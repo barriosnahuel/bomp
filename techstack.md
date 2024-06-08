@@ -6,9 +6,11 @@ barriosnahuel/push-me is built on the following main stack:
 - [CircleCI](https://circleci.com/) – Continuous Integration
 - [Gradle](https://www.gradle.org/) – Java Build Tools
 - [Java](https://www.java.com) – Languages
-- [Android SDK](http://developer.android.com) – Frameworks (Full Stack)
-- [Robolectric](http://robolectric.org/) – Testing Frameworks
 - [Kotlin](https://kotlinlang.org/) – Languages
+- [Android SDK](http://developer.android.com) – Frameworks (Full Stack)
+- [CircleCI](https://circleci.com/) – Continuous Integration
+- [Gradle](https://www.gradle.org/) – Java Build Tools
+- [Robolectric](http://robolectric.org/) – Testing Frameworks
 - [Timber.io](https://timber.io/) – Log Management
 - [Android OS](https://www.android.com) – Operating Systems
 
@@ -23,9 +25,11 @@ barriosnahuel/push-me is built on the following main stack:
 - <img width='25' height='25' src='https://img.stackshare.io/service/190/CvqrSSFs_400x400.jpg' alt='CircleCI'/> [CircleCI](https://circleci.com/) – Continuous Integration
 - <img width='25' height='25' src='https://img.stackshare.io/service/975/gradlephant-social-black-bg.png' alt='Gradle'/> [Gradle](https://www.gradle.org/) – Java Build Tools
 - <img width='25' height='25' src='https://img.stackshare.io/service/995/K85ZWV2F.png' alt='Java'/> [Java](https://www.java.com) – Languages
-- <img width='25' height='25' src='https://img.stackshare.io/service/1010/m8jf0po4imu8t5eemjdd.png' alt='Android SDK'/> [Android SDK](http://developer.android.com) – Frameworks (Full Stack)
-- <img width='25' height='25' src='https://img.stackshare.io/service/2022/OavapKft_400x400.png' alt='Robolectric'/> [Robolectric](http://robolectric.org/) – Testing Frameworks
 - <img width='25' height='25' src='https://img.stackshare.io/service/3750/pCfEzr6L.png' alt='Kotlin'/> [Kotlin](https://kotlinlang.org/) – Languages
+- <img width='25' height='25' src='https://img.stackshare.io/service/1010/m8jf0po4imu8t5eemjdd.png' alt='Android SDK'/> [Android SDK](http://developer.android.com) – Frameworks (Full Stack)
+- <img width='25' height='25' src='https://img.stackshare.io/service/190/CvqrSSFs_400x400.jpg' alt='CircleCI'/> [CircleCI](https://circleci.com/) – Continuous Integration
+- <img width='25' height='25' src='https://img.stackshare.io/service/975/gradlephant-social-black-bg.png' alt='Gradle'/> [Gradle](https://www.gradle.org/) – Java Build Tools
+- <img width='25' height='25' src='https://img.stackshare.io/service/2022/OavapKft_400x400.png' alt='Robolectric'/> [Robolectric](http://robolectric.org/) – Testing Frameworks
 - <img width='25' height='25' src='https://img.stackshare.io/service/7634/xBNoTqvy_400x400.jpg' alt='Timber.io'/> [Timber.io](https://timber.io/) – Log Management
 - <img width='25' height='25' src='https://img.stackshare.io/service/9586/ZvmtaSXW_400x400.jpg' alt='Android OS'/> [Android OS](https://www.android.com) – Operating Systems
 
@@ -38,7 +42,8 @@ Full tech stack [here](/techstack.md)
 # Tech Stack File
 ![](https://img.stackshare.io/repo.svg "repo") [barriosnahuel/push-me](https://github.com/barriosnahuel/push-me)![](https://img.stackshare.io/public_badge.svg "public")
 <br/><br/>
-|15<br/>Tools used|01/05/24 <br/>Report generated|
+|15<br/>Tools used|02/29/24 <br/>Report generated|
+
 |------|------|
 </div>
 
