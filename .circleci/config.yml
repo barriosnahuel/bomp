@@ -7,7 +7,7 @@ jobs:
   "test":
     executor:
       name: android/android-docker
-      tag: 2024.04.1
+      tag: 2023.10.2
     steps:
       - checkout
       - run:
@@ -18,7 +18,7 @@ jobs:
   "code-analysis":
     executor:
       name: android/android-docker
-      tag: 2024.04.1
+      tag: 2023.10.2
     steps:
       - checkout
       - run:
@@ -38,7 +38,7 @@ jobs:
   "build":
     executor:
       name: android/android-docker
-      tag: 2024.04.1
+      tag: 2023.10.2
     steps:
       - checkout
       - run:
