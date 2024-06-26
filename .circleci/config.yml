@@ -1,9 +1,13 @@
+# .circleci/config.yaml
 version: 2.1
 orbs:
-  android: circleci/android@0.2.0
+  android: circleci/android@2.4.0
+  # https://circleci.com/developer/orbs/orb/circleci/android for latest version
 jobs:
   "test":
-    executor: android/android
+    executor:
+      name: android/android-docker
+      tag: 2024.04.1
     steps:
       - checkout
       - run:
@@ -12,7 +16,9 @@ jobs:
       - store_artifacts:
           path: "app/build/reports/tests/"
   "code-analysis":
-    executor: android/android
+    executor:
+      name: android/android-docker
+      tag: 2024.04.1
     steps:
       - checkout
       - run:
@@ -30,7 +36,9 @@ jobs:
       - store_artifacts:
           path: "app/build/reports/detekt/detekt.html"
   "build":
-    executor: android/android
+    executor:
+      name: android/android-docker
+      tag: 2024.04.1
     steps:
       - checkout
       - run:
