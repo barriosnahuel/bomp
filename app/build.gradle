@@ -18,12 +18,11 @@ android {
         jvmTarget = "17"
     }
 
-    compileSdkVersion 33
-
     defaultConfig {
         applicationId "com.github.barriosnahuel.vossosunboton"
+        compileSdk 34
         minSdkVersion 21
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 5
         versionName '2.0.0'
     }
@@ -82,6 +81,10 @@ android {
     }
 
     dynamicFeatures = [":feature_addbutton"]
+
+    buildFeatures {
+        buildConfig true
+    }
 
 }
 

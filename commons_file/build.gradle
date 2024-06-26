@@ -10,11 +10,10 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    compileSdkVersion 33
-
     defaultConfig {
+        compileSdk 34
         minSdkVersion 21
-        targetSdkVersion 33
+        targetSdkVersion 34
     }
 
     resourcePrefix 'commons_file_'
