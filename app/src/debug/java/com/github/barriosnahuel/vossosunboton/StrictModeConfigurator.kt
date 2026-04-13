@@ -6,7 +6,6 @@ import com.github.barriosnahuel.vossosunboton.commons.android.error.Trackable
 import java.util.concurrent.Executors
 
 internal object StrictModeConfigurator {
-
     fun initializeWithDefaults(trackable: Trackable) {
         setupThreadPolicy(trackable)
         setupVirtualMachinePolicy(trackable)
@@ -14,14 +13,14 @@ internal object StrictModeConfigurator {
 }
 
 private fun setupThreadPolicy(trackable: Trackable) {
-    val threadPolicyBuilder = StrictMode.ThreadPolicy.Builder()
-        .detectCustomSlowCalls()
-        .detectNetwork()
-        .penaltyLog()
+    val threadPolicyBuilder =
+        StrictMode.ThreadPolicy
+            .Builder()
+            .detectCustomSlowCalls()
+            .detectNetwork()
+            .penaltyLog()
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        threadPolicyBuilder.detectResourceMismatches()
-    }
+    threadPolicyBuilder.detectResourceMismatches()
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         threadPolicyBuilder.penaltyListener(Executors.newSingleThreadExecutor()) {
@@ -33,9 +32,11 @@ private fun setupThreadPolicy(trackable: Trackable) {
 }
 
 private fun setupVirtualMachinePolicy(trackable: Trackable) {
-    val vmPolicyBuilder = StrictMode.VmPolicy.Builder()
-        .detectAll()
-        .penaltyLog()
+    val vmPolicyBuilder =
+        StrictMode.VmPolicy
+            .Builder()
+            .detectAll()
+            .penaltyLog()
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         vmPolicyBuilder.penaltyListener(Executors.newSingleThreadExecutor()) {
@@ -46,4 +47,6 @@ private fun setupVirtualMachinePolicy(trackable: Trackable) {
     StrictMode.setVmPolicy(vmPolicyBuilder.build())
 }
 
-private class StrictModeException(violation: Throwable) : RuntimeException(violation)
+private class StrictModeException(
+    violation: Throwable,
+) : RuntimeException(violation)

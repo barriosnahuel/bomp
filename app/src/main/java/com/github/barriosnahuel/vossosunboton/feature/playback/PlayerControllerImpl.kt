@@ -6,14 +6,15 @@ import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import java.io.IOException
 
-internal class PlayerControllerImpl(private val mediaPlayer: MediaPlayer = MediaPlayer()) : PlayerController {
-
+internal class PlayerControllerImpl(
+    private val mediaPlayer: MediaPlayer = MediaPlayer(),
+) : PlayerController {
     private var listener: PlayerControllerListener? = null
     private var currentSound: Sound? = null
 
     override fun startPlayingSound(
         context: Context,
-        sound: Sound
+        sound: Sound,
     ) {
         if (mediaPlayer.isPlaying) {
             // User clicked on a new button while still listening an audio, then we should turn that running button off.
@@ -39,8 +40,11 @@ internal class PlayerControllerImpl(private val mediaPlayer: MediaPlayer = Media
         }
     }
 
-    private fun setupSoundSource(context: Context, sound: Sound): Boolean {
-        return if (sound.isBundled()) {
+    private fun setupSoundSource(
+        context: Context,
+        sound: Sound,
+    ): Boolean =
+        if (sound.isBundled()) {
             try {
                 MediaPlayerHelper.setupSoundSource(context, mediaPlayer, sound.rawRes)
             } catch (e: IOException) {
@@ -55,7 +59,6 @@ internal class PlayerControllerImpl(private val mediaPlayer: MediaPlayer = Media
                 false
             }
         }
-    }
 
     override fun stopPlayingSound() {
         // Here sound is on so we have to stop it.
