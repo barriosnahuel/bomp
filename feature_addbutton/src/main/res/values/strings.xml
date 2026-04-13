@@ -1,5 +1,4 @@
 <resources>
-    <string name="feature_addbutton_permission_required">Permission required</string>
     <string name="feature_addbutton_name">Choose a funny name for your new button</string>
     <string name="feature_addbutton_save">Save</string>
     <string name="feature_addbutton_placeholder">I\'m f**k!ng druuunk</string>
@@ -7,11 +6,4 @@
     <string name="feature_addbutton_name_is_required_error">Name is required</string>
     <string name="feature_addbutton_feedback_saved_ok">Saved!</string>
     <string name="feature_addbutton_activity_title">New button</string>
-    <string name="feature_addbutton_permission_required_error">Permission is required to prevent missing these funny audio
-        messages
-    </string>
-    <string name="feature_addbutton_permission_positive">OK, save it!</string>
-    <string name="feature_addbutton_permission_negative">No, thanks</string>
-
-    <string name="feature_addbutton_youre_an_idiot_error">Mmm I see, so you\'re hiding something…</string>
 </resources>

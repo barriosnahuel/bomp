@@ -1,5 +1,4 @@
 <resources>
-    <string name="feature_addbutton_permission_required">Permiso obligatorio</string>
     <string name="feature_addbutton_name">Elegí un nombre para el botón</string>
     <string name="feature_addbutton_save">Guardar</string>
     <string name="feature_addbutton_placeholder">Vos, yo, champagne… all the night</string>
@@ -7,10 +6,4 @@
     <string name="feature_addbutton_name_is_required_error">El nombre es obligatorio</string>
     <string name="feature_addbutton_feedback_saved_ok">Guardado</string>
     <string name="feature_addbutton_activity_title">Nuevo botón</string>
-    <string name="feature_addbutton_permission_required_error">Necesitamos el permiso para no perder esos divertidos audios
-    </string>
-    <string name="feature_addbutton_permission_positive">OK, guardalo!</string>
-    <string name="feature_addbutton_permission_negative">No, gracias</string>
-
-    <string name="feature_addbutton_youre_an_idiot_error">Ah, veo que estas perseguido…</string>
 </resources>
