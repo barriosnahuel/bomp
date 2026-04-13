@@ -8,7 +8,6 @@ import io.mockk.verifySequence
 import org.junit.Test
 
 internal class PlayerControllerTest {
-
     @Test
     fun `on stopPlayingSound when media player is playing should stop it`() {
         val mockedMediaPlayer = givenAMediaPlayerCurrentlyPlayingASound()
