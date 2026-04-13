@@ -1,24 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Material Design original values (they should NOT be used outside this file) -->
-    <dimen name="app_material_horizontal_padding">16dp</dimen>
-
-    <!-- My default values (they must be used along the entire app -->
-    <dimen name="app_default_view_spacing_1x">8dp</dimen>
-    <dimen name="app_default_view_spacing_2x">@dimen/app_material_horizontal_padding</dimen>
-
-    <dimen name="app_default_icon_size">24dp</dimen>
-
     <dimen name="app_font_size_small_dynamic_feature">14sp</dimen>
-    <dimen name="app_font_size_medium_default">16sp</dimen>
-
-    <!-- Navigation defitions -->
-    <dimen name="app_material_appbar_bottom_height">84dp</dimen>
-    <dimen name="app_appbar_top_height">92dp</dimen>
-    <dimen name="app_appbar_top_title_margin_top">14dp</dimen>
-
-    <!-- These 2 are required to emulate the superposition between the rounded app bar and the scrollable content -->
-    <dimen name="app_appbar_scrollable_content_overlap_margin">36dp</dimen>
-    <dimen name="app_appbar_scrollable_content_overlap_traslation_negative">-24dp</dimen>
-    <!-- /Navigation defitions -->
 </resources>
