@@ -1,5 +1,5 @@
 apply plugin: 'io.gitlab.arturbosch.detekt'
-apply from: "$project.rootProject.projectDir/ktlint.gradle"
+apply plugin: 'org.jlleitschuh.gradle.ktlint'
 
 /**
  * Configuration for `io.gitlab.arturbosch.detekt` plugin
@@ -7,6 +7,15 @@ apply from: "$project.rootProject.projectDir/ktlint.gradle"
 detekt {
     config = files("$project.rootProject.projectDir/config/detekt/detekt-config.yml")
     buildUponDefaultConfig = true
+}
+
+/**
+ * Configuration for `org.jlleitschuh.gradle.ktlint` plugin
+ */
+ktlint {
+    android = true
+    outputToConsole = true
+    version = "1.5.0"
 }
 
 android {

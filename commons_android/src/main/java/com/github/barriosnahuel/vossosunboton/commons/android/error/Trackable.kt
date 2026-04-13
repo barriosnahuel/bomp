@@ -7,7 +7,6 @@ import timber.log.Timber
  * Simple interface to hide the implementation details of our error tracking tool.
  */
 interface Trackable {
-
     /**
      * Report the given `throwable` to our tracking tool.
      */
@@ -25,7 +24,6 @@ interface Trackable {
  * This tracker should be used along the entire project whenever you want to track some error or log something to the error platform.
  */
 object Tracker : Trackable {
-
     override fun track(throwable: Throwable) {
         Timber.e("Tracking error to Firebase Crashlytics: %s", throwable.message)
         throwable.printStackTrace()
@@ -42,7 +40,12 @@ object Tracker : Trackable {
  * Tree to plant on Timber to be able to log messages to the error tracking platform.
  */
 class ErrorTrackerTree : Timber.Tree() {
-    override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+    override fun log(
+        priority: Int,
+        tag: String?,
+        message: String,
+        t: Throwable?,
+    ) {
         Tracker.log(message)
     }
 }

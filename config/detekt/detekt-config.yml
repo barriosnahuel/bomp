@@ -3,3 +3,9 @@ style:
   MaxLineLength:
     active: true
     maxLineLength: 150
+  MagicNumber:
+    ignorePropertyDeclaration: true
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']

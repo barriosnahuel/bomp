@@ -5,15 +5,20 @@ apply from: "$project.rootProject.projectDir/linters.gradle"
 android {
     namespace 'com.github.barriosnahuel.vossosunboton.commons.android'
 
+    compileSdk 37
+
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = "21"
     }
 
     defaultConfig {
-        compileSdk 34
-        minSdkVersion 21
-        targetSdkVersion 34
+        minSdkVersion 23
+        targetSdkVersion 37
     }
 
     resourcePrefix 'commons_android_'
@@ -29,7 +34,7 @@ android {
 dependencies {
     implementation 'androidx.annotation:annotation:1.9.1'
 
-    implementation platform ('com.google.firebase:firebase-bom:33.5.1')
+    implementation platform('com.google.firebase:firebase-bom:34.4.0')
     implementation 'com.google.firebase:firebase-crashlytics'
     implementation 'com.google.firebase:firebase-analytics'
 

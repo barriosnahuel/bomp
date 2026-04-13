@@ -8,10 +8,9 @@ internal object PlayerControllerFactory {
 }
 
 internal interface PlayerController {
-
     fun startPlayingSound(
         context: Context,
-        sound: Sound
+        sound: Sound,
     )
 
     fun stopPlayingSound()

@@ -5,7 +5,6 @@ import com.github.barriosnahuel.vossosunboton.commons.android.error.ErrorTracker
 import timber.log.Timber
 
 internal abstract class CustomBuildTypeApplication : Application() {
-
     override fun onCreate() {
         Timber.plant(ErrorTrackerTree())
 

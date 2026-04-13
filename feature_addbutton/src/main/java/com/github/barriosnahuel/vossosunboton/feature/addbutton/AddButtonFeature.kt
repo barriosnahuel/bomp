@@ -6,15 +6,15 @@ import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
-import java.io.FileNotFoundException
-import java.io.FileOutputStream
-import java.io.IOException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import org.jetbrains.annotations.NotNull
 import timber.log.Timber
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
 
 /**
  * Actually persists the button into storage.
@@ -25,7 +25,11 @@ interface AddButtonFeature {
      * @param name Name of the button.
      * @param uri Sound's location.
      */
-    fun saveNewButtonAsync(context: @NotNull Context, name: String, uri: String): Deferred<Int>
+    fun saveNewButtonAsync(
+        context: @NotNull Context,
+        name: String,
+        uri: String,
+    ): Deferred<Int>
 
     companion object {
         val instance: AddButtonFeature by lazy { AddButtonFeatureImpl() }
@@ -33,8 +37,11 @@ interface AddButtonFeature {
 }
 
 private class AddButtonFeatureImpl : AddButtonFeature {
-
-    override fun saveNewButtonAsync(context: Context, name: String, uri: String): Deferred<Int> {
+    override fun saveNewButtonAsync(
+        context: Context,
+        name: String,
+        uri: String,
+    ): Deferred<Int> {
         val fileName = "Button-custom-" + System.currentTimeMillis() + ".mp3"
         val targetFile = getFile(context, fileName)
 
