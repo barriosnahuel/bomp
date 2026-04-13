@@ -2,10 +2,8 @@
     <string name="app_name">Sos Un Boton</string>
 
     <string name="app_share_chooser_title">Compartir vía</string>
-    <string name="app_feedback_share_generic_error">Todavía no se puede compartir este audio</string>
     <string name="app_undo">Deshacer!</string>
     <string name="app_feedback_button_deleted">Botón borrado</string>
-    <string name="app_feedback_bundled_buttons_cant_be_deleted_yet">Los botones famosos todavía no se pueden eliminar</string>
     <string name="app_feedback_generic_error_contact_support">Uh! Por favor contactá con soporte</string>
     <string name="app_navigation_menu_item_home">Inicio</string>
     <string name="app_navigation_menu_item_search">Buscar</string>

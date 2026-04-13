@@ -1,13 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Font definitions -->
-    <color name="app_default_font_color">@color/app_gray</color>
-    <color name="app_default_font_color_on_primary">@color/app_black</color>
-
-    <!-- Icons definitions -->
-    <color name="app_default_icons_color">@color/app_black</color>
-
-    <!-- Navigation defitions -->
-    <color name="app_bottom_navigation_color_active">@color/app_default_font_color_on_primary</color>
-    <color name="app_bottom_navigation_color_inactive">@color/app_gray</color>
-</resources>
+<resources />
