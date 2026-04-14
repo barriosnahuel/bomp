@@ -76,6 +76,19 @@ CircleCI runs three parallel jobs on PRs:
 
 `handoff/` contains session handoff documents (one per working session) with decisions taken, key file paths, and pending work. Ignored by git. When starting a new session, check the latest file in this directory for context.
 
+## Accessibility (WCAG 2.2 AA)
+
+All UI development and generated assets (store listing, What's New, changelogs) must target **WCAG 2.2 Level AA**. Key requirements:
+
+- **Contrast – text (1.4.3):** ≥ 4.5:1 for normal text; ≥ 3:1 for large text (≥ 18 sp or ≥ 14 sp bold)
+- **Contrast – non-text (1.4.11):** ≥ 3:1 for interactive UI components (icon-only buttons, input borders, focus indicators)
+- **Color not sole indicator (1.4.1):** Never use color alone to convey state — pair with an icon, label, or pattern
+- **Content descriptions (1.1.1):** Every `Icon`/`Image` conveying information needs a non-null `contentDescription`; purely decorative assets use `contentDescription = null`
+- **Touch targets (2.5.8):** Minimum 24 × 24 dp; prefer 48 × 48 dp for primary actions
+- **Labels match names (2.5.3):** Visible button/field labels must match the accessible name used by screen readers
+
+Verify contrast when adding or changing colors. Use the [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) or the Material Theme Builder. The brand palette in `AppTheme.kt` was designed to meet AA across all color roles.
+
 ## Changelog
 
 `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format:
