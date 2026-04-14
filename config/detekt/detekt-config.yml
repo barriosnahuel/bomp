@@ -1,3 +1,8 @@
+complexity:
+  LongParameterList:
+    threshold: 7
+    ignoreDefaultParameters: true
+
 style:
   active: true
   MaxLineLength:
