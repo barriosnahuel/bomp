@@ -1,17 +1,19 @@
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
 class AddButtonActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
 
         val uri: Uri? = intent.getParcelableExtra(Intent.EXTRA_STREAM)

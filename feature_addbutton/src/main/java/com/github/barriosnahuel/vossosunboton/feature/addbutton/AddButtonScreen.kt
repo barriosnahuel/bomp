@@ -2,6 +2,7 @@ package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,25 +64,7 @@ fun AddButtonScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.feature_addbutton_activity_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
-                        )
-                    }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-            )
-        },
+        topBar = { AddButtonTopBar(onNavigateUp) },
     ) { innerPadding ->
         Column(
             modifier =
@@ -114,4 +97,33 @@ fun AddButtonScreen(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddButtonTopBar(onNavigateUp: () -> Unit) {
+    // Light mode: primary (#5B21B6 deep violet) — dark bar, white title.
+    // Dark mode:  primaryContainer (#4A0A96 deep violet) — dark bar, lavender title.
+    val isDark = isSystemInDarkTheme()
+    val barContainerColor =
+        if (isDark) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary
+    val barContentColor =
+        if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary
+    TopAppBar(
+        title = { Text(stringResource(R.string.feature_addbutton_activity_title)) },
+        navigationIcon = {
+            IconButton(onClick = onNavigateUp) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                )
+            }
+        },
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = barContainerColor,
+                titleContentColor = barContentColor,
+                navigationIconContentColor = barContentColor,
+            ),
+    )
 }
