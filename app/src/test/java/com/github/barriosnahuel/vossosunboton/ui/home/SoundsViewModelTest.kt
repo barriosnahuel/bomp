@@ -101,6 +101,15 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         ).isFalse()
     }
 
+    @Test
+    fun `sounds are sorted alphabetically`() {
+        val viewModel = givenAViewModel()
+        val sounds = viewModel.sounds.value
+        if (sounds.size < 2) return
+
+        assertThat(sounds.map { it.name.lowercase() }).isInOrder()
+    }
+
     private fun givenAViewModel(): SoundsViewModel =
         SoundsViewModel(
             androidx.test.core.app.ApplicationProvider
