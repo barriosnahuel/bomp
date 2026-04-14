@@ -1,10 +1,13 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
@@ -26,12 +29,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +45,13 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val deletedEvent by viewModel.deletedSoundEvent.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    BackHandler(enabled = selectedTab != AppTab.EXPLORE) {
+        viewModel.selectTab(AppTab.EXPLORE)
+    }
 
     LaunchedEffect(deletedEvent) {
         if (deletedEvent == null) return@LaunchedEffect
@@ -58,11 +69,23 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }, colors = TopAppBarDefaults.topAppBarColors()) },
-        bottomBar = { AppBottomBar(selectedTab = selectedTab, onTabSelected = viewModel::selectTab) },
+        bottomBar = {
+            AppBottomBar(
+                selectedTab = selectedTab,
+                onTabSelected = { tab ->
+                    if (tab == selectedTab) {
+                        coroutineScope.launch { listState.animateScrollToItem(0) }
+                    } else {
+                        viewModel.selectTab(tab)
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         SoundsList(
             sounds = sounds,
+            listState = listState,
             modifier = Modifier.padding(innerPadding),
             onPlayClick = { sound -> viewModel.playOrStop(sound) },
             onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
@@ -101,13 +124,14 @@ private fun AppBottomBar(
 @Composable
 private fun SoundsList(
     sounds: List<Sound>,
+    listState: LazyListState,
     modifier: Modifier = Modifier,
     onPlayClick: (Sound) -> Unit,
     onShareClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        LazyColumn {
+        LazyColumn(state = listState) {
             itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
                 SoundItem(
                     sound = sound,
