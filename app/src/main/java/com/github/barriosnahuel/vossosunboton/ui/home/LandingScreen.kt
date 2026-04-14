@@ -48,6 +48,8 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val buttonDeletedMessage = stringResource(R.string.app_feedback_button_deleted)
+    val undoLabel = stringResource(R.string.app_undo)
 
     BackHandler(enabled = selectedTab != AppTab.EXPLORE) {
         viewModel.selectTab(AppTab.EXPLORE)
@@ -57,8 +59,8 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         if (deletedEvent == null) return@LaunchedEffect
         val result =
             snackbarHostState.showSnackbar(
-                message = context.getString(R.string.app_feedback_button_deleted),
-                actionLabel = context.getString(R.string.app_undo),
+                message = buttonDeletedMessage,
+                actionLabel = undoLabel,
                 duration = SnackbarDuration.Long,
             )
         when (result) {
