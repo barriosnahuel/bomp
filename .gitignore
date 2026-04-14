@@ -28,6 +28,10 @@ local.properties
 *.log
 
 
+### Temp files
+*.tmp*
+
+
 ### Android template
 # Built application files
 captures
