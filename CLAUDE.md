@@ -72,6 +72,10 @@ CircleCI runs three parallel jobs on PRs:
 2. **code-analysis** — `./gradlew check -x test` + `app:lintVitalRelease`
 3. **build** — assembles app and bundle (skips checks)
 
+## Handoff notes
+
+`handoff/` contains session handoff documents (one per working session) with decisions taken, key file paths, and pending work. Ignored by git. When starting a new session, check the latest file in this directory for context.
+
 ## Changelog
 
 `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format:
