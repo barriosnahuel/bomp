@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -70,7 +71,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }, colors = TopAppBarDefaults.topAppBarColors()) },
+        topBar = { AppTopBar() },
         bottomBar = {
             AppBottomBar(
                 selectedTab = selectedTab,
@@ -94,6 +95,19 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onDelete = { sound -> viewModel.deleteSound(sound) },
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppTopBar() {
+    TopAppBar(
+        title = { Text(stringResource(R.string.app_name)) },
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+    )
 }
 
 @Composable
