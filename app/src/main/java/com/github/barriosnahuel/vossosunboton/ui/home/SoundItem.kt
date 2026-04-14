@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,6 +63,9 @@ fun SoundItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeDeleteBackground(dismissState: SwipeToDismissBoxState) {
+    // Only render when an active swipe is in progress to avoid the background
+    // bleeding through the card's horizontal padding when at rest.
+    if (dismissState.dismissDirection == SwipeToDismissBoxValue.Settled) return
     val alignment =
         when (dismissState.dismissDirection) {
             SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
@@ -95,6 +99,11 @@ private fun SoundCard(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ),
     ) {
         Row(
             modifier =

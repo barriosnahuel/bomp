@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -115,20 +116,31 @@ private fun AppBottomBar(
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
 ) {
-    NavigationBar {
+    val itemColors =
+        NavigationBarItemDefaults.colors(
+            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+            selectedTextColor = MaterialTheme.colorScheme.primary,
+            indicatorColor = MaterialTheme.colorScheme.primary,
+            unselectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    NavigationBar(containerColor = MaterialTheme.colorScheme.primaryContainer) {
         NavigationBarItem(
+            colors = itemColors,
             selected = selectedTab == AppTab.HOME,
             onClick = { onTabSelected(AppTab.HOME) },
             icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.app_navigation_menu_item_home)) },
             label = { Text(stringResource(R.string.app_navigation_menu_item_home)) },
         )
         NavigationBarItem(
+            colors = itemColors,
             selected = selectedTab == AppTab.FAVORITES,
             onClick = { onTabSelected(AppTab.FAVORITES) },
             icon = { Icon(Icons.Default.Favorite, contentDescription = stringResource(R.string.app_navigation_menu_item_favourites)) },
             label = { Text(stringResource(R.string.app_navigation_menu_item_favourites)) },
         )
         NavigationBarItem(
+            colors = itemColors,
             selected = selectedTab == AppTab.EXPLORE,
             onClick = { onTabSelected(AppTab.EXPLORE) },
             icon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.app_navigation_menu_item_search)) },

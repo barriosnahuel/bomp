@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### Changed
 - Replaced placeholder color palette with a full WCAG 2.2 AA–compliant brand identity (Deep Violet / Vivid Rose / Amber) covering all Material3 color roles for light and dark modes.
 - TopAppBar on the home screen and Add Button screen now shows the brand primary color instead of the default surface color.
+- NavigationBar and sound cards now use explicit brand-palette colors instead of derived dark defaults, restoring visual distinction in both light and dark modes.
+- Fixed swipe-to-delete background bleeding through card padding when no swipe is in progress.
 - Upgraded stack: AGP 8.13, Kotlin 2.2.21, Gradle 8.13, compileSdk/targetSdk 37, Java 21.
 - Bumped all dependencies to latest stable: Firebase BOM 34.12.0, Compose BOM 2026.03.01, lifecycle 2.10.0, material 1.13.0, and more.
 - `minSdk` raised to 23 (Android 6.0).
