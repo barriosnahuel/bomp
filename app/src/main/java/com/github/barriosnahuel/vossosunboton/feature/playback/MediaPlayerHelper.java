@@ -1,12 +1,9 @@
 package com.github.barriosnahuel.vossosunboton.feature.playback;
 
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
-import android.database.Cursor;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.provider.MediaStore;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RawRes;
@@ -16,8 +13,6 @@ import com.github.barriosnahuel.vossosunboton.commons.file.FileUtils;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
-
-import timber.log.Timber;
 
 public final class MediaPlayerHelper {
 
@@ -35,13 +30,7 @@ public final class MediaPlayerHelper {
                                            @NonNull final MediaPlayer mediaPlayer,
                                            @NonNull final String file) throws IOException {
 
-        Uri soundFileUri = Uri.fromFile(FileUtils.getFile(context, file));
-        if (ContentResolver.SCHEME_CONTENT.equals(soundFileUri.getScheme())) {
-            Timber.d("Sound uri is a content uri");
-
-            soundFileUri = getSoundPath(context, soundFileUri);
-        }
-
+        final Uri soundFileUri = Uri.fromFile(FileUtils.getFile(context, file));
         mediaPlayer.reset();
         mediaPlayer.setDataSource(context, soundFileUri);
         return true;
@@ -68,15 +57,4 @@ public final class MediaPlayerHelper {
         }
     }
 
-    private static Uri getSoundPath(@NonNull final Context context, @NonNull final Uri contentUriSource) {
-        final String[] projection = {MediaStore.Audio.Media.DATA};
-        final String path;
-        try (Cursor cursor = context.getContentResolver().query(contentUriSource, projection, null, null, null)) {
-            cursor.moveToFirst();
-
-            path = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
-        }
-
-        return Uri.parse(path);
-    }
 }
