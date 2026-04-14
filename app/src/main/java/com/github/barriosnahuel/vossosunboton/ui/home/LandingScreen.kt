@@ -1,6 +1,7 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -103,12 +104,16 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppTopBar() {
+    // Light mode: primary (#5B21B6 deep violet) — dark bar, white title.
+    // Dark mode:  primaryContainer (#4A0A96 deep violet) — dark bar, lavender title.
+    // Both are dark bars, so the status bar keeps light (white) icons in both modes.
+    val isDark = isSystemInDarkTheme()
     TopAppBar(
         title = { Text(stringResource(R.string.app_name)) },
         colors =
             TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = if (isDark) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary,
+                titleContentColor = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary,
             ),
     )
 }
