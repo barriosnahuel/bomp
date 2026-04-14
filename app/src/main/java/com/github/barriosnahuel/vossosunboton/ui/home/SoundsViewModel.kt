@@ -90,7 +90,7 @@ class SoundsViewModel(
     }
 
     private fun loadSounds() {
-        val allSounds = SoundDao().find(getApplication<Application>())
+        val allSounds = SoundDao().find(getApplication<Application>()).sortedBy { it.name.lowercase() }
         _sounds.update {
             when (_selectedTab.value) {
                 AppTab.HOME -> allSounds.filter { !it.isBundled() }
