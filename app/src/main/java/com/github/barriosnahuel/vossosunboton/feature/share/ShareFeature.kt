@@ -68,7 +68,7 @@ private class ShareFeatureImpl : ShareFeature {
 
                     val rawResourceInputStream = context.resources.openRawResource(sound.rawRes)
 
-                    val fileForSharing = getFile(context, "Button-packaged-" + sound.name + ".mp3")
+                    val fileForSharing = getFile(context, sound.name + ".mp3")
                     if (fileForSharing.exists()) {
                         Timber.d("Packaged audio already copied to share directory: %s", fileForSharing)
                     } else {
