@@ -2,6 +2,7 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -159,7 +161,10 @@ private fun SoundsList(
     onDelete: (Sound) -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        LazyColumn(state = listState) {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(vertical = 8.dp),
+        ) {
             itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
                 SoundItem(
                     sound = sound,
