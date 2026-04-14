@@ -32,6 +32,10 @@ local.properties
 *.tmp*
 
 
+### Handoff notes
+handoff/
+
+
 ### Android template
 # Built application files
 captures
