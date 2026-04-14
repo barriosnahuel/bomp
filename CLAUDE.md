@@ -71,3 +71,11 @@ CircleCI runs three parallel jobs on PRs:
 1. **test** — `./gradlew test`
 2. **code-analysis** — `./gradlew check -x test` + `app:lintVitalRelease`
 3. **build** — assembles app and bundle (skips checks)
+
+## Changelog
+
+`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format:
+- Sections: `Added`, `Changed`, `Fixed`, `Removed` under `## [unreleased]`
+- Each entry is a single sentence starting with a capital letter, no trailing period
+- For dependency bumps, write one line summarising the overall bump (e.g. "Bumped all dependencies to latest stable"), not one line per library
+- After every commit, check whether the change is user-visible or architecturally significant; if so, update `## [unreleased]` before committing

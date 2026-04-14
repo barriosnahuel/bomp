@@ -5,56 +5,33 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased]
 ### Added
-- Let users share packaged buttons too.
-- Let users delete custom audios by swiping horizontally.
-- Target Android 13 (API Level 33); Tests also run for that API level.
-- Pull Requests template for contributors.
-- Firebase Analytics.
-- Firebase Crashlytics including last logs from each error.
-- Firebase Performance Monitoring.
-- Added Detekt static code analysis tool, as well as Ktlint for code style conventions.
-- Setup [Stale GitHub app](https://github.com/apps/stale).
-- Codacy checks integration through GitHub.
-- Multidex support for debug builds.
-- Timestamp as suffix on `versionName` for debug builds.
-- Automatic code obfuscation and optimizations on release builds.
-- Automated stack files integration by stackshare.io to easily communicate what's under the hood. Check `techstack.md` and see the magic.
+- Jetpack Compose UI replacing all Fragments, RecyclerViews and XML layouts.
+- `SoundsViewModel` with `StateFlow` for reactive UI state management.
+- Back press navigates from Home/Favorites to Explore instead of exiting the app.
+- Tapping the already-selected bottom tab scrolls the list back to the top.
+- Explicit backup rules for Android 12+: user audio files are now included in cloud backup and device transfer.
+- Tests for `SoundsViewModel` covering playback state and delete/restore flows.
 
 ### Changed
-- Brand NEW Look & Feel for the whole app.
-- Min Android version required is KitKat (API Level 19).
-- Circle CI config migrated to v2.1 using Orbs.
-- Many dependencies to the latest versions including Gradle, Android Build Tools, AppCompat,
-Firebase and static code analyzers too.
-- Migration to Android X.
-- Checkstyle turned on again.
-- Findbugs replaced with Spotbugs starting with `static-code-analysis` v3.x.
-- New ':model' module in Kotlin.
-- New ':commons_file' and ':commons_android' modules.
-- Changelog formatting.
-- Default language to English.
-- Gradle version to [v7.4.2](https://docs.gradle.org/7.4.2/release-notes.html).
-- Java compile version to v11.
-- Better separation of responsibilities.
-- `StrictMode` warnings now are logged to Crashlytics instead of the debugging notifier.
-- `LeakCanary` warnings now are logged to Crashlytics.
-- Refactor of Media Player setup for clearness.
-- Replaced Stetho with [Flipper](https://fbflipper.com/).
-- Replace usages of synthetic accessors for views in layouts to native view binding.
+- Upgraded stack: AGP 8.13, Kotlin 2.2.21, Gradle 8.13, compileSdk/targetSdk 37, Java 21.
+- Bumped all dependencies to latest stable: Firebase BOM 34.12.0, Compose BOM 2026.03.01, lifecycle 2.10.0, material 1.13.0, and more.
+- `minSdk` raised to 23 (Android 6.0).
+- KTLint migrated to JLLeitschuh plugin with KTLint 1.5.0.
+- Sound list is now sorted alphabetically across all tabs.
+- Share sheet filename for bundled sounds now shows the button name instead of an internal prefix.
 
 ### Fixed
-- Sharing buttons issues due to a bad permissions setup.
-- Crashes when debugging because of a bug in library `StrictModeNotifier`.
-- Performance issue when saving a new audio button.
-- Memory leak at the `MediaPlayer` which causes an increment on memory usage.
-- Many static code checks suggestions applied.
-- Usage of resources like `InputStream`, `OutputStream` and `Cursor`.
-- Stop exposing Firebase API configuration file.
+- Bundled sounds no longer offer a swipe-to-delete gesture; the action is simply not available.
+- Scrolling-induced ghost playing state fixed by migrating to Compose state-driven rendering.
+- Crash when switching tabs mid-playback fixed by ViewModel-owned player state.
+- `MediaPlayerHelper` dead code path using the deprecated `MediaStore.Audio.Media.DATA` column removed.
 
 ### Removed
-- Library StrictModeNotifier for debug builds.
-- Library [Static Code Analysis](https://github.com/Monits/static-code-analysis-plugin) because it's no longer actively maintained.
-- `kotlin-android-extensions` plugin because it's no longer necessary.
+- Flipper and LeakCanary debug tools.
+- `dexcount` Gradle plugin.
+- All Fragment/RecyclerView/ViewBinding UI code.
+- `WRITE_EXTERNAL_STORAGE` permission (no longer needed with scoped storage).
+- Multidex support (not needed above minSdk 21).
 
 ## \[v1.1.0] - 2017-08-16
 
