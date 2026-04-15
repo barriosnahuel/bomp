@@ -1,19 +1,14 @@
 apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
 apply from: "$project.rootProject.projectDir/linters.gradle"
 
 android {
     namespace 'com.github.barriosnahuel.vossosunboton.commons.android'
 
-    compileSdk 37
+    compileSdkVersion "android-37.0"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
-    }
-
-    kotlinOptions {
-        jvmTarget = "21"
     }
 
     defaultConfig {
