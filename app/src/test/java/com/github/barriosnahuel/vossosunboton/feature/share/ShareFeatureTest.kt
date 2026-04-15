@@ -67,6 +67,15 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         thenWeCheckSoundPathIsAtMusicDirectory(capturedFile)
     }
 
+    @Test
+    fun `share packaged sound temp filename is soundName dot mp3 without any prefix`() {
+        val sound = givenASoundWithResourceId()
+
+        val capturedFile = whenSharingTheSoundCapturingThePath(sound)
+
+        assertThat(capturedFile.name).isEqualTo("$dummyButtonName.mp3")
+    }
+
     private fun thenWeCheckSoundPathIsAtMusicDirectory(capturedFile: File) {
         assertThat(capturedFile.absolutePath.split("/").contains(Environment.DIRECTORY_MUSIC)).isTrue()
     }
