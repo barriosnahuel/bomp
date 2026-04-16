@@ -35,8 +35,28 @@ private fun setupVirtualMachinePolicy(trackable: Trackable) {
     val vmPolicyBuilder =
         StrictMode.VmPolicy
             .Builder()
-            .detectAll()
+            // Explicit detectors — intentionally excludes detectUntaggedSockets()
+            // because Firebase SDKs trigger it, and it is not actionable from app code.
+            .detectActivityLeaks()
+            .detectLeakedClosableObjects()
+            .detectLeakedSqlLiteObjects()
+            .detectLeakedRegistrationObjects()
+            .detectFileUriExposure()
             .penaltyLog()
+
+    vmPolicyBuilder.detectCleartextNetwork()
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        vmPolicyBuilder.detectContentUriWithoutPermission()
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        vmPolicyBuilder.detectNonSdkApiUsage()
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        vmPolicyBuilder.detectUnsafeIntentLaunch()
+    }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         vmPolicyBuilder.penaltyListener(Executors.newSingleThreadExecutor()) {
