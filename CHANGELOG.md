@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Tests for `SoundsViewModel` covering playback state and delete/restore flows.
 
 ### Changed
+- Centralised all dependency and plugin versions in `gradle/libs.versions.toml` (Gradle version catalog).
 - Replaced placeholder color palette with a full WCAG 2.2 AA–compliant brand identity (Deep Violet / Vivid Rose / Amber) covering all Material3 color roles for light and dark modes.
 - TopAppBar on the home screen and Add Button screen now shows the brand primary color instead of the default surface color.
 - NavigationBar and sound cards now use explicit brand-palette colors instead of derived dark defaults, restoring visual distinction in both light and dark modes.
