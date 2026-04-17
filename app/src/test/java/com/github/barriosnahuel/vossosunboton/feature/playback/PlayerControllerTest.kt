@@ -15,7 +15,6 @@ import org.junit.After
 import org.junit.Test
 
 internal class PlayerControllerTest {
-
     @After
     fun tearDown() {
         unmockkAll()
