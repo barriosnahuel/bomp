@@ -65,6 +65,16 @@ All three linters run on CI and must pass:
 - Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` and `secure.properties` (with `key.alias`, `key.password`, `store.password`) in the project root — not committed.
 - Debug builds use the included debug keystore and work without the above.
 
+## Pre-push checklist
+
+Before pushing any branch, always run:
+
+```bash
+./gradlew test && ./gradlew check -x test
+```
+
+This catches the same failures CI will report (unit tests, ktlint, detekt, checkstyle, Android lint) without waiting for a full CI run.
+
 ## CI
 
 CircleCI runs three parallel jobs on PRs:
