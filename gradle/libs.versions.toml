@@ -28,7 +28,7 @@ coroutines                = "1.10.2"
 junit                     = "4.13.2"
 androidxTestCore          = "1.7.0"
 robolectric               = "4.16.1"
-truth                     = "1.4.4"
+truth                     = "1.4.5"
 mockk                     = "1.14.9"
 
 [libraries]
