@@ -8,7 +8,9 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -143,9 +145,11 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = sounds }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun givenAViewModel(): SoundsViewModel =
         SoundsViewModel(
             androidx.test.core.app.ApplicationProvider
                 .getApplicationContext(),
+            ioDispatcher = UnconfinedTestDispatcher(),
         )
 }

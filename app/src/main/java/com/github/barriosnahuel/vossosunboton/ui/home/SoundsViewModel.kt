@@ -2,14 +2,18 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 enum class AppTab { HOME, FAVORITES, EXPLORE }
@@ -21,6 +25,7 @@ data class DeletedSoundEvent(
 
 class SoundsViewModel(
     application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AndroidViewModel(application),
     PlayerControllerListener {
     private val _selectedTab = MutableStateFlow(AppTab.EXPLORE)
@@ -37,12 +42,12 @@ class SoundsViewModel(
 
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
-        loadSounds()
+        viewModelScope.launch(ioDispatcher) { loadSounds() }
     }
 
     fun selectTab(tab: AppTab) {
         _selectedTab.value = tab
-        loadSounds()
+        viewModelScope.launch(ioDispatcher) { loadSounds() }
     }
 
     fun playOrStop(sound: Sound) {
@@ -89,7 +94,7 @@ class SoundsViewModel(
         _deletedSoundEvent.value = null
     }
 
-    private fun loadSounds() {
+    private suspend fun loadSounds() {
         val allSounds = SoundDao().find(getApplication<Application>()).sortedBy { it.name.lowercase() }
         _sounds.update {
             when (_selectedTab.value) {
