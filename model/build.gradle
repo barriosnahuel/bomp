@@ -29,6 +29,6 @@ android {
 dependencies {
     implementation project(':commons_file')
 
-    implementation 'com.jakewharton.timber:timber:5.0.1'
-    implementation 'androidx.annotation:annotation:1.10.0'
+    implementation libs.timber
+    implementation libs.androidx.annotation
 }

@@ -1,0 +1,85 @@
+[versions]
+# Build plugins
+agp                       = "9.1.1"
+googleServices            = "4.4.4"
+firebaseCrashlyticsGradle = "3.0.7"
+firebasePerfPlugin        = "2.0.2"
+kotlin                    = "2.3.20"
+detekt                    = "1.23.8"
+ktlintGradle              = "14.2.0"
+ktlint                    = "1.6.0"
+
+# AndroidX / Jetpack
+appcompat                 = "1.7.1"
+annotation                = "1.10.0"
+activityCompose           = "1.13.0"
+composeBom                = "2026.03.01"
+lifecycleCompose          = "2.10.0"
+material                  = "1.13.0"
+
+# Firebase
+firebaseBom               = "34.12.0"
+
+# Other
+timber                    = "5.0.1"
+coroutines                = "1.10.2"
+
+# Test
+junit                     = "4.13.2"
+androidxTestCore          = "1.6.1"
+robolectric               = "4.16.1"
+truth                     = "1.4.4"
+mockk                     = "1.14.9"
+
+[libraries]
+# ---------- Build-script classpath ----------
+build-agp                         = { module = "com.android.tools.build:gradle",                      version.ref = "agp" }
+build-google-services             = { module = "com.google.gms:google-services",                      version.ref = "googleServices" }
+build-firebase-crashlytics-gradle = { module = "com.google.firebase:firebase-crashlytics-gradle",     version.ref = "firebaseCrashlyticsGradle" }
+build-firebase-perf-plugin        = { module = "com.google.firebase:perf-plugin",                     version.ref = "firebasePerfPlugin" }
+build-kotlin-gradle               = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin",           version.ref = "kotlin" }
+build-kotlin-compose              = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+build-detekt-gradle               = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin",    version.ref = "detekt" }
+build-ktlint-gradle               = { module = "org.jlleitschuh.gradle:ktlint-gradle",                version.ref = "ktlintGradle" }
+
+# ---------- AndroidX ----------
+androidx-appcompat                = { module = "androidx.appcompat:appcompat",       version.ref = "appcompat" }
+androidx-annotation               = { module = "androidx.annotation:annotation",     version.ref = "annotation" }
+androidx-activity-compose         = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+
+# ---------- Compose BOM + components (no version — resolved by BOM) ----------
+compose-bom                       = { module = "androidx.compose:compose-bom",                       version.ref = "composeBom" }
+compose-ui                        = { module = "androidx.compose.ui:ui" }
+compose-ui-tooling-preview        = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-ui-tooling                = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-test-manifest          = { module = "androidx.compose.ui:ui-test-manifest" }
+compose-material3                 = { module = "androidx.compose.material3:material3" }
+compose-material-icons-extended   = { module = "androidx.compose.material:material-icons-extended" }
+
+# ---------- Lifecycle ----------
+lifecycle-viewmodel-compose       = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleCompose" }
+lifecycle-runtime-compose         = { module = "androidx.lifecycle:lifecycle-runtime-compose",   version.ref = "lifecycleCompose" }
+
+# ---------- Material ----------
+material                          = { module = "com.google.android.material:material", version.ref = "material" }
+
+# ---------- Firebase BOM + components (no version — resolved by BOM) ----------
+firebase-bom                      = { module = "com.google.firebase:firebase-bom",        version.ref = "firebaseBom" }
+firebase-analytics                = { module = "com.google.firebase:firebase-analytics" }
+firebase-crashlytics              = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-perf                     = { module = "com.google.firebase:firebase-perf" }
+
+# ---------- Timber ----------
+timber                            = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
+
+# ---------- Coroutines ----------
+coroutines-android                = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-core                   = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core",    version.ref = "coroutines" }
+coroutines-test                   = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test",    version.ref = "coroutines" }
+
+# ---------- Test ----------
+junit                             = { module = "junit:junit",               version.ref = "junit" }
+androidx-test-core                = { module = "androidx.test:core",        version.ref = "androidxTestCore" }
+robolectric                       = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+truth                             = { module = "com.google.truth:truth",    version.ref = "truth" }
+mockk                             = { module = "io.mockk:mockk",            version.ref = "mockk" }

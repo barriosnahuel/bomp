@@ -15,7 +15,7 @@ detekt {
 ktlint {
     android = true
     outputToConsole = true
-    version = "1.6.0"
+    version = libs.versions.ktlint.get()
 }
 
 android {

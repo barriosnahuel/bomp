@@ -7,17 +7,17 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:9.1.1'
-        classpath 'com.google.gms:google-services:4.4.4'
+        classpath libs.build.agp
+        classpath libs.build.google.services
 
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.7'
-        classpath 'com.google.firebase:perf-plugin:2.0.2'
+        classpath libs.build.firebase.crashlytics.gradle
+        classpath libs.build.firebase.perf.plugin
 
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20'
-        classpath 'org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.3.20'
+        classpath libs.build.kotlin.gradle
+        classpath libs.build.kotlin.compose
 
-        classpath 'io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.8'
-        classpath 'org.jlleitschuh.gradle:ktlint-gradle:14.2.0'
+        classpath libs.build.detekt.gradle
+        classpath libs.build.ktlint.gradle
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
