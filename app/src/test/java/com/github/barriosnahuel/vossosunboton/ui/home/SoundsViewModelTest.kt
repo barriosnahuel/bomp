@@ -15,7 +15,6 @@ import org.junit.Before
 import org.junit.Test
 
 internal class SoundsViewModelTest : AbstractRobolectricTest() {
-
     @Before
     fun setUp() {
         mockkObject(PlayerControllerFactory)

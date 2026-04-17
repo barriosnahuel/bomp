@@ -10,5 +10,8 @@ import org.robolectric.annotation.Config
  */
 @Suppress("UnnecessaryAbstractClass")
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [Build.VERSION_CODES.M, Build.VERSION_CODES.TIRAMISU, Build.VERSION_CODES.VANILLA_ICE_CREAM], application = TestApplication::class)
+@Config(
+    sdk = [Build.VERSION_CODES.M, Build.VERSION_CODES.TIRAMISU, Build.VERSION_CODES.VANILLA_ICE_CREAM],
+    application = TestApplication::class,
+)
 internal abstract class AbstractRobolectricTest
