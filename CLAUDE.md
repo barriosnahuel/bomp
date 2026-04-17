@@ -99,6 +99,20 @@ All UI development and generated assets (store listing, What's New, changelogs) 
 
 Verify contrast when adding or changing colors. Use the [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) or the Material Theme Builder. The brand palette in `AppTheme.kt` was designed to meet AA across all color roles.
 
+## Labels
+
+Available labels for this repository. Apply exactly one `a:` label to every PR before merging. Do not call `gh label list` — use this table.
+
+| Label | When to use |
+|---|---|
+| `a:bug` | Issue reporting something broken |
+| `a:feature` | PR that adds new user-facing functionality |
+| `a:feature-request` | Issue requesting a feature not yet built |
+| `a:fix` | PR that corrects a reported bug |
+| `an:enhancement` | PR that improves existing functionality without adding new features |
+| `dependencies` | PR that updates library, plugin, or Gradle wrapper versions (applied automatically by Dependabot) |
+| `stale` | Issue or PR with no recent activity — candidate for closing |
+
 ## Changelog
 
 `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format:
