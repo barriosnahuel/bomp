@@ -42,7 +42,8 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         name: String,
         uri: String,
     ): Deferred<Int> {
-        val fileName = "Button-custom-" + System.currentTimeMillis() + ".mp3"
+        val sanitizedName = name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val fileName = "$sanitizedName-${System.currentTimeMillis()}.mp3"
         val targetFile = getFile(context, fileName)
 
         return GlobalScope.async(Dispatchers.IO) {
