@@ -140,6 +140,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         SoundsViewModel::class.java
             .getDeclaredField("_sounds")
             .also { it.isAccessible = true }
+            // Safe: _sounds is always MutableStateFlow<List<Sound>> — type parameter erased at runtime
             .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = sounds }
     }
 
