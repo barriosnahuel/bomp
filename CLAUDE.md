@@ -120,3 +120,4 @@ Available labels for this repository. Apply exactly one `a:` label to every PR b
 - Each entry is a single sentence starting with a capital letter, no trailing period
 - For dependency bumps, write one line summarising the overall bump (e.g. "Bumped all dependencies to latest stable"), not one line per library
 - After every commit, check whether the change is user-visible or architecturally significant; if so, update `## [unreleased]` before committing
+- Never add a `Fixed` entry for a bug introduced in the same `[unreleased]` cycle. If end-users never experienced the regression, it has no changelog entry — git history provides the traceability
