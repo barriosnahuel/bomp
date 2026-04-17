@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - KTLint migrated to JLLeitschuh plugin with KTLint 1.5.0.
 - Sound list is now sorted alphabetically across all tabs.
 - Share sheet filename for bundled sounds now shows the button name instead of an internal prefix.
+- Custom button audio files are now named after the user-provided sound name (non-alphanumeric chars replaced by underscores) instead of the generic "Button-custom-" prefix.
 
 ### Fixed
 - Bundled sounds no longer offer a swipe-to-delete gesture; the action is simply not available.
