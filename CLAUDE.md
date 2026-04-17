@@ -52,6 +52,20 @@ Dependency direction: `app` → `model`, `commons_android`, `commons_file`; `fea
 - `feature.share` — Sharing non-packaged audios to other apps
 - `feature.base` — Base classes, runtime permission handling
 
+## Activity smoke tests
+
+Every `Activity` in the `app` module must have a corresponding smoke test that verifies it reaches `Lifecycle.State.RESUMED` without crashing. Place it alongside the Activity in `app/src/test/`, extend `AbstractRobolectricTest`, and use:
+
+```kotlin
+ActivityScenario.launch(MyActivity::class.java).use { scenario ->
+    assertThat(scenario.state).isEqualTo(Lifecycle.State.RESUMED)
+}
+```
+
+Mock any singleton factories (e.g. `PlayerControllerFactory`) that would crash under Robolectric. See `LandingActivityTest` for the canonical example.
+
+**Dynamic feature modules** (e.g. `feature_addbutton`) cannot use Robolectric — Robolectric's `ShadowPackageParser` rejects split APKs (`Expected base APK, but found split`). Activities in those modules require instrumented tests if smoke coverage is needed.
+
 ## Code Quality
 
 All three linters run on CI and must pass:
