@@ -7,9 +7,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import org.junit.Before
 import org.junit.Test
-import org.robolectric.annotation.Config
 
-@Config(sdk = [android.os.Build.VERSION_CODES.S_V2])
 internal class SoundsViewModelTest : AbstractRobolectricTest() {
     @Before
     fun setUp() {
