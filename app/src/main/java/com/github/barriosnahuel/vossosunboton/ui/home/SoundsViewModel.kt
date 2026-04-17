@@ -2,7 +2,10 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -115,5 +118,14 @@ class SoundsViewModel(
         sound.isPlaying = false
         _playingSound.value = null
         _sounds.update { list -> list.map { if (it.name == sound.name) sound else it } }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory =
+            viewModelFactory {
+                initializer {
+                    SoundsViewModel(application = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]!!)
+                }
+            }
     }
 }

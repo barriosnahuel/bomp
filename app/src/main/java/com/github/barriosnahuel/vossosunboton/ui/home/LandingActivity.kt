@@ -10,7 +10,7 @@ import androidx.activity.viewModels
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
 class LandingActivity : ComponentActivity() {
-    private val viewModel: SoundsViewModel by viewModels()
+    private val viewModel: SoundsViewModel by viewModels { SoundsViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // The TopAppBar is always a dark violet in both light and dark modes, so status
