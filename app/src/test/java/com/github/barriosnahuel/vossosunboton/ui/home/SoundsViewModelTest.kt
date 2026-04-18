@@ -153,8 +153,9 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     fun `deleteSound when sound is playing stops playback`() {
         every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
         val viewModel = givenAViewModel()
-        val sound = Sound("custom", "custom.mp3", 0, isPlaying = true)
+        val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
+        viewModel.onPlayerStart(sound) // establece _playingSound como fuente autoritativa
 
         viewModel.deleteSound(sound)
 
@@ -165,8 +166,9 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     fun `restoreSound when deleted sound was playing restores it as not playing`() {
         every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
         val viewModel = givenAViewModel()
-        val sound = Sound("custom", "custom.mp3", 0, isPlaying = true)
+        val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
+        viewModel.onPlayerStart(sound) // establece _playingSound como fuente autoritativa
 
         viewModel.deleteSound(sound)
         viewModel.restoreSound()
@@ -249,6 +251,51 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             viewModel.onButtonSaved()
 
             viewModel.buttonSavedEvent.first()
+        }
+
+    @Test
+    fun `deleteSound stops playback and removes sound even when passed a stale copy with isPlaying false`() {
+        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        val viewModel = givenAViewModel()
+        val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
+        viewModel.injectSounds(listOf(sound.copy(isPlaying = true)))
+        viewModel.onPlayerStart(sound)
+
+        viewModel.deleteSound(sound)
+
+        verify { PlayerControllerFactory.instance.stopPlayingSound() }
+        assertThat(viewModel.sounds.value.none { it.name == sound.name }).isTrue()
+    }
+
+    @Test
+    fun `loadSounds does not restore a soft-deleted sound while its delete is pending`() {
+        val viewModel = givenAViewModel()
+        viewModel.selectTab(AppTab.EXPLORE)
+        val sound = viewModel.sounds.value.first()
+
+        viewModel.deleteSound(sound)
+        viewModel.selectTab(AppTab.FAVORITES)
+        viewModel.selectTab(AppTab.EXPLORE)
+
+        assertThat(viewModel.sounds.value.none { it.name == sound.name }).isTrue()
+    }
+
+    @Test
+    fun `sounds list preserves isPlaying state after switching tabs and returning`() =
+        runTest {
+            val viewModel = givenAViewModel()
+            viewModel.selectTab(AppTab.EXPLORE)
+            val playingSound = viewModel.sounds.value.first()
+
+            viewModel.onPlayerStart(playingSound)
+            viewModel.selectTab(AppTab.FAVORITES)
+            viewModel.selectTab(AppTab.EXPLORE)
+
+            assertThat(
+                viewModel.sounds.value
+                    .single { it.name == playingSound.name }
+                    .isPlaying,
+            ).isTrue()
         }
 
     @Test

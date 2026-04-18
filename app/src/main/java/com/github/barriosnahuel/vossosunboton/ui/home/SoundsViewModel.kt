@@ -77,16 +77,16 @@ class SoundsViewModel(
 
     fun deleteSound(sound: Sound) {
         val currentSounds = _sounds.value.toMutableList()
-        val position = currentSounds.indexOf(sound)
-        if (position == -1) return
+        val currentSound = currentSounds.find { it.name == sound.name } ?: return
+        val position = currentSounds.indexOf(currentSound)
 
-        if (sound.isPlaying) {
+        if (_playingSound.value?.name == sound.name) {
             PlayerControllerFactory.instance.stopPlayingSound()
         }
 
         currentSounds.removeAt(position)
         _sounds.value = currentSounds
-        _deletedSoundEvent.value = DeletedSoundEvent(sound.copy(isPlaying = false), position)
+        _deletedSoundEvent.value = DeletedSoundEvent(currentSound.copy(isPlaying = false), position)
     }
 
     fun restoreSound() {
@@ -122,11 +122,19 @@ class SoundsViewModel(
 
     private suspend fun loadSounds() {
         val allSounds = SoundDao().find(getApplication<Application>()).sortedBy { it.name.lowercase() }
+        val playingName = _playingSound.value?.name
+        val deletedName = _deletedSoundEvent.value?.sound?.name
         _sounds.update {
-            when (_selectedTab.value) {
-                AppTab.HOME -> allSounds.filter { !it.isBundled() }
-                AppTab.FAVORITES -> allSounds.filter { it.isFavorite }
-                AppTab.EXPLORE -> allSounds.filter { it.isBundled() }
+            val filtered =
+                when (_selectedTab.value) {
+                    AppTab.HOME -> allSounds.filter { !it.isBundled() }
+                    AppTab.FAVORITES -> allSounds.filter { it.isFavorite }
+                    AppTab.EXPLORE -> allSounds.filter { it.isBundled() }
+                }.filter { it.name != deletedName }
+            if (playingName == null) {
+                filtered
+            } else {
+                filtered.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
             }
         }
     }
