@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Custom button audio files are now named after the user-provided sound name (non-alphanumeric chars replaced by underscores) instead of the generic "Button-custom-" prefix.
 
 ### Fixed
+- Custom sound stops playing immediately when deleted instead of continuing until the track ends.
 - Bundled sounds no longer offer a swipe-to-delete gesture; the action is simply not available.
 - Scrolling-induced ghost playing state fixed by migrating to Compose state-driven rendering.
 - Crash when switching tabs mid-playback fixed by ViewModel-owned player state.
