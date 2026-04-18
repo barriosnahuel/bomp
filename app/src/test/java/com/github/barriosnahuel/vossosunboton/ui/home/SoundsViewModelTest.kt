@@ -160,6 +160,18 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `deleteSound when sound is not playing does not stop playback`() {
+        val controller = PlayerControllerFactory.instance
+        val viewModel = givenAViewModel()
+        val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
+        viewModel.injectSounds(listOf(sound))
+
+        viewModel.deleteSound(sound)
+
+        verify(exactly = 0) { controller.stopPlayingSound() }
+    }
+
+    @Test
     fun `clearDeleteEvent clears the delete event`() {
         val viewModel = givenAViewModel()
         val sound = Sound("test", file = "test.mp3")
