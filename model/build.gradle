@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 apply from: "$project.rootProject.projectDir/linters.gradle"
 
 android {
-    namespace 'com.github.barriosnahuel.vossosunboton.model'
+    namespace = 'com.github.barriosnahuel.vossosunboton.model'
 
     compileSdkVersion "android-37.0"
 
@@ -16,7 +16,7 @@ android {
         targetSdkVersion 37
     }
 
-    resourcePrefix 'model_'
+    resourcePrefix = 'model_'
 
     buildTypes {
         release {

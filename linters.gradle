@@ -20,7 +20,7 @@ ktlint {
 
 android {
     lint {
-        checkDependencies true
+        checkDependencies = true
         lintConfig = file("$project.rootProject.projectDir/config/android/android-lint.xml")
     }
 }

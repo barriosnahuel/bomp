@@ -3,7 +3,7 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply from: "$project.rootProject.projectDir/linters.gradle"
 
 android {
-    namespace 'com.github.barriosnahuel.vossosunboton.feature.addbutton'
+    namespace = 'com.github.barriosnahuel.vossosunboton.feature.addbutton'
 
     compileSdkVersion "android-37.0"
 
@@ -17,7 +17,7 @@ android {
         targetSdkVersion 37
     }
 
-    resourcePrefix 'feature_addbutton_'
+    resourcePrefix = 'feature_addbutton_'
 
     buildTypes {
         release {
@@ -27,7 +27,7 @@ android {
         }
     }
     buildFeatures {
-        compose true
+        compose = true
     }
 }
 

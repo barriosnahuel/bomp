@@ -7,6 +7,7 @@ import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
@@ -46,6 +47,7 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         val fileName = "$sanitizedName-${System.currentTimeMillis()}.mp3"
         val targetFile = getFile(context, fileName)
 
+        @OptIn(DelicateCoroutinesApi::class)
         return GlobalScope.async(Dispatchers.IO) {
             var feedbackMessage = com.github.barriosnahuel.vossosunboton.R.string.app_feedback_generic_error_contact_support
             try {
