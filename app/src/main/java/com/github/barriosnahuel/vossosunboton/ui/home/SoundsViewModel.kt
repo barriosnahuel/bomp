@@ -12,9 +12,12 @@ import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -31,7 +34,7 @@ class SoundsViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AndroidViewModel(application),
     PlayerControllerListener {
-    private val _selectedTab = MutableStateFlow(AppTab.EXPLORE)
+    private val _selectedTab = MutableStateFlow(AppTab.HOME)
     val selectedTab: StateFlow<AppTab> = _selectedTab.asStateFlow()
 
     private val _sounds = MutableStateFlow<List<Sound>>(emptyList())
@@ -42,6 +45,9 @@ class SoundsViewModel(
 
     private val _deletedSoundEvent = MutableStateFlow<DeletedSoundEvent?>(null)
     val deletedSoundEvent: StateFlow<DeletedSoundEvent?> = _deletedSoundEvent.asStateFlow()
+
+    private val _buttonSavedEvent = Channel<Unit>(Channel.BUFFERED)
+    val buttonSavedEvent: Flow<Unit> = _buttonSavedEvent.receiveAsFlow()
 
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
@@ -107,6 +113,11 @@ class SoundsViewModel(
 
     fun clearDeleteEvent() {
         _deletedSoundEvent.value = null
+    }
+
+    fun onButtonSaved() {
+        selectTab(AppTab.HOME)
+        _buttonSavedEvent.trySend(Unit)
     }
 
     private suspend fun loadSounds() {

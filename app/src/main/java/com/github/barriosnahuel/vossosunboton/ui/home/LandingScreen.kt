@@ -49,32 +49,17 @@ import kotlinx.coroutines.launch
 fun LandingScreen(viewModel: SoundsViewModel) {
     val sounds by viewModel.sounds.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
-    val deletedEvent by viewModel.deletedSoundEvent.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    val buttonDeletedMessage = stringResource(R.string.app_feedback_button_deleted)
-    val undoLabel = stringResource(R.string.app_undo)
     val tabBackStack = remember { mutableStateListOf<AppTab>() }
 
     BackHandler(enabled = tabBackStack.isNotEmpty()) {
         viewModel.selectTab(tabBackStack.removeAt(tabBackStack.lastIndex))
     }
 
-    LaunchedEffect(deletedEvent) {
-        if (deletedEvent == null) return@LaunchedEffect
-        val result =
-            snackbarHostState.showSnackbar(
-                message = buttonDeletedMessage,
-                actionLabel = undoLabel,
-                duration = SnackbarDuration.Long,
-            )
-        when (result) {
-            SnackbarResult.ActionPerformed -> viewModel.restoreSound()
-            SnackbarResult.Dismissed -> viewModel.confirmDelete(context)
-        }
-    }
+    SnackbarEffects(viewModel = viewModel, snackbarHostState = snackbarHostState)
 
     Scaffold(
         topBar = { AppTopBar() },
@@ -102,6 +87,41 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onDelete = { sound -> viewModel.deleteSound(sound) },
             onFavoriteClick = { sound -> viewModel.toggleFavorite(sound) },
         )
+    }
+}
+
+@Composable
+private fun SnackbarEffects(
+    viewModel: SoundsViewModel,
+    snackbarHostState: SnackbarHostState,
+) {
+    val deletedEvent by viewModel.deletedSoundEvent.collectAsState()
+    val context = LocalContext.current
+    val buttonDeletedMessage = stringResource(R.string.app_feedback_button_deleted)
+    val undoLabel = stringResource(R.string.app_undo)
+    val buttonSavedMessage = stringResource(R.string.app_feedback_button_saved)
+
+    LaunchedEffect(Unit) {
+        viewModel.buttonSavedEvent.collect {
+            snackbarHostState.showSnackbar(
+                message = buttonSavedMessage,
+                duration = SnackbarDuration.Short,
+            )
+        }
+    }
+
+    LaunchedEffect(deletedEvent) {
+        if (deletedEvent == null) return@LaunchedEffect
+        val result =
+            snackbarHostState.showSnackbar(
+                message = buttonDeletedMessage,
+                actionLabel = undoLabel,
+                duration = SnackbarDuration.Long,
+            )
+        when (result) {
+            SnackbarResult.ActionPerformed -> viewModel.restoreSound()
+            SnackbarResult.Dismissed -> viewModel.confirmDelete(context)
+        }
     }
 }
 

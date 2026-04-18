@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
 
-## \[unreleased]
+## \[unreleased] (v2.0.0)
 ### Added
 - Favorites: users can mark/unmark any custom button as favorite; a dedicated Favorites tab lists only marked buttons
 - Deeplinks: the app responds to `push-me://open/home`, `push-me://open/favorites`, and `push-me://open/explore` to navigate directly to a tab
@@ -33,7 +33,10 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Custom button audio files are now named after the user-provided sound name (non-alphanumeric chars replaced by underscores) instead of the generic "Button-custom-" prefix.
 
 ### Fixed
-- Custom sound stops playing immediately when deleted instead of continuing until the track ends.
+- The app now opens the Home tab on launch instead of the Search tab
+- After saving a button via the share intent, the app now navigates to the Home tab and shows a "Saved!" confirmation Snackbar instead of silently returning to the previous app
+- The Add Button screen no longer appears in the recent apps tray after saving
+- Custom sound stops playing immediately when deleted instead of continuing until the track ends
 - Bundled sounds no longer offer a swipe-to-delete gesture; the action is simply not available.
 - Scrolling-induced ghost playing state fixed by migrating to Compose state-driven rendering.
 - Crash when switching tabs mid-playback fixed by ViewModel-owned player state.
