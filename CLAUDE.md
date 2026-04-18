@@ -76,13 +76,6 @@ Mock any singleton factories (e.g. `PlayerControllerFactory`) that would crash u
 
 **Dynamic feature modules** (e.g. `feature_addbutton`) cannot use Robolectric — Robolectric's `ShadowPackageParser` rejects split APKs (`Expected base APK, but found split`). Activities in those modules require instrumented tests if smoke coverage is needed.
 
-## Code Quality
-
-All three linters run on CI and must pass:
-- **KtLint** — style (runs as part of `check`; auto-fix with `ktlintFormat`)
-- **Detekt** — static analysis (config: `config/detekt/detekt-config.yml`; max line length 150)
-- **Android Lint** — lint rules in `config/android/android-lint.xml`
-
 ## Setup Notes
 
 - Replace `app/google-services.json` with a real Firebase config. The included file is a placeholder, excluded from tracking via `git update-index --skip-worktree app/google-services.json`.
@@ -100,20 +93,18 @@ git update-index --skip-worktree app/google-services.json
 
 ## Pre-push checklist
 
+All three linters run on CI and must pass:
+- **KtLint** — style (runs as part of `check`; auto-fix with `ktlintFormat`)
+- **Detekt** — static analysis (config: `config/detekt/detekt-config.yml`; max line length 150)
+- **Android Lint** — lint rules in `config/android/android-lint.xml`
+
 Before pushing any branch, always run:
 
 ```bash
-./gradlew test && ./gradlew check -x test
+./gradlew check -x test && ./gradlew test
 ```
 
-This catches the same failures CI will report (unit tests, ktlint, detekt, checkstyle, Android lint) without waiting for a full CI run.
-
-## CI
-
-CircleCI runs three parallel jobs on PRs:
-1. **test** — `./gradlew test`
-2. **code-analysis** — `./gradlew check -x test` + `app:lintVitalRelease`
-3. **build** — assembles app and bundle (skips checks)
+This catches the same failures CI will report (ktlint, detekt, Android lint, unit tests) without waiting for a full CI run.
 
 ## Handoff notes
 
