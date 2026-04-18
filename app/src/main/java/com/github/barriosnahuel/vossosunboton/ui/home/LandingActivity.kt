@@ -1,5 +1,6 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -22,5 +23,22 @@ class LandingActivity : ComponentActivity() {
                 LandingScreen(viewModel = viewModel)
             }
         }
+        handleDeeplink(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleDeeplink(intent)
+    }
+
+    private fun handleDeeplink(intent: Intent) {
+        val uri = intent.data ?: return
+        val tab =
+            when (uri.path) {
+                "/home" -> AppTab.HOME
+                "/favorites" -> AppTab.FAVORITES
+                else -> AppTab.EXPLORE
+            }
+        viewModel.selectTab(tab)
     }
 }
