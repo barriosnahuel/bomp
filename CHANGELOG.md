@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### Fixed
 - After saving a button via the share intent, the app now navigates to the Home tab and shows a "Saved!" confirmation Snackbar instead of silently returning to the previous app
 - The Add Button screen no longer appears in the recent apps tray after saving
+- Custom sound stops playing immediately when deleted instead of continuing until the track ends
 - Bundled sounds no longer offer a swipe-to-delete gesture; the action is simply not available.
 - Scrolling-induced ghost playing state fixed by migrating to Compose state-driven rendering.
 - Crash when switching tabs mid-playback fixed by ViewModel-owned player state.

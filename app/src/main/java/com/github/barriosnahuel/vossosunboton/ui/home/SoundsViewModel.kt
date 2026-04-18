@@ -80,9 +80,13 @@ class SoundsViewModel(
         val position = currentSounds.indexOf(sound)
         if (position == -1) return
 
+        if (sound.isPlaying) {
+            PlayerControllerFactory.instance.stopPlayingSound()
+        }
+
         currentSounds.removeAt(position)
         _sounds.value = currentSounds
-        _deletedSoundEvent.value = DeletedSoundEvent(sound, position)
+        _deletedSoundEvent.value = DeletedSoundEvent(sound.copy(isPlaying = false), position)
     }
 
     fun restoreSound() {
