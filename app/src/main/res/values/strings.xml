@@ -4,6 +4,7 @@
     <string name="app_share_chooser_title">Share vía</string>
     <string name="app_undo">Undo!</string>
     <string name="app_feedback_button_deleted">Button deleted</string>
+    <string name="app_feedback_button_saved">Saved!</string>
 <string name="app_feedback_generic_error_contact_support">Oops! I did it again, please contact support</string>
     <string name="app_navigation_menu_item_home">Home</string>
     <string name="app_navigation_menu_item_search">Search</string>

@@ -23,12 +23,19 @@ class LandingActivity : ComponentActivity() {
                 LandingScreen(viewModel = viewModel)
             }
         }
-        handleDeeplink(intent)
+        handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
         handleDeeplink(intent)
+        if (intent.getBooleanExtra(EXTRA_BUTTON_SAVED, false)) {
+            viewModel.onButtonSaved()
+        }
     }
 
     private fun handleDeeplink(intent: Intent) {
@@ -40,5 +47,9 @@ class LandingActivity : ComponentActivity() {
                 else -> AppTab.EXPLORE
             }
         viewModel.selectTab(tab)
+    }
+
+    companion object {
+        const val EXTRA_BUTTON_SAVED = "extra_button_saved"
     }
 }

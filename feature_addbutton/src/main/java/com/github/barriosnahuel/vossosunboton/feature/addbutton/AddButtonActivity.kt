@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
 class AddButtonActivity : ComponentActivity() {
@@ -35,7 +36,15 @@ class AddButtonActivity : ComponentActivity() {
                 AddButtonScreen(
                     context = this,
                     uri = uri,
-                    onSaved = { finish() },
+                    onSaved = {
+                        startActivity(
+                            Intent(this, LandingActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                putExtra(LandingActivity.EXTRA_BUTTON_SAVED, true)
+                            },
+                        )
+                        finishAndRemoveTask()
+                    },
                     onNavigateUp = { finish() },
                 )
             }

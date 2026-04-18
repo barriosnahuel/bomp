@@ -86,6 +86,15 @@ All three linters run on CI and must pass:
 ## Setup Notes
 
 - Replace `app/google-services.json` with a real Firebase config. The included file is a placeholder, excluded from tracking via `git update-index --skip-worktree app/google-services.json`.
+
+## Worktree setup
+
+After creating a new worktree, always run these two commands to replace the dummy `google-services.json` with the real one from the main worktree:
+
+```bash
+cp "$(git rev-parse --git-common-dir)/../app/google-services.json" app/google-services.json
+git update-index --skip-worktree app/google-services.json
+```
 - Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` and `secure.properties` (with `key.alias`, `key.password`, `store.password`) in the project root — not committed.
 - Debug builds use the included debug keystore and work without the above.
 
@@ -123,9 +132,11 @@ All UI development and generated assets (store listing, What's New, changelogs) 
 
 Verify contrast when adding or changing colors. Use the [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) or the Material Theme Builder. The brand palette in `AppTheme.kt` was designed to meet AA across all color roles.
 
-## Labels
+## Labels and milestone
 
-Available labels for this repository. Apply exactly one `a:` label to every PR before merging. Do not call `gh label list` — use this table.
+Apply exactly one `a:` label to every PR before merging. Do not call `gh label list` — use this table.
+
+For the milestone, read the `## [unreleased]` line in `CHANGELOG.md` — the version in parentheses is the milestone name (e.g. `(v2.0.0)` → milestone `v2.0.0`). Do not call `gh api repos/.../milestones`.
 
 | Label | When to use |
 |---|---|

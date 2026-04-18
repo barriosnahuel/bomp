@@ -3,6 +3,8 @@ complexity:
     functionThreshold: 7
     constructorThreshold: 7
     ignoreDefaultParameters: true
+  TooManyFunctions:
+    thresholdInClasses: 12
 
 style:
   active: true

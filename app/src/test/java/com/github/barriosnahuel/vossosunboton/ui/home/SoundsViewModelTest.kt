@@ -10,7 +10,9 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -188,6 +190,25 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
                 .isFavorite,
         ).isFalse()
     }
+
+    @Test
+    fun `onButtonSaved selects HOME tab`() {
+        val viewModel = givenAViewModel()
+
+        viewModel.onButtonSaved()
+
+        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.HOME)
+    }
+
+    @Test
+    fun `onButtonSaved emits buttonSavedEvent`() =
+        runTest {
+            val viewModel = givenAViewModel()
+
+            viewModel.onButtonSaved()
+
+            viewModel.buttonSavedEvent.first()
+        }
 
     @Test
     fun `sounds are sorted alphabetically`() {
