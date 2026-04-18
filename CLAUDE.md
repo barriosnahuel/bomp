@@ -52,6 +52,16 @@ Dependency direction: `app` → `model`, `commons_android`, `commons_file`; `fea
 - `feature.share` — Sharing non-packaged audios to other apps
 - `feature.base` — Base classes, runtime permission handling
 
+## Bug fixes — TDD workflow
+
+When the user reports a bug or says we are going to fix a bug, always follow Test-Driven Development:
+
+1. **Write a failing test first** that reproduces the bug. Run it to confirm it fails for the right reason.
+2. **Fix the production code** with the minimum change needed to make the test pass.
+3. **Run the full test suite** (`./gradlew test`) to verify nothing regressed.
+
+Skip TDD only when the bug lives exclusively in UI rendering or platform wiring that cannot be exercised by unit or Robolectric tests (e.g. a pure layout glitch). In that case, note why TDD was skipped.
+
 ## Activity smoke tests
 
 Every `Activity` in the `app` module must have a corresponding smoke test that verifies it reaches `Lifecycle.State.RESUMED` without crashing. Place it alongside the Activity in `app/src/test/`, extend `AbstractRobolectricTest`, and use:
