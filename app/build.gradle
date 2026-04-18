@@ -6,7 +6,7 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply from: "$project.rootProject.projectDir/linters.gradle"
 
 android {
-    namespace 'com.github.barriosnahuel.vossosunboton'
+    namespace = 'com.github.barriosnahuel.vossosunboton'
 
     compileSdkVersion "android-37.0"
 
@@ -23,7 +23,7 @@ android {
         versionName '2.0.0'
     }
 
-    resourcePrefix 'app_'
+    resourcePrefix = 'app_'
 
     signingConfigs {
         release {
@@ -69,17 +69,17 @@ android {
 
         release {
             minifyEnabled true
-            shrinkResources true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            signingConfig = signingConfigs.release
         }
     }
 
     dynamicFeatures = [":feature_addbutton"]
 
     buildFeatures {
-        buildConfig true
-        compose true
+        buildConfig = true
+        compose = true
     }
 
 }

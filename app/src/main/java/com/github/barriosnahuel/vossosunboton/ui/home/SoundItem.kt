@@ -43,10 +43,7 @@ fun SoundItem(
         SoundCard(sound = sound, onPlayClick = onPlayClick, onShareClick = onShareClick)
         return
     }
-    val dismissState =
-        rememberSwipeToDismissBoxState(
-            confirmValueChange = { it != SwipeToDismissBoxValue.Settled },
-        )
+    val dismissState = rememberSwipeToDismissBoxState()
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
             onDelete()

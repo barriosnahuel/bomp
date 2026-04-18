@@ -8,7 +8,7 @@ import androidx.annotation.RawRes
 data class Sound(
     val name: String,
     val file: String?,
-    @RawRes val rawRes: Int,
+    @field:RawRes @param:RawRes val rawRes: Int,
     val isPlaying: Boolean,
 ) {
     constructor(name: String, file: String?) : this(name, file, 0, false)

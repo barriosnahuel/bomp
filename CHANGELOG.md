@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Tests for `SoundsViewModel` covering playback state and delete/restore flows.
 
 ### Changed
+- Resolved all Kotlin compiler and Gradle DSL deprecation warnings for a clean build log
 - `SoundsViewModel` now loads sounds on a background thread (`Dispatchers.IO`) to avoid blocking the main thread on startup.
 - Centralised all dependency and plugin versions in `gradle/libs.versions.toml` (Gradle version catalog).
 - Replaced placeholder color palette with a full WCAG 2.2 AA–compliant brand identity (Deep Violet / Vivid Rose / Amber) covering all Material3 color roles for light and dark modes.
