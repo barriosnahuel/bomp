@@ -24,6 +24,7 @@ public class SoundDao {
 
     private static final String SOUNDS_NAME = "sounds.name";
     private static final String SOUNDS_FILE_NAME_PREFFIX = "sounds.file.";
+    private static final String SOUNDS_FAVORITE_PREFFIX = "sounds.favorite.";
     private final Storage storage;
 
     /**
@@ -55,12 +56,22 @@ public class SoundDao {
 
         for (final String eachSoundName : names) {
             final String fileName = storage.get(context, SOUNDS_FILE_NAME_PREFFIX + eachSoundName);
-            sounds.add(new Sound(eachSoundName, fileName));
+            final boolean isFavorite = "true".equals(storage.get(context, SOUNDS_FAVORITE_PREFFIX + eachSoundName));
+            sounds.add(new Sound(eachSoundName, fileName, 0, false, isFavorite));
         }
 
         sounds.addAll(PackagedAudios.get(context));
 
         return sounds;
+    }
+
+    /**
+     * @param context    The execution context.
+     * @param soundName  Name of the sound to update.
+     * @param isFavorite Whether the sound is a favorite.
+     */
+    public void saveFavorite(final Context context, final String soundName, final boolean isFavorite) {
+        storage.save(context, SOUNDS_FAVORITE_PREFFIX + soundName, String.valueOf(isFavorite));
     }
 
     /**
@@ -82,6 +93,7 @@ public class SoundDao {
             Timber.i("Button file successfully deleted. Button: %s", sound.getName());
             deleteButtonKey(context, sound.getName());
             deleteButtonKeyFileMapping(context, sound.getName());
+            storage.remove(context, SOUNDS_FAVORITE_PREFFIX + sound.getName());
         } else {
             Timber.e("Button could NOT be deleted. Button: %s", sound.getName());
         }

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -38,9 +40,10 @@ fun SoundItem(
     onPlayClick: () -> Unit,
     onShareClick: () -> Unit,
     onDelete: () -> Unit,
+    onFavoriteClick: () -> Unit,
 ) {
     if (sound.isBundled()) {
-        SoundCard(sound = sound, onPlayClick = onPlayClick, onShareClick = onShareClick)
+        SoundCard(sound = sound, onPlayClick = onPlayClick, onShareClick = onShareClick, onFavoriteClick = onFavoriteClick)
         return
     }
     val dismissState = rememberSwipeToDismissBoxState()
@@ -53,7 +56,7 @@ fun SoundItem(
         state = dismissState,
         backgroundContent = { SwipeDeleteBackground(dismissState) },
     ) {
-        SoundCard(sound = sound, onPlayClick = onPlayClick, onShareClick = onShareClick)
+        SoundCard(sound = sound, onPlayClick = onPlayClick, onShareClick = onShareClick, onFavoriteClick = onFavoriteClick)
     }
 }
 
@@ -90,6 +93,7 @@ private fun SoundCard(
     sound: Sound,
     onPlayClick: () -> Unit,
     onShareClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
 ) {
     Card(
         modifier =
@@ -121,6 +125,16 @@ private fun SoundCard(
                 )
             }
             if (!sound.isBundled()) {
+                IconButton(onClick = onFavoriteClick) {
+                    Icon(
+                        imageVector = if (sound.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription =
+                            stringResource(
+                                if (sound.isFavorite) R.string.app_remove_from_favorites else R.string.app_add_to_favorites,
+                            ),
+                        tint = if (sound.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
                 IconButton(onClick = onShareClick) {
                     Icon(
                         imageVector = Icons.Default.Share,

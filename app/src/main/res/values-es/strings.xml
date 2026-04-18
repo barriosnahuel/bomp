@@ -8,4 +8,6 @@
     <string name="app_navigation_menu_item_home">Inicio</string>
     <string name="app_navigation_menu_item_search">Buscar</string>
     <string name="app_navigation_menu_item_favourites">Favoritos</string>
+    <string name="app_add_to_favorites">Agregar a favoritos</string>
+    <string name="app_remove_from_favorites">Quitar de favoritos</string>
 </resources>

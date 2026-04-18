@@ -160,6 +160,36 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `toggleFavorite marks a sound as favorite`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", file = "test.mp3")
+        viewModel.injectSounds(listOf(sound))
+
+        viewModel.toggleFavorite(sound)
+
+        assertThat(
+            viewModel.sounds.value
+                .single { it.name == "test" }
+                .isFavorite,
+        ).isTrue()
+    }
+
+    @Test
+    fun `toggleFavorite on a favorite sound removes it from favorites`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", "test.mp3", 0, false, isFavorite = true)
+        viewModel.injectSounds(listOf(sound))
+
+        viewModel.toggleFavorite(sound)
+
+        assertThat(
+            viewModel.sounds.value
+                .single { it.name == "test" }
+                .isFavorite,
+        ).isFalse()
+    }
+
+    @Test
     fun `sounds are sorted alphabetically`() {
         val viewModel = givenAViewModel()
         val sounds = viewModel.sounds.value

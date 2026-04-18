@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased]
 ### Added
+- Favorites: users can mark/unmark any custom button as favorite; a dedicated Favorites tab lists only marked buttons
+- Deeplinks: the app responds to `push-me://open/home`, `push-me://open/favorites`, and `push-me://open/explore` to navigate directly to a tab
+- Back navigation now follows the actual tab history instead of always returning to Explore
 - Jetpack Compose UI replacing all Fragments, RecyclerViews and XML layouts.
 - `SoundsViewModel` with `StateFlow` for reactive UI state management.
 - Back press navigates from Home/Favorites to Explore instead of exiting the app.

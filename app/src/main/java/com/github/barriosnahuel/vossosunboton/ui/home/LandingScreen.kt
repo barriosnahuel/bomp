@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -55,9 +56,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val context = LocalContext.current
     val buttonDeletedMessage = stringResource(R.string.app_feedback_button_deleted)
     val undoLabel = stringResource(R.string.app_undo)
+    val tabBackStack = remember { mutableStateListOf<AppTab>() }
 
-    BackHandler(enabled = selectedTab != AppTab.EXPLORE) {
-        viewModel.selectTab(AppTab.EXPLORE)
+    BackHandler(enabled = tabBackStack.isNotEmpty()) {
+        viewModel.selectTab(tabBackStack.removeAt(tabBackStack.lastIndex))
     }
 
     LaunchedEffect(deletedEvent) {
@@ -83,6 +85,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     if (tab == selectedTab) {
                         coroutineScope.launch { listState.animateScrollToItem(0) }
                     } else {
+                        tabBackStack.add(selectedTab)
                         viewModel.selectTab(tab)
                     }
                 },
@@ -97,6 +100,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onPlayClick = { sound -> viewModel.playOrStop(sound) },
             onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
             onDelete = { sound -> viewModel.deleteSound(sound) },
+            onFavoriteClick = { sound -> viewModel.toggleFavorite(sound) },
         )
     }
 }
@@ -164,6 +168,7 @@ private fun SoundsList(
     onPlayClick: (Sound) -> Unit,
     onShareClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
+    onFavoriteClick: (Sound) -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -176,6 +181,7 @@ private fun SoundsList(
                     onPlayClick = { onPlayClick(sound) },
                     onShareClick = { onShareClick(sound) },
                     onDelete = { onDelete(sound) },
+                    onFavoriteClick = { onFavoriteClick(sound) },
                 )
             }
         }

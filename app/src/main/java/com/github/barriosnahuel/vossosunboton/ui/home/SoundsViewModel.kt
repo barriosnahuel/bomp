@@ -53,6 +53,14 @@ class SoundsViewModel(
         viewModelScope.launch(ioDispatcher) { loadSounds() }
     }
 
+    fun toggleFavorite(sound: Sound) {
+        val updated = sound.copy(isFavorite = !sound.isFavorite)
+        _sounds.update { list -> list.map { if (it.name == sound.name) updated else it } }
+        viewModelScope.launch(ioDispatcher) {
+            SoundDao().saveFavorite(getApplication(), sound.name, updated.isFavorite)
+        }
+    }
+
     fun playOrStop(sound: Sound) {
         if (sound.isPlaying) {
             PlayerControllerFactory.instance.stopPlayingSound()
@@ -102,7 +110,7 @@ class SoundsViewModel(
         _sounds.update {
             when (_selectedTab.value) {
                 AppTab.HOME -> allSounds.filter { !it.isBundled() }
-                AppTab.FAVORITES -> allSounds.filter { !it.isBundled() }
+                AppTab.FAVORITES -> allSounds.filter { it.isFavorite }
                 AppTab.EXPLORE -> allSounds.filter { it.isBundled() }
             }
         }
