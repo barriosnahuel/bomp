@@ -34,7 +34,7 @@ class SoundsViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AndroidViewModel(application),
     PlayerControllerListener {
-    private val _selectedTab = MutableStateFlow(AppTab.EXPLORE)
+    private val _selectedTab = MutableStateFlow(AppTab.HOME)
     val selectedTab: StateFlow<AppTab> = _selectedTab.asStateFlow()
 
     private val _sounds = MutableStateFlow<List<Sound>>(emptyList())

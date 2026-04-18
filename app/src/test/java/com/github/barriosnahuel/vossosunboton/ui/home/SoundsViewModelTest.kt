@@ -31,10 +31,10 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `initial tab is EXPLORE`() {
+    fun `initial tab is HOME`() {
         val viewModel = givenAViewModel()
 
-        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.EXPLORE)
+        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.HOME)
     }
 
     @Test
