@@ -4,60 +4,117 @@ orbs:
   android: circleci/android@3.2.0
   # https://circleci.com/developer/orbs/orb/circleci/android for latest version
 jobs:
+  "compile":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+      resource_class: medium+
+    steps:
+      - checkout
+      - android/restore-gradle-cache
+      - run:
+          name: "Compile Debug and Release Sources"
+          command: ./gradlew compileDebugSources compileReleaseSources
+      - android/save-gradle-cache
+      - persist_to_workspace:
+          root: .
+          paths:
+            - "*/build"
+            - ".gradle"
+
+  "detekt":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+    steps:
+      - checkout
+      - android/restore-gradle-cache
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Run Detekt"
+          command: ./gradlew detekt
+      - store_artifacts:
+          path: "app/build/reports/detekt/detekt.html"
+
+  "ktlint":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+    steps:
+      - checkout
+      - android/restore-gradle-cache
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Run ktlint"
+          command: ./gradlew ktlintCheck
+
+  "lint":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+    steps:
+      - checkout
+      - android/restore-gradle-cache
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Run Android Lint"
+          command: ./gradlew lint app:lintRelease app:lintVitalRelease
+      - store_artifacts:
+          path: "app/build/reports/lint-results-debug.html"
+      - store_artifacts:
+          path: "app/build/reports/lint-results-release.html"
+
   "test":
     executor:
       name: android/android_docker
       tag: "2026.03"
     steps:
       - checkout
+      - android/restore-gradle-cache
+      - attach_workspace:
+          at: .
       - run:
           name: "Run Tests"
           command: ./gradlew test
       - store_artifacts:
           path: "app/build/reports/tests/"
-  "code-analysis":
-    executor:
-      name: android/android_docker
-      tag: "2026.03"
-    steps:
-      - checkout
-      - run:
-          name: "Run Code Analyzers"
-          command: ./gradlew check -x test
-      - run:
-          name: "Run Release Lint"
-          command: ./gradlew app:lintRelease
-      - store_artifacts:
-          path: "app/build/reports/lint-results-debug.html"
-      - store_artifacts:
-          path: "app/build/reports/lint-results-release.html"
-      - store_artifacts:
-          path: "app/build/reports/detekt/detekt.html"
-  "bundle-debug":
+
+  "bundle":
     executor:
       name: android/android_docker
       tag: "2026.03"
       resource_class: medium+
     steps:
       - checkout
+      - android/restore-gradle-cache
+      - attach_workspace:
+          at: .
       - run:
-          name: "Bundle Debug"
-          command: ./gradlew app:bundleDebug
-  "bundle-release":
-    executor:
-      name: android/android_docker
-      tag: "2026.03"
-      resource_class: medium+
-    steps:
-      - checkout
-      - run:
-          name: "Bundle Release"
-          command: ./gradlew app:bundleRelease -x lintVitalRelease -x uploadCrashlyticsMappingFileRelease
+          name: "Bundle Debug and Release"
+          command: ./gradlew app:bundleDebug app:bundleRelease -x lintVitalRelease -x uploadCrashlyticsMappingFileRelease
+
 workflows:
   version: 2.1
   "Pull Requests Workflow":
     jobs:
-      - test
-      - code-analysis
-      - bundle-debug
-      - bundle-release
+      - compile
+      - detekt:
+          requires:
+            - compile
+      - ktlint:
+          requires:
+            - compile
+      - lint:
+          requires:
+            - compile
+      - test:
+          requires:
+            - detekt
+            - ktlint
+            - lint
+      - bundle:
+          requires:
+            - test
