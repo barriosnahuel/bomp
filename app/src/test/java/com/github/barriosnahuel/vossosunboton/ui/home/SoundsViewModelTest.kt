@@ -75,8 +75,9 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         viewModel.onPlayerStart(sound)
 
-        assertThat(viewModel.playingSound.value).isEqualTo(sound)
-        assertThat(sound.isPlaying).isTrue()
+        assertThat(viewModel.playingSound.value?.name).isEqualTo(sound.name)
+        assertThat(viewModel.playingSound.value?.isPlaying).isTrue()
+        assertThat(sound.isPlaying).isFalse()
     }
 
     @Test
@@ -89,6 +90,38 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         assertThat(viewModel.playingSound.value).isNull()
         assertThat(sound.isPlaying).isFalse()
+    }
+
+    @Test
+    fun `onPlayerStart updates sounds list with isPlaying true without mutating original sound`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", rawRes = 1)
+        viewModel.injectSounds(listOf(sound))
+
+        viewModel.onPlayerStart(sound)
+
+        assertThat(
+            viewModel.sounds.value
+                .single { it.name == "test" }
+                .isPlaying,
+        ).isTrue()
+        assertThat(sound.isPlaying).isFalse()
+    }
+
+    @Test
+    fun `onPlayerStop updates sounds list with isPlaying false without mutating original sound`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", null, 1, isPlaying = true)
+        viewModel.injectSounds(listOf(sound))
+
+        viewModel.onPlayerStop(sound)
+
+        assertThat(
+            viewModel.sounds.value
+                .single { it.name == "test" }
+                .isPlaying,
+        ).isFalse()
+        assertThat(sound.isPlaying).isTrue()
     }
 
     @Test
