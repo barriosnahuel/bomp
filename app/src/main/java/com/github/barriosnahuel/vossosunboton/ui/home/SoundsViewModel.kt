@@ -80,7 +80,7 @@ class SoundsViewModel(
 
         currentSounds.removeAt(position)
         _sounds.value = currentSounds
-        _deletedSoundEvent.value = DeletedSoundEvent(sound, position)
+        _deletedSoundEvent.value = DeletedSoundEvent(sound.copy(isPlaying = false), position)
     }
 
     fun restoreSound() {
