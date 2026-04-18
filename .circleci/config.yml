@@ -11,11 +11,11 @@ jobs:
       resource_class: medium+
     steps:
       - checkout
-      - android/restore-gradle-cache
+      - android/restore_gradle_cache
       - run:
           name: "Compile Debug and Release Sources"
           command: ./gradlew compileDebugSources compileReleaseSources
-      - android/save-gradle-cache
+      - android/save_gradle_cache
       - persist_to_workspace:
           root: .
           paths:
@@ -28,7 +28,7 @@ jobs:
       tag: "2026.03"
     steps:
       - checkout
-      - android/restore-gradle-cache
+      - android/restore_gradle_cache
       - attach_workspace:
           at: .
       - run:
@@ -43,7 +43,7 @@ jobs:
       tag: "2026.03"
     steps:
       - checkout
-      - android/restore-gradle-cache
+      - android/restore_gradle_cache
       - attach_workspace:
           at: .
       - run:
@@ -56,7 +56,7 @@ jobs:
       tag: "2026.03"
     steps:
       - checkout
-      - android/restore-gradle-cache
+      - android/restore_gradle_cache
       - attach_workspace:
           at: .
       - run:
@@ -73,7 +73,7 @@ jobs:
       tag: "2026.03"
     steps:
       - checkout
-      - android/restore-gradle-cache
+      - android/restore_gradle_cache
       - attach_workspace:
           at: .
       - run:
@@ -89,7 +89,7 @@ jobs:
       resource_class: medium+
     steps:
       - checkout
-      - android/restore-gradle-cache
+      - android/restore_gradle_cache
       - attach_workspace:
           at: .
       - run:
