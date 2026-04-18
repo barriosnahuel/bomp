@@ -109,15 +109,15 @@ class SoundsViewModel(
     }
 
     override fun onPlayerStart(sound: Sound) {
-        sound.isPlaying = true
-        _playingSound.value = sound
-        _sounds.update { list -> list.map { if (it.name == sound.name) sound else it } }
+        val playingSound = sound.copy(isPlaying = true)
+        _playingSound.value = playingSound
+        _sounds.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
     }
 
     override fun onPlayerStop(sound: Sound) {
-        sound.isPlaying = false
+        val stoppedSound = sound.copy(isPlaying = false)
         _playingSound.value = null
-        _sounds.update { list -> list.map { if (it.name == sound.name) sound else it } }
+        _sounds.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
     }
 
     companion object {

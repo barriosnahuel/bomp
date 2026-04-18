@@ -9,7 +9,7 @@ data class Sound(
     val name: String,
     val file: String?,
     @RawRes val rawRes: Int,
-    var isPlaying: Boolean,
+    val isPlaying: Boolean,
 ) {
     constructor(name: String, file: String?) : this(name, file, 0, false)
     constructor(
