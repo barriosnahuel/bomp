@@ -23,9 +23,9 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -46,7 +46,16 @@ fun SoundItem(
         SoundCard(sound = sound, onPlayClick = onPlayClick, onShareClick = onShareClick, onFavoriteClick = onFavoriteClick)
         return
     }
-    val dismissState = rememberSwipeToDismissBoxState()
+    // rememberSaveable (used by rememberSwipeToDismissBoxState) restores the dismissed state
+    // when the item re-enters the composition after undo, immediately re-triggering onDelete.
+    // remember (no persistence) ensures the state always starts at Settled on re-entry.
+    val dismissState =
+        remember {
+            SwipeToDismissBoxState(
+                initialValue = SwipeToDismissBoxValue.Settled,
+                positionalThreshold = { totalDistance -> totalDistance * 0.5f },
+            )
+        }
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
             onDelete()
