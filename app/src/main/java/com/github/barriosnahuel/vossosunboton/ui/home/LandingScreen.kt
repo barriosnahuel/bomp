@@ -18,8 +18,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ViewComfyAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -57,6 +59,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val sounds by viewModel.sounds.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
+    val isSearchVisible by viewModel.isSearchVisible.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
+    val isSearchPending by viewModel.isSearchPending.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -85,6 +91,14 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { viewModel.showSearch() }) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = stringResource(R.string.app_search),
+                )
+            }
+        },
     ) { innerPadding ->
         SoundsList(
             sounds = sounds,
@@ -97,6 +111,25 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
             onDelete = { sound -> viewModel.deleteSound(sound) },
             onFavoriteClick = { sound -> viewModel.toggleFavorite(sound) },
+        )
+    }
+
+    if (isSearchVisible) {
+        SearchOverlay(
+            query = searchQuery,
+            results = searchResults,
+            isSearchPending = isSearchPending,
+            playbackProgress = playbackProgress,
+            onQueryChange = viewModel::onSearchQueryChange,
+            onClose = viewModel::hideSearch,
+            onPlayClick = viewModel::playOrStop,
+            onSeek = viewModel::seekTo,
+            onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
+            onFavoriteClick = viewModel::toggleFavorite,
+            onDelete = { sound ->
+                viewModel.hideSearch()
+                viewModel.deleteSound(sound)
+            },
         )
     }
 }

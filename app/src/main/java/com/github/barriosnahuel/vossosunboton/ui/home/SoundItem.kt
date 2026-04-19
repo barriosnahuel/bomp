@@ -57,6 +57,7 @@ fun SoundItem(
     onShareClick: () -> Unit,
     onDelete: () -> Unit,
     onFavoriteClick: () -> Unit,
+    originLabel: String? = null,
 ) {
     if (sound.isBundled()) {
         SoundCard(
@@ -66,6 +67,7 @@ fun SoundItem(
             onSeek = onSeek,
             onShareClick = onShareClick,
             onFavoriteClick = onFavoriteClick,
+            originLabel = originLabel,
         )
         return
     }
@@ -95,6 +97,7 @@ fun SoundItem(
             onSeek = onSeek,
             onShareClick = onShareClick,
             onFavoriteClick = onFavoriteClick,
+            originLabel = originLabel,
         )
     }
 }
@@ -135,6 +138,7 @@ private fun SoundCard(
     onSeek: (Int) -> Unit,
     onShareClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    originLabel: String? = null,
 ) {
     var sliderPosition by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
@@ -166,12 +170,20 @@ private fun SoundCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = sound.name,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = sound.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (originLabel != null) {
+                        Text(
+                            text = originLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                        )
+                    }
+                }
                 if (!sound.isBundled()) {
                     IconButton(onClick = onFavoriteClick) {
                         Icon(

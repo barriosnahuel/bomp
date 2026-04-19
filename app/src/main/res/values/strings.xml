@@ -16,4 +16,14 @@
     <string name="app_date_today">Today</string>
     <string name="app_date_yesterday">Yesterday</string>
     <string name="app_error_playback_failed">Could not play this audio</string>
+    <string name="app_search">Search</string>
+    <string name="app_search_hint">Search sounds…</string>
+    <string name="app_search_close">Close search</string>
+    <string name="app_search_initial_headline">What sound are we looking for?</string>
+    <string name="app_search_initial_subtext">You can search by audio name.</string>
+    <string name="app_search_empty_headline">Absolute silence…</string>
+    <string name="app_search_empty_subtext">Looks like this audio sticker doesn\'t exist yet. Your collection has a gap only you can fill.</string>
+    <string name="app_search_origin_home">Home</string>
+    <string name="app_search_origin_explore">Explore</string>
+    <string name="app_search_origin_home_and_favorites">Home · Favorites</string>
 </resources>
