@@ -238,20 +238,32 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     fun `onButtonSaved selects HOME tab`() {
         val viewModel = givenAViewModel()
 
-        viewModel.onButtonSaved()
+        viewModel.onButtonSaved("test")
 
         assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.HOME)
     }
 
     @Test
-    fun `onButtonSaved emits buttonSavedEvent`() =
+    fun `onButtonSaved emits buttonSavedEvent with the button name`() =
         runTest {
             val viewModel = givenAViewModel()
 
-            viewModel.onButtonSaved()
+            viewModel.onButtonSaved("Juancho")
 
-            viewModel.buttonSavedEvent.first()
+            assertThat(viewModel.buttonSavedEvent.first()).isEqualTo("Juancho")
         }
+
+    @Test
+    fun `toggleFavorite in FAVORITES tab removes unfavorited sound from list`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", "test.mp3", 0, false, isFavorite = true)
+        viewModel.injectSounds(listOf(sound))
+        viewModel.selectTab(AppTab.FAVORITES)
+
+        viewModel.toggleFavorite(sound)
+
+        assertThat(viewModel.sounds.value.none { it.name == "test" }).isTrue()
+    }
 
     @Test
     fun `deleteSound stops playback and removes sound even when passed a stale copy with isPlaying false`() {

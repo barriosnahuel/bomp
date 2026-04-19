@@ -1,4 +1,4 @@
 <resources>
     <string name="app_feature_addbutton_feature_name_dynamic_feature" translatable="false">Save as button</string>
-    <string name="app_feature_addbutton_activity_label_dynamic_feature">Save as button</string>
+    <string name="app_feature_addbutton_activity_label_dynamic_feature">Save button</string>
 </resources>

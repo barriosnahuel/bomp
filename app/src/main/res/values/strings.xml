@@ -4,16 +4,16 @@
     <string name="app_share_chooser_title">Share vía</string>
     <string name="app_undo">Undo!</string>
     <string name="app_feedback_button_deleted">Button deleted</string>
-    <string name="app_feedback_button_saved">Saved!</string>
+    <string name="app_feedback_button_saved">%1$s is now yours!</string>
 <string name="app_feedback_generic_error_contact_support">Oops! I did it again, please contact support</string>
     <string name="app_navigation_menu_item_home">Home</string>
-    <string name="app_navigation_menu_item_search">Search</string>
+    <string name="app_navigation_menu_item_explore">Explore</string>
     <string name="app_navigation_menu_item_favourites">Favorites</string>
     <string name="app_add_to_favorites">Add to favorites</string>
     <string name="app_remove_from_favorites">Remove from favorites</string>
     <string name="app_play">Play</string>
     <string name="app_pause">Pause</string>
-    <string name="date_today">Today</string>
-    <string name="date_yesterday">Yesterday</string>
+    <string name="app_date_today">Today</string>
+    <string name="app_date_yesterday">Yesterday</string>
     <string name="app_error_playback_failed">Could not play this audio</string>
 </resources>

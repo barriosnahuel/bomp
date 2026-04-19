@@ -36,11 +36,12 @@ class AddButtonActivity : ComponentActivity() {
                 AddButtonScreen(
                     context = this,
                     uri = uri,
-                    onSaved = {
+                    onSaved = { name ->
                         startActivity(
                             Intent(this, LandingActivity::class.java).apply {
                                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                                 putExtra(LandingActivity.EXTRA_BUTTON_SAVED, true)
+                                putExtra(LandingActivity.EXTRA_BUTTON_NAME, name)
                             },
                         )
                         finishAndRemoveTask()

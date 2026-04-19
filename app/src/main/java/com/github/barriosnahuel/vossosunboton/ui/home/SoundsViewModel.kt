@@ -56,8 +56,8 @@ class SoundsViewModel(
     private val _deletedSoundEvent = MutableStateFlow<DeletedSoundEvent?>(null)
     val deletedSoundEvent: StateFlow<DeletedSoundEvent?> = _deletedSoundEvent.asStateFlow()
 
-    private val _buttonSavedEvent = Channel<Unit>(Channel.BUFFERED)
-    val buttonSavedEvent: Flow<Unit> = _buttonSavedEvent.receiveAsFlow()
+    private val _buttonSavedEvent = Channel<String>(Channel.BUFFERED)
+    val buttonSavedEvent: Flow<String> = _buttonSavedEvent.receiveAsFlow()
 
     private val _playbackErrorEvent = Channel<Unit>(Channel.BUFFERED)
     val playbackErrorEvent: Flow<Unit> = _playbackErrorEvent.receiveAsFlow()
@@ -73,10 +73,14 @@ class SoundsViewModel(
     }
 
     fun toggleFavorite(sound: Sound) {
-        val updated = sound.copy(isFavorite = !sound.isFavorite)
-        _sounds.update { list -> list.map { if (it.name == sound.name) updated else it } }
+        val nowFavorite = !sound.isFavorite
+        if (_selectedTab.value == AppTab.FAVORITES && !nowFavorite) {
+            _sounds.update { list -> list.filter { it.name != sound.name } }
+        } else {
+            _sounds.update { list -> list.map { if (it.name == sound.name) sound.copy(isFavorite = nowFavorite) else it } }
+        }
         viewModelScope.launch(ioDispatcher) {
-            SoundDao().saveFavorite(getApplication(), sound.name, updated.isFavorite)
+            SoundDao().saveFavorite(getApplication(), sound.name, nowFavorite)
         }
     }
 
@@ -133,9 +137,9 @@ class SoundsViewModel(
         _deletedSoundEvent.value = null
     }
 
-    fun onButtonSaved() {
+    fun onButtonSaved(name: String) {
         selectTab(AppTab.HOME)
-        _buttonSavedEvent.trySend(Unit)
+        _buttonSavedEvent.trySend(name)
     }
 
     private suspend fun loadSounds() {

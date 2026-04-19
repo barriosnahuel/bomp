@@ -36,7 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -257,11 +257,11 @@ private fun formatRelativeDate(epochMs: Long): String {
     val today = startOfDay(System.currentTimeMillis())
     val dateDay = startOfDay(epochMs)
     val diffDays = TimeUnit.MILLISECONDS.toDays(today - dateDay)
-    val resources = LocalContext.current.resources
+    val resources = LocalResources.current
     return when {
-        diffDays == 0L -> stringResource(R.string.date_today)
-        diffDays == 1L -> stringResource(R.string.date_yesterday)
-        diffDays < RELATIVE_DATE_MAX_DAYS -> resources.getQuantityString(R.plurals.date_days_ago, diffDays.toInt(), diffDays.toInt())
+        diffDays == 0L -> stringResource(R.string.app_date_today)
+        diffDays == 1L -> stringResource(R.string.app_date_yesterday)
+        diffDays < RELATIVE_DATE_MAX_DAYS -> resources.getQuantityString(R.plurals.app_date_days_ago, diffDays.toInt(), diffDays.toInt())
         else -> SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(epochMs))
     }
 }
