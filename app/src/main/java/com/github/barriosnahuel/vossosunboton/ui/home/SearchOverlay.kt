@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,8 +23,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -129,15 +125,21 @@ fun SearchOverlay(
                     ) { state ->
                         when (state) {
                             is SearchDisplayState.Initial ->
-                                SearchEmptyStateContent(
-                                    icon = Icons.Default.Search,
-                                    headline = stringResource(R.string.app_search_initial_headline),
-                                    subtext = stringResource(R.string.app_search_initial_subtext),
-                                )
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.app_search_initial_hint),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(horizontal = 32.dp),
+                                    )
+                                }
 
                             is SearchDisplayState.ZeroResults ->
-                                SearchEmptyStateContent(
-                                    icon = Icons.Default.MusicNote,
+                                SearchZeroResultsContent(
                                     headline = stringResource(R.string.app_search_empty_headline),
                                     subtext = stringResource(R.string.app_search_empty_subtext),
                                 )
@@ -161,8 +163,7 @@ fun SearchOverlay(
 }
 
 @Composable
-private fun SearchEmptyStateContent(
-    icon: ImageVector,
+private fun SearchZeroResultsContent(
     headline: String,
     subtext: String,
 ) {
@@ -174,13 +175,6 @@ private fun SearchEmptyStateContent(
             modifier = Modifier.padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-            )
-            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = headline,
                 style = MaterialTheme.typography.titleMedium,
@@ -212,12 +206,6 @@ private fun SearchField(
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
         placeholder = { Text(stringResource(R.string.app_search_hint)) },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-            )
-        },
         trailingIcon = {
             if (query.isNotBlank()) {
                 IconButton(onClick = { onQueryChange("") }) {
