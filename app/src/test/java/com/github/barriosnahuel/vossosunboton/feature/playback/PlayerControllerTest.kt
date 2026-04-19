@@ -3,8 +3,8 @@ package com.github.barriosnahuel.vossosunboton.feature.playback
 import android.content.Context
 import android.media.MediaPlayer
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
-import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.model.Sound
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
