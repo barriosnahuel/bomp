@@ -34,7 +34,8 @@ class LandingActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent) {
         handleDeeplink(intent)
         if (intent.getBooleanExtra(EXTRA_BUTTON_SAVED, false)) {
-            viewModel.onButtonSaved()
+            val name = intent.getStringExtra(EXTRA_BUTTON_NAME) ?: ""
+            viewModel.onButtonSaved(name)
         }
     }
 
@@ -51,5 +52,6 @@ class LandingActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_BUTTON_SAVED = "extra_button_saved"
+        const val EXTRA_BUTTON_NAME = "extra_button_name"
     }
 }

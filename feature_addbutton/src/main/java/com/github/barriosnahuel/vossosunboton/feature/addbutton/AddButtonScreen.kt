@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,7 +44,7 @@ import kotlinx.coroutines.withContext
 fun AddButtonScreen(
     context: Context,
     uri: Uri,
-    onSaved: () -> Unit,
+    onSaved: (String) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
@@ -59,7 +60,7 @@ fun AddButtonScreen(
         keyboardController?.hide()
         coroutineScope.launch {
             AddButtonFeature.instance.saveNewButtonAsync(context, name.trim(), uri.toString()).await()
-            withContext(Dispatchers.Main) { onSaved() }
+            withContext(Dispatchers.Main) { onSaved(name.trim()) }
         }
     }
 
@@ -76,13 +77,27 @@ fun AddButtonScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = {
-                    name = it
+                    name = it.take(MAX_NAME_LENGTH)
                     nameError = null
                 },
                 label = { Text(stringResource(R.string.feature_addbutton_name)) },
                 placeholder = { Text(stringResource(R.string.feature_addbutton_placeholder)) },
                 isError = nameError != null,
-                supportingText = nameError?.let { { Text(it) } },
+                supportingText = {
+                    val error = nameError
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        if (error != null) {
+                            Text(
+                                text = error,
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                        Text(text = "${name.length}/$MAX_NAME_LENGTH")
+                    }
+                },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { save() }),
@@ -98,6 +113,8 @@ fun AddButtonScreen(
         }
     }
 }
+
+private const val MAX_NAME_LENGTH = 50
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

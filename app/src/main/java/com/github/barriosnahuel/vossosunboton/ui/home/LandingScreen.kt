@@ -1,6 +1,11 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -42,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,6 +88,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     ) { innerPadding ->
         SoundsList(
             sounds = sounds,
+            selectedTab = selectedTab,
             playbackProgress = playbackProgress,
             listState = listState,
             modifier = Modifier.padding(innerPadding),
@@ -102,8 +110,8 @@ private fun SnackbarEffects(
     val context = LocalContext.current
     val buttonDeletedMessage = stringResource(R.string.app_feedback_button_deleted)
     val undoLabel = stringResource(R.string.app_undo)
-    val buttonSavedMessage = stringResource(R.string.app_feedback_button_saved)
     val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
+    val buttonSavedTemplate = stringResource(R.string.app_feedback_button_saved)
 
     LaunchedEffect(Unit) {
         viewModel.playbackErrorEvent.collect {
@@ -115,9 +123,9 @@ private fun SnackbarEffects(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.buttonSavedEvent.collect {
+        viewModel.buttonSavedEvent.collect { name ->
             snackbarHostState.showSnackbar(
-                message = buttonSavedMessage,
+                message = String.format(buttonSavedTemplate, name),
                 duration = SnackbarDuration.Short,
             )
         }
@@ -193,9 +201,12 @@ private fun AppBottomBar(
     }
 }
 
+private const val UNFAVORITE_ANIMATION_DURATION_MS = 300
+
 @Composable
 private fun SoundsList(
     sounds: List<Sound>,
+    selectedTab: AppTab,
     playbackProgress: PlaybackProgress?,
     listState: LazyListState,
     modifier: Modifier = Modifier,
@@ -205,21 +216,45 @@ private fun SoundsList(
     onDelete: (Sound) -> Unit,
     onFavoriteClick: (Sound) -> Unit,
 ) {
+    val dismissingFavorites = remember { mutableStateSetOf<String>() }
+    val coroutineScope = rememberCoroutineScope()
+
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
             itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
-                SoundItem(
-                    sound = sound,
-                    playbackProgress = if (sound.isPlaying) playbackProgress else null,
-                    onPlayClick = { onPlayClick(sound) },
-                    onSeek = onSeek,
-                    onShareClick = { onShareClick(sound) },
-                    onDelete = { onDelete(sound) },
-                    onFavoriteClick = { onFavoriteClick(sound) },
-                )
+                AnimatedVisibility(
+                    visible = sound.name !in dismissingFavorites,
+                    enter = EnterTransition.None,
+                    exit =
+                        slideOutVertically(
+                            animationSpec = tween(durationMillis = UNFAVORITE_ANIMATION_DURATION_MS),
+                            targetOffsetY = { -it },
+                        ) + fadeOut(animationSpec = tween(durationMillis = UNFAVORITE_ANIMATION_DURATION_MS)),
+                ) {
+                    SoundItem(
+                        sound = sound,
+                        playbackProgress = if (sound.isPlaying) playbackProgress else null,
+                        onPlayClick = { onPlayClick(sound) },
+                        onSeek = onSeek,
+                        onShareClick = { onShareClick(sound) },
+                        onDelete = { onDelete(sound) },
+                        onFavoriteClick = {
+                            if (selectedTab == AppTab.FAVORITES && sound.isFavorite) {
+                                dismissingFavorites.add(sound.name)
+                                coroutineScope.launch {
+                                    delay(UNFAVORITE_ANIMATION_DURATION_MS.toLong())
+                                    onFavoriteClick(sound)
+                                    dismissingFavorites.remove(sound.name)
+                                }
+                            } else {
+                                onFavoriteClick(sound)
+                            }
+                        },
+                    )
+                }
             }
         }
     }
