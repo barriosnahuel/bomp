@@ -11,6 +11,7 @@ data class Sound(
     @field:RawRes @param:RawRes val rawRes: Int,
     val isPlaying: Boolean,
     val isFavorite: Boolean = false,
+    val dateAdded: Long? = null,
 ) {
     constructor(name: String, file: String?) : this(name, file, 0, false, false)
     constructor(

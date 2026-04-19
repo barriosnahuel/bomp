@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 fun LandingScreen(viewModel: SoundsViewModel) {
     val sounds by viewModel.sounds.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
+    val playbackProgress by viewModel.playbackProgress.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -80,9 +81,11 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     ) { innerPadding ->
         SoundsList(
             sounds = sounds,
+            playbackProgress = playbackProgress,
             listState = listState,
             modifier = Modifier.padding(innerPadding),
             onPlayClick = { sound -> viewModel.playOrStop(sound) },
+            onSeek = { positionMs -> viewModel.seekTo(positionMs) },
             onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
             onDelete = { sound -> viewModel.deleteSound(sound) },
             onFavoriteClick = { sound -> viewModel.toggleFavorite(sound) },
@@ -100,6 +103,16 @@ private fun SnackbarEffects(
     val buttonDeletedMessage = stringResource(R.string.app_feedback_button_deleted)
     val undoLabel = stringResource(R.string.app_undo)
     val buttonSavedMessage = stringResource(R.string.app_feedback_button_saved)
+    val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
+
+    LaunchedEffect(Unit) {
+        viewModel.playbackErrorEvent.collect {
+            snackbarHostState.showSnackbar(
+                message = playbackErrorMessage,
+                duration = SnackbarDuration.Short,
+            )
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.buttonSavedEvent.collect {
@@ -183,9 +196,11 @@ private fun AppBottomBar(
 @Composable
 private fun SoundsList(
     sounds: List<Sound>,
+    playbackProgress: PlaybackProgress?,
     listState: LazyListState,
     modifier: Modifier = Modifier,
     onPlayClick: (Sound) -> Unit,
+    onSeek: (Int) -> Unit,
     onShareClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
     onFavoriteClick: (Sound) -> Unit,
@@ -198,7 +213,9 @@ private fun SoundsList(
             itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
                 SoundItem(
                     sound = sound,
+                    playbackProgress = if (sound.isPlaying) playbackProgress else null,
                     onPlayClick = { onPlayClick(sound) },
+                    onSeek = onSeek,
                     onShareClick = { onShareClick(sound) },
                     onDelete = { onDelete(sound) },
                     onFavoriteClick = { onFavoriteClick(sound) },

@@ -2,6 +2,8 @@ package com.github.barriosnahuel.vossosunboton.feature.playback
 
 import android.content.Context
 import android.media.MediaPlayer
+import android.os.Handler
+import android.os.Looper
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import java.io.IOException
@@ -11,6 +13,17 @@ internal class PlayerControllerImpl(
 ) : PlayerController {
     private var listener: PlayerControllerListener? = null
     private var currentSound: Sound? = null
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val progressRunnable =
+        object : Runnable {
+            override fun run() {
+                if (mediaPlayer.isPlaying) {
+                    listener?.onProgressUpdate(mediaPlayer.currentPosition)
+                    handler.postDelayed(this, PROGRESS_INTERVAL_MS)
+                }
+            }
+        }
 
     override fun startPlayingSound(
         context: Context,
@@ -22,6 +35,7 @@ internal class PlayerControllerImpl(
             listener?.onPlayerStop(currentSound!!)
         }
 
+        handler.removeCallbacks(progressRunnable)
         mediaPlayer.reset()
 
         if (setupSoundSource(context, sound)) {
@@ -29,14 +43,20 @@ internal class PlayerControllerImpl(
                 mediaPlayer.prepare()
             } catch (e: IOException) {
                 Tracker.track(RuntimeException("Media player can't be prepared for playback.", e))
+                listener?.onPlayerError(sound)
+                return
             }
 
-            mediaPlayer.setOnCompletionListener { listener?.onPlayerStop(sound) }
-            mediaPlayer.setOnSeekCompleteListener { it.pause() }
+            val durationMs = mediaPlayer.duration
+            mediaPlayer.setOnCompletionListener {
+                handler.removeCallbacks(progressRunnable)
+                listener?.onPlayerStop(sound)
+            }
 
-            listener?.onPlayerStart(sound)
+            listener?.onPlayerStart(sound, durationMs)
             currentSound = sound
             mediaPlayer.start()
+            handler.post(progressRunnable)
         }
     }
 
@@ -61,15 +81,22 @@ internal class PlayerControllerImpl(
         }
 
     override fun stopPlayingSound() {
-        // Here sound is on so we have to stop it.
-
         if (mediaPlayer.isPlaying) {
             mediaPlayer.stop()
+            handler.removeCallbacks(progressRunnable)
             listener?.onPlayerStop(currentSound!!)
         }
     }
 
+    override fun seekTo(positionMs: Int) {
+        mediaPlayer.seekTo(positionMs)
+    }
+
     override fun setOnStartStopListener(listener: PlayerControllerListener) {
         this.listener = listener
+    }
+
+    companion object {
+        private const val PROGRESS_INTERVAL_MS = 100L
     }
 }

@@ -29,6 +29,13 @@ data class DeletedSoundEvent(
     val position: Int,
 )
 
+data class PlaybackProgress(
+    val positionMs: Int,
+    val durationMs: Int,
+) {
+    val fraction: Float get() = if (durationMs > 0) positionMs / durationMs.toFloat() else 0f
+}
+
 class SoundsViewModel(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -43,11 +50,17 @@ class SoundsViewModel(
     private val _playingSound = MutableStateFlow<Sound?>(null)
     val playingSound: StateFlow<Sound?> = _playingSound.asStateFlow()
 
+    private val _playbackProgress = MutableStateFlow<PlaybackProgress?>(null)
+    val playbackProgress: StateFlow<PlaybackProgress?> = _playbackProgress.asStateFlow()
+
     private val _deletedSoundEvent = MutableStateFlow<DeletedSoundEvent?>(null)
     val deletedSoundEvent: StateFlow<DeletedSoundEvent?> = _deletedSoundEvent.asStateFlow()
 
     private val _buttonSavedEvent = Channel<Unit>(Channel.BUFFERED)
     val buttonSavedEvent: Flow<Unit> = _buttonSavedEvent.receiveAsFlow()
+
+    private val _playbackErrorEvent = Channel<Unit>(Channel.BUFFERED)
+    val playbackErrorEvent: Flow<Unit> = _playbackErrorEvent.receiveAsFlow()
 
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
@@ -73,6 +86,11 @@ class SoundsViewModel(
         } else {
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
         }
+    }
+
+    fun seekTo(positionMs: Int) {
+        PlayerControllerFactory.instance.seekTo(positionMs)
+        _playbackProgress.update { it?.copy(positionMs = positionMs) }
     }
 
     fun deleteSound(sound: Sound) {
@@ -139,16 +157,29 @@ class SoundsViewModel(
         }
     }
 
-    override fun onPlayerStart(sound: Sound) {
+    override fun onPlayerStart(
+        sound: Sound,
+        durationMs: Int,
+    ) {
         val playingSound = sound.copy(isPlaying = true)
         _playingSound.value = playingSound
+        _playbackProgress.value = PlaybackProgress(positionMs = 0, durationMs = durationMs)
         _sounds.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
     }
 
     override fun onPlayerStop(sound: Sound) {
         val stoppedSound = sound.copy(isPlaying = false)
         _playingSound.value = null
+        _playbackProgress.value = null
         _sounds.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
+    }
+
+    override fun onProgressUpdate(positionMs: Int) {
+        _playbackProgress.update { it?.copy(positionMs = positionMs) }
+    }
+
+    override fun onPlayerError(sound: Sound) {
+        _playbackErrorEvent.trySend(Unit)
     }
 
     companion object {

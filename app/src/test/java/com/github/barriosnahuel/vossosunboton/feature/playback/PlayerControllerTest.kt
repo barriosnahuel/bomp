@@ -2,6 +2,8 @@ package com.github.barriosnahuel.vossosunboton.feature.playback
 
 import android.content.Context
 import android.media.MediaPlayer
+import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import io.mockk.every
 import io.mockk.mockk
@@ -14,7 +16,7 @@ import io.mockk.verifySequence
 import org.junit.After
 import org.junit.Test
 
-internal class PlayerControllerTest {
+internal class PlayerControllerTest : AbstractRobolectricTest() {
     @After
     fun tearDown() {
         unmockkAll()
@@ -78,6 +80,36 @@ internal class PlayerControllerTest {
         PlayerControllerImpl(mp).startPlayingSound(context, sound)
 
         verify(exactly = 0) { mp.start() }
+    }
+
+    @Test
+    fun `on startPlayingSound when prepare throws should call onPlayerError and not start`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+        every { mp.prepare() } throws java.io.IOException("fail")
+
+        mockkObject(Tracker)
+        every { Tracker.track(any()) } answers { nothing }
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = PlayerControllerImpl(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+
+        verify { listener.onPlayerError(sound) }
+        verify(exactly = 0) { mp.start() }
+    }
+
+    @Test
+    fun `seekTo delegates to mediaPlayer seekTo`() {
+        val mp = givenAnIdleMediaPlayer()
+
+        PlayerControllerImpl(mp).seekTo(1500)
+
+        verify { mp.seekTo(1500) }
     }
 
     private fun givenAMediaPlayerCurrentlyPlayingASound(): MediaPlayer {

@@ -76,7 +76,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val viewModel = givenAViewModel()
         val sound = Sound("test", rawRes = 1)
 
-        viewModel.onPlayerStart(sound)
+        viewModel.onPlayerStart(sound, durationMs = 1000)
 
         assertThat(viewModel.playingSound.value?.name).isEqualTo(sound.name)
         assertThat(viewModel.playingSound.value?.isPlaying).isTrue()
@@ -87,7 +87,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     fun `onPlayerStop clears playingSound`() {
         val viewModel = givenAViewModel()
         val sound = Sound("test", rawRes = 1)
-        viewModel.onPlayerStart(sound)
+        viewModel.onPlayerStart(sound, durationMs = 1000)
 
         viewModel.onPlayerStop(sound)
 
@@ -101,7 +101,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val sound = Sound("test", rawRes = 1)
         viewModel.injectSounds(listOf(sound))
 
-        viewModel.onPlayerStart(sound)
+        viewModel.onPlayerStart(sound, durationMs = 1000)
 
         assertThat(
             viewModel.sounds.value
@@ -155,7 +155,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val viewModel = givenAViewModel()
         val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
-        viewModel.onPlayerStart(sound) // establece _playingSound como fuente autoritativa
+        viewModel.onPlayerStart(sound, durationMs = 1000) // establece _playingSound como fuente autoritativa
 
         viewModel.deleteSound(sound)
 
@@ -168,7 +168,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val viewModel = givenAViewModel()
         val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
-        viewModel.onPlayerStart(sound) // establece _playingSound como fuente autoritativa
+        viewModel.onPlayerStart(sound, durationMs = 1000) // establece _playingSound como fuente autoritativa
 
         viewModel.deleteSound(sound)
         viewModel.restoreSound()
@@ -259,7 +259,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val viewModel = givenAViewModel()
         val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound.copy(isPlaying = true)))
-        viewModel.onPlayerStart(sound)
+        viewModel.onPlayerStart(sound, durationMs = 1000)
 
         viewModel.deleteSound(sound)
 
@@ -287,7 +287,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             viewModel.selectTab(AppTab.EXPLORE)
             val playingSound = viewModel.sounds.value.first()
 
-            viewModel.onPlayerStart(playingSound)
+            viewModel.onPlayerStart(playingSound, durationMs = 1000)
             viewModel.selectTab(AppTab.FAVORITES)
             viewModel.selectTab(AppTab.EXPLORE)
 
@@ -296,6 +296,63 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
                     .single { it.name == playingSound.name }
                     .isPlaying,
             ).isTrue()
+        }
+
+    @Test
+    fun `onPlayerStart initialises playbackProgress with zero position and given duration`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", rawRes = 1)
+
+        viewModel.onPlayerStart(sound, durationMs = 3000)
+
+        assertThat(viewModel.playbackProgress.value?.positionMs).isEqualTo(0)
+        assertThat(viewModel.playbackProgress.value?.durationMs).isEqualTo(3000)
+    }
+
+    @Test
+    fun `onPlayerStop clears playbackProgress`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", rawRes = 1)
+        viewModel.onPlayerStart(sound, durationMs = 3000)
+
+        viewModel.onPlayerStop(sound)
+
+        assertThat(viewModel.playbackProgress.value).isNull()
+    }
+
+    @Test
+    fun `onProgressUpdate updates positionMs while keeping durationMs`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", rawRes = 1)
+        viewModel.onPlayerStart(sound, durationMs = 3000)
+
+        viewModel.onProgressUpdate(positionMs = 1500)
+
+        assertThat(viewModel.playbackProgress.value?.positionMs).isEqualTo(1500)
+        assertThat(viewModel.playbackProgress.value?.durationMs).isEqualTo(3000)
+    }
+
+    @Test
+    fun `seekTo delegates to PlayerController and optimistically updates progress`() {
+        every { PlayerControllerFactory.instance.seekTo(any()) } answers { nothing }
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", rawRes = 1)
+        viewModel.onPlayerStart(sound, durationMs = 5000)
+
+        viewModel.seekTo(2000)
+
+        verify { PlayerControllerFactory.instance.seekTo(2000) }
+        assertThat(viewModel.playbackProgress.value?.positionMs).isEqualTo(2000)
+    }
+
+    @Test
+    fun `onPlayerError emits playbackErrorEvent`() =
+        runTest {
+            val viewModel = givenAViewModel()
+
+            viewModel.onPlayerError(Sound("test", rawRes = 1))
+
+            viewModel.playbackErrorEvent.first()
         }
 
     @Test
