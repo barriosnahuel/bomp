@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - `SoundsViewModel` with `StateFlow` for reactive UI state management.
 - Back press navigates from Home/Favorites to Explore instead of exiting the app.
 - Tapping the already-selected bottom tab scrolls the list back to the top.
-- Explicit backup rules for Android 12+: user audio files are now included in cloud backup and device transfer.
+- Custom audio files and their metadata are backed up and restored via Android Auto Backup (cloud backup and device transfer on all supported API levels)
 - Tests for `SoundsViewModel` covering playback state and delete/restore flows.
 
 ### Changed

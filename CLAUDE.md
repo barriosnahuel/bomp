@@ -33,6 +33,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew :model:test --tests "com.github.barriosnahuel.vossosunboton.model.SomeTest"
 ```
 
+### Tooling & Environment
+- **Android CLI**: Available. You can use `adb` (Android Debug Bridge), `fastboot`, and `emulator` commands.
+- **Usage**: Use `adb` to manage connected devices, install APKs, and access shell commands.
+
 ## Module Architecture
 
 Push Me is an Android soundboard app with 5 Gradle modules:
