@@ -47,6 +47,17 @@ class SoundsViewModel(
     private val _sounds = MutableStateFlow<List<Sound>>(emptyList())
     val sounds: StateFlow<List<Sound>> = _sounds.asStateFlow()
 
+    private val allSoundsCache = MutableStateFlow<List<Sound>>(emptyList())
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _isSearchVisible = MutableStateFlow(false)
+    val isSearchVisible: StateFlow<Boolean> = _isSearchVisible.asStateFlow()
+
+    private val _searchResults = MutableStateFlow<List<Sound>>(emptyList())
+    val searchResults: StateFlow<List<Sound>> = _searchResults.asStateFlow()
+
     private val _playingSound = MutableStateFlow<Sound?>(null)
     val playingSound: StateFlow<Sound?> = _playingSound.asStateFlow()
 
@@ -67,6 +78,31 @@ class SoundsViewModel(
         viewModelScope.launch(ioDispatcher) { loadSounds() }
     }
 
+    fun showSearch() {
+        _isSearchVisible.value = true
+    }
+
+    fun hideSearch() {
+        _isSearchVisible.value = false
+        _searchQuery.value = ""
+        _searchResults.value = emptyList()
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+        recomputeSearchResults()
+    }
+
+    private fun recomputeSearchResults() {
+        val query = _searchQuery.value
+        _searchResults.value =
+            if (query.isBlank()) {
+                emptyList()
+            } else {
+                allSoundsCache.value.filter { it.name.contains(query, ignoreCase = true) }.sortedBy { it.name.lowercase() }
+            }
+    }
+
     fun selectTab(tab: AppTab) {
         _selectedTab.value = tab
         viewModelScope.launch(ioDispatcher) { loadSounds() }
@@ -79,6 +115,8 @@ class SoundsViewModel(
         } else {
             _sounds.update { list -> list.map { if (it.name == sound.name) sound.copy(isFavorite = nowFavorite) else it } }
         }
+        allSoundsCache.update { list -> list.map { if (it.name == sound.name) it.copy(isFavorite = nowFavorite) else it } }
+        recomputeSearchResults()
         viewModelScope.launch(ioDispatcher) {
             SoundDao().saveFavorite(getApplication(), sound.name, nowFavorite)
         }
@@ -108,6 +146,8 @@ class SoundsViewModel(
 
         currentSounds.removeAt(position)
         _sounds.value = currentSounds
+        allSoundsCache.update { list -> list.filter { it.name != sound.name } }
+        recomputeSearchResults()
         _deletedSoundEvent.value = DeletedSoundEvent(currentSound.copy(isPlaying = false), position)
     }
 
@@ -117,6 +157,11 @@ class SoundsViewModel(
         val insertPosition = event.position.coerceAtMost(currentSounds.size)
         currentSounds.add(insertPosition, event.sound)
         _sounds.value = currentSounds
+        allSoundsCache.update { list ->
+            val allInsertPosition = insertPosition.coerceAtMost(list.size)
+            list.toMutableList().also { it.add(allInsertPosition, event.sound) }
+        }
+        recomputeSearchResults()
         _deletedSoundEvent.value = null
     }
 
@@ -146,6 +191,13 @@ class SoundsViewModel(
         val allSounds = SoundDao().find(getApplication<Application>()).sortedBy { it.name.lowercase() }
         val playingName = _playingSound.value?.name
         val deletedName = _deletedSoundEvent.value?.sound?.name
+        allSoundsCache.value =
+            if (playingName == null) {
+                allSounds
+            } else {
+                allSounds.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
+            }
+        recomputeSearchResults()
         _sounds.update {
             val filtered =
                 when (_selectedTab.value) {
@@ -169,6 +221,8 @@ class SoundsViewModel(
         _playingSound.value = playingSound
         _playbackProgress.value = PlaybackProgress(positionMs = 0, durationMs = durationMs)
         _sounds.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
+        allSoundsCache.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
+        recomputeSearchResults()
     }
 
     override fun onPlayerStop(sound: Sound) {
@@ -176,6 +230,8 @@ class SoundsViewModel(
         _playingSound.value = null
         _playbackProgress.value = null
         _sounds.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
+        allSoundsCache.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
+        recomputeSearchResults()
     }
 
     override fun onProgressUpdate(positionMs: Int) {

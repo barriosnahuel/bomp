@@ -16,4 +16,12 @@
     <string name="app_date_today">Hoy</string>
     <string name="app_date_yesterday">Ayer</string>
     <string name="app_error_playback_failed">No se pudo reproducir este audio</string>
+    <string name="app_search">Buscar</string>
+    <string name="app_search_hint">Buscar sonidos…</string>
+    <string name="app_search_close">Cerrar búsqueda</string>
+    <string name="app_search_empty_headline">Silencio absoluto…</string>
+    <string name="app_search_empty_subtext">Parece que este sticker de audio aún no existe. Tu colección tiene un vacío que solo vos podés llenar.</string>
+    <string name="app_search_origin_home">Inicio</string>
+    <string name="app_search_origin_explore">Explorar</string>
+    <string name="app_search_origin_home_and_favorites">Inicio · Favoritos</string>
 </resources>

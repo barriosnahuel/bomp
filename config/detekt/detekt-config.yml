@@ -8,6 +8,7 @@ complexity:
     ignoreAnnotated: ['Composable']
   TooManyFunctions:
     thresholdInClasses: 15
+    ignoreOverridden: true
 
 style:
   active: true

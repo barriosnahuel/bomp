@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased] (v2.0.0)
 ### Added
+- Search overlay: tap the new FAB to search across all tabs at once; results show the same play/favorite/share/delete actions as the main list plus a subtle origin badge
 - Favorites: users can mark/unmark any custom button as favorite; a dedicated Favorites tab lists only marked buttons
 - Deeplinks: the app responds to `push-me://open/home`, `push-me://open/favorites`, and `push-me://open/explore` to navigate directly to a tab
 - Back navigation now follows the actual tab history instead of always returning to Explore
