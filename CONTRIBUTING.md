@@ -11,6 +11,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Continuous integration](#continuous-integration-)
 - [Gradle upgrade](#gradle-upgrade)
 - [Firebase config file](#firebase-config-file-)
+- [Backup & restore testing](#backup--restore-testing-)
 - [Logcat](#logcat-)
 - [Resources](#resources-)
 - [Signing](#signing-)
@@ -68,6 +69,24 @@ To prevent future modifications on `app/google-services.json` I run:
     To revert this just:
 
     > git update-index --no-skip-worktree app/google-services.json
+
+## Backup & restore testing 💾
+
+To manually verify Auto Backup saves and restores custom sound metadata, use `bmgr` via `adb`:
+
+1. **Trigger a backup:**
+
+       adb shell bmgr backupnow com.github.barriosnahuel.vossosunboton.debug
+
+2. **List available backup sets** (to find the restore token):
+
+       adb shell bmgr list sets
+
+3. **Restore from a backup set:**
+
+       adb shell bmgr restore <token> com.github.barriosnahuel.vossosunboton.debug
+
+> Requires a device or emulator with Google Mobile Services. Does not work on stock AOSP emulators.
 
 ## Logcat 😿
 
