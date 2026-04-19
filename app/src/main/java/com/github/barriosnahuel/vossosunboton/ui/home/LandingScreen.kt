@@ -18,7 +18,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ViewComfyAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -195,8 +195,8 @@ private fun AppBottomBar(
             colors = itemColors,
             selected = selectedTab == AppTab.EXPLORE,
             onClick = { onTabSelected(AppTab.EXPLORE) },
-            icon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.app_navigation_menu_item_search)) },
-            label = { Text(stringResource(R.string.app_navigation_menu_item_search)) },
+            icon = { Icon(Icons.Default.ViewComfyAlt, contentDescription = stringResource(R.string.app_navigation_menu_item_explore)) },
+            label = { Text(stringResource(R.string.app_navigation_menu_item_explore)) },
         )
     }
 }

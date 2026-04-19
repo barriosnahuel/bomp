@@ -92,6 +92,20 @@ git update-index --skip-worktree app/google-services.json
 - Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` and `secure.properties` (with `key.alias`, `key.password`, `store.password`) in the project root — not committed.
 - Debug builds use the included debug keystore and work without the above.
 
+## Android resources naming
+
+Every resource name must start with the `resourcePrefix` defined in the module's `build.gradle`:
+
+| Module | Prefix |
+|---|---|
+| `app` | `app_` |
+| `feature_addbutton` | `feature_addbutton_` |
+| `commons_android` | `commons_android_` |
+| `commons_file` | `commons_file_` |
+| `model` | `model_` |
+
+Android Lint enforces this rule (`ResourceName` check). Violating it causes a build failure.
+
 ## Pre-push checklist
 
 All three linters run on CI and must pass:
