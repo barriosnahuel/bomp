@@ -39,12 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -224,12 +222,13 @@ private fun SoundCard(
                             }
                         },
                         enabled = sound.isPlaying,
-                        colors = SliderDefaults.colors(
-                            inactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                            disabledInactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                            disabledThumbColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                            disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
-                        ),
+                        colors =
+                            SliderDefaults.colors(
+                                inactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                                disabledInactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                                disabledThumbColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                                disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
+                            ),
                         modifier = Modifier.fillMaxWidth(),
                     )
 
@@ -253,13 +252,6 @@ private fun SoundCard(
     }
 }
 
-private fun formatDuration(ms: Int): String {
-    val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(ms.toLong())
-    val minutes = totalSeconds / SECONDS_PER_MINUTE
-    val seconds = totalSeconds % SECONDS_PER_MINUTE
-    return "$minutes:${seconds.toString().padStart(2, '0')}"
-}
-
 @Composable
 private fun formatRelativeDate(epochMs: Long): String {
     val today = startOfDay(System.currentTimeMillis())
@@ -273,17 +265,3 @@ private fun formatRelativeDate(epochMs: Long): String {
         else -> SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(epochMs))
     }
 }
-
-@Suppress("MagicNumber")
-private fun startOfDay(epochMs: Long): Long =
-    Calendar.getInstance().run {
-        timeInMillis = epochMs
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-        timeInMillis
-    }
-
-private const val RELATIVE_DATE_MAX_DAYS = 7L
-private const val SECONDS_PER_MINUTE = 60L

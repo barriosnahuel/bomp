@@ -346,6 +346,16 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `onPlayerError emits playbackErrorEvent`() =
+        runTest {
+            val viewModel = givenAViewModel()
+
+            viewModel.onPlayerError(Sound("test", rawRes = 1))
+
+            viewModel.playbackErrorEvent.first()
+        }
+
+    @Test
     fun `sounds are sorted alphabetically`() {
         val viewModel = givenAViewModel()
         val sounds = viewModel.sounds.value

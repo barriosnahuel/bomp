@@ -42,4 +42,7 @@ internal interface PlayerControllerListener {
 
     /** Called approximately every 100 ms while audio is playing. */
     fun onProgressUpdate(positionMs: Int)
+
+    /** Called when the audio source could not be prepared for playback. */
+    fun onPlayerError(sound: Sound)
 }

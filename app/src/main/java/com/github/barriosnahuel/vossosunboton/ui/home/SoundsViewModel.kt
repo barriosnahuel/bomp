@@ -59,6 +59,9 @@ class SoundsViewModel(
     private val _buttonSavedEvent = Channel<Unit>(Channel.BUFFERED)
     val buttonSavedEvent: Flow<Unit> = _buttonSavedEvent.receiveAsFlow()
 
+    private val _playbackErrorEvent = Channel<Unit>(Channel.BUFFERED)
+    val playbackErrorEvent: Flow<Unit> = _playbackErrorEvent.receiveAsFlow()
+
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
         viewModelScope.launch(ioDispatcher) { loadSounds() }
@@ -173,6 +176,10 @@ class SoundsViewModel(
 
     override fun onProgressUpdate(positionMs: Int) {
         _playbackProgress.update { it?.copy(positionMs = positionMs) }
+    }
+
+    override fun onPlayerError(sound: Sound) {
+        _playbackErrorEvent.trySend(Unit)
     }
 
     companion object {

@@ -103,6 +103,16 @@ private fun SnackbarEffects(
     val buttonDeletedMessage = stringResource(R.string.app_feedback_button_deleted)
     val undoLabel = stringResource(R.string.app_undo)
     val buttonSavedMessage = stringResource(R.string.app_feedback_button_saved)
+    val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
+
+    LaunchedEffect(Unit) {
+        viewModel.playbackErrorEvent.collect {
+            snackbarHostState.showSnackbar(
+                message = playbackErrorMessage,
+                duration = SnackbarDuration.Short,
+            )
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.buttonSavedEvent.collect {

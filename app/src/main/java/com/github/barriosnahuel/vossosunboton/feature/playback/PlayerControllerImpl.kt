@@ -43,6 +43,8 @@ internal class PlayerControllerImpl(
                 mediaPlayer.prepare()
             } catch (e: IOException) {
                 Tracker.track(RuntimeException("Media player can't be prepared for playback.", e))
+                listener?.onPlayerError(sound)
+                return
             }
 
             val durationMs = mediaPlayer.duration

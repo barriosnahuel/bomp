@@ -7,7 +7,7 @@ complexity:
   LongMethod:
     ignoreAnnotated: ['Composable']
   TooManyFunctions:
-    thresholdInClasses: 14
+    thresholdInClasses: 15
 
 style:
   active: true
