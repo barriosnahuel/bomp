@@ -12,7 +12,9 @@ import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +41,7 @@ data class PlaybackProgress(
 class SoundsViewModel(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val searchDebounceMs: Long = 200L,
 ) : AndroidViewModel(application),
     PlayerControllerListener {
     private val _selectedTab = MutableStateFlow(AppTab.HOME)
@@ -57,6 +60,11 @@ class SoundsViewModel(
 
     private val _searchResults = MutableStateFlow<List<Sound>>(emptyList())
     val searchResults: StateFlow<List<Sound>> = _searchResults.asStateFlow()
+
+    private val _isSearchPending = MutableStateFlow(false)
+    val isSearchPending: StateFlow<Boolean> = _isSearchPending.asStateFlow()
+
+    private var searchDebounceJob: Job? = null
 
     private val _playingSound = MutableStateFlow<Sound?>(null)
     val playingSound: StateFlow<Sound?> = _playingSound.asStateFlow()
@@ -83,14 +91,28 @@ class SoundsViewModel(
     }
 
     fun hideSearch() {
+        searchDebounceJob?.cancel()
         _isSearchVisible.value = false
         _searchQuery.value = ""
         _searchResults.value = emptyList()
+        _isSearchPending.value = false
     }
 
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
-        recomputeSearchResults()
+        searchDebounceJob?.cancel()
+        if (searchDebounceMs == 0L || query.isBlank()) {
+            _isSearchPending.value = false
+            recomputeSearchResults()
+        } else {
+            _isSearchPending.value = true
+            searchDebounceJob =
+                viewModelScope.launch {
+                    delay(searchDebounceMs)
+                    recomputeSearchResults()
+                    _isSearchPending.value = false
+                }
+        }
     }
 
     private fun recomputeSearchResults() {

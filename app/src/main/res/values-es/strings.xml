@@ -19,6 +19,8 @@
     <string name="app_search">Buscar</string>
     <string name="app_search_hint">Buscar sonidos…</string>
     <string name="app_search_close">Cerrar búsqueda</string>
+    <string name="app_search_initial_headline">¿Qué sonido buscamos?</string>
+    <string name="app_search_initial_subtext">Podés buscar por nombre del audio.</string>
     <string name="app_search_empty_headline">Silencio absoluto…</string>
     <string name="app_search_empty_subtext">Parece que este sticker de audio aún no existe. Tu colección tiene un vacío que solo vos podés llenar.</string>
     <string name="app_search_origin_home">Inicio</string>

@@ -117,5 +117,6 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
             androidx.test.core.app.ApplicationProvider
                 .getApplicationContext(),
             ioDispatcher = UnconfinedTestDispatcher(),
+            searchDebounceMs = 0L,
         )
 }

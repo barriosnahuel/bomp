@@ -62,6 +62,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val isSearchVisible by viewModel.isSearchVisible.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
+    val isSearchPending by viewModel.isSearchPending.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -117,6 +118,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         SearchOverlay(
             query = searchQuery,
             results = searchResults,
+            isSearchPending = isSearchPending,
             playbackProgress = playbackProgress,
             onQueryChange = viewModel::onSearchQueryChange,
             onClose = viewModel::hideSearch,
