@@ -80,9 +80,6 @@ Mock any singleton factories (e.g. `PlayerControllerFactory`) that would crash u
 
 **Dynamic feature modules** (e.g. `feature_addbutton`) cannot use Robolectric — Robolectric's `ShadowPackageParser` rejects split APKs (`Expected base APK, but found split`). Activities in those modules require instrumented tests if smoke coverage is needed.
 
-## Setup Notes
-
-- Replace `app/google-services.json` with a real Firebase config. The included file is a placeholder, excluded from tracking via `git update-index --skip-worktree app/google-services.json`.
 
 ## Worktree setup
 
@@ -109,10 +106,6 @@ Before pushing any branch, always run:
 ```
 
 This catches the same failures CI will report (ktlint, detekt, Android lint, unit tests) without waiting for a full CI run.
-
-## Handoff notes
-
-`handoff/` contains session handoff documents (one per working session) with decisions taken, key file paths, and pending work. Ignored by git. When starting a new session, check the latest file in this directory for context.
 
 ## Accessibility (WCAG 2.2 AA)
 
@@ -151,3 +144,7 @@ For the milestone, read the `## [unreleased]` line in `CHANGELOG.md` — the ver
 - For dependency bumps, write one line summarising the overall bump (e.g. "Bumped all dependencies to latest stable"), not one line per library
 - After every commit, check whether the change is user-visible or architecturally significant; if so, update `## [unreleased]` before committing
 - Never add a `Fixed` entry for a bug introduced in the same `[unreleased]` cycle. If end-users never experienced the regression, it has no changelog entry — git history provides the traceability
+
+## Handoff notes
+
+`handoff/` contains session handoff documents (one per working session) with decisions taken, key file paths, and pending work. Ignored by git. When starting a new session, check the latest file in this directory for context.
