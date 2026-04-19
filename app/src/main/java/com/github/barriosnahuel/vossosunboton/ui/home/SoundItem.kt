@@ -2,7 +2,9 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,31 +21,54 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SoundItem(
     sound: Sound,
+    playbackProgress: PlaybackProgress?,
     onPlayClick: () -> Unit,
+    onSeek: (Int) -> Unit,
     onShareClick: () -> Unit,
     onDelete: () -> Unit,
     onFavoriteClick: () -> Unit,
 ) {
     if (sound.isBundled()) {
-        SoundCard(sound = sound, onPlayClick = onPlayClick, onShareClick = onShareClick, onFavoriteClick = onFavoriteClick)
+        SoundCard(
+            sound = sound,
+            playbackProgress = playbackProgress,
+            onPlayClick = onPlayClick,
+            onSeek = onSeek,
+            onShareClick = onShareClick,
+            onFavoriteClick = onFavoriteClick,
+        )
         return
     }
     // rememberSaveable (used by rememberSwipeToDismissBoxState) restores the dismissed state
@@ -65,7 +90,14 @@ fun SoundItem(
         state = dismissState,
         backgroundContent = { SwipeDeleteBackground(dismissState) },
     ) {
-        SoundCard(sound = sound, onPlayClick = onPlayClick, onShareClick = onShareClick, onFavoriteClick = onFavoriteClick)
+        SoundCard(
+            sound = sound,
+            playbackProgress = playbackProgress,
+            onPlayClick = onPlayClick,
+            onSeek = onSeek,
+            onShareClick = onShareClick,
+            onFavoriteClick = onFavoriteClick,
+        )
     }
 }
 
@@ -100,10 +132,21 @@ private fun SwipeDeleteBackground(dismissState: SwipeToDismissBoxState) {
 @Composable
 private fun SoundCard(
     sound: Sound,
+    playbackProgress: PlaybackProgress?,
     onPlayClick: () -> Unit,
+    onSeek: (Int) -> Unit,
     onShareClick: () -> Unit,
     onFavoriteClick: () -> Unit,
 ) {
+    var sliderPosition by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+
+    LaunchedEffect(playbackProgress) {
+        if (!isDragging) {
+            sliderPosition = playbackProgress?.fraction ?: 0f
+        }
+    }
+
     Card(
         modifier =
             Modifier
@@ -115,42 +158,132 @@ private fun SoundCard(
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             ),
     ) {
-        Row(
+        Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
         ) {
-            Text(
-                text = sound.name,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            IconButton(onClick = onPlayClick) {
-                Icon(
-                    imageVector = if (sound.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = stringResource(R.string.app_navigation_menu_item_home),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = sound.name,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
                 )
+                if (!sound.isBundled()) {
+                    IconButton(onClick = onFavoriteClick) {
+                        Icon(
+                            imageVector = if (sound.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription =
+                                stringResource(
+                                    if (sound.isFavorite) R.string.app_remove_from_favorites else R.string.app_add_to_favorites,
+                                ),
+                            tint =
+                                if (sound.isFavorite) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                },
+                        )
+                    }
+                    IconButton(onClick = onShareClick) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.app_share_chooser_title),
+                        )
+                    }
+                }
             }
-            if (!sound.isBundled()) {
-                IconButton(onClick = onFavoriteClick) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                IconButton(onClick = onPlayClick) {
                     Icon(
-                        imageVector = if (sound.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription =
-                            stringResource(
-                                if (sound.isFavorite) R.string.app_remove_from_favorites else R.string.app_add_to_favorites,
-                            ),
-                        tint = if (sound.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer,
+                        imageVector = if (sound.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = stringResource(if (sound.isPlaying) R.string.app_pause else R.string.app_play),
                     )
                 }
-                IconButton(onClick = onShareClick) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = stringResource(R.string.app_share_chooser_title),
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Slider(
+                        value = sliderPosition,
+                        onValueChange = { value ->
+                            isDragging = true
+                            sliderPosition = value
+                        },
+                        onValueChangeFinished = {
+                            isDragging = false
+                            if (playbackProgress != null) {
+                                onSeek((sliderPosition * playbackProgress.durationMs).toInt())
+                            }
+                        },
+                        enabled = sound.isPlaying,
+                        colors = SliderDefaults.colors(
+                            inactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                            disabledInactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                            disabledThumbColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                            disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
                     )
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = formatDuration(playbackProgress?.positionMs ?: 0),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        val dateAdded = sound.dateAdded
+                        if (dateAdded != null) {
+                            Text(
+                                text = formatRelativeDate(dateAdded),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
+
+private fun formatDuration(ms: Int): String {
+    val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(ms.toLong())
+    val minutes = totalSeconds / SECONDS_PER_MINUTE
+    val seconds = totalSeconds % SECONDS_PER_MINUTE
+    return "$minutes:${seconds.toString().padStart(2, '0')}"
+}
+
+@Composable
+private fun formatRelativeDate(epochMs: Long): String {
+    val today = startOfDay(System.currentTimeMillis())
+    val dateDay = startOfDay(epochMs)
+    val diffDays = TimeUnit.MILLISECONDS.toDays(today - dateDay)
+    val resources = LocalContext.current.resources
+    return when {
+        diffDays == 0L -> stringResource(R.string.date_today)
+        diffDays == 1L -> stringResource(R.string.date_yesterday)
+        diffDays < RELATIVE_DATE_MAX_DAYS -> resources.getQuantityString(R.plurals.date_days_ago, diffDays.toInt(), diffDays.toInt())
+        else -> SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(epochMs))
+    }
+}
+
+@Suppress("MagicNumber")
+private fun startOfDay(epochMs: Long): Long =
+    Calendar.getInstance().run {
+        timeInMillis = epochMs
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+        timeInMillis
+    }
+
+private const val RELATIVE_DATE_MAX_DAYS = 7L
+private const val SECONDS_PER_MINUTE = 60L

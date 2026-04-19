@@ -11,4 +11,8 @@
     <string name="app_navigation_menu_item_favourites">Favorites</string>
     <string name="app_add_to_favorites">Add to favorites</string>
     <string name="app_remove_from_favorites">Remove from favorites</string>
+    <string name="app_play">Play</string>
+    <string name="app_pause">Pause</string>
+    <string name="date_today">Today</string>
+    <string name="date_yesterday">Yesterday</string>
 </resources>

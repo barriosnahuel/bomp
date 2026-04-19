@@ -15,6 +15,8 @@ internal interface PlayerController {
 
     fun stopPlayingSound()
 
+    fun seekTo(positionMs: Int)
+
     /**
      * @param listener the listener that will handle all play/stop callbacks for all buttons.
      */
@@ -31,6 +33,13 @@ internal interface PlayerControllerListener {
     /**
      * Perform any action you want right after the given sound started to play.
      * @param sound The sound that has started to play.
+     * @param durationMs Total duration of the audio in milliseconds.
      */
-    fun onPlayerStart(sound: Sound)
+    fun onPlayerStart(
+        sound: Sound,
+        durationMs: Int,
+    )
+
+    /** Called approximately every 100 ms while audio is playing. */
+    fun onProgressUpdate(positionMs: Int)
 }

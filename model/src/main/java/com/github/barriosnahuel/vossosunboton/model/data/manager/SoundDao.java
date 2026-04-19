@@ -57,7 +57,9 @@ public class SoundDao {
         for (final String eachSoundName : names) {
             final String fileName = storage.get(context, SOUNDS_FILE_NAME_PREFFIX + eachSoundName);
             final boolean isFavorite = "true".equals(storage.get(context, SOUNDS_FAVORITE_PREFFIX + eachSoundName));
-            sounds.add(new Sound(eachSoundName, fileName, 0, false, isFavorite));
+            final java.io.File soundFile = fileName != null ? FileUtils.getFile(context, fileName) : null;
+            final Long dateAdded = (soundFile != null && soundFile.exists()) ? soundFile.lastModified() : null;
+            sounds.add(new Sound(eachSoundName, fileName, 0, false, isFavorite, dateAdded));
         }
 
         sounds.addAll(PackagedAudios.get(context));

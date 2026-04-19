@@ -2,6 +2,7 @@ package com.github.barriosnahuel.vossosunboton.feature.playback
 
 import android.content.Context
 import android.media.MediaPlayer
+import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import io.mockk.every
 import io.mockk.mockk
@@ -14,7 +15,7 @@ import io.mockk.verifySequence
 import org.junit.After
 import org.junit.Test
 
-internal class PlayerControllerTest {
+internal class PlayerControllerTest : AbstractRobolectricTest() {
     @After
     fun tearDown() {
         unmockkAll()
