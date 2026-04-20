@@ -1,9 +1,16 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
+import com.github.barriosnahuel.vossosunboton.R
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-internal fun formatDuration(ms: Int): String {
+fun formatDuration(ms: Int): String {
     val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(ms.toLong())
     val minutes = totalSeconds / SECONDS_PER_MINUTE
     val seconds = totalSeconds % SECONDS_PER_MINUTE
@@ -20,6 +27,27 @@ internal fun startOfDay(epochMs: Long): Long =
         set(Calendar.MILLISECOND, 0)
         timeInMillis
     }
+
+fun relativeDateDays(
+    epochMs: Long,
+    nowMs: Long = System.currentTimeMillis(),
+): Long {
+    val today = startOfDay(nowMs)
+    val dateDay = startOfDay(epochMs)
+    return TimeUnit.MILLISECONDS.toDays(today - dateDay)
+}
+
+@Composable
+fun formatRelativeDate(epochMs: Long): String {
+    val diffDays = relativeDateDays(epochMs)
+    val resources = LocalResources.current
+    return when {
+        diffDays == 0L -> stringResource(R.string.app_date_today)
+        diffDays == 1L -> stringResource(R.string.app_date_yesterday)
+        diffDays < RELATIVE_DATE_MAX_DAYS -> resources.getQuantityString(R.plurals.app_date_days_ago, diffDays.toInt(), diffDays.toInt())
+        else -> SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(epochMs))
+    }
+}
 
 internal const val RELATIVE_DATE_MAX_DAYS = 7L
 private const val SECONDS_PER_MINUTE = 60L

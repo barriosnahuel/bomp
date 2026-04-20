@@ -44,7 +44,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -52,10 +51,6 @@ import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -372,20 +367,6 @@ private fun SoundCardHeader(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun formatRelativeDate(epochMs: Long): String {
-    val today = startOfDay(System.currentTimeMillis())
-    val dateDay = startOfDay(epochMs)
-    val diffDays = TimeUnit.MILLISECONDS.toDays(today - dateDay)
-    val resources = LocalResources.current
-    return when {
-        diffDays == 0L -> stringResource(R.string.app_date_today)
-        diffDays == 1L -> stringResource(R.string.app_date_yesterday)
-        diffDays < RELATIVE_DATE_MAX_DAYS -> resources.getQuantityString(R.plurals.app_date_days_ago, diffDays.toInt(), diffDays.toInt())
-        else -> SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(epochMs))
     }
 }
 
