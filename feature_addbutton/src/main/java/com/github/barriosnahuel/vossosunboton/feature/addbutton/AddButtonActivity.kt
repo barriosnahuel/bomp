@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
@@ -17,6 +18,12 @@ class AddButtonActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
+
+        val editSoundName = intent.getStringExtra(LandingActivity.EXTRA_EDIT_SOUND_NAME)
+        if (editSoundName != null) {
+            launchEditAddButtonMode(editSoundName)
+            return
+        }
 
         val uri: Uri? =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -30,25 +37,58 @@ class AddButtonActivity : ComponentActivity() {
             finish()
             return
         }
+        launchCreateAddButtonMode(uri)
+    }
 
+    private fun launchEditAddButtonMode(soundName: String) {
+        val file = intent.getStringExtra(LandingActivity.EXTRA_EDIT_SOUND_FILE)
+        val isFavorite = intent.getBooleanExtra(LandingActivity.EXTRA_EDIT_SOUND_FAVORITE, false)
+        val dateAddedRaw = intent.getLongExtra(LandingActivity.EXTRA_EDIT_SOUND_DATE_ADDED, 0L)
+        val sound = Sound(soundName, file, 0, false, isFavorite, if (dateAddedRaw > 0L) dateAddedRaw else null)
         setContent {
             AppTheme {
                 AddButtonScreen(
                     context = this,
-                    uri = uri,
-                    onSaved = { name ->
-                        startActivity(
-                            Intent(this, LandingActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                                putExtra(LandingActivity.EXTRA_BUTTON_SAVED, true)
-                                putExtra(LandingActivity.EXTRA_BUTTON_NAME, name)
-                            },
-                        )
-                        finishAndRemoveTask()
-                    },
+                    mode = AddButtonMode.Edit(sound),
+                    onSaved = { name -> navigateBackRenamed(name) },
                     onNavigateUp = { finish() },
                 )
             }
         }
+    }
+
+    private fun launchCreateAddButtonMode(uri: Uri) {
+        setContent {
+            AppTheme {
+                AddButtonScreen(
+                    context = this,
+                    mode = AddButtonMode.Create(uri),
+                    onSaved = { name -> navigateBackSaved(name) },
+                    onNavigateUp = { finish() },
+                )
+            }
+        }
+    }
+
+    private fun navigateBackSaved(name: String) {
+        startActivity(
+            Intent(this, LandingActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(LandingActivity.EXTRA_BUTTON_SAVED, true)
+                putExtra(LandingActivity.EXTRA_BUTTON_NAME, name)
+            },
+        )
+        finishAndRemoveTask()
+    }
+
+    private fun navigateBackRenamed(name: String) {
+        startActivity(
+            Intent(this, LandingActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(LandingActivity.EXTRA_BUTTON_RENAMED, true)
+                putExtra(LandingActivity.EXTRA_BUTTON_NAME, name)
+            },
+        )
+        finishAndRemoveTask()
     }
 }

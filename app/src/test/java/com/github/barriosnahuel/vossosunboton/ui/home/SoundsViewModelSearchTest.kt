@@ -49,18 +49,18 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `searchResults reflects a favorite toggled while overlay is open`() {
+    fun `searchResults reflects a pin toggled while overlay is open`() {
         val viewModel = givenAViewModel()
         val sound = Sound("custom sound", file = "custom.mp3")
         viewModel.injectSoundsAndAllSounds(listOf(sound))
         viewModel.onSearchQueryChange("custom")
 
-        viewModel.toggleFavorite(sound)
+        viewModel.togglePin(sound)
 
         assertThat(
             viewModel.searchResults.value
                 .single { it.name == "custom sound" }
-                .isFavorite,
+                .isPinned,
         ).isTrue()
     }
 

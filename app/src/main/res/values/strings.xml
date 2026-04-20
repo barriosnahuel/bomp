@@ -8,9 +8,6 @@
 <string name="app_feedback_generic_error_contact_support">Oops! I did it again, please contact support</string>
     <string name="app_navigation_menu_item_home">Home</string>
     <string name="app_navigation_menu_item_explore">Explore</string>
-    <string name="app_navigation_menu_item_favourites">Favorites</string>
-    <string name="app_add_to_favorites">Add to favorites</string>
-    <string name="app_remove_from_favorites">Remove from favorites</string>
     <string name="app_play">Play</string>
     <string name="app_pause">Pause</string>
     <string name="app_date_today">Today</string>
@@ -22,7 +19,10 @@
     <string name="app_search_initial_hint">Type to filter your stickers…</string>
     <string name="app_search_empty_headline">Absolute silence…</string>
     <string name="app_search_empty_subtext">This sticker doesn\'t exist yet. Your collection has a gap only you can fill.</string>
-    <string name="app_search_origin_home">Home</string>
-    <string name="app_search_origin_explore">Explore</string>
-    <string name="app_search_origin_home_and_favorites">Home · Favorites</string>
+    <string name="app_edit">Rename</string>
+    <string name="app_feedback_button_renamed">%1$s renamed!</string>
+    <string name="app_pin">Pin to top</string>
+    <string name="app_unpin">Unpin</string>
+    <string name="app_pinned">Pinned</string>
+    <string name="app_delete">Delete</string>
 </resources>

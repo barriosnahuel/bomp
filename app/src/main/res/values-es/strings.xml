@@ -8,9 +8,6 @@
     <string name="app_feedback_generic_error_contact_support">Uh! Por favor contactá con soporte</string>
     <string name="app_navigation_menu_item_home">Inicio</string>
     <string name="app_navigation_menu_item_explore">Explorar</string>
-    <string name="app_navigation_menu_item_favourites">Favoritos</string>
-    <string name="app_add_to_favorites">Agregar a favoritos</string>
-    <string name="app_remove_from_favorites">Quitar de favoritos</string>
     <string name="app_play">Reproducir</string>
     <string name="app_pause">Pausar</string>
     <string name="app_date_today">Hoy</string>
@@ -22,7 +19,10 @@
     <string name="app_search_initial_hint">Escribí para filtrar tus stickers…</string>
     <string name="app_search_empty_headline">Silencio absoluto…</string>
     <string name="app_search_empty_subtext">Este sticker aún no existe. Tu colección tiene un vacío que solo vos podés llenar.</string>
-    <string name="app_search_origin_home">Inicio</string>
-    <string name="app_search_origin_explore">Explorar</string>
-    <string name="app_search_origin_home_and_favorites">Inicio · Favoritos</string>
+    <string name="app_edit">Renombrar</string>
+    <string name="app_feedback_button_renamed">¡%1$s renombrado!</string>
+    <string name="app_pin">Destacar al inicio</string>
+    <string name="app_unpin">Quitar destacado</string>
+    <string name="app_pinned">Destacado</string>
+    <string name="app_delete">Eliminar</string>
 </resources>

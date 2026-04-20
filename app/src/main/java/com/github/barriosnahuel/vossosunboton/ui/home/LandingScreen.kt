@@ -3,9 +3,10 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ViewComfyAlt
@@ -102,7 +102,6 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     ) { innerPadding ->
         SoundsList(
             sounds = sounds,
-            selectedTab = selectedTab,
             playbackProgress = playbackProgress,
             listState = listState,
             modifier = Modifier.padding(innerPadding),
@@ -110,7 +109,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onSeek = { positionMs -> viewModel.seekTo(positionMs) },
             onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
             onDelete = { sound -> viewModel.deleteSound(sound) },
-            onFavoriteClick = { sound -> viewModel.toggleFavorite(sound) },
+            onPinClick = { sound -> viewModel.togglePin(sound) },
+            onEdit = { sound ->
+                context.startActivity(LandingActivity.editIntent(context, sound))
+            },
         )
     }
 
@@ -125,7 +127,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onPlayClick = viewModel::playOrStop,
             onSeek = viewModel::seekTo,
             onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
-            onFavoriteClick = viewModel::toggleFavorite,
+            onPinClick = viewModel::togglePin,
             onDelete = { sound ->
                 viewModel.hideSearch()
                 viewModel.deleteSound(sound)
@@ -145,6 +147,7 @@ private fun SnackbarEffects(
     val undoLabel = stringResource(R.string.app_undo)
     val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
     val buttonSavedTemplate = stringResource(R.string.app_feedback_button_saved)
+    val buttonRenamedTemplate = stringResource(R.string.app_feedback_button_renamed)
 
     LaunchedEffect(Unit) {
         viewModel.playbackErrorEvent.collect {
@@ -159,6 +162,15 @@ private fun SnackbarEffects(
         viewModel.buttonSavedEvent.collect { name ->
             snackbarHostState.showSnackbar(
                 message = String.format(buttonSavedTemplate, name),
+                duration = SnackbarDuration.Short,
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.buttonRenamedEvent.collect { name ->
+            snackbarHostState.showSnackbar(
+                message = String.format(buttonRenamedTemplate, name),
                 duration = SnackbarDuration.Short,
             )
         }
@@ -219,13 +231,6 @@ private fun AppBottomBar(
         )
         NavigationBarItem(
             colors = itemColors,
-            selected = selectedTab == AppTab.FAVORITES,
-            onClick = { onTabSelected(AppTab.FAVORITES) },
-            icon = { Icon(Icons.Default.Favorite, contentDescription = stringResource(R.string.app_navigation_menu_item_favourites)) },
-            label = { Text(stringResource(R.string.app_navigation_menu_item_favourites)) },
-        )
-        NavigationBarItem(
-            colors = itemColors,
             selected = selectedTab == AppTab.EXPLORE,
             onClick = { onTabSelected(AppTab.EXPLORE) },
             icon = { Icon(Icons.Default.ViewComfyAlt, contentDescription = stringResource(R.string.app_navigation_menu_item_explore)) },
@@ -234,12 +239,11 @@ private fun AppBottomBar(
     }
 }
 
-private const val UNFAVORITE_ANIMATION_DURATION_MS = 300
+private const val DELETE_ANIMATION_DURATION_MS = 300
 
 @Composable
 private fun SoundsList(
     sounds: List<Sound>,
-    selectedTab: AppTab,
     playbackProgress: PlaybackProgress?,
     listState: LazyListState,
     modifier: Modifier = Modifier,
@@ -247,9 +251,10 @@ private fun SoundsList(
     onSeek: (Int) -> Unit,
     onShareClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
-    onFavoriteClick: (Sound) -> Unit,
+    onPinClick: (Sound) -> Unit,
+    onEdit: (Sound) -> Unit,
 ) {
-    val dismissingFavorites = remember { mutableStateSetOf<String>() }
+    val dismissingItems = remember { mutableStateSetOf<String>() }
     val coroutineScope = rememberCoroutineScope()
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -258,14 +263,21 @@ private fun SoundsList(
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
             itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
+                val isDeleting = sound.name in dismissingItems
                 AnimatedVisibility(
-                    visible = sound.name !in dismissingFavorites,
+                    visible = !isDeleting,
+                    modifier =
+                        Modifier.animateItem(
+                            fadeInSpec = null,
+                            fadeOutSpec = null,
+                            placementSpec = spring(),
+                        ),
                     enter = EnterTransition.None,
                     exit =
-                        slideOutVertically(
-                            animationSpec = tween(durationMillis = UNFAVORITE_ANIMATION_DURATION_MS),
-                            targetOffsetY = { -it },
-                        ) + fadeOut(animationSpec = tween(durationMillis = UNFAVORITE_ANIMATION_DURATION_MS)),
+                        scaleOut(
+                            targetScale = 0f,
+                            animationSpec = tween(durationMillis = DELETE_ANIMATION_DURATION_MS),
+                        ) + fadeOut(animationSpec = tween(durationMillis = DELETE_ANIMATION_DURATION_MS)),
                 ) {
                     SoundItem(
                         sound = sound,
@@ -273,19 +285,21 @@ private fun SoundsList(
                         onPlayClick = { onPlayClick(sound) },
                         onSeek = onSeek,
                         onShareClick = { onShareClick(sound) },
-                        onDelete = { onDelete(sound) },
-                        onFavoriteClick = {
-                            if (selectedTab == AppTab.FAVORITES && sound.isFavorite) {
-                                dismissingFavorites.add(sound.name)
-                                coroutineScope.launch {
-                                    delay(UNFAVORITE_ANIMATION_DURATION_MS.toLong())
-                                    onFavoriteClick(sound)
-                                    dismissingFavorites.remove(sound.name)
-                                }
-                            } else {
-                                onFavoriteClick(sound)
+                        onDelete = {
+                            dismissingItems.add(sound.name)
+                            coroutineScope.launch {
+                                delay(DELETE_ANIMATION_DURATION_MS.toLong())
+                                onDelete(sound)
+                                dismissingItems.remove(sound.name)
                             }
                         },
+                        onPinClick = { onPinClick(sound) },
+                        onEditClick =
+                            if (!sound.isBundled()) {
+                                { onEdit(sound) }
+                            } else {
+                                null
+                            },
                     )
                 }
             }

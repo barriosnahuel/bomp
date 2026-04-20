@@ -17,20 +17,18 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 
-/**
- * Actually persists the button into storage.
- */
 interface AddButtonFeature {
-    /**
-     * @param context The execution context.
-     * @param name Name of the button.
-     * @param uri Sound's location.
-     */
     fun saveNewButtonAsync(
         context: @NotNull Context,
         name: String,
         uri: String,
     ): Deferred<Int>
+
+    fun renameButtonAsync(
+        context: @NotNull Context,
+        sound: Sound,
+        newName: String,
+    ): Deferred<Unit>
 
     companion object {
         val instance: AddButtonFeature by lazy { AddButtonFeatureImpl() }
@@ -70,6 +68,17 @@ private class AddButtonFeatureImpl : AddButtonFeature {
             }
 
             feedbackMessage
+        }
+    }
+
+    override fun renameButtonAsync(
+        context: Context,
+        sound: Sound,
+        newName: String,
+    ): Deferred<Unit> {
+        @OptIn(DelicateCoroutinesApi::class)
+        return GlobalScope.async(Dispatchers.IO) {
+            SoundDao().rename(context, sound, newName)
         }
     }
 }

@@ -25,6 +25,7 @@ public class SoundDao {
     private static final String SOUNDS_NAME = "sounds.name";
     private static final String SOUNDS_FILE_NAME_PREFFIX = "sounds.file.";
     private static final String SOUNDS_FAVORITE_PREFFIX = "sounds.favorite.";
+    private static final String SOUNDS_PINNED_PREFIX = "sounds.pinned.";
     private final Storage storage;
 
     /**
@@ -57,9 +58,10 @@ public class SoundDao {
         for (final String eachSoundName : names) {
             final String fileName = storage.get(context, SOUNDS_FILE_NAME_PREFFIX + eachSoundName);
             final boolean isFavorite = "true".equals(storage.get(context, SOUNDS_FAVORITE_PREFFIX + eachSoundName));
+            final boolean isPinned = "true".equals(storage.get(context, SOUNDS_PINNED_PREFIX + eachSoundName));
             final java.io.File soundFile = fileName != null ? FileUtils.getFile(context, fileName) : null;
             final Long dateAdded = (soundFile != null && soundFile.exists()) ? soundFile.lastModified() : null;
-            sounds.add(new Sound(eachSoundName, fileName, 0, false, isFavorite, dateAdded));
+            sounds.add(new Sound(eachSoundName, fileName, 0, false, isFavorite, dateAdded, isPinned));
         }
 
         sounds.addAll(PackagedAudios.get(context));
@@ -74,6 +76,10 @@ public class SoundDao {
      */
     public void saveFavorite(final Context context, final String soundName, final boolean isFavorite) {
         storage.save(context, SOUNDS_FAVORITE_PREFFIX + soundName, String.valueOf(isFavorite));
+    }
+
+    public void savePin(final Context context, final String soundName, final boolean isPinned) {
+        storage.save(context, SOUNDS_PINNED_PREFIX + soundName, String.valueOf(isPinned));
     }
 
     /**
@@ -96,11 +102,44 @@ public class SoundDao {
             deleteButtonKey(context, sound.getName());
             deleteButtonKeyFileMapping(context, sound.getName());
             storage.remove(context, SOUNDS_FAVORITE_PREFFIX + sound.getName());
+            storage.remove(context, SOUNDS_PINNED_PREFIX + sound.getName());
         } else {
             Timber.e("Button could NOT be deleted. Button: %s", sound.getName());
         }
 
         return deleted;
+    }
+
+    /**
+     * Renames a custom sound while preserving its file and favorite status.
+     *
+     * @param context  The execution context.
+     * @param sound    The sound to rename (its current name and file are used as source).
+     * @param newName  The new display name.
+     */
+    public void rename(final Context context, final Sound sound, final String newName) {
+        final Set<String> names = storage.getAll(context, SOUNDS_NAME);
+        names.remove(sound.getName());
+        names.add(newName);
+        storage.save(context, SOUNDS_NAME, names);
+
+        final String file = sound.getFile();
+        storage.remove(context, SOUNDS_FILE_NAME_PREFFIX + sound.getName());
+        if (file != null) {
+            storage.save(context, SOUNDS_FILE_NAME_PREFFIX + newName, file);
+        }
+
+        final String favoriteValue = storage.get(context, SOUNDS_FAVORITE_PREFFIX + sound.getName());
+        storage.remove(context, SOUNDS_FAVORITE_PREFFIX + sound.getName());
+        if (favoriteValue != null) {
+            storage.save(context, SOUNDS_FAVORITE_PREFFIX + newName, favoriteValue);
+        }
+
+        final String pinnedValue = storage.get(context, SOUNDS_PINNED_PREFIX + sound.getName());
+        storage.remove(context, SOUNDS_PINNED_PREFIX + sound.getName());
+        if (pinnedValue != null) {
+            storage.save(context, SOUNDS_PINNED_PREFIX + newName, pinnedValue);
+        }
     }
 
     private void deleteButtonKey(final @NonNull Context context, final @NonNull String name) {

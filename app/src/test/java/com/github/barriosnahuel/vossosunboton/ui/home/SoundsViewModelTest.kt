@@ -205,32 +205,32 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `toggleFavorite marks a sound as favorite`() {
+    fun `togglePin marks a sound as pinned`() {
         val viewModel = givenAViewModel()
         val sound = Sound("test", file = "test.mp3")
         viewModel.injectSounds(listOf(sound))
 
-        viewModel.toggleFavorite(sound)
+        viewModel.togglePin(sound)
 
         assertThat(
             viewModel.sounds.value
                 .single { it.name == "test" }
-                .isFavorite,
+                .isPinned,
         ).isTrue()
     }
 
     @Test
-    fun `toggleFavorite on a favorite sound removes it from favorites`() {
+    fun `togglePin on a pinned sound unpins it`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("test", "test.mp3", 0, false, isFavorite = true)
+        val sound = Sound("test", "test.mp3", 0, false, isPinned = true)
         viewModel.injectSounds(listOf(sound))
 
-        viewModel.toggleFavorite(sound)
+        viewModel.togglePin(sound)
 
         assertThat(
             viewModel.sounds.value
                 .single { it.name == "test" }
-                .isFavorite,
+                .isPinned,
         ).isFalse()
     }
 
@@ -254,15 +254,19 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         }
 
     @Test
-    fun `toggleFavorite in FAVORITES tab removes unfavorited sound from list`() {
+    fun `togglePin moves pinned sound to top of list`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("test", "test.mp3", 0, false, isFavorite = true)
-        viewModel.injectSounds(listOf(sound))
-        viewModel.selectTab(AppTab.FAVORITES)
+        val sound1 = Sound(name = "alpha", file = "a.mp3", rawRes = 0, isPlaying = false, dateAdded = 2000L)
+        val sound2 = Sound(name = "beta", file = "b.mp3", rawRes = 0, isPlaying = false, dateAdded = 1000L)
+        viewModel.injectSounds(listOf(sound1, sound2))
 
-        viewModel.toggleFavorite(sound)
+        viewModel.togglePin(sound2)
 
-        assertThat(viewModel.sounds.value.none { it.name == "test" }).isTrue()
+        assertThat(
+            viewModel.sounds.value
+                .first()
+                .name,
+        ).isEqualTo("beta")
     }
 
     @Test
@@ -286,7 +290,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val sound = viewModel.sounds.value.first()
 
         viewModel.deleteSound(sound)
-        viewModel.selectTab(AppTab.FAVORITES)
+        viewModel.selectTab(AppTab.HOME)
         viewModel.selectTab(AppTab.EXPLORE)
 
         assertThat(viewModel.sounds.value.none { it.name == sound.name }).isTrue()
@@ -300,7 +304,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             val playingSound = viewModel.sounds.value.first()
 
             viewModel.onPlayerStart(playingSound, durationMs = 1000)
-            viewModel.selectTab(AppTab.FAVORITES)
+            viewModel.selectTab(AppTab.HOME)
             viewModel.selectTab(AppTab.EXPLORE)
 
             assertThat(

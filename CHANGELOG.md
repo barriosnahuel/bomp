@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased] (v2.0.0)
 ### Added
+- Swipe right on any custom sound to pin/favorite it (PrimaryContainer background); swipe left to delete (ErrorContainer background) — replaces the old single-direction swipe
+- Edit custom sounds: long-press any card to rename it; the existing audio stays, only the name changes
+- Sorting: custom sounds now order by date added (newest first), with alphabetical fallback for bundled sounds
+- Haptic feedback on swipe actions: CONFIRM pulse for pin, REJECT double-pulse for delete (API 30+)
+- Delete animation: removed items scale and fade to zero before the list collapses ("Void Shrink")
+- List reflow: remaining items animate smoothly into place after any removal (animateItem)
+- Edit button screen: reuses the Add Button flow with pre-loaded name, audio preview, and "Save changes" CTA
 - Search overlay: tap the new FAB to search across all tabs at once; results show the same play/favorite/share/delete actions as the main list plus a subtle origin badge
 - Favorites: users can mark/unmark any custom button as favorite; a dedicated Favorites tab lists only marked buttons
 - Deeplinks: the app responds to `push-me://open/home`, `push-me://open/favorites`, and `push-me://open/explore` to navigate directly to a tab
