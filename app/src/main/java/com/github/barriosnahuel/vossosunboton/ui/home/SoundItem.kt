@@ -16,9 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -164,7 +162,7 @@ private fun SwipeActionBackground(dismissState: SwipeToDismissBoxState) {
         if (isPinAction) PIN_BACKGROUND_COLOR else MaterialTheme.colorScheme.errorContainer
     val iconTint =
         if (isPinAction) Color.White else MaterialTheme.colorScheme.onErrorContainer
-    val icon = if (isPinAction) Icons.Default.PushPin else Icons.Default.Delete
+    val icon = if (isPinAction) AppIcons.PushPin else Icons.Default.Delete
     val alignment = if (isPinAction) Alignment.CenterStart else Alignment.CenterEnd
     Box(
         modifier =
@@ -325,7 +323,7 @@ private fun SoundCardHeader(
         }
         if (sound.isPinned) {
             Icon(
-                imageVector = Icons.Default.PushPin,
+                imageVector = AppIcons.PushPin,
                 contentDescription = stringResource(R.string.app_pinned),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(end = 4.dp),
@@ -346,7 +344,7 @@ private fun SoundCardHeader(
                     if (onPinClick != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(if (sound.isPinned) R.string.app_unpin else R.string.app_pin)) },
-                            leadingIcon = { Icon(Icons.Default.PushPin, contentDescription = null) },
+                            leadingIcon = { Icon(AppIcons.PushPin, contentDescription = null) },
                             onClick = {
                                 onMenuDismiss()
                                 onPinClick()
