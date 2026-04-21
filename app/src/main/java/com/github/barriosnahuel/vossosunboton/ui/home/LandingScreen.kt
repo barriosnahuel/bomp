@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ViewComfyAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -50,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -228,7 +228,7 @@ private fun AppBottomBar(
             colors = itemColors,
             selected = selectedTab == AppTab.EXPLORE,
             onClick = { onTabSelected(AppTab.EXPLORE) },
-            icon = { Icon(Icons.Default.ViewComfyAlt, contentDescription = stringResource(R.string.app_navigation_menu_item_explore)) },
+            icon = { Icon(AppIcons.ViewComfyAlt, contentDescription = stringResource(R.string.app_navigation_menu_item_explore)) },
             label = { Text(stringResource(R.string.app_navigation_menu_item_explore)) },
         )
     }
