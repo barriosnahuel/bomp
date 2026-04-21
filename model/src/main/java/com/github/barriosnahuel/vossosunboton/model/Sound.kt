@@ -12,6 +12,7 @@ data class Sound(
     val isPlaying: Boolean,
     val isFavorite: Boolean = false,
     val dateAdded: Long? = null,
+    val isPinned: Boolean = false,
 ) {
     constructor(name: String, file: String?) : this(name, file, 0, false, false)
     constructor(

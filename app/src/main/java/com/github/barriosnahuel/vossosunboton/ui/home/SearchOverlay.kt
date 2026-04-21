@@ -70,7 +70,7 @@ fun SearchOverlay(
     onPlayClick: (Sound) -> Unit,
     onSeek: (Int) -> Unit,
     onShareClick: (Sound) -> Unit,
-    onFavoriteClick: (Sound) -> Unit,
+    onPinClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
 ) {
     BackHandler { onClose() }
@@ -151,7 +151,7 @@ fun SearchOverlay(
                                     onPlayClick = onPlayClick,
                                     onSeek = onSeek,
                                     onShareClick = onShareClick,
-                                    onFavoriteClick = onFavoriteClick,
+                                    onPinClick = onPinClick,
                                     onDelete = onDelete,
                                 )
                         }
@@ -239,21 +239,11 @@ private fun SearchResultsList(
     onPlayClick: (Sound) -> Unit,
     onSeek: (Int) -> Unit,
     onShareClick: (Sound) -> Unit,
-    onFavoriteClick: (Sound) -> Unit,
+    onPinClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
 ) {
-    val homeLabel = stringResource(R.string.app_search_origin_home)
-    val exploreLabel = stringResource(R.string.app_search_origin_explore)
-    val homeAndFavoritesLabel = stringResource(R.string.app_search_origin_home_and_favorites)
-
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         items(results, key = { it.name }) { sound ->
-            val originLabel =
-                when {
-                    sound.isBundled() -> exploreLabel
-                    sound.isFavorite -> homeAndFavoritesLabel
-                    else -> homeLabel
-                }
             SoundItem(
                 sound = sound,
                 playbackProgress = if (sound.isPlaying) playbackProgress else null,
@@ -261,8 +251,7 @@ private fun SearchResultsList(
                 onSeek = onSeek,
                 onShareClick = { onShareClick(sound) },
                 onDelete = { onDelete(sound) },
-                onFavoriteClick = { onFavoriteClick(sound) },
-                originLabel = originLabel,
+                onPinClick = { onPinClick(sound) },
             )
         }
     }

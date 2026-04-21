@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-enum class AppTab { HOME, FAVORITES, EXPLORE }
+enum class AppTab { HOME, EXPLORE }
 
 data class DeletedSoundEvent(
     val sound: Sound,
@@ -38,6 +38,7 @@ data class PlaybackProgress(
     val fraction: Float get() = if (durationMs > 0) positionMs / durationMs.toFloat() else 0f
 }
 
+@Suppress("TooManyFunctions")
 class SoundsViewModel(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -77,6 +78,9 @@ class SoundsViewModel(
 
     private val _buttonSavedEvent = Channel<String>(Channel.BUFFERED)
     val buttonSavedEvent: Flow<String> = _buttonSavedEvent.receiveAsFlow()
+
+    private val _buttonRenamedEvent = Channel<String>(Channel.BUFFERED)
+    val buttonRenamedEvent: Flow<String> = _buttonRenamedEvent.receiveAsFlow()
 
     private val _playbackErrorEvent = Channel<Unit>(Channel.BUFFERED)
     val playbackErrorEvent: Flow<Unit> = _playbackErrorEvent.receiveAsFlow()
@@ -121,7 +125,9 @@ class SoundsViewModel(
             if (query.isBlank()) {
                 emptyList()
             } else {
-                allSoundsCache.value.filter { it.name.contains(query, ignoreCase = true) }.sortedBy { it.name.lowercase() }
+                allSoundsCache.value
+                    .filter { it.name.contains(query, ignoreCase = true) }
+                    .sortedWith(compareByDescending<Sound> { it.isPinned }.thenBy { it.name.lowercase() })
             }
     }
 
@@ -130,17 +136,23 @@ class SoundsViewModel(
         viewModelScope.launch(ioDispatcher) { loadSounds() }
     }
 
-    fun toggleFavorite(sound: Sound) {
-        val nowFavorite = !sound.isFavorite
-        if (_selectedTab.value == AppTab.FAVORITES && !nowFavorite) {
-            _sounds.update { list -> list.filter { it.name != sound.name } }
-        } else {
-            _sounds.update { list -> list.map { if (it.name == sound.name) sound.copy(isFavorite = nowFavorite) else it } }
+    fun togglePin(sound: Sound) {
+        if (sound.isBundled()) return
+        val nowPinned = !sound.isPinned
+        val sortedList = { list: List<Sound> ->
+            list
+                .map { if (it.name == sound.name) it.copy(isPinned = nowPinned) else it }
+                .sortedWith(
+                    compareByDescending<Sound> { it.isPinned }
+                        .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
+                        .thenBy { it.name.lowercase() },
+                )
         }
-        allSoundsCache.update { list -> list.map { if (it.name == sound.name) it.copy(isFavorite = nowFavorite) else it } }
+        _sounds.update(sortedList)
+        allSoundsCache.update { list -> list.map { if (it.name == sound.name) it.copy(isPinned = nowPinned) else it } }
         recomputeSearchResults()
         viewModelScope.launch(ioDispatcher) {
-            SoundDao().saveFavorite(getApplication(), sound.name, nowFavorite)
+            SoundDao().savePin(getApplication(), sound.name, nowPinned)
         }
     }
 
@@ -209,8 +221,20 @@ class SoundsViewModel(
         _buttonSavedEvent.trySend(name)
     }
 
+    fun onButtonRenamed(name: String) {
+        selectTab(AppTab.HOME)
+        _buttonRenamedEvent.trySend(name)
+    }
+
     private suspend fun loadSounds() {
-        val allSounds = SoundDao().find(getApplication<Application>()).sortedBy { it.name.lowercase() }
+        val allSounds =
+            SoundDao()
+                .find(getApplication<Application>())
+                .sortedWith(
+                    compareByDescending<Sound> { it.isPinned }
+                        .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
+                        .thenBy { it.name.lowercase() },
+                )
         val playingName = _playingSound.value?.name
         val deletedName = _deletedSoundEvent.value?.sound?.name
         allSoundsCache.value =
@@ -224,7 +248,6 @@ class SoundsViewModel(
             val filtered =
                 when (_selectedTab.value) {
                     AppTab.HOME -> allSounds.filter { !it.isBundled() }
-                    AppTab.FAVORITES -> allSounds.filter { it.isFavorite }
                     AppTab.EXPLORE -> allSounds.filter { it.isBundled() }
                 }.filter { it.name != deletedName }
             if (playingName == null) {

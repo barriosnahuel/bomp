@@ -1,5 +1,6 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -8,6 +9,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
 class LandingActivity : ComponentActivity() {
@@ -37,6 +39,10 @@ class LandingActivity : ComponentActivity() {
             val name = intent.getStringExtra(EXTRA_BUTTON_NAME) ?: ""
             viewModel.onButtonSaved(name)
         }
+        if (intent.getBooleanExtra(EXTRA_BUTTON_RENAMED, false)) {
+            val name = intent.getStringExtra(EXTRA_BUTTON_NAME) ?: ""
+            viewModel.onButtonRenamed(name)
+        }
     }
 
     private fun handleDeeplink(intent: Intent) {
@@ -44,7 +50,6 @@ class LandingActivity : ComponentActivity() {
         val tab =
             when (uri.path) {
                 "/home" -> AppTab.HOME
-                "/favorites" -> AppTab.FAVORITES
                 else -> AppTab.EXPLORE
             }
         viewModel.selectTab(tab)
@@ -52,6 +57,26 @@ class LandingActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_BUTTON_SAVED = "extra_button_saved"
+        const val EXTRA_BUTTON_RENAMED = "extra_button_renamed"
         const val EXTRA_BUTTON_NAME = "extra_button_name"
+        const val EXTRA_EDIT_SOUND_NAME = "extra_edit_sound_name"
+        const val EXTRA_EDIT_SOUND_FILE = "extra_edit_sound_file"
+        const val EXTRA_EDIT_SOUND_FAVORITE = "extra_edit_sound_favorite"
+        const val EXTRA_EDIT_SOUND_DATE_ADDED = "extra_edit_sound_date_added"
+
+        private const val ADD_BUTTON_ACTIVITY_CLASS =
+            "com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity"
+
+        fun editIntent(
+            context: Context,
+            sound: Sound,
+        ): Intent =
+            Intent().apply {
+                setClassName(context, ADD_BUTTON_ACTIVITY_CLASS)
+                putExtra(EXTRA_EDIT_SOUND_NAME, sound.name)
+                putExtra(EXTRA_EDIT_SOUND_FILE, sound.file)
+                putExtra(EXTRA_EDIT_SOUND_FAVORITE, sound.isFavorite)
+                sound.dateAdded?.let { putExtra(EXTRA_EDIT_SOUND_DATE_ADDED, it) }
+            }
     }
 }

@@ -6,4 +6,8 @@
     <string name="feature_addbutton_name_is_required_error">El nombre es obligatorio</string>
     <string name="feature_addbutton_feedback_saved_ok">Guardado</string>
     <string name="feature_addbutton_activity_title">Nuevo botón</string>
+    <string name="feature_addbutton_activity_title_edit">Editar botón</string>
+    <string name="feature_addbutton_save_changes">Guardar cambios</string>
+    <string name="feature_addbutton_edit_name_label">Actualizar el nombre</string>
+    <string name="feature_addbutton_preview_audio">Vista previa del audio</string>
 </resources>

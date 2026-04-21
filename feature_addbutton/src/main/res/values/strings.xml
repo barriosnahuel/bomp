@@ -6,4 +6,8 @@
     <string name="feature_addbutton_name_is_required_error">Name is required</string>
     <string name="feature_addbutton_feedback_saved_ok">Saved!</string>
     <string name="feature_addbutton_activity_title">New button</string>
+    <string name="feature_addbutton_activity_title_edit">Edit button</string>
+    <string name="feature_addbutton_save_changes">Save changes</string>
+    <string name="feature_addbutton_edit_name_label">Update the name</string>
+    <string name="feature_addbutton_preview_audio">Preview audio</string>
 </resources>
