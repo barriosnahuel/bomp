@@ -260,7 +260,7 @@ private fun SoundsList(
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(vertical = 8.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 8.dp),
         ) {
             itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
                 val isDeleting = sound.name in dismissingItems

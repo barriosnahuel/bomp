@@ -94,7 +94,7 @@ fun AddButtonScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
         ) {
             val editSound = (mode as? AddButtonMode.Edit)?.sound
             val editFile = editSound?.file

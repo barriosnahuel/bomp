@@ -7,7 +7,6 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### Changed
 - Edit screen audio preview now shows total duration and date added, matching the home card layout
 - Normalized top-bar-to-content spacing to 16 dp across all screens
-- Search FAB now uses the secondary (rose) color to visually stand apart from the cards
 
 ### Added
 - Swipe right on any custom sound to pin/favorite it (PrimaryContainer background); swipe left to delete (ErrorContainer background) — replaces the old single-direction swipe
