@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -244,7 +245,7 @@ private fun SoundCard(
             ) {
                 IconButton(onClick = onPlayClick) {
                     Icon(
-                        imageVector = if (sound.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        imageVector = if (sound.isPlaying) AppIcons.Pause else Icons.Default.PlayArrow,
                         contentDescription = stringResource(if (sound.isPlaying) R.string.app_pause else R.string.app_play),
                     )
                 }

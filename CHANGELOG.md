@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Tests for `SoundsViewModel` covering playback state and delete/restore flows.
 
 ### Changed
+- Migrated from `material-icons-extended` to `material-icons-core` following Material 3 1.4.0; icons absent from core (`Pause`, `ViewComfyAlt`) are now local `ImageVector` definitions copied verbatim from the extended sources to preserve visual consistency
 - Resolved all Kotlin compiler and Gradle DSL deprecation warnings for a clean build log
 - `SoundsViewModel` now loads sounds on a background thread (`Dispatchers.IO`) to avoid blocking the main thread on startup.
 - Centralised all dependency and plugin versions in `gradle/libs.versions.toml` (Gradle version catalog).
