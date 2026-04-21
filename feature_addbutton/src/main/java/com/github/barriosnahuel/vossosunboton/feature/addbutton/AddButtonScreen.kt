@@ -46,6 +46,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
+import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,11 +94,17 @@ fun AddButtonScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
         ) {
-            val editFile = (mode as? AddButtonMode.Edit)?.sound?.file
+            val editSound = (mode as? AddButtonMode.Edit)?.sound
+            val editFile = editSound?.file
             if (editFile != null) {
-                AudioPreview(context = context, fileName = editFile, soundName = name)
+                AudioPreview(
+                    context = context,
+                    fileName = editFile,
+                    soundName = name,
+                    dateAdded = editSound.dateAdded,
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -163,6 +171,7 @@ private fun AudioPreview(
     context: Context,
     fileName: String,
     soundName: String,
+    dateAdded: Long?,
 ) {
     var isPlaying by remember { mutableStateOf(false) }
     var sliderPosition by remember { mutableFloatStateOf(0f) }
@@ -232,22 +241,37 @@ private fun AudioPreview(
                             contentDescription = stringResource(R.string.feature_addbutton_preview_audio),
                         )
                     }
-                    Slider(
-                        value = sliderPosition,
-                        onValueChange = { value ->
-                            sliderPosition = value
-                            if (durationMs > 0) player.seekTo((value * durationMs).toInt())
-                        },
-                        enabled = isPlaying,
-                        colors =
-                            SliderDefaults.colors(
-                                inactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                                disabledInactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                                disabledThumbColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                                disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
-                            ),
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Slider(
+                            value = sliderPosition,
+                            onValueChange = { value ->
+                                sliderPosition = value
+                                if (durationMs > 0) player.seekTo((value * durationMs).toInt())
+                            },
+                            enabled = isPlaying,
+                            colors =
+                                SliderDefaults.colors(
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                                    disabledInactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                                    disabledThumbColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                                    disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = formatDuration(durationMs),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            if (dateAdded != null) {
+                                Text(
+                                    text = formatRelativeDate(dateAdded),
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

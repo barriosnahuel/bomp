@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
 
 ## \[unreleased] (v2.0.0)
+### Changed
+- Edit screen audio preview now shows total duration and date added, matching the home card layout
+- Normalized top-bar-to-content spacing to 16 dp across all screens
+
 ### Added
 - Swipe right on any custom sound to pin/favorite it (PrimaryContainer background); swipe left to delete (ErrorContainer background) — replaces the old single-direction swipe
 - Edit custom sounds: long-press any card to rename it; the existing audio stays, only the name changes
