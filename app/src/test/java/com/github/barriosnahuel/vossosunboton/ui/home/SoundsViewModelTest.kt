@@ -270,6 +270,24 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `togglePin twice returns sound to its original date-sorted position`() {
+        val viewModel = givenAViewModel()
+        val alpha = Sound(name = "alpha", file = "a.mp3", rawRes = 0, isPlaying = false, dateAdded = 2000L)
+        val beta = Sound(name = "beta", file = "b.mp3", rawRes = 0, isPlaying = false, dateAdded = 1000L)
+        viewModel.injectSounds(listOf(alpha, beta))
+
+        viewModel.togglePin(beta)
+        val pinnedBeta = viewModel.sounds.value.single { it.name == "beta" }
+        viewModel.togglePin(pinnedBeta)
+
+        assertThat(
+            viewModel.sounds.value
+                .first()
+                .name,
+        ).isEqualTo("alpha")
+    }
+
+    @Test
     fun `deleteSound stops playback and removes sound even when passed a stale copy with isPlaying false`() {
         every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
         val viewModel = givenAViewModel()

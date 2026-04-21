@@ -99,4 +99,47 @@ internal class SoundDaoTest : AbstractRobolectricTest() {
 
         assertThat(result.single().isFavorite).isTrue()
     }
+
+    @Test
+    fun `savePin true is returned as isPinned by find`() {
+        dao.save(context, Sound("bell", "bell.mp3"))
+
+        dao.savePin(context, "bell", true)
+
+        assertThat(dao.find(context).single { it.name == "bell" }.isPinned).isTrue()
+    }
+
+    @Test
+    fun `savePin false overrides a previous savePin true`() {
+        dao.save(context, Sound("bell", "bell.mp3"))
+        dao.savePin(context, "bell", true)
+
+        dao.savePin(context, "bell", false)
+
+        assertThat(dao.find(context).single { it.name == "bell" }.isPinned).isFalse()
+    }
+
+    @Test
+    fun `savePin is preserved across a simulated restore`() {
+        dao.save(context, Sound("bell", "bell.mp3"))
+        dao.savePin(context, "bell", true)
+
+        val names = storage.getAll(context, "sounds.name").toSet()
+        val file = storage.get(context, "sounds.file.bell")
+        val pinned = storage.get(context, "sounds.pinned.bell")
+
+        context
+            .getSharedPreferences("my-prefs", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+
+        storage.save(context, "sounds.name", names)
+        storage.save(context, "sounds.file.bell", file)
+        storage.save(context, "sounds.pinned.bell", pinned)
+
+        val result = dao.find(context).filter { !it.isBundled() }
+
+        assertThat(result.single().isPinned).isTrue()
+    }
 }

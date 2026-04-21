@@ -77,6 +77,23 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `searchResults sorts pinned result first after togglePin`() {
+        val viewModel = givenAViewModel()
+        val alpha = Sound("test alpha", file = "a.mp3")
+        val beta = Sound("test beta", file = "b.mp3")
+        viewModel.injectSoundsAndAllSounds(listOf(alpha, beta))
+        viewModel.onSearchQueryChange("test")
+
+        viewModel.togglePin(beta)
+
+        assertThat(
+            viewModel.searchResults.value
+                .first()
+                .name,
+        ).isEqualTo("test beta")
+    }
+
+    @Test
     fun `hideSearch resets query and clears results`() {
         val viewModel = givenAViewModel()
         viewModel.injectAllSounds(listOf(Sound("Bromas de oficina", rawRes = 1)))

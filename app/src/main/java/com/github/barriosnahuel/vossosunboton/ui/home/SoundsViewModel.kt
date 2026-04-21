@@ -125,7 +125,9 @@ class SoundsViewModel(
             if (query.isBlank()) {
                 emptyList()
             } else {
-                allSoundsCache.value.filter { it.name.contains(query, ignoreCase = true) }.sortedBy { it.name.lowercase() }
+                allSoundsCache.value
+                    .filter { it.name.contains(query, ignoreCase = true) }
+                    .sortedWith(compareByDescending<Sound> { it.isPinned }.thenBy { it.name.lowercase() })
             }
     }
 
