@@ -7,7 +7,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -92,7 +91,11 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { viewModel.showSearch() }) {
+            FloatingActionButton(
+                onClick = { viewModel.showSearch() },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = stringResource(R.string.app_search),
@@ -194,16 +197,12 @@ private fun SnackbarEffects(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppTopBar() {
-    // Light mode: primary (#5B21B6 deep violet) — dark bar, white title.
-    // Dark mode:  primaryContainer (#4A0A96 deep violet) — dark bar, lavender title.
-    // Both are dark bars, so the status bar keeps light (white) icons in both modes.
-    val isDark = isSystemInDarkTheme()
     TopAppBar(
         title = { Text(stringResource(R.string.app_name)) },
         colors =
             TopAppBarDefaults.topAppBarColors(
-                containerColor = if (isDark) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary,
-                titleContentColor = if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary,
+                containerColor = MaterialTheme.colorScheme.secondary,
+                titleContentColor = MaterialTheme.colorScheme.onSecondary,
             ),
     )
 }
@@ -215,13 +214,13 @@ private fun AppBottomBar(
 ) {
     val itemColors =
         NavigationBarItemDefaults.colors(
-            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
             selectedTextColor = MaterialTheme.colorScheme.primary,
-            indicatorColor = MaterialTheme.colorScheme.primary,
-            unselectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    NavigationBar(containerColor = MaterialTheme.colorScheme.primaryContainer) {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceVariant) {
         NavigationBarItem(
             colors = itemColors,
             selected = selectedTab == AppTab.HOME,

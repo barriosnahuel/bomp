@@ -132,7 +132,46 @@ All UI development and generated assets (store listing, What's New, changelogs) 
 - **Touch targets (2.5.8):** Minimum 24 × 24 dp; prefer 48 × 48 dp for primary actions
 - **Labels match names (2.5.3):** Visible button/field labels must match the accessible name used by screen readers
 
-Verify contrast when adding or changing colors. Use the [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) or the Material Theme Builder. The brand palette in `AppTheme.kt` was designed to meet AA across all color roles.
+Verify contrast when adding or changing colors. Use the [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) or the Material Theme Builder. The brand palette in `AppTheme.kt` was designed to meet AA across all color roles. **All critical role pairs are automatically verified by `AppThemeContrastTest`** — if you change the palette and a test fails, fix the theme, not the test.
+
+## Design system
+
+The app uses the **Neo-Club** palette (ink × acid). Single source of truth: `app/src/main/java/…/ui/theme/AppTheme.kt`.
+
+### Palette
+
+| Token | Value | Notes |
+|---|---|---|
+| `Ink1000` | `#0B0B0C` | Near-black; dark bg, top-bar backgrounds |
+| `Ink900` | `#141415` | Card/nav bg in dark mode |
+| `Ink800` | `#1C1C1D` | Snackbar bg in light mode |
+| `Ink50` | `#F1F0EA` | Card/nav bg in light mode |
+| `Paper` | `#FAFAF7` | Bone-white; light bg, top-bar text |
+| `Acid400` | `#D7FF3A` | Signal yellow-green; all filled actions |
+| `AcidDark` | `#3E5400` | Acid darkened for text on light surfaces |
+| `Blood600` | `#C72C2F` | Destructive (light error, dark errorContainer) |
+
+### Semantic role → intent mapping
+
+| Role | Light | Dark | Used for |
+|---|---|---|---|
+| `primary` | AcidDark | Acid400 | Nav text, active labels |
+| `primaryContainer` | Acid400 | Acid400 | FAB, buttons, swipe-pin bg, search accent |
+| `onPrimaryContainer` | Ink1000 | Ink1000 | Text/icons on acid fills |
+| `secondary` | Ink1000 | Ink900 | Top-bar backgrounds (always dark) |
+| `onSecondary` | Paper | Paper | Top-bar title and icons |
+| `surfaceVariant` | Ink50 | Ink900 | Card backgrounds, bottom-nav background |
+| `onSurfaceVariant` | Ink500 | Ink300 | Card muted text, unselected nav icons |
+| `inverseSurface` | Ink800 | Paper | Snackbar background |
+| `inversePrimary` | Acid400 | AcidDark | Snackbar action button text |
+| `error` / `errorContainer` | Blood scale | Blood scale | Swipe-delete background, error states |
+
+### Rules for component authors
+
+- **Never add `isSystemInDarkTheme()` / `isDark` in component files.** If the same semantic role needs to look different per mode, the role mapping in `AppTheme.kt` is wrong — fix the theme, not the component.
+- **Never hardcode a color literal in a component** (e.g. `Color(0xFF2E7D32)`). Use the closest semantic role from `AppTheme.kt`.
+- **Components inside always-dark bars** (TopAppBar using `secondary`): use `primaryContainer` (= Acid400 in both modes) for accent elements like cursor, underline, and icons — not `primary`, which is AcidDark in light mode and nearly invisible on a dark bar.
+- **Adding a new color:** add the constant to `AppTheme.kt`, map it to an M3 role in both `LightColors` and `DarkColors`, then add a contrast assertion for the relevant pair in `AppThemeContrastTest`.
 
 ## Labels and milestone
 

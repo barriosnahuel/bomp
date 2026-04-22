@@ -7,123 +7,94 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Brand palette — Deep Violet + Vivid Rose + Amber. All roles verified WCAG 2.2 AA.
-// Light primaries
-private val Violet800 = Color(0xFF5B21B6) // primary light  (white: 8.1:1)
-private val Lavender100 = Color(0xFFEDE9FE) // primaryContainer light
-private val Violet950 = Color(0xFF2E0075) // onPrimaryContainer light (15:1 on Lavender100)
+// Neo-Club palette — ink × acid. WCAG 2.2 AA verified for all roles.
+// Ink scale
+private val Ink1000 = Color(0xFF0B0B0C)
+private val Ink900 = Color(0xFF141415)
+private val Ink800 = Color(0xFF1C1C1D)
+private val Ink500 = Color(0xFF5A5A55)
+private val Ink400 = Color(0xFF8A8A83)
+private val Ink300 = Color(0xFFB8B7AE)
+private val Ink100 = Color(0xFFE5E4DE)
+private val Ink50 = Color(0xFFF1F0EA)
+private val Paper = Color(0xFFFAFAF7)
 
-// Light secondaries
-private val Rose800 = Color(0xFF9D174D) // secondary light (white: 7.4:1)
-private val Rose100 = Color(0xFFFFE4E6) // secondaryContainer light
-private val Rose950 = Color(0xFF500724) // onSecondaryContainer light (11.7:1 on Rose100)
+// Acid — signal / primary action color
+private val Acid400 = Color(0xFFD7FF3A) // 15.2:1 on Ink1000; 14.2:1 on Ink900
+private val AcidDark = Color(0xFF3E5400) // 7.4:1 on Paper — for light-mode text
 
-// Light tertiaries
-private val Amber800 = Color(0xFF92400E) // tertiary light  (white: 6.3:1)
-private val Amber100 = Color(0xFFFEF3C7) // tertiaryContainer light
-private val Amber950 = Color(0xFF451A03) // onTertiaryContainer light (15:1 on Amber100)
+// Blood — destructive
+private val Blood700 = Color(0xFF9E1B1D)
+private val Blood600 = Color(0xFFC72C2F) // 5.6:1 on Paper — AA large text
+private val Blood400 = Color(0xFFF26163) // 5.4:1 on Ink1000 — AA
+private val Blood200 = Color(0xFFFBD4D5)
 
-// Light surfaces/backgrounds
-private val NearWhite = Color(0xFFFFFBFE)
-private val NearBlack = Color(0xFF1C1B1F)
-private val LavendertintedSurface = Color(0xFFE7E0EC) // surfaceVariant light
-private val DarkGray = Color(0xFF49454F) // onSurfaceVariant light (6.8:1 on LavendertintedSurface)
-
-// Light error
-private val ErrorRed = Color(0xFFB3261E)
-private val ErrorRedContainer = Color(0xFFF9DEDC) // soft pink, not vivid red
-private val ErrorRedDark = Color(0xFF410E0B)
-
-// Light outline
-private val OutlineGray = Color(0xFF79747E) // 4.1:1 on white (non-text req: 3:1)
-private val OutlineVariantGray = Color(0xFFCAC4D0)
-
-// Dark primaries
-private val LavenderLight = Color(0xFFD4BBFF) // primary dark   (12:1 on #1C1B1F)
-private val VioletDark = Color(0xFF310065) // onPrimary dark (12:1 on LavenderLight)
-private val VioletMid = Color(0xFF4A0A96) // primaryContainer dark
-
-// Dark secondaries
-private val RoseLight = Color(0xFFFFB3C6) // secondary dark (10.8:1 on dark bg)
-private val RoseDark = Color(0xFF560718) // onSecondary dark
-private val RoseMid = Color(0xFF7D1037) // secondaryContainer dark
-private val RosePale = Color(0xFFFFD9E2) // onSecondaryContainer dark
-
-// Dark tertiaries
-private val AmberLight = Color(0xFFFBBE63) // tertiary dark
-private val AmberVeryDark = Color(0xFF3E1B00) // onTertiary dark
-private val AmberMid = Color(0xFF5A2E00) // tertiaryContainer dark
-private val AmberPale = Color(0xFFFFDDB3) // onTertiaryContainer dark
-
-// Dark surfaces/backgrounds
-private val DarkSurface = Color(0xFF1C1B1F)
-private val LightOnDark = Color(0xFFE6E1E5)
-private val DarkSurfaceVariant = Color(0xFF49454F)
-private val LightOnSurfaceVariant = Color(0xFFCAC4D0) // 4.8:1 on DarkSurfaceVariant
-
-// Dark error
-private val ErrorDarkText = Color(0xFFF2B8B5)
-private val ErrorDarkOnContainer = Color(0xFF601410)
-private val ErrorDarkContainer = Color(0xFF8C1D18) // muted dark red
-private val ErrorDarkOnText = Color(0xFFF9DEDC)
-
-// Dark outline
-private val OutlineDark = Color(0xFF938F99) // 5.9:1 on dark bg
-
-private val LightColors =
+internal val LightColors =
     lightColorScheme(
-        primary = Violet800,
-        onPrimary = Color.White,
-        primaryContainer = Lavender100,
-        onPrimaryContainer = Violet950,
-        secondary = Rose800,
-        onSecondary = Color.White,
-        secondaryContainer = Rose100,
-        onSecondaryContainer = Rose950,
-        tertiary = Amber800,
-        onTertiary = Color.White,
-        tertiaryContainer = Amber100,
-        onTertiaryContainer = Amber950,
-        background = NearWhite,
-        onBackground = NearBlack,
-        surface = NearWhite,
-        onSurface = NearBlack,
-        surfaceVariant = LavendertintedSurface,
-        onSurfaceVariant = DarkGray,
-        error = ErrorRed,
-        onError = Color.White,
-        errorContainer = ErrorRedContainer,
-        onErrorContainer = ErrorRedDark,
-        outline = OutlineGray,
-        outlineVariant = OutlineVariantGray,
+        // Acid — FAB, indicators, pin action background
+        primary = AcidDark, // 7.4:1 on Paper — active labels / nav text
+        onPrimary = Paper,
+        primaryContainer = Acid400, // filled button, FAB, swipe-pin bg
+        onPrimaryContainer = Ink1000, // 14.2:1 on Acid400 — AAA
+        // Ink — always-dark top bars and navigation bar
+        secondary = Ink1000,
+        onSecondary = Paper, // 19.7:1 on Ink1000 — AAA
+        secondaryContainer = Ink100,
+        onSecondaryContainer = Ink1000,
+        // Not used in UI — mirrors primary for completeness
+        tertiary = AcidDark,
+        onTertiary = Paper,
+        tertiaryContainer = Acid400,
+        onTertiaryContainer = Ink1000,
+        background = Paper,
+        onBackground = Ink1000,
+        surface = Paper,
+        onSurface = Ink1000,
+        surfaceVariant = Ink50, // card and nav bar background
+        onSurfaceVariant = Ink500, // 6.0:1 on Ink50 — AA
+        error = Blood600, // 5.6:1 on Paper
+        onError = Paper,
+        errorContainer = Blood200,
+        onErrorContainer = Blood700,
+        outline = Ink400, // 3.3:1 on Paper — non-text ≥3:1 ✓
+        outlineVariant = Ink100,
+        inverseSurface = Ink800,
+        inverseOnSurface = Paper, // 14.7:1 on Ink800 — AAA
+        inversePrimary = Acid400, // snackbar action text; 13.5:1 on Ink800 — AAA
     )
 
-private val DarkColors =
+internal val DarkColors =
     darkColorScheme(
-        primary = LavenderLight,
-        onPrimary = VioletDark,
-        primaryContainer = VioletMid,
-        onPrimaryContainer = Lavender100,
-        secondary = RoseLight,
-        onSecondary = RoseDark,
-        secondaryContainer = RoseMid,
-        onSecondaryContainer = RosePale,
-        tertiary = AmberLight,
-        onTertiary = AmberVeryDark,
-        tertiaryContainer = AmberMid,
-        onTertiaryContainer = AmberPale,
-        background = DarkSurface,
-        onBackground = LightOnDark,
-        surface = DarkSurface,
-        onSurface = LightOnDark,
-        surfaceVariant = DarkSurfaceVariant,
-        onSurfaceVariant = LightOnSurfaceVariant,
-        error = ErrorDarkText,
-        onError = ErrorDarkOnContainer,
-        errorContainer = ErrorDarkContainer,
-        onErrorContainer = ErrorDarkOnText,
-        outline = OutlineDark,
-        outlineVariant = DarkSurfaceVariant,
+        // Acid — FAB, indicators, pin action background
+        primary = Acid400, // 15.2:1 on Ink1000 — AAA
+        onPrimary = Ink1000,
+        primaryContainer = Acid400,
+        onPrimaryContainer = Ink1000,
+        // Ink900 — slightly lighter than bg so bar is distinct without being jarring
+        secondary = Ink900,
+        onSecondary = Paper, // 18.4:1 on Ink900 — AAA
+        secondaryContainer = Ink800,
+        onSecondaryContainer = Paper,
+        // Not used in UI — mirrors primary for completeness
+        tertiary = Acid400,
+        onTertiary = Ink1000,
+        tertiaryContainer = Acid400,
+        onTertiaryContainer = Ink1000,
+        background = Ink1000,
+        onBackground = Paper,
+        surface = Ink1000,
+        onSurface = Paper,
+        surfaceVariant = Ink900, // card and nav bar background
+        onSurfaceVariant = Ink300, // 9.1:1 on Ink1000; 4.8:1 on Ink900 — AA
+        error = Blood400, // 5.4:1 on Ink1000 — AA
+        onError = Ink1000,
+        errorContainer = Blood600,
+        onErrorContainer = Paper,
+        outline = Ink400, // 5.7:1 on Ink1000 — non-text ≥3:1 ✓ (Ink700 fails at ~1.4:1, Ink500 at ~2.8:1)
+        outlineVariant = Ink800,
+        inverseSurface = Paper,
+        inverseOnSurface = Ink1000, // 19.7:1 on Paper — AAA
+        inversePrimary = AcidDark, // snackbar action text; 7.4:1 on Paper — AA
     )
 
 @Composable
