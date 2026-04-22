@@ -1,5 +1,6 @@
 apply plugin: 'io.gitlab.arturbosch.detekt'
 apply plugin: 'org.jlleitschuh.gradle.ktlint'
+apply plugin: 'com.diffplug.spotless'
 
 /**
  * Configuration for `io.gitlab.arturbosch.detekt` plugin
@@ -16,6 +17,16 @@ ktlint {
     android = true
     outputToConsole = true
     version = libs.versions.ktlint.get()
+}
+
+/**
+ * Configuration for `com.diffplug.spotless` plugin
+ */
+spotless {
+    kotlin {
+        licenseHeaderFile(rootProject.file("config/spotless/copyright.kt"))
+        target("src/**/*.kt")
+    }
 }
 
 android {
