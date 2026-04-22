@@ -106,8 +106,8 @@ fun SearchOverlay(
                     },
                     colors =
                         TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onSecondary,
                         ),
                 )
 
@@ -197,6 +197,7 @@ private fun SearchField(
     onQueryChange: (String) -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
+    val contentColor = MaterialTheme.colorScheme.onSecondary
 
     TextField(
         value = query,
@@ -222,8 +223,15 @@ private fun SearchField(
             TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
+                focusedIndicatorColor = MaterialTheme.colorScheme.primaryContainer,
                 unfocusedIndicatorColor = Color.Transparent,
+                focusedTextColor = contentColor,
+                unfocusedTextColor = contentColor,
+                cursorColor = MaterialTheme.colorScheme.primaryContainer,
+                focusedPlaceholderColor = contentColor.copy(alpha = 0.6f),
+                unfocusedPlaceholderColor = contentColor.copy(alpha = 0.6f),
+                focusedTrailingIconColor = MaterialTheme.colorScheme.primaryContainer,
+                unfocusedTrailingIconColor = contentColor,
             ),
     )
 

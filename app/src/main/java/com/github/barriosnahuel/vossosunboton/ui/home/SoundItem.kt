@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -154,9 +153,17 @@ private fun SwipeActionBackground(dismissState: SwipeToDismissBoxState) {
     if (dismissState.dismissDirection == SwipeToDismissBoxValue.Settled) return
     val isPinAction = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
     val backgroundColor =
-        if (isPinAction) PIN_BACKGROUND_COLOR else MaterialTheme.colorScheme.errorContainer
+        if (isPinAction) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.errorContainer
+        }
     val iconTint =
-        if (isPinAction) Color.White else MaterialTheme.colorScheme.onErrorContainer
+        if (isPinAction) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onErrorContainer
+        }
     val icon = if (isPinAction) AppIcons.PushPin else Icons.Default.Delete
     val alignment = if (isPinAction) Alignment.CenterStart else Alignment.CenterEnd
     Box(
@@ -211,8 +218,8 @@ private fun SoundCard(
                 ),
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
     ) {
         Column(
@@ -259,9 +266,9 @@ private fun SoundCard(
                         enabled = sound.isPlaying,
                         colors =
                             SliderDefaults.colors(
-                                inactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                                disabledInactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                                disabledThumbColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                                inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
+                                disabledInactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
+                                disabledThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
                                 disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
                             ),
                         modifier = Modifier.fillMaxWidth(),
@@ -312,7 +319,7 @@ private fun SoundCardHeader(
                 Text(
                     text = originLabel,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )
             }
         }
@@ -369,5 +376,3 @@ private fun SoundCardHeader(
         }
     }
 }
-
-private val PIN_BACKGROUND_COLOR = Color(0xFF2E7D32)

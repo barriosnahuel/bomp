@@ -2,7 +2,6 @@ package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.Context
 import android.media.MediaPlayer
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -150,6 +150,11 @@ fun AddButtonScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = { save() },
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
@@ -204,8 +209,8 @@ private fun AudioPreview(
         Card(
             colors =
                 CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -251,9 +256,9 @@ private fun AudioPreview(
                             enabled = isPlaying,
                             colors =
                                 SliderDefaults.colors(
-                                    inactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                                    disabledInactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
-                                    disabledThumbColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
+                                    disabledInactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
+                                    disabledThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
                                     disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
                                 ),
                             modifier = Modifier.fillMaxWidth(),
@@ -286,13 +291,6 @@ private fun AddButtonTopBar(
     mode: AddButtonMode,
     onNavigateUp: () -> Unit,
 ) {
-    // Light mode: primary (#5B21B6 deep violet) — dark bar, white title.
-    // Dark mode:  primaryContainer (#4A0A96 deep violet) — dark bar, lavender title.
-    val isDark = isSystemInDarkTheme()
-    val barContainerColor =
-        if (isDark) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary
-    val barContentColor =
-        if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary
     TopAppBar(
         title = {
             Text(
@@ -315,9 +313,9 @@ private fun AddButtonTopBar(
         },
         colors =
             TopAppBarDefaults.topAppBarColors(
-                containerColor = barContainerColor,
-                titleContentColor = barContentColor,
-                navigationIconContentColor = barContentColor,
+                containerColor = MaterialTheme.colorScheme.secondary,
+                titleContentColor = MaterialTheme.colorScheme.onSecondary,
+                navigationIconContentColor = MaterialTheme.colorScheme.onSecondary,
             ),
     )
 }
