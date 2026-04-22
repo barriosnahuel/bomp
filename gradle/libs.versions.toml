@@ -1,6 +1,6 @@
 [versions]
 # Build plugins
-agp                       = "9.1.1"
+agp                       = "9.2.0"
 googleServices            = "4.4.4"
 firebaseCrashlyticsGradle = "3.0.7"
 firebasePerfPlugin        = "2.0.2"
