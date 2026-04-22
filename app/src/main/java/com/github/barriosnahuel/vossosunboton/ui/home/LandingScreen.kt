@@ -22,10 +22,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -43,9 +47,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -54,6 +60,7 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import com.github.barriosnahuel.vossosunboton.ui.about.AboutScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -72,6 +79,12 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val tabBackStack = remember { mutableStateListOf<AppTab>() }
+    var isAboutVisible by remember { mutableStateOf(false) }
+
+    if (isAboutVisible) {
+        AboutScreen(onBack = { isAboutVisible = false })
+        return
+    }
 
     BackHandler(enabled = tabBackStack.isNotEmpty()) {
         viewModel.selectTab(tabBackStack.removeAt(tabBackStack.lastIndex))
@@ -80,7 +93,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     SnackbarEffects(viewModel = viewModel, snackbarHostState = snackbarHostState)
 
     Scaffold(
-        topBar = { AppTopBar() },
+        topBar = { AppTopBar(onAboutClick = { isAboutVisible = true }) },
         bottomBar = {
             AppBottomBar(
                 selectedTab = selectedTab,
@@ -201,13 +214,35 @@ private fun SnackbarEffects(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AppTopBar() {
+private fun AppTopBar(onAboutClick: () -> Unit) {
+    var isMenuExpanded by remember { mutableStateOf(false) }
     TopAppBar(
         title = { Text(stringResource(R.string.app_name)) },
+        actions = {
+            IconButton(onClick = { isMenuExpanded = true }) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = stringResource(R.string.app_overflow_menu),
+                )
+            }
+            DropdownMenu(
+                expanded = isMenuExpanded,
+                onDismissRequest = { isMenuExpanded = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.app_about)) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onAboutClick()
+                    },
+                )
+            }
+        },
         colors =
             TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.secondary,
                 titleContentColor = MaterialTheme.colorScheme.onSecondary,
+                actionIconContentColor = MaterialTheme.colorScheme.onSecondary,
             ),
     )
 }

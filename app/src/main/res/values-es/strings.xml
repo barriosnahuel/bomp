@@ -25,4 +25,12 @@
     <string name="app_unpin">Quitar destacado</string>
     <string name="app_pinned">Destacado</string>
     <string name="app_delete">Eliminar</string>
+
+    <string name="app_overflow_menu">Más opciones</string>
+    <string name="app_about">Acerca de</string>
+    <string name="app_about_back">Volver</string>
+    <string name="app_about_tagline">Tu tablero de sonidos personal</string>
+    <string name="app_about_license">Licencia de código</string>
+    <string name="app_about_credits">Créditos de terceros</string>
+    <string name="app_about_source">Código fuente</string>
 </resources>

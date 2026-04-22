@@ -1,0 +1,73 @@
+Third-Party Software Notices
+============================
+
+This application includes software from third parties. The following notices
+are provided in accordance with each library's license terms.
+
+--------------------------------------------------------------------------------
+Android Jetpack (Activity, Compose, Lifecycle, etc.)
+Copyright (C) The Android Open Source Project
+Apache License, Version 2.0
+https://developer.android.com/jetpack
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Kotlin Programming Language
+Copyright (C) JetBrains s.r.o. and Kotlin Contributors
+Apache License, Version 2.0
+https://kotlinlang.org
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Kotlin Coroutines
+Copyright (C) JetBrains s.r.o. and Kotlin Contributors
+Apache License, Version 2.0
+https://github.com/Kotlin/kotlinx.coroutines
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Material Components for Android
+Copyright (C) The Android Open Source Project
+Apache License, Version 2.0
+https://github.com/material-components/material-components-android
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Firebase Android SDK (Analytics, Crashlytics, Performance)
+Copyright (C) Google LLC
+Apache License, Version 2.0 (plus Firebase ToS)
+https://firebase.google.com
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Timber
+Copyright (C) 2013 Jake Wharton
+Apache License, Version 2.0
+https://github.com/JakeWharton/timber
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+MockK
+Copyright (C) 2018 Oleksiy Pylypenko
+Apache License, Version 2.0
+https://github.com/mockk/mockk
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Robolectric
+Copyright (C) The Robolectric Authors
+Apache License, Version 2.0
+https://robolectric.org
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Google Truth
+Copyright (C) 2011 The Guava Authors, (C) 2014 Google, Inc.
+Apache License, Version 2.0
+https://github.com/google/truth
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Apache License, Version 2.0
+Full text: https://www.apache.org/licenses/LICENSE-2.0
+--------------------------------------------------------------------------------

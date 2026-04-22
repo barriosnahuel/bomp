@@ -25,4 +25,13 @@
     <string name="app_unpin">Unpin</string>
     <string name="app_pinned">Pinned</string>
     <string name="app_delete">Delete</string>
+
+    <string name="app_overflow_menu">More options</string>
+    <string name="app_about">About</string>
+    <string name="app_about_back">Back</string>
+    <string name="app_about_tagline">Your personal soundboard</string>
+    <string name="app_about_license">Source license</string>
+    <string name="app_about_credits">Third-party credits</string>
+    <string name="app_about_source">Source code</string>
+    <string name="app_about_source_url" translatable="false">https://github.com/barriosnahuel/push-me</string>
 </resources>

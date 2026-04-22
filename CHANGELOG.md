@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Replaced the old violet/rose/amber palette with the Neo-Club ink × acid design system across all screens (top bars, cards, FAB, search, swipe actions)
 
 ### Added
+- About screen: version info, license viewer (AGPLv3), third-party credits, and source code link — accessible from the top-bar overflow menu
+- AGPLv3 copyright header on all source files, enforced by Spotless
 - Swipe right on any custom sound to pin/favorite it (PrimaryContainer background); swipe left to delete (ErrorContainer background) — replaces the old single-direction swipe
 - Edit custom sounds: long-press any card to rename it; the existing audio stays, only the name changes
 - Sorting: custom sounds now order by date added (newest first), with alphabetical fallback for bundled sounds
