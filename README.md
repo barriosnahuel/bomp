@@ -5,6 +5,7 @@ An Android app made, by the moment, only for fun. Currently it's aimed to be use
 [![version](https://img.shields.io/badge/version-1.1.0-brightgreen.svg)](https://github.com/barriosnahuel/push-me/releases)
 [![Semver](https://img.shields.io/badge/SemVer-v2.0.0-green.svg)](http://semver.org/spec/v2.0.0.html)
 [![stable](https://img.shields.io/badge/stability-experimental-green.svg)](https://nodejs.org/api/documentation.html#documentation_stability_index)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://source.android.com/setup/start/build-numbers)
 [![API](https://img.shields.io/badge/API-33-brightgreen.svg?style=flat)](https://source.android.com/setup/start/build-numbers)
@@ -32,3 +33,10 @@ Before doing anything, just check the [contributing cheatsheet](CONTRIBUTING.md)
 Also, if you're interested in working on open source projects take a look at [opensource.guide](https://opensource.guide/).
 
 Thank you! 🤝
+
+## Legal
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
+See the [LICENSE](LICENSE) file in the project root for the full license text.
+
+Copyright (c) 2016–2026 Nahuel Barrios. All rights reserved.
