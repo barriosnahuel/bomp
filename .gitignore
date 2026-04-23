@@ -20,6 +20,8 @@ build/
 config/*
 !config/android/android-lint.xml
 !config/detekt/detekt-config.yml
+!config/spotless/
+!config/spotless/copyright.kt
 
 
 ### Local configuration file (sdk path, etc)
