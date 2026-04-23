@@ -126,3 +126,6 @@ the same AGPLv3 terms. See [LICENSE](LICENSE) for the full text.
 
 All `.kt` source files must include the AGPLv3 copyright header. Run `./gradlew spotlessApply`
 to apply it automatically to any new files you add — CI will reject files without it.
+
+When adding a runtime dependency, also update `app/src/main/res/raw/app_third_party_notices.txt`
+with the library name, copyright holder, license, and project URL.

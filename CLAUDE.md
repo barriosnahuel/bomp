@@ -224,6 +224,21 @@ For the milestone, read the `## [unreleased]` line in `CHANGELOG.md` — the ver
 | `dependencies` | PR that updates library, plugin, or Gradle wrapper versions (applied automatically by Dependabot) |
 | `stale` | Issue or PR with no recent activity — candidate for closing |
 
+## Third-party notices
+
+`app/src/main/res/raw/app_third_party_notices.txt` lists all runtime dependencies with their license attribution. **Update this file whenever you add or remove a runtime dependency** (`implementation`, not `testImplementation` or `debugImplementation`).
+
+Each entry follows this format:
+
+```
+--------------------------------------------------------------------------------
+Library Name
+Copyright (C) Author
+License Name
+https://project-url
+--------------------------------------------------------------------------------
+```
+
 ## Changelog
 
 `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format:
