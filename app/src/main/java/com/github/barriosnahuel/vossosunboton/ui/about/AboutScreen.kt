@@ -6,10 +6,10 @@
 package com.github.barriosnahuel.vossosunboton.ui.about
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -222,7 +222,7 @@ private fun openUrl(
     context: Context,
     url: String,
 ) {
-    CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
+    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 }
 
 private const val VERSION_TEXT_ALPHA = 0.6f

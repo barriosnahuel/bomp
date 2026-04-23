@@ -9,7 +9,6 @@ detekt                    = "1.23.8"
 ktlintGradle              = "14.2.0"
 ktlint                    = "1.6.0"
 spotless                  = "6.25.0"
-browser                   = "1.8.0"
 
 # AndroidX / Jetpack
 appcompat                 = "1.7.1"
@@ -72,9 +71,6 @@ firebase-bom                      = { module = "com.google.firebase:firebase-bom
 firebase-analytics                = { module = "com.google.firebase:firebase-analytics" }
 firebase-crashlytics              = { module = "com.google.firebase:firebase-crashlytics" }
 firebase-perf                     = { module = "com.google.firebase:firebase-perf" }
-
-# ---------- Browser (Custom Tabs) ----------
-androidx-browser                  = { module = "androidx.browser:browser",                              version.ref = "browser" }
 
 # ---------- Timber ----------
 timber                            = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
