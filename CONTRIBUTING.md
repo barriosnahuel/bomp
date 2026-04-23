@@ -117,3 +117,12 @@ The following files must be located into the root dir:
 ## Store listing 📄
 
 As mentioned before, under [store-listing/](/store-listing) there are the assets for the store listing and the original GIMP files to edit those assets.
+
+## License 📄
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
+By submitting a pull request you agree that your contribution will be distributed under
+the same AGPLv3 terms. See [LICENSE](LICENSE) for the full text.
+
+All `.kt` source files must include the AGPLv3 copyright header. Run `./gradlew spotlessApply`
+to apply it automatically to any new files you add — CI will reject files without it.

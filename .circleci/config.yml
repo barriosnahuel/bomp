@@ -50,6 +50,19 @@ jobs:
           name: "Run ktlint"
           command: ./gradlew ktlintCheck
 
+  "spotless":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+    steps:
+      - checkout
+      - android/restore_gradle_cache
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Run Spotless (license headers)"
+          command: ./gradlew spotlessCheck
+
   "lint":
     executor:
       name: android/android_docker
@@ -107,6 +120,9 @@ workflows:
       - ktlint:
           requires:
             - compile
+      - spotless:
+          requires:
+            - compile
       - lint:
           requires:
             - compile
@@ -114,6 +130,7 @@ workflows:
           requires:
             - detekt
             - ktlint
+            - spotless
             - lint
       - bundle:
           requires:
