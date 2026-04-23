@@ -24,7 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -140,7 +140,7 @@ fun AboutScreen(onBack: () -> Unit) {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.app_about_license)) },
                 trailingContent = {
-                    Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null)
+                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
                 },
                 modifier = Modifier.clickable { isLicenseSheetVisible = true },
             )
@@ -150,7 +150,7 @@ fun AboutScreen(onBack: () -> Unit) {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.app_about_credits)) },
                 trailingContent = {
-                    Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null)
+                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
                 },
                 modifier = Modifier.clickable { isCreditsSheetVisible = true },
             )
@@ -160,7 +160,7 @@ fun AboutScreen(onBack: () -> Unit) {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.app_about_source)) },
                 trailingContent = {
-                    Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null)
+                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
                 },
                 modifier = Modifier.clickable { openUrl(context, sourceUrl) },
             )

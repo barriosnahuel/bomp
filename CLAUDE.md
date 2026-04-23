@@ -31,6 +31,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Run a single test class
 ./gradlew :model:test --tests "com.github.barriosnahuel.vossosunboton.model.SomeTest"
+
+# Apply AGPLv3 copyright header to all .kt files (auto-fix for Spotless violations)
+./gradlew spotlessApply
 ```
 
 ### Tooling & Environment
@@ -80,6 +83,21 @@ Mock any singleton factories (e.g. `PlayerControllerFactory`) that would crash u
 
 **Dynamic feature modules** (e.g. `feature_addbutton`) cannot use Robolectric — Robolectric's `ShadowPackageParser` rejects split APKs (`Expected base APK, but found split`). Activities in those modules require instrumented tests if smoke coverage is needed.
 
+Full-screen composables with their own business logic (PackageManager calls, raw resource reads, or significant state) must also have a `createComposeRule()` smoke test that verifies they render without crashing. See `AboutScreenTest` as the canonical example:
+
+```kotlin
+@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+internal class MyScreenTest : AbstractRobolectricTest() {
+    @get:Rule val composeTestRule = createComposeRule()
+
+    @Test
+    fun `MyScreen renders without crashing`() {
+        composeTestRule.setContent { AppTheme { MyScreen(onBack = {}) } }
+        composeTestRule.waitForIdle()
+    }
+}
+```
+
 
 ## Worktree setup
 
@@ -106,11 +124,28 @@ Every resource name must start with the `resourcePrefix` defined in the module's
 
 Android Lint enforces this rule (`ResourceName` check). Violating it causes a build failure.
 
+## Copyright headers
+
+Every `.kt` source file must start with the AGPLv3 copyright block (enforced by Spotless at CI time):
+
+```
+/*
+ * Copyright (c) 2016-2026 Nahuel Barrios. All rights reserved.
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See LICENSE in the project root for full license information.
+ */
+```
+
+If `./gradlew check` fails with a Spotless violation, run `./gradlew spotlessApply` to auto-fix all files.
+
+**Do not remove or hide the About screen.** It is the "Appropriate Legal Notices" mechanism required by AGPLv3 §0. Its entry point is the TopAppBar overflow menu in `LandingScreen.kt`.
+
 ## Pre-push checklist
 
-All three linters run on CI and must pass:
+All linters run on CI and must pass:
 - **KtLint** — style (runs as part of `check`; auto-fix with `ktlintFormat`)
 - **Detekt** — static analysis (config: `config/detekt/detekt-config.yml`; max line length 150)
+- **Spotless** — AGPLv3 copyright headers (runs as part of `check`; auto-fix with `spotlessApply`)
 - **Android Lint** — lint rules in `config/android/android-lint.xml`
 
 Before pushing any branch, always run:
@@ -119,7 +154,7 @@ Before pushing any branch, always run:
 ./gradlew check -x test && ./gradlew test
 ```
 
-This catches the same failures CI will report (ktlint, detekt, Android lint, unit tests) without waiting for a full CI run.
+This catches the same failures CI will report (ktlint, detekt, Spotless, Android lint, unit tests) without waiting for a full CI run.
 
 ## Accessibility (WCAG 2.2 AA)
 
