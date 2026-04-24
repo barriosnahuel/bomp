@@ -29,7 +29,13 @@
     <string name="app_overflow_menu">Más opciones</string>
     <string name="app_about">Acerca de</string>
     <string name="app_about_back">Volver</string>
-    <string name="app_about_tagline">Tu tablero de sonidos personal</string>
+    <string name="app_about_tagline">Porque un audio de los tuyos no es un mensaje, es un abrazo que se escucha</string>
+    <string name="app_about_play_branding_audio">Reproducir audio de marca</string>
+    <string name="app_about_ai_gemini_name">Google Gemini</string>
+    <string name="app_about_ai_gemini_role">Ayudó a pensar ideas y decidir qué construir</string>
+    <string name="app_about_ai_claude_name">Anthropic Claude</string>
+    <string name="app_about_ai_claude_role">Convirtió esas ideas en la app que estás usando</string>
+    <string name="app_about_collaborators_section_title">Hecho con</string>
     <string name="app_about_license">Licencia de código</string>
     <string name="app_about_credits">Créditos de terceros</string>
     <string name="app_about_source">Código fuente</string>

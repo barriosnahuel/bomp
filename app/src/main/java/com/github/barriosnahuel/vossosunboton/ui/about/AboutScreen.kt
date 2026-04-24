@@ -8,64 +8,105 @@ package com.github.barriosnahuel.vossosunboton.ui.about
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.SoundPool
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
 import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import java.util.Locale
+
+private val COLLABORATORS: List<Collaborator> = emptyList()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var isLicenseSheetVisible by remember { mutableStateOf(false) }
-    var isCreditsSheetVisible by remember { mutableStateOf(false) }
     val licenseText = remember { context.readRawResource(R.raw.app_license) }
     val creditsText = remember { context.readRawResource(R.raw.app_third_party_notices) }
+    val creditEntries = remember { parseCreditEntries(creditsText) }
     val versionInfo = remember { context.versionInfo() }
     val sourceUrl = stringResource(R.string.app_about_source_url)
+    val isEnglishLocale = remember { Locale.getDefault().language == "en" }
+
+    var soundId by remember { mutableIntStateOf(0) }
+    val soundPool =
+        remember {
+            SoundPool
+                .Builder()
+                .setMaxStreams(1)
+                .setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build(),
+                ).build()
+        }
+    DisposableEffect(Unit) {
+        soundPool.setOnLoadCompleteListener { _, id, status ->
+            if (status == 0) soundId = id
+        }
+        soundPool.load(context, R.raw.app_branding_audio, 1)
+        onDispose { soundPool.release() }
+    }
 
     BackHandler { onBack() }
 
@@ -97,75 +138,24 @@ fun AboutScreen(onBack: () -> Unit) {
                     .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(32.dp))
-
-            Image(
-                painter = painterResource(R.mipmap.app_ic_launcher),
-                contentDescription = null,
-                modifier = Modifier.size(96.dp),
-                colorFilter =
-                    if (BuildConfig.DEBUG) {
-                        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                    } else {
-                        null
-                    },
+            HeroSection(
+                versionInfo = versionInfo,
+                soundPool = soundPool,
+                soundId = soundId,
+                isEnglishLocale = isEnglishLocale,
             )
-
+            Spacer(Modifier.height(24.dp))
+            CreditsSection(creditEntries = creditEntries)
+            if (COLLABORATORS.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                CollaboratorsSection(COLLABORATORS)
+            }
             Spacer(Modifier.height(16.dp))
-
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineLarge,
+            LegalSection(
+                onLicenseClick = { isLicenseSheetVisible = true },
+                onSourceClick = { openUrl(context, sourceUrl) },
             )
-
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                text = stringResource(R.string.app_about_tagline),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = versionInfo,
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.alpha(VERSION_TEXT_ALPHA),
-            )
-
             Spacer(Modifier.height(32.dp))
-
-            HorizontalDivider()
-
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.app_about_license)) },
-                trailingContent = {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-                },
-                modifier = Modifier.clickable { isLicenseSheetVisible = true },
-            )
-
-            HorizontalDivider()
-
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.app_about_credits)) },
-                trailingContent = {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-                },
-                modifier = Modifier.clickable { isCreditsSheetVisible = true },
-            )
-
-            HorizontalDivider()
-
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.app_about_source)) },
-                trailingContent = {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-                },
-                modifier = Modifier.clickable { openUrl(context, sourceUrl) },
-            )
-
-            HorizontalDivider()
         }
     }
 
@@ -187,24 +177,251 @@ fun AboutScreen(onBack: () -> Unit) {
             }
         }
     }
+}
 
-    if (isCreditsSheetVisible) {
-        ModalBottomSheet(
-            onDismissRequest = { isCreditsSheetVisible = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+@Composable
+private fun HeroSection(
+    versionInfo: String,
+    soundPool: SoundPool,
+    soundId: Int,
+    isEnglishLocale: Boolean,
+) {
+    Spacer(Modifier.height(32.dp))
+
+    Image(
+        painter = painterResource(R.mipmap.app_ic_launcher),
+        contentDescription = null,
+        modifier = Modifier.size(96.dp),
+        colorFilter =
+            if (BuildConfig.DEBUG) {
+                ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+            } else {
+                null
+            },
+    )
+
+    Spacer(Modifier.height(16.dp))
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.displaySmall,
+        )
+        Spacer(Modifier.width(8.dp))
+        IconButton(
+            onClick = { if (soundId > 0) soundPool.play(soundId, 1f, 1f, 1, 0, 1f) },
+            modifier = Modifier.size(56.dp),
         ) {
-            LazyColumn(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(bottom = 32.dp),
-            ) {
-                item {
-                    Text(
-                        text = creditsText,
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                    )
-                }
+            Icon(
+                imageVector = AppIcons.VolumeUp,
+                contentDescription = stringResource(R.string.app_about_play_branding_audio),
+            )
+        }
+    }
+
+    if (isEnglishLocale) {
+        Text(
+            text = stringResource(R.string.app_about_pronunciation),
+            style = MaterialTheme.typography.bodyLarge,
+            fontStyle = FontStyle.Italic,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+
+    Text(
+        text = "“${stringResource(R.string.app_about_tagline)}”",
+        style = MaterialTheme.typography.bodyLarge,
+        fontStyle = FontStyle.Italic,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
+
+    Spacer(Modifier.height(8.dp))
+
+    Text(
+        text = versionInfo,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun CreditsSection(creditEntries: List<CreditEntry>) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (isExpanded) 90f else 0f,
+        label = "credits_arrow",
+    )
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { isExpanded = !isExpanded }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.app_about_credits),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            modifier = Modifier.rotate(arrowRotation),
+        )
+    }
+
+    AnimatedVisibility(visible = isExpanded) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AiAttributionCard(
+                name = stringResource(R.string.app_about_ai_gemini_name),
+                role = stringResource(R.string.app_about_ai_gemini_role),
+            )
+            AiAttributionCard(
+                name = stringResource(R.string.app_about_ai_claude_name),
+                role = stringResource(R.string.app_about_ai_claude_role),
+            )
+            creditEntries.forEach { entry ->
+                CreditCard(entry = entry)
+            }
+            Spacer(Modifier.height(4.dp))
+        }
+    }
+}
+
+@Composable
+private fun AiAttributionCard(
+    name: String,
+    role: String,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = role,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CreditCard(entry: CreditEntry) {
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = entry.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            entry.copyright?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = entry.license,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            entry.url?.let { url ->
+                Text(
+                    text = url,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { openUrl(context, url) },
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun CollaboratorsSection(collaborators: List<Collaborator>) {
+    Text(
+        text = stringResource(R.string.app_about_collaborators_section_title),
+        style = MaterialTheme.typography.titleMedium,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+    )
+    Spacer(Modifier.height(8.dp))
+    collaborators.forEach { collaborator ->
+        Card(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = collaborator.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = collaborator.role,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegalSection(
+    onLicenseClick: () -> Unit,
+    onSourceClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onLicenseClick,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Text(stringResource(R.string.app_about_license))
+    }
+    OutlinedButton(
+        onClick = onSourceClick,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Text(stringResource(R.string.app_about_source))
     }
 }
 
@@ -224,5 +441,3 @@ private fun openUrl(
 ) {
     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 }
-
-private const val VERSION_TEXT_ALPHA = 0.6f
