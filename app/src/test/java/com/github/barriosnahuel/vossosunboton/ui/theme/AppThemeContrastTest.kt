@@ -144,6 +144,28 @@ internal class AppThemeContrastTest {
     fun `dark primary on surfaceVariant pin icon on card passes non-text AA`() {
         assertNonTextAA(DarkColors.primary, DarkColors.surfaceVariant, "dark: primary / surfaceVariant")
     }
+
+    // --- About screen pairs ---
+
+    @Test
+    fun `light onSurface on surfaceVariant About card name passes AA`() {
+        assertTextAA(LightColors.onSurface, LightColors.surfaceVariant, "light: onSurface / surfaceVariant")
+    }
+
+    @Test
+    fun `dark onSurface on surfaceVariant About card name passes AA`() {
+        assertTextAA(DarkColors.onSurface, DarkColors.surfaceVariant, "dark: onSurface / surfaceVariant")
+    }
+
+    @Test
+    fun `light onSurfaceVariant on background About muted text passes AA`() {
+        assertTextAA(LightColors.onSurfaceVariant, LightColors.background, "light: onSurfaceVariant / background")
+    }
+
+    @Test
+    fun `dark onSurfaceVariant on background About muted text passes AA`() {
+        assertTextAA(DarkColors.onSurfaceVariant, DarkColors.background, "dark: onSurfaceVariant / background")
+    }
 }
 
 private fun assertTextAA(

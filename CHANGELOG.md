@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Replaced the old violet/rose/amber palette with the Neo-Club ink × acid design system across all screens (top bars, cards, FAB, search, swipe actions)
 
 ### Added
+- About screen redesigned as a brand manifesto: audio branding button (plays official push-me sound), AI co-pilot attribution (Gemini and Claude), conditional collaborators section, and full-width legal buttons — WCAG AAA accessible (18 sp body text, 56 dp touch targets, 7:1+ contrast across all text roles)
 - About screen: version info, license viewer (AGPLv3), third-party credits, and source code link — accessible from the top-bar overflow menu
 - AGPLv3 copyright header on all source files, enforced by Spotless
 - Swipe right on any custom sound to pin/favorite it (PrimaryContainer background); swipe left to delete (ErrorContainer background) — replaces the old single-direction swipe
