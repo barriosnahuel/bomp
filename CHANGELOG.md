@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Edit screen audio preview now shows total duration and date added, matching the home card layout
 - Normalized top-bar-to-content spacing to 16 dp across all screens
 - Replaced the old violet/rose/amber palette with the Neo-Club ink × acid design system across all screens (top bars, cards, FAB, search, swipe actions)
+- Play button is now the primary visual action within each card: acid-filled circle with a halo when playing; share icon demoted to secondary weight
+- Sound cards now have a subtle 1dp hairline border for visual separation on dark and light backgrounds
 
 ### Added
 - About screen redesigned as a brand manifesto: audio branding button (plays official push-me sound), AI co-pilot attribution (Gemini and Claude), conditional collaborators section, and full-width legal buttons — WCAG AAA accessible (18 sp body text, 56 dp touch targets, 7:1+ contrast across all text roles)
