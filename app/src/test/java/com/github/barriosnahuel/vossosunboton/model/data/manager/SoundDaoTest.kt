@@ -8,6 +8,7 @@ package com.github.barriosnahuel.vossosunboton.model.data.manager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.local.Storage
 import com.google.common.truth.Truth.assertThat
@@ -146,5 +147,35 @@ internal class SoundDaoTest : AbstractRobolectricTest() {
         val result = dao.find(context).filter { !it.isBundled() }
 
         assertThat(result.single().isPinned).isTrue()
+    }
+
+    @Test
+    fun `findDurations returns empty map when no durations saved`() {
+        val durations = dao.findDurations(context)
+
+        assertThat(durations).isEmpty()
+    }
+
+    @Test
+    fun `saveDuration then findDurations returns the saved duration`() {
+        dao.save(context, Sound("bell", "bell.mp3"))
+
+        dao.saveDuration(context, "bell", 42000)
+
+        assertThat(dao.findDurations(context)).containsEntry("bell", 42000)
+    }
+
+    @Test
+    fun `delete also removes the persisted duration`() {
+        val sound = Sound("bell", "bell.mp3")
+        dao.save(context, sound)
+        dao.saveDuration(context, "bell", 42000)
+        val soundFile = getFile(context, "bell.mp3")
+        soundFile.parentFile?.mkdirs()
+        soundFile.createNewFile()
+
+        dao.delete(context, sound)
+
+        assertThat(dao.findDurations(context)).doesNotContainKey("bell")
     }
 }

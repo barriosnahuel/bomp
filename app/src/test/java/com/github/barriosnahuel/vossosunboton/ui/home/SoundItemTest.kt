@@ -114,6 +114,50 @@ internal class SoundItemTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `when idle with duration shows total duration`() {
+        val sound = Sound("bell", file = "bell.mp3")
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SoundItem(
+                    sound = sound,
+                    playbackProgress = null,
+                    durationMs = 62000,
+                    onPlayClick = {},
+                    onSeek = {},
+                    onShareClick = {},
+                    onDelete = {},
+                    onPinClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("1:02").assertExists()
+    }
+
+    @Test
+    fun `when playing shows elapsed time not remaining`() {
+        val sound = Sound("bell", file = "bell.mp3").copy(isPlaying = true)
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SoundItem(
+                    sound = sound,
+                    playbackProgress = PlaybackProgress(positionMs = 30000, durationMs = 62000),
+                    durationMs = 62000,
+                    onPlayClick = {},
+                    onSeek = {},
+                    onShareClick = {},
+                    onDelete = {},
+                    onPinClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("0:30").assertExists()
+    }
+
+    @Test
     fun `bundled sound does not trigger any callback on swipe`() {
         var pinCallCount = 0
         var deleteCallCount = 0

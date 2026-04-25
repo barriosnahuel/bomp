@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
@@ -61,6 +62,19 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                         } else {
                             copy(inputStream, fileOutputStream)
                             SoundDao().save(context, Sound(name, fileName))
+                            val durationMs =
+                                runCatching {
+                                    val retriever = MediaMetadataRetriever()
+                                    try {
+                                        retriever.setDataSource(targetFile.absolutePath)
+                                        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toInt()
+                                    } finally {
+                                        retriever.release()
+                                    }
+                                }.getOrNull()
+                            if (durationMs != null) {
+                                SoundDao().saveDuration(context, name, durationMs)
+                            }
 
                             feedbackMessage = R.string.feature_addbutton_feedback_saved_ok
                         }
