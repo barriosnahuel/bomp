@@ -23,7 +23,6 @@
     <string name="app_feedback_button_renamed">%1$s renamed!</string>
     <string name="app_pin">Pin to top</string>
     <string name="app_unpin">Unpin</string>
-    <string name="app_pinned">Pinned</string>
     <string name="app_delete">Delete</string>
 
     <string name="app_overflow_menu">More options</string>

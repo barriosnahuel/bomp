@@ -6,11 +6,15 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.os.Build
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
@@ -155,6 +159,45 @@ internal class SoundItemTest : AbstractRobolectricTest() {
         }
 
         composeTestRule.onNodeWithText("0:30").assertExists()
+    }
+
+    @Test
+    fun `pinned and unpinned card have the same height`() {
+        var pinnedHeight = 0
+        var unpinnedHeight = 0
+        val sound = Sound("test sound", file = "test.mp3")
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                Column {
+                    Box(modifier = Modifier.onGloballyPositioned { pinnedHeight = it.size.height }) {
+                        SoundItem(
+                            sound = sound.copy(isPinned = true),
+                            playbackProgress = null,
+                            onPlayClick = {},
+                            onSeek = {},
+                            onShareClick = {},
+                            onDelete = {},
+                            onPinClick = {},
+                        )
+                    }
+                    Box(modifier = Modifier.onGloballyPositioned { unpinnedHeight = it.size.height }) {
+                        SoundItem(
+                            sound = sound.copy(isPinned = false),
+                            playbackProgress = null,
+                            onPlayClick = {},
+                            onSeek = {},
+                            onShareClick = {},
+                            onDelete = {},
+                            onPinClick = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        assertThat(pinnedHeight).isEqualTo(unpinnedHeight)
     }
 
     @Test

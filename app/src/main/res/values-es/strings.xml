@@ -23,7 +23,6 @@
     <string name="app_feedback_button_renamed">¡%1$s renombrado!</string>
     <string name="app_pin">Destacar al inicio</string>
     <string name="app_unpin">Quitar destacado</string>
-    <string name="app_pinned">Destacado</string>
     <string name="app_delete">Eliminar</string>
 
     <string name="app_overflow_menu">Más opciones</string>

@@ -368,13 +368,14 @@ private fun SoundCardHeader(
                 )
             }
         }
-        if (sound.isPinned) {
-            Icon(
-                imageVector = AppIcons.PushPin,
-                contentDescription = stringResource(R.string.app_pinned),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = Spacing.XS),
-            )
+        if (onPinClick != null) {
+            IconButton(onClick = onPinClick) {
+                Icon(
+                    imageVector = if (sound.isPinned) AppIcons.PushPin else AppIcons.PushPinOutlined,
+                    contentDescription = stringResource(if (sound.isPinned) R.string.app_unpin else R.string.app_pin),
+                    tint = if (sound.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         IconButton(onClick = onShareClick) {
             Icon(
@@ -388,16 +389,6 @@ private fun SoundCardHeader(
                     expanded = showMenu,
                     onDismissRequest = onMenuDismiss,
                 ) {
-                    if (onPinClick != null) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(if (sound.isPinned) R.string.app_unpin else R.string.app_pin)) },
-                            leadingIcon = { Icon(AppIcons.PushPin, contentDescription = null) },
-                            onClick = {
-                                onMenuDismiss()
-                                onPinClick()
-                            },
-                        )
-                    }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.app_edit)) },
                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },

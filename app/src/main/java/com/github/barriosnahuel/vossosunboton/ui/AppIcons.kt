@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.ui
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
@@ -68,6 +69,48 @@ public object AppIcons {
                     horizontalLineTo(19f)
                     verticalLineToRelative(-2f)
                     curveToRelative(-1.66f, 0f, -3f, -1.34f, -3f, -3f)
+                    close()
+                }
+            }.build()
+    }
+
+    val PushPinOutlined: ImageVector by lazy {
+        ImageVector
+            .Builder(
+                name = "PushPinOutlined",
+                defaultWidth = 24.dp,
+                defaultHeight = 24.dp,
+                viewportWidth = 24f,
+                viewportHeight = 24f,
+            ).apply {
+                path(fill = SolidColor(Color.Black), pathFillType = PathFillType.EvenOdd) {
+                    moveTo(16f, 9f)
+                    verticalLineTo(4f)
+                    horizontalLineToRelative(1f)
+                    curveToRelative(0.55f, 0f, 1f, -0.45f, 1f, -1f)
+                    reflectiveCurveToRelative(-0.45f, -1f, -1f, -1f)
+                    horizontalLineTo(7f)
+                    curveToRelative(-0.55f, 0f, -1f, 0.45f, -1f, 1f)
+                    reflectiveCurveToRelative(0.45f, 1f, 1f, 1f)
+                    horizontalLineToRelative(1f)
+                    verticalLineToRelative(5f)
+                    curveToRelative(0f, 1.66f, -1.34f, 3f, -3f, 3f)
+                    verticalLineToRelative(2f)
+                    horizontalLineToRelative(5.97f)
+                    verticalLineToRelative(7f)
+                    lineToRelative(1f, 1f)
+                    lineToRelative(1f, -1f)
+                    verticalLineToRelative(-7f)
+                    horizontalLineTo(19f)
+                    verticalLineToRelative(-2f)
+                    curveToRelative(-1.66f, 0f, -3f, -1.34f, -3f, -3f)
+                    close()
+                    // Inner rectangle: creates the hollow pin-body via EvenOdd
+                    moveTo(14f, 9f)
+                    horizontalLineToRelative(-4f)
+                    verticalLineTo(4f)
+                    horizontalLineToRelative(4f)
+                    verticalLineTo(9f)
                     close()
                 }
             }.build()
