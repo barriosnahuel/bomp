@@ -67,7 +67,7 @@ Before writing production code for a new feature, identify and agree on the mini
 
 1. **Happy path** — the feature works as intended under normal conditions.
 2. **Failure modes at system boundaries** — external inputs that can fail: audio file I/O, MediaPlayer errors, permissions denied, Play Store feature delivery failures, etc.
-3. **Smoke test** — required for every new `Activity` (see section below) and every full-screen Composable with its own business logic.
+3. **Smoke test** — see the Activity smoke tests section below for requirements.
 
 Implement the tests **alongside** the feature, not after. Any scenario not listed before starting is out of scope for the current PR — note it in the PR description.
 
@@ -142,6 +142,8 @@ Every `.kt` source file must start with the AGPLv3 copyright block (enforced by 
 
 If `./gradlew check` fails with a Spotless violation, run `./gradlew spotlessApply` to auto-fix all files.
 
+## About screen
+
 **Do not remove or hide the About screen.** It is the "Appropriate Legal Notices" mechanism required by AGPLv3 §0. Its entry point is the TopAppBar overflow menu in `LandingScreen.kt`.
 
 ## Pre-PR checklist
@@ -154,6 +156,8 @@ Before opening a PR for any feature or bug fix, verify:
 - [ ] New full-screen Composable with business logic has a `createComposeRule()` smoke test
 - [ ] Any skipped scenario is explicitly noted with a reason (not silently omitted)
 - [ ] Self code review: re-read every changed file as a reviewer, not as the author — look for logic gaps, missing edge cases, and unclear naming
+
+Once all items pass, run the **Pre-push checklist** below before pushing.
 
 ## Pre-push checklist
 
@@ -260,13 +264,13 @@ https://project-url
 - Sections: `Added`, `Changed`, `Fixed`, `Removed` under `## [unreleased]`
 - Each entry is a single sentence starting with a capital letter, no trailing period
 - For dependency bumps, write one line summarising the overall bump (e.g. "Bumped all dependencies to latest stable"), not one line per library
-- After every commit, check whether the change is user-visible or architecturally significant; if so, update `## [unreleased]` before committing
+- As part of each commit, if the change is user-visible or architecturally significant, update `## [unreleased]` before committing
 - Never add a `Fixed` entry for a bug introduced in the same `[unreleased]` cycle. If end-users never experienced the regression, it has no changelog entry — git history provides the traceability
 
 ## Handoff notes
 
-`handoff/` contains session handoff documents (one per working session) with decisions taken, key file paths, and pending work. Ignored by git. When starting a new session, check the latest file in this directory for context.
+`handoff/` contains session handoff documents with decisions taken, key file paths, and pending work. Ignored by git. Only read these files when the user explicitly references them to continue a previous topic.
 
 ## Issue tracking
 
-This project does not use GitHub Issues. Out-of-scope work is tracked in handoff notes.
+GitHub Issues are open for external feature requests and bug reports. Out-of-scope work identified during development is noted in the PR description; session context goes in handoff notes.
