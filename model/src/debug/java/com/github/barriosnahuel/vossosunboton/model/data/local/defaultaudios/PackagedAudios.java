@@ -16,7 +16,6 @@ import com.github.barriosnahuel.vossosunboton.model.Sound;
 import java.util.ArrayList;
 import java.util.List;
 
-@SuppressWarnings("CPD-START")
 public final class PackagedAudios {
 
     private PackagedAudios() {
