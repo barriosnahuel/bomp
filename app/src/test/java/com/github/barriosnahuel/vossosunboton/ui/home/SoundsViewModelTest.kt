@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -281,6 +282,46 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
                 .first()
                 .name,
         ).isEqualTo("beta")
+    }
+
+    @Test
+    fun `togglePin emits scrollToTopEvent when sound is pinned`() =
+        runTest {
+            val viewModel = givenAViewModel()
+            val sound = Sound("test", file = "test.mp3")
+            viewModel.injectSounds(listOf(sound))
+
+            viewModel.togglePin(sound)
+
+            viewModel.scrollToTopEvent.first()
+        }
+
+    @Test
+    fun `togglePin does not emit scrollToTopEvent when sound is unpinned`() =
+        runTest {
+            val viewModel = givenAViewModel()
+            val sound = Sound("test", "test.mp3", 0, false, isPinned = true)
+            viewModel.injectSounds(listOf(sound))
+
+            viewModel.togglePin(sound)
+
+            val received = withTimeoutOrNull(50) { viewModel.scrollToTopEvent.first() }
+            assertThat(received).isNull()
+        }
+
+    @Test
+    fun `togglePin on bundled sound updates isPinned to true`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("bundled", rawRes = 1)
+        viewModel.injectSounds(listOf(sound))
+
+        viewModel.togglePin(sound)
+
+        assertThat(
+            viewModel.sounds.value
+                .single { it.name == "bundled" }
+                .isPinned,
+        ).isTrue()
     }
 
     @Test

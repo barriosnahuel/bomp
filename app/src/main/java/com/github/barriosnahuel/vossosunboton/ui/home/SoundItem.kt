@@ -43,6 +43,7 @@ import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -54,6 +55,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -78,18 +82,59 @@ fun SoundItem(
     originLabel: String? = null,
 ) {
     if (sound.isBundled()) {
-        SoundCard(
-            sound = sound,
-            playbackProgress = playbackProgress,
-            durationMs = durationMs,
-            onPlayClick = onPlayClick,
-            onSeek = onSeek,
-            onShareClick = onShareClick,
-            onPinClick = null,
-            onEditClick = null,
-            onDelete = null,
-            originLabel = originLabel,
-        )
+        val view = LocalView.current
+        val dismissState =
+            remember {
+                SwipeToDismissBoxState(
+                    initialValue = SwipeToDismissBoxValue.Settled,
+                    positionalThreshold = { totalDistance -> totalDistance * 0.35f },
+                )
+            }
+        val currentOnPinClick by rememberUpdatedState(onPinClick)
+        LaunchedEffect(Unit) {
+            snapshotFlow { dismissState.settledValue }
+                .collect { settled ->
+                    when (settled) {
+                        SwipeToDismissBoxValue.StartToEnd -> {
+                            performConfirmHaptic(view)
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                            currentOnPinClick()
+                        }
+                        SwipeToDismissBoxValue.EndToStart -> {
+                            performRejectHaptic(view)
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                        }
+                        SwipeToDismissBoxValue.Settled -> Unit
+                    }
+                }
+        }
+        val noOpHaptic =
+            remember {
+                object : HapticFeedback {
+                    @Suppress("EmptyFunctionBlock")
+                    override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {}
+                }
+            }
+        SwipeToDismissBox(
+            state = dismissState,
+            backgroundContent = { SwipeActionBackground(dismissState, canDelete = false) },
+        ) {
+            CompositionLocalProvider(LocalHapticFeedback provides noOpHaptic) {
+                SoundCard(
+                    sound = sound,
+                    playbackProgress = playbackProgress,
+                    durationMs = durationMs,
+                    onPlayClick = onPlayClick,
+                    onSeek = onSeek,
+                    onShareClick = onShareClick,
+                    onPinClick = onPinClick,
+                    onEditClick = null,
+                    onDelete = null,
+                    onLongClick = { performRejectHaptic(view) },
+                    originLabel = originLabel,
+                )
+            }
+        }
         return
     }
     // rememberSaveable (used by rememberSwipeToDismissBoxState) restores the dismissed state
@@ -115,12 +160,12 @@ fun SoundItem(
             .collect { settled ->
                 when (settled) {
                     SwipeToDismissBoxValue.StartToEnd -> {
-                        performPinHaptic(view)
+                        performConfirmHaptic(view)
                         dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                         currentOnPinClick()
                     }
                     SwipeToDismissBoxValue.EndToStart -> {
-                        performDeleteHaptic(view)
+                        performConfirmHaptic(view)
                         currentOnDelete()
                     }
                     SwipeToDismissBoxValue.Settled -> Unit
@@ -146,7 +191,7 @@ fun SoundItem(
     }
 }
 
-private fun performPinHaptic(view: View) {
+private fun performConfirmHaptic(view: View) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
     } else {
@@ -154,7 +199,7 @@ private fun performPinHaptic(view: View) {
     }
 }
 
-private fun performDeleteHaptic(view: View) {
+private fun performRejectHaptic(view: View) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         view.performHapticFeedback(HapticFeedbackConstants.REJECT)
     } else {
@@ -164,9 +209,13 @@ private fun performDeleteHaptic(view: View) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SwipeActionBackground(dismissState: SwipeToDismissBoxState) {
+private fun SwipeActionBackground(
+    dismissState: SwipeToDismissBoxState,
+    canDelete: Boolean = true,
+) {
     if (dismissState.dismissDirection == SwipeToDismissBoxValue.Settled) return
     val isPinAction = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
+    if (!isPinAction && !canDelete) return
     val backgroundColor =
         if (isPinAction) {
             MaterialTheme.colorScheme.primaryContainer
@@ -204,6 +253,7 @@ private fun SoundCard(
     onPinClick: (() -> Unit)?,
     onEditClick: (() -> Unit)?,
     onDelete: (() -> Unit)?,
+    onLongClick: (() -> Unit)? = null,
     originLabel: String? = null,
 ) {
     var sliderPosition by remember { mutableFloatStateOf(0f) }
@@ -229,7 +279,7 @@ private fun SoundCard(
                         if (onEditClick != null) {
                             { showMenu = true }
                         } else {
-                            null
+                            onLongClick
                         },
                 ),
         border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant),
@@ -368,13 +418,14 @@ private fun SoundCardHeader(
                 )
             }
         }
-        if (sound.isPinned) {
-            Icon(
-                imageVector = AppIcons.PushPin,
-                contentDescription = stringResource(R.string.app_pinned),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = Spacing.XS),
-            )
+        if (onPinClick != null) {
+            IconButton(onClick = onPinClick) {
+                Icon(
+                    imageVector = if (sound.isPinned) AppIcons.PushPin else AppIcons.PushPinOutlined,
+                    contentDescription = stringResource(if (sound.isPinned) R.string.app_unpin else R.string.app_pin),
+                    tint = if (sound.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         IconButton(onClick = onShareClick) {
             Icon(
@@ -388,16 +439,6 @@ private fun SoundCardHeader(
                     expanded = showMenu,
                     onDismissRequest = onMenuDismiss,
                 ) {
-                    if (onPinClick != null) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(if (sound.isPinned) R.string.app_unpin else R.string.app_pin)) },
-                            leadingIcon = { Icon(AppIcons.PushPin, contentDescription = null) },
-                            onClick = {
-                                onMenuDismiss()
-                                onPinClick()
-                            },
-                        )
-                    }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.app_edit)) },
                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },

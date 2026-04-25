@@ -93,6 +93,9 @@ class SoundsViewModel(
     private val _buttonRenamedEvent = Channel<String>(Channel.BUFFERED)
     val buttonRenamedEvent: Flow<String> = _buttonRenamedEvent.receiveAsFlow()
 
+    private val _scrollToTopEvent = Channel<Unit>(Channel.BUFFERED)
+    val scrollToTopEvent: Flow<Unit> = _scrollToTopEvent.receiveAsFlow()
+
     private val _playbackErrorEvent = Channel<Unit>(Channel.BUFFERED)
     val playbackErrorEvent: Flow<Unit> = _playbackErrorEvent.receiveAsFlow()
 
@@ -148,7 +151,6 @@ class SoundsViewModel(
     }
 
     fun togglePin(sound: Sound) {
-        if (sound.isBundled()) return
         val nowPinned = !sound.isPinned
         val sortedList = { list: List<Sound> ->
             list
@@ -162,6 +164,7 @@ class SoundsViewModel(
         _sounds.update(sortedList)
         allSoundsCache.update { list -> list.map { if (it.name == sound.name) it.copy(isPinned = nowPinned) else it } }
         recomputeSearchResults()
+        if (nowPinned) _scrollToTopEvent.trySend(Unit)
         viewModelScope.launch(ioDispatcher) {
             SoundDao().savePin(getApplication(), sound.name, nowPinned)
         }

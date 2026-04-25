@@ -6,12 +6,17 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.os.Build
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
@@ -158,8 +163,71 @@ internal class SoundItemTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `bundled sound does not trigger any callback on swipe`() {
+    fun `pinned and unpinned card have the same height`() {
+        var pinnedHeight = 0
+        var unpinnedHeight = 0
+        val sound = Sound("test sound", file = "test.mp3")
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                Column {
+                    Box(modifier = Modifier.onGloballyPositioned { pinnedHeight = it.size.height }) {
+                        SoundItem(
+                            sound = sound.copy(isPinned = true),
+                            playbackProgress = null,
+                            onPlayClick = {},
+                            onSeek = {},
+                            onShareClick = {},
+                            onDelete = {},
+                            onPinClick = {},
+                        )
+                    }
+                    Box(modifier = Modifier.onGloballyPositioned { unpinnedHeight = it.size.height }) {
+                        SoundItem(
+                            sound = sound.copy(isPinned = false),
+                            playbackProgress = null,
+                            onPlayClick = {},
+                            onSeek = {},
+                            onShareClick = {},
+                            onDelete = {},
+                            onPinClick = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        assertThat(pinnedHeight).isEqualTo(unpinnedHeight)
+    }
+
+    @Test
+    fun `swipe right on bundled sound triggers pin callback`() {
         var pinCallCount = 0
+        val sound = Sound("bundled sound", rawRes = 1)
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SoundItem(
+                    sound = sound,
+                    playbackProgress = null,
+                    onPlayClick = {},
+                    onSeek = {},
+                    onShareClick = {},
+                    onDelete = {},
+                    onPinClick = { pinCallCount++ },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("bundled sound").performTouchInput { swipeRight() }
+        composeTestRule.waitForIdle()
+
+        assertThat(pinCallCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `swipe left on bundled sound does not trigger delete callback`() {
         var deleteCallCount = 0
         val sound = Sound("bundled sound", rawRes = 1)
 
@@ -172,17 +240,35 @@ internal class SoundItemTest : AbstractRobolectricTest() {
                     onSeek = {},
                     onShareClick = {},
                     onDelete = { deleteCallCount++ },
-                    onPinClick = { pinCallCount++ },
+                    onPinClick = {},
                 )
             }
         }
 
-        composeTestRule.onNodeWithText("bundled sound").performTouchInput { swipeRight() }
-        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("bundled sound").performTouchInput { swipeLeft() }
         composeTestRule.waitForIdle()
 
-        assertThat(pinCallCount).isEqualTo(0)
         assertThat(deleteCallCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `pin button is visible for bundled sound`() {
+        val sound = Sound("bundled sound", rawRes = 1)
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SoundItem(
+                    sound = sound,
+                    playbackProgress = null,
+                    onPlayClick = {},
+                    onSeek = {},
+                    onShareClick = {},
+                    onDelete = {},
+                    onPinClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("Pin to top").assertExists()
     }
 }
