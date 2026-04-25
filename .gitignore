@@ -3,6 +3,11 @@ nahuelbarrios.keystore-appbundle.pkcs12
 secure.properties
 
 
+### Bundled audio files
+model/src/debug/res/raw/*.mp3
+model/src/debug/res/raw/*.ogg
+
+
 ### Gradle files
 .gradle/
 build/

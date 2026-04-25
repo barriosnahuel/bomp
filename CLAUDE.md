@@ -105,14 +105,17 @@ internal class MyScreenTest : AbstractRobolectricTest() {
 
 ## Worktree setup
 
-After creating a new worktree, always run these two commands to replace the dummy `google-services.json` with the real one from the main worktree:
+After creating a new worktree, always run these commands to replace the dummy `google-services.json` and copy the bundled audio files from the main worktree:
 
 ```bash
 cp "$(git rev-parse --git-common-dir)/../app/google-services.json" app/google-services.json
 git update-index --skip-worktree app/google-services.json
+cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.mp3 model/src/debug/res/raw/ 2>/dev/null || true
+cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.ogg model/src/debug/res/raw/ 2>/dev/null || true
 ```
 - Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` and `secure.properties` (with `key.alias`, `key.password`, `store.password`) in the project root — not committed.
 - Debug builds use the included debug keystore and work without the above.
+- Bundled audio files (`model/src/debug/res/raw/*.mp3` and `*.ogg`) are not committed. Without them the debug build still compiles and runs, but the Explore tab will be empty.
 
 ## Android resources naming
 

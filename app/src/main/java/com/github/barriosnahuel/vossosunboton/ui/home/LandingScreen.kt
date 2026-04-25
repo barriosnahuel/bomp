@@ -69,6 +69,7 @@ import kotlinx.coroutines.launch
 fun LandingScreen(viewModel: SoundsViewModel) {
     val sounds by viewModel.sounds.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
+    val hasBundledSounds by viewModel.hasBundledSounds.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
     val soundDurations by viewModel.soundDurations.collectAsState()
     val isSearchVisible by viewModel.isSearchVisible.collectAsState()
@@ -96,17 +97,19 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     Scaffold(
         topBar = { AppTopBar(onAboutClick = { isAboutVisible = true }) },
         bottomBar = {
-            AppBottomBar(
-                selectedTab = selectedTab,
-                onTabSelected = { tab ->
-                    if (tab == selectedTab) {
-                        coroutineScope.launch { listState.animateScrollToItem(0) }
-                    } else {
-                        tabBackStack.add(selectedTab)
-                        viewModel.selectTab(tab)
-                    }
-                },
-            )
+            if (hasBundledSounds) {
+                AppBottomBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = { tab ->
+                        if (tab == selectedTab) {
+                            coroutineScope.launch { listState.animateScrollToItem(0) }
+                        } else {
+                            tabBackStack.add(selectedTab)
+                            viewModel.selectTab(tab)
+                        }
+                    },
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
