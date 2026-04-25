@@ -366,8 +366,6 @@ private fun SoundCardHeader(
             Icon(
                 imageVector = Icons.Default.Share,
                 contentDescription = stringResource(R.string.app_share_chooser_title),
-                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.75f),
-                modifier = Modifier.size(18.dp),
             )
         }
         if (onEditClick != null) {
