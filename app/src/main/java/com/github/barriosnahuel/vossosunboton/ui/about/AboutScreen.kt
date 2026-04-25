@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See LICENSE in the project root for full license information.
  */
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.github.barriosnahuel.vossosunboton.ui.about
 
 import android.content.Context
@@ -35,6 +37,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
