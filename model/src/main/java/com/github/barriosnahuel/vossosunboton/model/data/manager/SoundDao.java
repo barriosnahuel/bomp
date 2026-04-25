@@ -10,7 +10,9 @@ import com.github.barriosnahuel.vossosunboton.model.data.local.Storage;
 import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import timber.log.Timber;
@@ -26,6 +28,7 @@ public class SoundDao {
     private static final String SOUNDS_FILE_NAME_PREFFIX = "sounds.file.";
     private static final String SOUNDS_FAVORITE_PREFFIX = "sounds.favorite.";
     private static final String SOUNDS_PINNED_PREFIX = "sounds.pinned.";
+    private static final String SOUNDS_DURATION_PREFIX = "sounds.duration.";
     private final Storage storage;
 
     /**
@@ -82,6 +85,25 @@ public class SoundDao {
         storage.save(context, SOUNDS_PINNED_PREFIX + soundName, String.valueOf(isPinned));
     }
 
+    public void saveDuration(final Context context, final String soundName, final int durationMs) {
+        storage.save(context, SOUNDS_DURATION_PREFIX + soundName, String.valueOf(durationMs));
+    }
+
+    public Map<String, Integer> findDurations(final Context context) {
+        final Set<String> names = storage.getAll(context, SOUNDS_NAME);
+        final Map<String, Integer> durations = new HashMap<>();
+        for (final String name : names) {
+            final String raw = storage.get(context, SOUNDS_DURATION_PREFIX + name);
+            if (raw != null) {
+                try {
+                    durations.put(name, Integer.parseInt(raw));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return durations;
+    }
+
     /**
      * @param context The execution context.
      * @param sound   The sound to delete.
@@ -103,6 +125,7 @@ public class SoundDao {
             deleteButtonKeyFileMapping(context, sound.getName());
             storage.remove(context, SOUNDS_FAVORITE_PREFFIX + sound.getName());
             storage.remove(context, SOUNDS_PINNED_PREFIX + sound.getName());
+            storage.remove(context, SOUNDS_DURATION_PREFIX + sound.getName());
         } else {
             Timber.e("Button could NOT be deleted. Button: %s", sound.getName());
         }
@@ -139,6 +162,12 @@ public class SoundDao {
         storage.remove(context, SOUNDS_PINNED_PREFIX + sound.getName());
         if (pinnedValue != null) {
             storage.save(context, SOUNDS_PINNED_PREFIX + newName, pinnedValue);
+        }
+
+        final String durationValue = storage.get(context, SOUNDS_DURATION_PREFIX + sound.getName());
+        storage.remove(context, SOUNDS_DURATION_PREFIX + sound.getName());
+        if (durationValue != null) {
+            storage.save(context, SOUNDS_DURATION_PREFIX + newName, durationValue);
         }
     }
 

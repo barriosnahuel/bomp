@@ -235,14 +235,17 @@ class SoundsViewModel(
     }
 
     private suspend fun loadSounds() {
+        val dao = SoundDao()
         val allSounds =
-            SoundDao()
+            dao
                 .find(getApplication<Application>())
                 .sortedWith(
                     compareByDescending<Sound> { it.isPinned }
                         .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
                         .thenBy { it.name.lowercase() },
                 )
+        val cachedDurations = dao.findDurations(getApplication<Application>())
+        _soundDurations.update { current -> cachedDurations + current }
         val playingName = _playingSound.value?.name
         val deletedName = _deletedSoundEvent.value?.sound?.name
         allSoundsCache.value =
@@ -274,6 +277,9 @@ class SoundsViewModel(
         _playingSound.value = playingSound
         _playbackProgress.value = PlaybackProgress(positionMs = 0, durationMs = durationMs)
         _soundDurations.update { it + (sound.name to durationMs) }
+        viewModelScope.launch(ioDispatcher) {
+            SoundDao().saveDuration(getApplication(), sound.name, durationMs)
+        }
         _sounds.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
         allSoundsCache.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
         recomputeSearchResults()
