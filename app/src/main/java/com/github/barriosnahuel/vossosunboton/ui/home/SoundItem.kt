@@ -314,7 +314,7 @@ private fun SoundCard(
                         val displayMs =
                             when {
                                 sound.isPlaying && playbackProgress != null ->
-                                    playbackProgress.durationMs - playbackProgress.positionMs
+                                    playbackProgress.positionMs
                                 durationMs != null -> durationMs
                                 else -> null
                             }
