@@ -206,11 +206,6 @@ private fun HeroSection(
     Spacer(Modifier.height(16.dp))
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.displaySmall,
-        )
-        Spacer(Modifier.width(8.dp))
         FilledIconButton(
             onClick = { if (soundId > 0) soundPool.play(soundId, 1f, 1f, 1, 0, 1f) },
             modifier = Modifier.size(44.dp),
@@ -225,6 +220,13 @@ private fun HeroSection(
                 contentDescription = stringResource(R.string.app_about_play_branding_audio),
             )
         }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.displaySmall,
+        )
+        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.size(44.dp))
     }
 
     if (isEnglishLocale) {
