@@ -114,6 +114,16 @@ The following files must be located into the root dir:
 - `nahuelbarrios.keystore-appbundle.pkcs12`
 - `secure.properties`
 
+## Bundled audio files 🔊
+
+The following directory must be populated manually after cloning — it is not version-controlled:
+
+```
+model/src/debug/res/raw/
+```
+
+Place the bundled `.mp3` and `.ogg` files there. Without them the debug build still compiles and runs, but the **Explore** tab will be empty. Release builds are unaffected.
+
 ## Store listing 📄
 
 As mentioned before, under [store-listing/](/store-listing) there are the assets for the store listing and the original GIMP files to edit those assets.

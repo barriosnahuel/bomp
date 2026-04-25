@@ -75,6 +75,11 @@
             We're waiting for https://issuetracker.google.com/issues/113198298 to be released on Android Studio v4.0 beta 2 and v4.1 canary 2
          -->
         <ignore regexp=".*_dynamic_feature" />
+        <!--
+            Bundled audio files live in the debug source set and are loaded at runtime via
+            getIdentifier() — no static R.raw reference exists for lint to follow.
+         -->
+        <ignore path="**/debug/res/raw/model_sample_button_*" />
     </issue>
     <issue id="UseCompoundDrawables" severity="error" />
     <issue id="UselessLeaf" severity="error" />

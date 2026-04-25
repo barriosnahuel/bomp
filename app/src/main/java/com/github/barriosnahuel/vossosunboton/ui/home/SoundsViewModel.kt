@@ -56,6 +56,9 @@ class SoundsViewModel(
     private val _sounds = MutableStateFlow<List<Sound>>(emptyList())
     val sounds: StateFlow<List<Sound>> = _sounds.asStateFlow()
 
+    private val _hasBundledSounds = MutableStateFlow(false)
+    val hasBundledSounds: StateFlow<Boolean> = _hasBundledSounds.asStateFlow()
+
     private val allSoundsCache = MutableStateFlow<List<Sound>>(emptyList())
 
     private val _searchQuery = MutableStateFlow("")
@@ -246,6 +249,7 @@ class SoundsViewModel(
                 )
         val cachedDurations = dao.findDurations(getApplication<Application>())
         _soundDurations.update { current -> cachedDurations + current }
+        _hasBundledSounds.value = allSounds.any { it.isBundled() }
         val playingName = _playingSound.value?.name
         val deletedName = _deletedSoundEvent.value?.sound?.name
         allSoundsCache.value =

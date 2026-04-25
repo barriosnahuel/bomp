@@ -13,7 +13,7 @@ import android.os.Environment
 import androidx.core.content.FileProvider
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
-import com.github.barriosnahuel.vossosunboton.model.R
+import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -88,7 +88,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
 
     private fun givenASoundWithUri() = Sound(dummyButtonName, "a/dummy/sound/uri")
 
-    private fun givenASoundWithResourceId() = Sound(dummyButtonName, rawRes = R.raw.model_sample_button_activar)
+    private fun givenASoundWithResourceId() = Sound(dummyButtonName, rawRes = R.raw.app_test_sound)
 
     private fun givenASoundWithNullUri() = Sound(dummyButtonName)
 

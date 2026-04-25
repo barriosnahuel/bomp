@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
 
 ## \[unreleased] (v2.0.0)
+### Removed
+- Bundled audio files removed from version control; bottom navigation bar hidden in release builds (Explore tab only appears in debug when audio files are manually placed)
+
 ### Changed
 - Edit screen audio preview now shows total duration and date added, matching the home card layout
 - Normalized top-bar-to-content spacing to 16 dp across all screens

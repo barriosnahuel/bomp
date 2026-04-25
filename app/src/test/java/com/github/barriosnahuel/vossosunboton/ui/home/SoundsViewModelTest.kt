@@ -5,9 +5,12 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
@@ -26,6 +29,12 @@ import org.junit.Test
 internal class SoundsViewModelTest : AbstractRobolectricTest() {
     @Before
     fun setUp() {
+        ApplicationProvider
+            .getApplicationContext<android.app.Application>()
+            .getSharedPreferences("my-prefs", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
     }
@@ -308,13 +317,12 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
     @Test
     fun `loadSounds does not restore a soft-deleted sound while its delete is pending`() {
-        val viewModel = givenAViewModel()
-        viewModel.selectTab(AppTab.EXPLORE)
+        val viewModel = givenAViewModelWithCustomSound()
         val sound = viewModel.sounds.value.first()
 
         viewModel.deleteSound(sound)
-        viewModel.selectTab(AppTab.HOME)
         viewModel.selectTab(AppTab.EXPLORE)
+        viewModel.selectTab(AppTab.HOME)
 
         assertThat(viewModel.sounds.value.none { it.name == sound.name }).isTrue()
     }
@@ -322,13 +330,12 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     @Test
     fun `sounds list preserves isPlaying state after switching tabs and returning`() =
         runTest {
-            val viewModel = givenAViewModel()
-            viewModel.selectTab(AppTab.EXPLORE)
+            val viewModel = givenAViewModelWithCustomSound()
             val playingSound = viewModel.sounds.value.first()
 
             viewModel.onPlayerStart(playingSound, durationMs = 1000)
-            viewModel.selectTab(AppTab.HOME)
             viewModel.selectTab(AppTab.EXPLORE)
+            viewModel.selectTab(AppTab.HOME)
 
             assertThat(
                 viewModel.sounds.value
@@ -414,10 +421,19 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
+    private fun givenAViewModelWithCustomSound(
+        name: String = "custom",
+        file: String = "custom.mp3",
+    ): SoundsViewModel {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        SoundDao().save(context, Sound(name, file))
+        return givenAViewModel()
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun givenAViewModel(): SoundsViewModel =
         SoundsViewModel(
-            androidx.test.core.app.ApplicationProvider
-                .getApplicationContext(),
+            ApplicationProvider.getApplicationContext(),
             ioDispatcher = UnconfinedTestDispatcher(),
         )
 }
