@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Bundled audio files removed from version control; bottom navigation bar hidden in release builds (Explore tab only appears in debug when audio files are manually placed)
 
 ### Changed
+- Swipe-to-delete haptic feedback on custom sounds changed from double-pulse (reject) to single-pulse (confirm), matching the pin gesture — a successful delete is a confirmed action
 - Edit screen audio preview now shows total duration and date added, matching the home card layout
 - Normalized top-bar-to-content spacing to 16 dp across all screens
 - Replaced the old violet/rose/amber palette with the Neo-Club ink × acid design system across all screens (top bars, cards, FAB, search, swipe actions)
@@ -15,6 +16,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Sound cards now have a subtle 1dp hairline border for visual separation on dark and light backgrounds
 
 ### Added
+- Bundled sounds (Explore tab) can now be pinned to the top via button tap or swipe right, with the pinned state persisting across app restarts
+- Swiping left or long-pressing a bundled sound gives haptic rejection feedback (double-pulse), indicating those actions are not available
+- Pinning any sound now automatically scrolls the list back to the top so the newly pinned item is immediately visible
 - About screen redesigned as a brand manifesto: audio branding button (plays official push-me sound), AI co-pilot attribution (Gemini and Claude), conditional collaborators section, and full-width legal buttons — WCAG AAA accessible (18 sp body text, 56 dp touch targets, 7:1+ contrast across all text roles)
 - About screen: version info, license viewer (AGPLv3), third-party credits, and source code link — accessible from the top-bar overflow menu
 - AGPLv3 copyright header on all source files, enforced by Spotless

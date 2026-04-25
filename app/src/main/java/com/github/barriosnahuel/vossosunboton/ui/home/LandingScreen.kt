@@ -92,6 +92,12 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         viewModel.selectTab(tabBackStack.removeAt(tabBackStack.lastIndex))
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.scrollToTopEvent.collect {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     SnackbarEffects(viewModel = viewModel, snackbarHostState = snackbarHostState)
 
     Scaffold(

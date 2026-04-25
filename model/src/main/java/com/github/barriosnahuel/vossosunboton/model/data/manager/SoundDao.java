@@ -67,7 +67,14 @@ public class SoundDao {
             sounds.add(new Sound(eachSoundName, fileName, 0, false, isFavorite, dateAdded, isPinned));
         }
 
-        sounds.addAll(PackagedAudios.get(context));
+        for (Sound bundled : PackagedAudios.get(context)) {
+            final boolean isPinned = "true".equals(storage.get(context, SOUNDS_PINNED_PREFIX + bundled.getName()));
+            if (isPinned) {
+                sounds.add(new Sound(bundled.getName(), bundled.getFile(), bundled.getRawRes(), false, bundled.isFavorite(), bundled.getDateAdded(), true));
+            } else {
+                sounds.add(bundled);
+            }
+        }
 
         return sounds;
     }
