@@ -49,9 +49,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
 private sealed class SearchDisplayState {
     data object Initial : SearchDisplayState()
@@ -140,7 +140,7 @@ fun SearchOverlay(
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                         textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(horizontal = 32.dp),
+                                        modifier = Modifier.padding(horizontal = Spacing.XXL),
                                     )
                                 }
 
@@ -179,7 +179,7 @@ private fun SearchZeroResultsContent(
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 32.dp),
+            modifier = Modifier.padding(horizontal = Spacing.XXL),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -187,7 +187,7 @@ private fun SearchZeroResultsContent(
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.SM))
             Text(
                 text = subtext,
                 style = MaterialTheme.typography.bodyMedium,
@@ -258,7 +258,7 @@ private fun SearchResultsList(
     onPinClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
 ) {
-    LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
+    LazyColumn(contentPadding = PaddingValues(vertical = Spacing.SM)) {
         items(results, key = { it.name }) { sound ->
             SoundItem(
                 sound = sound,

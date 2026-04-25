@@ -74,6 +74,7 @@ import androidx.core.content.pm.PackageInfoCompat
 import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import java.util.Locale
 
 private val COLLABORATORS: List<Collaborator> = emptyList()
@@ -147,18 +148,18 @@ fun AboutScreen(onBack: () -> Unit) {
                 soundId = soundId,
                 isEnglishLocale = isEnglishLocale,
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Spacing.XL))
             CreditsSection(creditEntries = creditEntries)
             if (COLLABORATORS.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(Spacing.LG))
                 CollaboratorsSection(COLLABORATORS)
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Spacing.LG))
             LegalSection(
                 onLicenseClick = { isLicenseSheetVisible = true },
                 onSourceClick = { openUrl(context, sourceUrl) },
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(Spacing.XXL))
         }
     }
 
@@ -168,8 +169,8 @@ fun AboutScreen(onBack: () -> Unit) {
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
             LazyColumn(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(bottom = 32.dp),
+                modifier = Modifier.padding(horizontal = Spacing.LG),
+                contentPadding = PaddingValues(bottom = Spacing.XXL),
             ) {
                 item {
                     Text(
@@ -189,7 +190,7 @@ private fun HeroSection(
     soundId: Int,
     isEnglishLocale: Boolean,
 ) {
-    Spacer(Modifier.height(32.dp))
+    Spacer(Modifier.height(Spacing.XXL))
 
     Image(
         painter = painterResource(R.mipmap.app_ic_launcher),
@@ -203,7 +204,7 @@ private fun HeroSection(
             },
     )
 
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(Spacing.LG))
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         FilledIconButton(
@@ -220,12 +221,12 @@ private fun HeroSection(
                 contentDescription = stringResource(R.string.app_about_play_branding_audio),
             )
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Spacing.SM))
         Text(
             text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.displaySmall,
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Spacing.SM))
         Spacer(Modifier.size(44.dp))
     }
 
@@ -238,7 +239,7 @@ private fun HeroSection(
         )
     }
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(Spacing.MD))
 
     Text(
         text = "“${stringResource(R.string.app_about_tagline)}”",
@@ -247,10 +248,10 @@ private fun HeroSection(
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
         textAlign = TextAlign.Center,
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.padding(horizontal = Spacing.LG),
     )
 
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Spacing.SM))
 
     Text(
         text = versionInfo,
@@ -272,7 +273,7 @@ private fun CreditsSection(creditEntries: List<CreditEntry>) {
             Modifier
                 .fillMaxWidth()
                 .clickable { isExpanded = !isExpanded }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = Spacing.LG, vertical = Spacing.MD),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -292,8 +293,8 @@ private fun CreditsSection(creditEntries: List<CreditEntry>) {
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = Spacing.LG),
+            verticalArrangement = Arrangement.spacedBy(Spacing.SM),
         ) {
             AiAttributionCard(
                 name = stringResource(R.string.app_about_ai_gemini_name),
@@ -306,7 +307,7 @@ private fun CreditsSection(creditEntries: List<CreditEntry>) {
             creditEntries.forEach { entry ->
                 CreditCard(entry = entry)
             }
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Spacing.XS))
         }
     }
 }
@@ -320,7 +321,7 @@ private fun AiAttributionCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.LG)) {
             Text(
                 text = name,
                 style = MaterialTheme.typography.bodyLarge,
@@ -343,7 +344,7 @@ private fun CreditCard(entry: CreditEntry) {
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.LG)) {
             Text(
                 text = entry.name,
                 style = MaterialTheme.typography.bodyMedium,
@@ -382,18 +383,18 @@ private fun CollaboratorsSection(collaborators: List<Collaborator>) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = Spacing.LG),
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Spacing.SM))
     collaborators.forEach { collaborator ->
         Card(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = Spacing.LG, vertical = Spacing.XS),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(Spacing.LG)) {
                 Text(
                     text = collaborator.name,
                     style = MaterialTheme.typography.bodyLarge,
@@ -420,7 +421,7 @@ private fun LegalSection(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(horizontal = Spacing.LG, vertical = Spacing.XS),
     ) {
         Text(stringResource(R.string.app_about_license))
     }
@@ -429,7 +430,7 @@ private fun LegalSection(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(horizontal = Spacing.LG, vertical = Spacing.XS),
     ) {
         Text(stringResource(R.string.app_about_source))
     }

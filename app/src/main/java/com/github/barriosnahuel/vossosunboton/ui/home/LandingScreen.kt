@@ -55,12 +55,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.about.AboutScreen
+import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -303,7 +303,7 @@ private fun SoundsList(
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(top = 12.dp, bottom = 8.dp),
+            contentPadding = PaddingValues(top = Spacing.MD, bottom = Spacing.SM),
         ) {
             itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
                 val isDeleting = sound.name in dismissingItems
