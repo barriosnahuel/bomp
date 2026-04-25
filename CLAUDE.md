@@ -36,9 +36,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew spotlessApply
 ```
 
-### Tooling & Environment
-- **Android CLI**: Available. You can use `adb` (Android Debug Bridge), `fastboot`, and `emulator` commands.
-- **Usage**: Use `adb` to manage connected devices, install APKs, and access shell commands.
+## Tooling & Environment
+- **Android CLI**: Available via `adb` (Android Debug Bridge), `fastboot`, and `emulator`.
 
 ## Module Architecture
 
@@ -51,13 +50,6 @@ Push Me is an Android soundboard app with 5 Gradle modules:
 - **`feature_addbutton`** — Dynamic feature module (on-demand delivery via Play Store) for adding custom buttons.
 
 Dependency direction: `app` → `model`, `commons_android`, `commons_file`; `feature_addbutton` → `app`.
-
-## Key Packages in `app`
-
-- `ui.home` — `LandingActivity`, fragments (packaged vs. saved sounds), and `RecyclerView` adapters
-- `feature.playback` — `MediaPlayer`-based audio playback
-- `feature.share` — Sharing non-packaged audios to other apps
-- `feature.base` — Base classes, runtime permission handling
 
 ## Bug fixes — TDD workflow
 
