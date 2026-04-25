@@ -38,8 +38,10 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -209,9 +211,14 @@ private fun HeroSection(
             style = MaterialTheme.typography.displaySmall,
         )
         Spacer(Modifier.width(8.dp))
-        IconButton(
+        FilledIconButton(
             onClick = { if (soundId > 0) soundPool.play(soundId, 1f, 1f, 1, 0, 1f) },
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(44.dp),
+            colors =
+                IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
         ) {
             Icon(
                 imageVector = AppIcons.VolumeUp,
