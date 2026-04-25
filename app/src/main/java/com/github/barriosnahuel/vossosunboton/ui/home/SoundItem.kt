@@ -67,6 +67,7 @@ import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 fun SoundItem(
     sound: Sound,
     playbackProgress: PlaybackProgress?,
+    durationMs: Int? = null,
     onPlayClick: () -> Unit,
     onSeek: (Int) -> Unit,
     onShareClick: () -> Unit,
@@ -79,6 +80,7 @@ fun SoundItem(
         SoundCard(
             sound = sound,
             playbackProgress = playbackProgress,
+            durationMs = durationMs,
             onPlayClick = onPlayClick,
             onSeek = onSeek,
             onShareClick = onShareClick,
@@ -131,6 +133,7 @@ fun SoundItem(
         SoundCard(
             sound = sound,
             playbackProgress = playbackProgress,
+            durationMs = durationMs,
             onPlayClick = onPlayClick,
             onSeek = onSeek,
             onShareClick = onShareClick,
@@ -193,6 +196,7 @@ private fun SwipeActionBackground(dismissState: SwipeToDismissBoxState) {
 private fun SoundCard(
     sound: Sound,
     playbackProgress: PlaybackProgress?,
+    durationMs: Int?,
     onPlayClick: () -> Unit,
     onSeek: (Int) -> Unit,
     onShareClick: () -> Unit,
@@ -306,10 +310,19 @@ private fun SoundCard(
                     )
 
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = formatDuration(playbackProgress?.positionMs ?: 0),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
+                        val displayMs =
+                            when {
+                                sound.isPlaying && playbackProgress != null ->
+                                    playbackProgress.durationMs - playbackProgress.positionMs
+                                durationMs != null -> durationMs
+                                else -> null
+                            }
+                        if (displayMs != null) {
+                            Text(
+                                text = formatDuration(displayMs),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
                         Spacer(modifier = Modifier.weight(1f))
                         val dateAdded = sound.dateAdded
                         if (dateAdded != null) {
