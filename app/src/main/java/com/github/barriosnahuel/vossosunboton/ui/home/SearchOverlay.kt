@@ -70,6 +70,7 @@ fun SearchOverlay(
     results: List<Sound>,
     isSearchPending: Boolean,
     playbackProgress: PlaybackProgress?,
+    soundDurations: Map<String, Int>,
     onQueryChange: (String) -> Unit,
     onClose: () -> Unit,
     onPlayClick: (Sound) -> Unit,
@@ -153,6 +154,7 @@ fun SearchOverlay(
                                 SearchResultsList(
                                     results = state.sounds,
                                     playbackProgress = playbackProgress,
+                                    soundDurations = soundDurations,
                                     onPlayClick = onPlayClick,
                                     onSeek = onSeek,
                                     onShareClick = onShareClick,
@@ -249,6 +251,7 @@ private fun SearchField(
 private fun SearchResultsList(
     results: List<Sound>,
     playbackProgress: PlaybackProgress?,
+    soundDurations: Map<String, Int>,
     onPlayClick: (Sound) -> Unit,
     onSeek: (Int) -> Unit,
     onShareClick: (Sound) -> Unit,
@@ -260,6 +263,7 @@ private fun SearchResultsList(
             SoundItem(
                 sound = sound,
                 playbackProgress = if (sound.isPlaying) playbackProgress else null,
+                durationMs = soundDurations[sound.name],
                 onPlayClick = { onPlayClick(sound) },
                 onSeek = onSeek,
                 onShareClick = { onShareClick(sound) },

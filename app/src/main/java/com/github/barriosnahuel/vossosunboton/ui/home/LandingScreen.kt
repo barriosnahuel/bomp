@@ -70,6 +70,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val sounds by viewModel.sounds.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
+    val soundDurations by viewModel.soundDurations.collectAsState()
     val isSearchVisible by viewModel.isSearchVisible.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
@@ -124,6 +125,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         SoundsList(
             sounds = sounds,
             playbackProgress = playbackProgress,
+            soundDurations = soundDurations,
             listState = listState,
             modifier = Modifier.padding(innerPadding),
             onPlayClick = { sound -> viewModel.playOrStop(sound) },
@@ -143,6 +145,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             results = searchResults,
             isSearchPending = isSearchPending,
             playbackProgress = playbackProgress,
+            soundDurations = soundDurations,
             onQueryChange = viewModel::onSearchQueryChange,
             onClose = viewModel::hideSearch,
             onPlayClick = viewModel::playOrStop,
@@ -284,6 +287,7 @@ private const val DELETE_ANIMATION_DURATION_MS = 300
 private fun SoundsList(
     sounds: List<Sound>,
     playbackProgress: PlaybackProgress?,
+    soundDurations: Map<String, Int>,
     listState: LazyListState,
     modifier: Modifier = Modifier,
     onPlayClick: (Sound) -> Unit,
@@ -321,6 +325,7 @@ private fun SoundsList(
                     SoundItem(
                         sound = sound,
                         playbackProgress = if (sound.isPlaying) playbackProgress else null,
+                        durationMs = soundDurations[sound.name],
                         onPlayClick = { onPlayClick(sound) },
                         onSeek = onSeek,
                         onShareClick = { onShareClick(sound) },

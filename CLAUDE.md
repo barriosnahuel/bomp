@@ -69,6 +69,18 @@ When the user reports a bug or says we are going to fix a bug, always follow Tes
 
 Skip TDD only when the bug lives exclusively in UI rendering or platform wiring that cannot be exercised by unit or Robolectric tests (e.g. a pure layout glitch). In that case, note why TDD was skipped.
 
+## Features — test coverage workflow
+
+Before writing production code for a new feature, identify and agree on the minimum test scenarios:
+
+1. **Happy path** — the feature works as intended under normal conditions.
+2. **Failure modes at system boundaries** — external inputs that can fail: audio file I/O, MediaPlayer errors, permissions denied, Play Store feature delivery failures, etc.
+3. **Smoke test** — required for every new `Activity` (see section below) and every full-screen Composable with its own business logic.
+
+Implement the tests **alongside** the feature, not after. Any scenario not listed before starting is out of scope for the current PR — note it in the PR description.
+
+Skip a test scenario only when it lives exclusively in platform wiring that cannot be exercised by unit or Robolectric tests (e.g. a pure layout change). In that case, note why it was skipped.
+
 ## Activity smoke tests
 
 Every `Activity` in the `app` module must have a corresponding smoke test that verifies it reaches `Lifecycle.State.RESUMED` without crashing. Place it alongside the Activity in `app/src/test/`, extend `AbstractRobolectricTest`, and use:
@@ -139,6 +151,17 @@ Every `.kt` source file must start with the AGPLv3 copyright block (enforced by 
 If `./gradlew check` fails with a Spotless violation, run `./gradlew spotlessApply` to auto-fix all files.
 
 **Do not remove or hide the About screen.** It is the "Appropriate Legal Notices" mechanism required by AGPLv3 §0. Its entry point is the TopAppBar overflow menu in `LandingScreen.kt`.
+
+## Pre-PR checklist
+
+Before opening a PR for any feature or bug fix, verify:
+
+- [ ] Happy path is covered by at least one test
+- [ ] Failure modes at system/external boundaries have tests (file I/O, MediaPlayer, permissions, network, Play feature delivery)
+- [ ] New `Activity` has a smoke test (see Activity smoke tests section)
+- [ ] New full-screen Composable with business logic has a `createComposeRule()` smoke test
+- [ ] Any skipped scenario is explicitly noted with a reason (not silently omitted)
+- [ ] Self code review: re-read every changed file as a reviewer, not as the author — look for logic gaps, missing edge cases, and unclear naming
 
 ## Pre-push checklist
 
@@ -251,3 +274,7 @@ https://project-url
 ## Handoff notes
 
 `handoff/` contains session handoff documents (one per working session) with decisions taken, key file paths, and pending work. Ignored by git. When starting a new session, check the latest file in this directory for context.
+
+## Issue tracking
+
+This project does not use GitHub Issues. Out-of-scope work is tracked in handoff notes.

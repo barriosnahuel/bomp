@@ -78,6 +78,9 @@ class SoundsViewModel(
     private val _playbackProgress = MutableStateFlow<PlaybackProgress?>(null)
     val playbackProgress: StateFlow<PlaybackProgress?> = _playbackProgress.asStateFlow()
 
+    private val _soundDurations = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val soundDurations: StateFlow<Map<String, Int>> = _soundDurations.asStateFlow()
+
     private val _deletedSoundEvent = MutableStateFlow<DeletedSoundEvent?>(null)
     val deletedSoundEvent: StateFlow<DeletedSoundEvent?> = _deletedSoundEvent.asStateFlow()
 
@@ -270,6 +273,7 @@ class SoundsViewModel(
         val playingSound = sound.copy(isPlaying = true)
         _playingSound.value = playingSound
         _playbackProgress.value = PlaybackProgress(positionMs = 0, durationMs = durationMs)
+        _soundDurations.update { it + (sound.name to durationMs) }
         _sounds.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
         allSoundsCache.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
         recomputeSearchResults()
