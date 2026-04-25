@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,7 +186,7 @@ private fun SwipeActionBackground(dismissState: SwipeToDismissBoxState) {
             Modifier
                 .fillMaxSize()
                 .background(backgroundColor)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = Spacing.LG),
         contentAlignment = alignment,
     ) {
         Icon(imageVector = icon, contentDescription = null, tint = iconTint)
@@ -219,7 +220,7 @@ private fun SoundCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = Spacing.SM, vertical = Spacing.XS)
                 .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -242,7 +243,7 @@ private fun SoundCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(horizontal = Spacing.SM, vertical = Spacing.SM),
         ) {
             SoundCardHeader(
                 sound = sound,
@@ -372,7 +373,7 @@ private fun SoundCardHeader(
                 imageVector = AppIcons.PushPin,
                 contentDescription = stringResource(R.string.app_pinned),
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = 4.dp),
+                modifier = Modifier.padding(end = Spacing.XS),
             )
         }
         IconButton(onClick = onShareClick) {
