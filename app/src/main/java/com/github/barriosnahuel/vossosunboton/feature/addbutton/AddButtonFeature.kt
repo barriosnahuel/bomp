@@ -8,6 +8,7 @@ package com.github.barriosnahuel.vossosunboton.feature.addbutton
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -76,7 +77,7 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                                 SoundDao().saveDuration(context, name, durationMs)
                             }
 
-                            feedbackMessage = R.string.feature_addbutton_feedback_saved_ok
+                            feedbackMessage = R.string.app_addbutton_feedback_saved_ok
                         }
                     }
                 }

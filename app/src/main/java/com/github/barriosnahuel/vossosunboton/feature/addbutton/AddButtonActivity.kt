@@ -15,6 +15,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
@@ -38,7 +39,7 @@ class AddButtonActivity : ComponentActivity() {
                 intent.getParcelableExtra(Intent.EXTRA_STREAM)
             }
         if (uri == null) {
-            Toast.makeText(this, R.string.feature_addbutton_missing_parameter_error, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.app_addbutton_missing_parameter_error, Toast.LENGTH_SHORT).show()
             finish()
             return
         }

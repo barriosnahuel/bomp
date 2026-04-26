@@ -83,36 +83,25 @@ Adopt **Option D**, isolated under `app/src/androidTest/`:
 - Not invoked by `.circleci/config.yml` (the `test` job runs `./gradlew test` only).
 - A single command runs the suite: `./gradlew app:connectedDebugAndroidTest`.
 - Operator workflow: run `./scripts/setup-test-emulator.sh` once to create the AVD, boot
-  the emulator, then `./scripts/run-ui-tests.sh` for each test pass.
+  the emulator, then `./gradlew app:connectedDebugAndroidTest` for each pass.
 - Each screen test file owns its accessibility assertions. There is no
   `AccessibilitySweepTest` collector — a11y is part of the feature, not a separate concern.
 
-### Dynamic feature install
+### History note: dynamic feature workaround (removed)
 
-`:feature_addbutton` ships as a dynamic feature module with `<dist:install-time />`.
-In production Play Store fuses it with the base APK at install. Locally,
-`./gradlew app:connectedDebugAndroidTest` only pushes the base-only `app-debug.apk`
-via UTP, so any test that launches `AddButtonActivity` crashes with
-`ClassNotFoundException`. `scripts/run-ui-tests.sh` solves this by:
+The `:feature_addbutton` module used to be a dynamic feature with
+`<dist:install-time />`. AGP/UTP only installed `app-debug.apk` (base, no
+feature splits) before the connected test run, so `AddButtonActivity` tests
+crashed with `ClassNotFoundException`. The first iteration of this suite
+worked around it with `scripts/run-ui-tests.sh`: built the bundle, fused base +
+feature into a universal APK with bundletool, and ran `am instrument` directly
+to bypass UTP's reinstall.
 
-1. Building `app:bundleDebug` and `app:assembleDebugAndroidTest`.
-2. Running `bundletool build-apks --mode=universal` to fuse base + feature into
-   one APK signed with the standard debug keystore (`~/.android/debug.keystore`,
-   the same one AGP uses, so the test APK install doesn't trip a signature
-   mismatch).
-3. Installing the universal APK + the test APK via `adb install -r`.
-4. Running `adb shell am instrument -w -r` directly. Gradle's
-   `connectedDebugAndroidTest` is bypassed because its UTP runner re-installs
-   the base-only APK before each run regardless of `-x installDebug`, which
-   would erase the dynamic feature install we just pushed.
-
-Tradeoff: no Gradle HTML test report. The script writes raw `am instrument`
-output to `app/build/reports/androidTests/local-ui/raw.txt` and prints a
-pass/fail summary parsed from `INSTRUMENTATION_STATUS_CODE`. Sufficient for
-local debugging — if a test fails, the raw log has the stack trace.
-
-Bundletool is auto-downloaded once to `build/tools/bundletool-<version>.jar`.
-Pinned version lives in the script header.
+That whole workaround was deleted when `:feature_addbutton` was promoted into
+`:app` (creating buttons is core to the product, not a freemium add-on). The
+suite is now plain `./gradlew app:connectedDebugAndroidTest` with the standard
+HTML/XML report. Reintroduce something similar if a dynamic feature returns
+for genuinely on-demand functionality.
 
 ## Consequences
 

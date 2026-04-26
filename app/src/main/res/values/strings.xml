@@ -41,4 +41,17 @@
     <string name="app_about_credits">Third-party credits</string>
     <string name="app_about_source">Source code</string>
     <string name="app_about_source_url" translatable="false">https://github.com/barriosnahuel/push-me</string>
+
+    <string name="app_addbutton_activity_title">New button</string>
+    <string name="app_addbutton_activity_title_edit">Edit button</string>
+    <string name="app_addbutton_activity_label">Save button</string>
+    <string name="app_addbutton_name">Choose a funny name for your new button</string>
+    <string name="app_addbutton_edit_name_label">Update the name</string>
+    <string name="app_addbutton_placeholder">I\'m f**k!ng druuunk</string>
+    <string name="app_addbutton_save">Save</string>
+    <string name="app_addbutton_save_changes">Save changes</string>
+    <string name="app_addbutton_preview_audio">Preview audio</string>
+    <string name="app_addbutton_name_is_required_error">Name is required</string>
+    <string name="app_addbutton_missing_parameter_error">Missing audio file</string>
+    <string name="app_addbutton_feedback_saved_ok">Saved!</string>
 </resources>

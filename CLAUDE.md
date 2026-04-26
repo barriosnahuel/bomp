@@ -41,15 +41,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Module Architecture
 
-Push Me is an Android soundboard app with 5 Gradle modules:
+Push Me is an Android soundboard app with 4 Gradle modules:
 
-- **`app`** — Main application module: Activities, Fragments, RecyclerView adapters, and the feature layer (playback, share, permissions). Entry point is `LandingActivity`.
+- **`app`** — Main application module: Activities, Fragments, RecyclerView adapters, and the feature layer (playback, share, permissions, add-button). Entry point is `LandingActivity`. The Add Button flow lives at `feature/addbutton/` inside this module.
 - **`model`** — Business logic library: `Sound` data model, data managers for loading/saving sounds, persistence. Has no Android UI dependencies.
-- **`commons_android`** — Foundation library for the app and feature modules: Firebase initialization, Timber logging setup, annotation utilities.
+- **`commons_android`** — Foundation library for the app: Firebase initialization, Timber logging setup, annotation utilities.
 - **`commons_file`** — File handling utilities (reading/writing audio files).
-- **`feature_addbutton`** — Dynamic feature module (on-demand delivery via Play Store) for adding custom buttons.
 
-Dependency direction: `app` → `model`, `commons_android`, `commons_file`; `feature_addbutton` → `app`.
+Dependency direction: `app` → `model`, `commons_android`, `commons_file`. No dynamic features today — the Add Button flow used to live in a `:feature_addbutton` module but was promoted into `:app` since creating buttons is core to the product. Reintroduce dynamic features when freemium-style on-demand delivery is needed.
 
 ## Product & brand context (when relevant)
 
@@ -111,7 +110,7 @@ ActivityScenario.launch(MyActivity::class.java).use { scenario ->
 
 Mock any singleton factories (e.g. `PlayerControllerFactory`) that would crash under Robolectric. See `LandingActivityTest` for the canonical example.
 
-**Dynamic feature modules** (e.g. `feature_addbutton`) cannot use Robolectric — Robolectric's `ShadowPackageParser` rejects split APKs (`Expected base APK, but found split`). Activities in those modules require instrumented tests if smoke coverage is needed.
+If a future Activity ends up in a dynamic feature module again, note that Robolectric's `ShadowPackageParser` rejects split APKs (`Expected base APK, but found split`) — those Activities need instrumented tests for smoke coverage.
 
 Full-screen composables with their own business logic (PackageManager calls, raw resource reads, or significant state) must also have a `createComposeRule()` smoke test that verifies they render without crashing. See `AboutScreenTest` as the canonical example:
 
@@ -150,10 +149,11 @@ Every resource name must start with the `resourcePrefix` defined in the module's
 | Module | Prefix |
 |---|---|
 | `app` | `app_` |
-| `feature_addbutton` | `feature_addbutton_` |
 | `commons_android` | `commons_android_` |
 | `commons_file` | `commons_file_` |
 | `model` | `model_` |
+
+Logical sub-areas inside `:app` (e.g. the Add Button flow at `feature/addbutton/`) use a secondary prefix on top of `app_` for grouping — `app_addbutton_*`, `app_about_*`, etc. Keep new resources clustered by feature this way.
 
 Android Lint enforces this rule (`ResourceName` check). Violating it causes a build failure.
 
@@ -224,29 +224,19 @@ Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a
 emulator -avd push_me_test -no-snapshot-save -no-boot-anim &
 adb wait-for-device shell 'while [[ $(getprop sys.boot_completed) != 1 ]]; do sleep 1; done'
 
-# 2. Run all instrumented tests (auto-downloads bundletool the first time)
-./scripts/run-ui-tests.sh
+# 2. Run all instrumented tests (UTP installs + runs natively)
+./gradlew app:connectedDebugAndroidTest
 ```
 
-The wrapper builds the debug bundle, generates a universal APK (base +
-`feature_addbutton` fused), installs it and the test APK via `adb`, then runs
-`adb shell am instrument` directly — bypassing Gradle's UTP test runner,
-which always re-installs the base-only APK and would erase the dynamic
-feature. Raw output and pass/fail counts land at
-`app/build/reports/androidTests/local-ui/raw.txt`.
+HTML report: `app/build/reports/androidTests/connected/debug/index.html`. Raw
+XML: `app/build/outputs/androidTest-results/connected/debug/`.
 
-### Re-run a single test class
+### Run a single test class
 
 ```bash
-./scripts/run-ui-tests.sh -e class \
-  com.github.barriosnahuel.vossosunboton.ui.home.SearchOverlayTest
+./gradlew app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.github.barriosnahuel.vossosunboton.ui.home.SearchOverlayTest
 ```
-
-Extra args after the script name are forwarded verbatim to `am instrument`,
-so any of its flags (`-e class`, `-e package`, `-e size small`, etc.) work.
-The full build + install always runs first; if you only changed test code
-and want to skip the rebuild, run `am instrument` yourself with the same
-arguments.
 
 ### When to run
 

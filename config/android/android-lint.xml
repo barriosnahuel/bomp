@@ -24,9 +24,6 @@
     <issue id="ScrollViewSize" severity="warning" />
     <issue id="UnusedAttribute" severity="error" />
 
-    <!-- Turned off because it throws false-positives when having dynamic feature modules. Bug reported: https://issuetracker.google.com/issues/157783066 -->
-    <issue id="ResourceName" severity="warning" />
-
     <!-- Correctness:Messages -->
     <issue id="Typos" severity="error" />
     <issue id="PluralsCandidate" severity="error" />
@@ -69,12 +66,6 @@
 
     <issue id="UnusedNamespace" severity="error" />
     <issue id="UnusedResources" severity="error">
-        <!--
-            Required because when using a Dynamic Feature we are forced to declare in the base module all resources used in the dynamic feature
-            module's AndroidManifest.xml
-            We're waiting for https://issuetracker.google.com/issues/113198298 to be released on Android Studio v4.0 beta 2 and v4.1 canary 2
-         -->
-        <ignore regexp=".*_dynamic_feature" />
         <!--
             Bundled audio files live in the debug source set and are loaded at runtime via
             getIdentifier() — no static R.raw reference exists for lint to follow.
