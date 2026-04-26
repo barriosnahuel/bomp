@@ -14,6 +14,11 @@ An Android app made, by the moment, only for fun. Currently it's aimed to be use
 
 Wanna know about the entire tech stack? Check it at [techstack.md](techstack.md).
 
+## Support the project
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y31YIHWK)
+[![Invitame un café en cafecito.app](https://cdn.cafecito.app/imgs/buttons/button_1.svg)](https://cafecito.app/barriosnahuel)
+
 ## Features 🏁
 - Play packaged audios.
 - Save audios from WhatsApp.
