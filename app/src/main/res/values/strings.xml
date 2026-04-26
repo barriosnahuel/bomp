@@ -16,6 +16,7 @@
     <string name="app_search">Search</string>
     <string name="app_search_hint">Search by name…</string>
     <string name="app_search_close">Close search</string>
+    <string name="app_search_clear">Clear search</string>
     <string name="app_search_initial_hint">Type to filter your stickers…</string>
     <string name="app_search_empty_headline">Absolute silence…</string>
     <string name="app_search_empty_subtext">This sticker doesn\'t exist yet. Your collection has a gap only you can fill.</string>
