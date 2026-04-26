@@ -15,6 +15,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
 class LandingActivity : ComponentActivity() {
@@ -52,12 +53,21 @@ class LandingActivity : ComponentActivity() {
 
     private fun handleDeeplink(intent: Intent) {
         val uri = intent.data ?: return
-        val tab =
+        val requested =
             when (uri.path) {
                 "/home" -> AppTab.HOME
                 else -> AppTab.EXPLORE
             }
-        viewModel.selectTab(tab)
+        // Explore is empty in release builds (no bundled audios) and in any debug build that
+        // hasn't populated model/src/debug/res/raw/. Routing there would land on a blank tab,
+        // so fall back to Home when there's nothing to explore.
+        val resolved =
+            if (requested == AppTab.EXPLORE && PackagedAudios.get(this).isEmpty()) {
+                AppTab.HOME
+            } else {
+                requested
+            }
+        viewModel.selectTab(resolved)
     }
 
     companion object {
