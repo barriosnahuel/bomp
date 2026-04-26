@@ -33,11 +33,11 @@ import org.junit.runner.RunWith
 /**
  * Instrumented coverage for [AddButtonActivity] in Edit mode (case 1.6).
  *
- * The AddButtonActivity class lives in the dynamic feature module, which the `:app` module
- * cannot depend on at compile-time without creating a cycle. Tests therefore launch via an
- * [Intent] targeting the class by name (using [LandingActivity.editIntent]) and reference
- * `feature_addbutton_*` strings by their English literal values — the AVD locale is `en_US`
- * by default.
+ * The Activity lives in the dynamic feature module, which the `:app` module cannot depend
+ * on at compile-time without creating a cycle. We launch via [LandingActivity.editIntent]
+ * (sets the class by name) and resolve `feature_addbutton_*` strings through [string]
+ * (a runtime `Resources.getIdentifier` lookup), so a rename in the feature's `strings.xml`
+ * fails the test loudly instead of silently passing on en_US.
  */
 @RunWith(AndroidJUnit4::class)
 internal class AddButtonEditFlowTest : AbstractUiTest() {
@@ -50,7 +50,9 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
             // Both the OutlinedTextField and the AudioPreview header render the sound name,
             // so a plain hasText() matcher returns 2 nodes. Scope to the editable input.
             nameField().assertIsDisplayed()
-            composeRule.onNodeWithContentDescription(PREVIEW_AUDIO).assertHasClickAction()
+            composeRule
+                .onNodeWithContentDescription(string("feature_addbutton_preview_audio", "feature_addbutton"))
+                .assertHasClickAction()
         }
     }
 
@@ -61,9 +63,11 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
         ActivityScenario.launch<Activity>(editIntent(sound)).use {
             composeRule.waitForIdle()
             nameField().performTextClearance()
-            composeRule.onNodeWithText(SAVE_CHANGES).performClick()
+            composeRule.onNodeWithText(string("feature_addbutton_save_changes", "feature_addbutton")).performClick()
             composeRule.waitForIdle()
-            composeRule.onNodeWithText(NAME_REQUIRED_ERROR).assertIsDisplayed()
+            composeRule
+                .onNodeWithText(string("feature_addbutton_name_is_required_error", "feature_addbutton"))
+                .assertIsDisplayed()
         }
     }
 
@@ -78,7 +82,7 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
             composeRule.waitForIdle()
             nameField().performTextClearance()
             nameField().performTextInput(newName)
-            composeRule.onNodeWithText(SAVE_CHANGES).performClick()
+            composeRule.onNodeWithText(string("feature_addbutton_save_changes", "feature_addbutton")).performClick()
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
                 // Same hamcrest 1.3 `allOf` gap as elsewhere — assert the most discriminating
                 // matchers in series. Renamed extra is unique to this navigation path.
@@ -97,7 +101,9 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch<Activity>(editIntent(sound)).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(PREVIEW_AUDIO).assertHasClickAction()
+            composeRule
+                .onNodeWithContentDescription(string("feature_addbutton_preview_audio", "feature_addbutton"))
+                .assertHasClickAction()
         }
     }
 
@@ -106,12 +112,6 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     private fun nameField() = composeRule.onNode(hasSetTextAction())
 
     companion object {
-        // String literals from feature_addbutton/src/main/res/values/strings.xml.
-        // The androidTest source set in :app cannot import the dynamic feature's R class
-        // without creating a circular dependency.
-        private const val PREVIEW_AUDIO = "Preview audio"
-        private const val SAVE_CHANGES = "Save changes"
-        private const val NAME_REQUIRED_ERROR = "Name is required"
         private const val WAIT_TIMEOUT_MS = 5_000L
     }
 }

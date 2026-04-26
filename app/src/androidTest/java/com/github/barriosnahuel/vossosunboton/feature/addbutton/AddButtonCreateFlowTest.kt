@@ -21,8 +21,11 @@ import org.junit.runner.RunWith
 /**
  * Instrumented coverage for [AddButtonActivity] in Create mode (case 1.5).
  *
- * See [AddButtonEditFlowTest] for the pattern: launching by intent and using English
- * string literals because the dynamic feature's R class is unreachable from `:app`.
+ * The Activity lives in the dynamic feature module, which the `:app` module cannot depend
+ * on at compile-time without creating a cycle. We launch via an intent that targets the
+ * class by name and resolve `feature_addbutton_*` strings through [string] (a runtime
+ * `Resources.getIdentifier` lookup), so a rename in the feature's `strings.xml` fails the
+ * test loudly instead of silently passing on en_US.
  */
 @RunWith(AndroidJUnit4::class)
 internal class AddButtonCreateFlowTest : AbstractUiTest() {
@@ -43,8 +46,8 @@ internal class AddButtonCreateFlowTest : AbstractUiTest() {
     fun create_mode_with_uri_renders_save_button_and_form() {
         ActivityScenario.launch<Activity>(launchIntent(uri = SAMPLE_URI)).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithText(SAVE).assertIsDisplayed()
-            composeRule.onNodeWithText(NAME_FIELD_LABEL).assertIsDisplayed()
+            composeRule.onNodeWithText(string("feature_addbutton_save", "feature_addbutton")).assertIsDisplayed()
+            composeRule.onNodeWithText(string("feature_addbutton_name", "feature_addbutton")).assertIsDisplayed()
         }
     }
 
@@ -52,9 +55,11 @@ internal class AddButtonCreateFlowTest : AbstractUiTest() {
     fun save_with_blank_name_shows_required_error() {
         ActivityScenario.launch<Activity>(launchIntent(uri = SAMPLE_URI)).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithText(SAVE).performClick()
+            composeRule.onNodeWithText(string("feature_addbutton_save", "feature_addbutton")).performClick()
             composeRule.waitForIdle()
-            composeRule.onNodeWithText(NAME_REQUIRED_ERROR).assertIsDisplayed()
+            composeRule
+                .onNodeWithText(string("feature_addbutton_name_is_required_error", "feature_addbutton"))
+                .assertIsDisplayed()
         }
     }
 
@@ -68,11 +73,6 @@ internal class AddButtonCreateFlowTest : AbstractUiTest() {
     companion object {
         private const val ADD_BUTTON_ACTIVITY =
             "com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity"
-
-        // Strings from feature_addbutton/src/main/res/values/strings.xml.
-        private const val SAVE = "Save"
-        private const val NAME_FIELD_LABEL = "Choose a funny name for your new button"
-        private const val NAME_REQUIRED_ERROR = "Name is required"
         private val SAMPLE_URI: Uri = Uri.parse("content://test/audio.mp3")
     }
 }

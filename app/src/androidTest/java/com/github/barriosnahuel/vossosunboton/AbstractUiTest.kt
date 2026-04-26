@@ -39,6 +39,27 @@ internal abstract class AbstractUiTest {
     protected val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
+    /**
+     * Resolves a string resource by its name on the merged APK. Use this for resources that
+     * live in another module (e.g. `feature_addbutton_*`) where the `R` class isn't on the
+     * `:app` androidTest classpath because adding the dependency would create a cycle.
+     *
+     * Pass [moduleName] for dynamic-feature resources — Android namespaces them under
+     * `<applicationId>.<moduleName>` (e.g. `com.github.barriosnahuel.vossosunboton.debug.feature_addbutton`).
+     *
+     * Fails loudly if the name doesn't exist — renaming or deleting the resource will surface
+     * here instead of silently passing in en_US and breaking in other locales.
+     */
+    protected fun string(
+        name: String,
+        moduleName: String? = null,
+    ): String {
+        val pkg = moduleName?.let { "${context.packageName}.$it" } ?: context.packageName
+        val id = context.resources.getIdentifier(name, "string", pkg)
+        require(id != 0) { "String resource '$name' not found in package '$pkg'." }
+        return context.getString(id)
+    }
+
     @Before
     open fun setUp() {
         Intents.init()
