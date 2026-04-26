@@ -83,9 +83,36 @@ Adopt **Option D**, isolated under `app/src/androidTest/`:
 - Not invoked by `.circleci/config.yml` (the `test` job runs `./gradlew test` only).
 - A single command runs the suite: `./gradlew app:connectedDebugAndroidTest`.
 - Operator workflow: run `./scripts/setup-test-emulator.sh` once to create the AVD, boot
-  the emulator, then invoke the Gradle task.
+  the emulator, then `./scripts/run-ui-tests.sh` for each test pass.
 - Each screen test file owns its accessibility assertions. There is no
   `AccessibilitySweepTest` collector — a11y is part of the feature, not a separate concern.
+
+### Dynamic feature install
+
+`:feature_addbutton` ships as a dynamic feature module with `<dist:install-time />`.
+In production Play Store fuses it with the base APK at install. Locally,
+`./gradlew app:connectedDebugAndroidTest` only pushes the base-only `app-debug.apk`
+via UTP, so any test that launches `AddButtonActivity` crashes with
+`ClassNotFoundException`. `scripts/run-ui-tests.sh` solves this by:
+
+1. Building `app:bundleDebug` and `app:assembleDebugAndroidTest`.
+2. Running `bundletool build-apks --mode=universal` to fuse base + feature into
+   one APK signed with the standard debug keystore (`~/.android/debug.keystore`,
+   the same one AGP uses, so the test APK install doesn't trip a signature
+   mismatch).
+3. Installing the universal APK + the test APK via `adb install -r`.
+4. Running `adb shell am instrument -w -r` directly. Gradle's
+   `connectedDebugAndroidTest` is bypassed because its UTP runner re-installs
+   the base-only APK before each run regardless of `-x installDebug`, which
+   would erase the dynamic feature install we just pushed.
+
+Tradeoff: no Gradle HTML test report. The script writes raw `am instrument`
+output to `app/build/reports/androidTests/local-ui/raw.txt` and prints a
+pass/fail summary parsed from `INSTRUMENTATION_STATUS_CODE`. Sufficient for
+local debugging — if a test fails, the raw log has the stack trace.
+
+Bundletool is auto-downloaded once to `build/tools/bundletool-<version>.jar`.
+Pinned version lives in the script header.
 
 ## Consequences
 

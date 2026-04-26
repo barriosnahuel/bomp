@@ -11,7 +11,6 @@ import android.content.Intent
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -28,7 +27,6 @@ import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -43,23 +41,15 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 internal class AddButtonEditFlowTest : AbstractUiTest() {
-    override fun setUp() {
-        super.setUp()
-        assumeTrue(
-            "AddButtonActivity lives in the :feature_addbutton dynamic feature, which " +
-                "connectedDebugAndroidTest does not install. Install the feature manually " +
-                "(e.g. via Android Studio Run, or 'bundletool install-apks') to exercise these tests.",
-            runCatching { Class.forName(ADD_BUTTON_ACTIVITY_FQN) }.isSuccess,
-        )
-    }
-
     @Test
     fun edit_mode_renders_preview_card_and_existing_name() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch<Activity>(editIntent(sound)).use {
             composeRule.waitForIdle()
-            composeRule.onNode(hasText(sound.name)).assertIsDisplayed()
+            // Both the OutlinedTextField and the AudioPreview header render the sound name,
+            // so a plain hasText() matcher returns 2 nodes. Scope to the editable input.
+            nameField().assertIsDisplayed()
             composeRule.onNodeWithContentDescription(PREVIEW_AUDIO).assertHasClickAction()
         }
     }
@@ -70,7 +60,7 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch<Activity>(editIntent(sound)).use {
             composeRule.waitForIdle()
-            composeRule.onNode(hasText(sound.name)).performTextClearance()
+            nameField().performTextClearance()
             composeRule.onNodeWithText(SAVE_CHANGES).performClick()
             composeRule.waitForIdle()
             composeRule.onNodeWithText(NAME_REQUIRED_ERROR).assertIsDisplayed()
@@ -86,8 +76,8 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch<Activity>(editIntent(sound)).use {
             composeRule.waitForIdle()
-            composeRule.onNode(hasText(sound.name)).performTextClearance()
-            composeRule.onNode(hasSetTextAction()).performTextInput(newName)
+            nameField().performTextClearance()
+            nameField().performTextInput(newName)
             composeRule.onNodeWithText(SAVE_CHANGES).performClick()
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
                 // Same hamcrest 1.3 `allOf` gap as elsewhere — assert the most discriminating
@@ -113,6 +103,8 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
 
     private fun editIntent(sound: Sound): Intent = LandingActivity.editIntent(context, sound)
 
+    private fun nameField() = composeRule.onNode(hasSetTextAction())
+
     companion object {
         // String literals from feature_addbutton/src/main/res/values/strings.xml.
         // The androidTest source set in :app cannot import the dynamic feature's R class
@@ -121,7 +113,5 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
         private const val SAVE_CHANGES = "Save changes"
         private const val NAME_REQUIRED_ERROR = "Name is required"
         private const val WAIT_TIMEOUT_MS = 5_000L
-        private const val ADD_BUTTON_ACTIVITY_FQN =
-            "com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity"
     }
 }

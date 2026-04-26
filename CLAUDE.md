@@ -198,18 +198,29 @@ Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a
 emulator -avd push_me_test -no-snapshot-save -no-boot-anim &
 adb wait-for-device shell 'while [[ $(getprop sys.boot_completed) != 1 ]]; do sleep 1; done'
 
-# 2. Run all instrumented tests
-./gradlew app:connectedDebugAndroidTest
+# 2. Run all instrumented tests (auto-downloads bundletool the first time)
+./scripts/run-ui-tests.sh
 ```
 
-HTML report: `app/build/reports/androidTests/connected/debug/index.html`.
+The wrapper builds the debug bundle, generates a universal APK (base +
+`feature_addbutton` fused), installs it and the test APK via `adb`, then runs
+`adb shell am instrument` directly — bypassing Gradle's UTP test runner,
+which always re-installs the base-only APK and would erase the dynamic
+feature. Raw output and pass/fail counts land at
+`app/build/reports/androidTests/local-ui/raw.txt`.
 
-### Run a single test class
+### Re-run a single test class
 
 ```bash
-./gradlew app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.github.barriosnahuel.vossosunboton.ui.home.SearchOverlayTest
+./scripts/run-ui-tests.sh -e class \
+  com.github.barriosnahuel.vossosunboton.ui.home.SearchOverlayTest
 ```
+
+Extra args after the script name are forwarded verbatim to `am instrument`,
+so any of its flags (`-e class`, `-e package`, `-e size small`, etc.) work.
+The full build + install always runs first; if you only changed test code
+and want to skip the rebuild, run `am instrument` yourself with the same
+arguments.
 
 ### When to run
 

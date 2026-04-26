@@ -15,7 +15,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -27,22 +26,13 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 internal class AddButtonCreateFlowTest : AbstractUiTest() {
-    override fun setUp() {
-        super.setUp()
-        assumeTrue(
-            "AddButtonActivity lives in the :feature_addbutton dynamic feature, which " +
-                "connectedDebugAndroidTest does not install. Install the feature manually " +
-                "(e.g. via Android Studio Run, or 'bundletool install-apks') to exercise these tests.",
-            runCatching { Class.forName(ADD_BUTTON_ACTIVITY) }.isSuccess,
-        )
-    }
-
     @Test
     fun create_mode_without_uri_finishes_immediately() {
         ActivityScenario.launch<Activity>(launchIntent(uri = null)).use { scenario ->
-            // The Activity shows a toast and calls finish() inside onCreate.
-            composeRule.waitForIdle()
-            scenario.moveToState(Lifecycle.State.RESUMED) // no-op if already DESTROYED
+            // The Activity shows a toast and calls finish() inside onCreate, so by the
+            // time the launch returns, scenario.state is already DESTROYED. There's no
+            // composable to settle and calling moveToState(RESUMED) on a destroyed
+            // ActivityScenario throws IllegalStateException.
             assert(scenario.state == Lifecycle.State.DESTROYED) {
                 "Expected Activity to be DESTROYED after missing-URI guard. Was: ${scenario.state}"
             }
