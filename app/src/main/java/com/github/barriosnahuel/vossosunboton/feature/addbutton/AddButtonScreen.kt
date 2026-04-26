@@ -57,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
@@ -84,7 +85,7 @@ fun AddButtonScreen(
 
     fun save() {
         if (name.isBlank()) {
-            nameError = context.getString(R.string.feature_addbutton_name_is_required_error)
+            nameError = context.getString(R.string.app_addbutton_name_is_required_error)
             return
         }
         keyboardController?.hide()
@@ -131,14 +132,14 @@ fun AddButtonScreen(
                     Text(
                         stringResource(
                             if (mode is AddButtonMode.Edit) {
-                                R.string.feature_addbutton_edit_name_label
+                                R.string.app_addbutton_edit_name_label
                             } else {
-                                R.string.feature_addbutton_name
+                                R.string.app_addbutton_name
                             },
                         ),
                     )
                 },
-                placeholder = { Text(stringResource(R.string.feature_addbutton_placeholder)) },
+                placeholder = { Text(stringResource(R.string.app_addbutton_placeholder)) },
                 isError = nameError != null,
                 supportingText = {
                     val error = nameError
@@ -173,9 +174,9 @@ fun AddButtonScreen(
                 Text(
                     stringResource(
                         if (mode is AddButtonMode.Edit) {
-                            R.string.feature_addbutton_save_changes
+                            R.string.app_addbutton_save_changes
                         } else {
-                            R.string.feature_addbutton_save
+                            R.string.app_addbutton_save
                         },
                     ),
                 )
@@ -273,7 +274,7 @@ private fun AudioPreview(
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) AppIcons.Pause else Icons.Default.PlayArrow,
-                                contentDescription = stringResource(R.string.feature_addbutton_preview_audio),
+                                contentDescription = stringResource(R.string.app_addbutton_preview_audio),
                             )
                         }
                     }
@@ -327,9 +328,9 @@ private fun AddButtonTopBar(
             Text(
                 stringResource(
                     if (mode is AddButtonMode.Edit) {
-                        R.string.feature_addbutton_activity_title_edit
+                        R.string.app_addbutton_activity_title_edit
                     } else {
-                        R.string.feature_addbutton_activity_title
+                        R.string.app_addbutton_activity_title
                     },
                 ),
             )

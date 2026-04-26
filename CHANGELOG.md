@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Bundled audio files removed from version control; bottom navigation bar hidden in release builds (Explore tab only appears in debug when audio files are manually placed)
 
 ### Changed
+- Promoted the Add Button flow from a `:feature_addbutton` dynamic feature module into the core `:app` module (creating buttons is core, not a freemium add-on). Eliminates the bundletool wrapper script and lets the local UI test suite run as plain `./gradlew app:connectedDebugAndroidTest`
 - Deeplink `push-me://open/explore` now falls back to Home when no bundled sounds are available (release builds and debug checkouts without the bundled `raw/` directory), avoiding a blank Explore tab
 - Search overlay's clear-query icon now announces "Clear search" (was "Close search", which collided with the back-arrow's label and confused screen readers)
 - Swipe-to-delete haptic feedback on custom sounds changed from double-pulse (reject) to single-pulse (confirm), matching the pin gesture — a successful delete is a confirmed action

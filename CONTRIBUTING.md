@@ -28,12 +28,10 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
     It must return **`BUILD SUCCESS`**.
 
 ## Directory structure 🎄
-- [app/](/app) Android application module which depends on all other submodules to be the great app you're building.
+- [app/](/app) Android application module which depends on all other submodules to be the great app you're building. The Add Button flow lives at `app/src/main/java/com/github/barriosnahuel/vossosunboton/feature/addbutton/`.
 - [commons_android/](/commons_android) Android library module for Android-related foundation staff.
 - [commons_file/](/commons_file) Android library module for File handling staff.
 - [config/](/config) contains code analyzers configuration files.
-- [feature_addbutton/](/feature_addbutton) Android Feature module containing all code and resources required in order to let users add a new
-button.
 - [gradle/wrapper/](/gradle/wrapper) contains Gradle's binary in order to be able to run this project everywhere.
 - [model/](/model) Android library module containing our business logic.
 - [store-listing/](/store-listing) contains all listing related files, like GIMP files to edit screenshots.

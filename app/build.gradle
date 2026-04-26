@@ -80,8 +80,6 @@ android {
         }
     }
 
-    dynamicFeatures = [":feature_addbutton"]
-
     buildFeatures {
         buildConfig = true
         compose = true
@@ -95,6 +93,7 @@ dependencies {
     implementation project(':model')
 
     implementation libs.androidx.appcompat
+    implementation libs.androidx.annotation
     implementation libs.material
 
     implementation platform(libs.firebase.bom)
@@ -112,6 +111,7 @@ dependencies {
     implementation libs.lifecycle.viewmodel.compose
     implementation libs.lifecycle.runtime.compose
     implementation libs.coroutines.android
+    implementation libs.coroutines.core
 
     debugImplementation libs.compose.ui.tooling
     debugImplementation libs.compose.ui.test.manifest
