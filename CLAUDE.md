@@ -51,6 +51,16 @@ Push Me is an Android soundboard app with 5 Gradle modules:
 
 Dependency direction: `app` → `model`, `commons_android`, `commons_file`; `feature_addbutton` → `app`.
 
+## Product & brand context (when relevant)
+
+Product specs, brand language, and canonical naming live in the sibling backlog repo at `../push-me-backlog/`. Consult it when working on user-facing strings, micro-copy, feature/level naming, gamification, or social-layer behavior — these docs are the source of truth for the in-app vocabulary:
+
+- [`../push-me-backlog/docs/brand-dna.md`](../push-me-backlog/docs/brand-dna.md) — canonical terminology (Bomp, Bomper, Bompear, Escala Richter levels: Bompín / Bompazo / Bompardo / Bompión, Inmortal as cloud-state descriptor)
+- [`../push-me-backlog/CLAUDE.md`](../push-me-backlog/CLAUDE.md) — Product Language glossary and spec conventions
+- [`../push-me-backlog/backlog/`](../push-me-backlog/backlog/) — pending feature specs (the "why" behind features)
+
+Skip for refactors, dep bumps, build config, and platform-wiring fixes — those don't need brand context. If the sibling path isn't present (CI, alternate checkout layout), proceed with the in-repo strings as authoritative and surface the gap to the user.
+
 ## Bug fixes — TDD workflow
 
 When the user reports a bug or says we are going to fix a bug, always follow Test-Driven Development:
@@ -72,6 +82,22 @@ Before writing production code for a new feature, identify and agree on the mini
 Implement the tests **alongside** the feature, not after. Any scenario not listed before starting is out of scope for the current PR — note it in the PR description.
 
 Skip a test scenario only when it lives exclusively in platform wiring that cannot be exercised by unit or Robolectric tests (e.g. a pure layout change). In that case, note why it was skipped.
+
+## Test naming convention
+
+Test names are **descriptive sentences**, never opaque identifiers like `testFoo1`. Reports list them verbatim, so they should read like a spec.
+
+- **JVM tests** under `src/test/` (Robolectric, pure Kotlin): use **backtick-quoted strings**, sentence-case, no trailing period.
+  ```kotlin
+  @Test
+  fun `searchResults emits empty list when query is blank`() { ... }
+  ```
+- **Instrumented tests** under `src/androidTest/`: use **snake_case** (or camelCase) descriptive names.
+  ```kotlin
+  @Test
+  fun swipe_right_pins_a_custom_sound() { ... }
+  ```
+  Backticks with spaces would require DEX 040, which D8 only emits when `minSdk >= 34`. The app's `minSdk` is 23, so the dexer rejects spaces in method names with `Space characters in SimpleName 'X' are not allowed prior to DEX version 040`. Until the floor moves to 34, instrumented tests stay underscore-separated.
 
 ## Activity smoke tests
 
