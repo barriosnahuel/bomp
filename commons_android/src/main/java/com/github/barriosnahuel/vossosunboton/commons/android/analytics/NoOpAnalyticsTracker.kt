@@ -14,7 +14,13 @@ import android.os.Bundle
 class NoOpAnalyticsTracker : AnalyticsTracker {
     override fun log(event: AnalyticsEvent) = Unit
 
-    override fun setUserProperty(name: String, value: String) = Unit
+    override fun setUserProperty(
+        name: String,
+        value: String,
+    ) = Unit
 
-    override fun logScreen(screenName: String, extras: Bundle?) = Unit
+    override fun logScreen(
+        screenName: String,
+        extras: Bundle?,
+    ) = Unit
 }

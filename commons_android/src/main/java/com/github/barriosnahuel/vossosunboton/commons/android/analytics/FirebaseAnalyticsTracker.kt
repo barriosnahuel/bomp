@@ -29,15 +29,22 @@ internal class FirebaseAnalyticsTracker(
         }
     }
 
-    override fun setUserProperty(name: String, value: String) {
+    override fun setUserProperty(
+        name: String,
+        value: String,
+    ) {
         firebase.setUserProperty(name, value)
     }
 
-    override fun logScreen(screenName: String, extras: Bundle?) {
-        val params = Bundle().apply {
-            putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
-            extras?.let { putAll(it) }
-        }
+    override fun logScreen(
+        screenName: String,
+        extras: Bundle?,
+    ) {
+        val params =
+            Bundle().apply {
+                putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
+                extras?.let { putAll(it) }
+            }
         firebase.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, params)
     }
 }

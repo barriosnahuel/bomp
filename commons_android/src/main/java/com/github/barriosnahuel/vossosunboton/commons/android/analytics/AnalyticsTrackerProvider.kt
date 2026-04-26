@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.commons.android.analytics
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -18,14 +19,18 @@ object AnalyticsTrackerProvider {
     private var cached: AnalyticsTracker? = null
 
     /**
-     * Return the production tracker, creating it on first call. Thread-safe and idempotent.
+     * Return the production tracker, creating it on first call. Thread-safe and idempotent. The INTERNET /
+     * ACCESS_NETWORK_STATE / WAKE_LOCK permissions Firebase needs are declared by the consuming app — this library
+     * cannot opt itself in, hence the suppression.
      */
-    fun get(context: Context): AnalyticsTracker = cached ?: synchronized(this) {
-        cached ?: FirebaseAnalyticsTracker(
-            firebase = FirebaseAnalytics.getInstance(context.applicationContext),
-            store = SharedPrefsAnalyticsStore(context.applicationContext),
-        ).also { cached = it }
-    }
+    @SuppressLint("MissingPermission")
+    fun get(context: Context): AnalyticsTracker =
+        cached ?: synchronized(this) {
+            cached ?: FirebaseAnalyticsTracker(
+                firebase = FirebaseAnalytics.getInstance(context.applicationContext),
+                store = SharedPrefsAnalyticsStore(context.applicationContext),
+            ).also { cached = it }
+        }
 
     /**
      * Replace the cached tracker for tests. Call from `@Before`; reset to `null` from `@After` if isolation is needed.

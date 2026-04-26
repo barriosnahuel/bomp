@@ -14,7 +14,10 @@ import android.os.Bundle
  * not duplicate the first-time logic. Naming and conventions live in `plans/04-firebase-analytics-core-funnel.md` §4
  * and the project's CLAUDE.md "Analytics events" section.
  */
-sealed class AnalyticsEvent(val name: String, val hasFirstVariant: Boolean) {
+sealed class AnalyticsEvent(
+    val name: String,
+    val hasFirstVariant: Boolean,
+) {
     /**
      * Optional event params. Default is no params.
      */
@@ -28,13 +31,14 @@ sealed class AnalyticsEvent(val name: String, val hasFirstVariant: Boolean) {
         val nameHitLimit: Boolean,
         val currentSounds: Int,
     ) : AnalyticsEvent(name = "sound_add", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply {
-            putString("source", source)
-            putInt("name_length", nameLength)
-            putInt("name_word_count", nameWordCount)
-            putBoolean("name_hit_limit", nameHitLimit)
-            putInt("current_sounds", currentSounds)
-        }
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString("source", source)
+                putInt("name_length", nameLength)
+                putInt("name_word_count", nameWordCount)
+                putBoolean("name_hit_limit", nameHitLimit)
+                putInt("current_sounds", currentSounds)
+            }
     }
 
     /** Audio renamed. Pairs with `screen_view {edit_sound}`. */
@@ -44,13 +48,14 @@ sealed class AnalyticsEvent(val name: String, val hasFirstVariant: Boolean) {
         val nameHitLimit: Boolean,
         val nameChanged: Boolean,
     ) : AnalyticsEvent(name = "sound_edit", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply {
-            putString("field", "name")
-            putInt("name_length", nameLength)
-            putInt("name_word_count", nameWordCount)
-            putBoolean("name_hit_limit", nameHitLimit)
-            putBoolean("name_changed", nameChanged)
-        }
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString("field", "name")
+                putInt("name_length", nameLength)
+                putInt("name_word_count", nameWordCount)
+                putBoolean("name_hit_limit", nameHitLimit)
+                putBoolean("name_changed", nameChanged)
+            }
     }
 
     /** Audio deleted (post-snackbar commit). NOT emitted when the user taps "Undo" before the timeout. */
@@ -60,18 +65,23 @@ sealed class AnalyticsEvent(val name: String, val hasFirstVariant: Boolean) {
     object SoundDeleteUndone : AnalyticsEvent(name = "sound_delete_undone", hasFirstVariant = false)
 
     /** Audio played. [surface] must match a canonical `screen_name` from the catalog. */
-    data class SoundPlay(val surface: String) : AnalyticsEvent(name = "sound_play", hasFirstVariant = true) {
+    data class SoundPlay(
+        val surface: String,
+    ) : AnalyticsEvent(name = "sound_play", hasFirstVariant = true) {
         override fun params(): Bundle = Bundle().apply { putString("surface", surface) }
     }
 
     /** Audio pinned/unpinned via swipe. */
-    data class PinToggle(val pinned: Boolean) : AnalyticsEvent(name = "pin_toggle", hasFirstVariant = true) {
+    data class PinToggle(
+        val pinned: Boolean,
+    ) : AnalyticsEvent(name = "pin_toggle", hasFirstVariant = true) {
         override fun params(): Bundle = Bundle().apply { putBoolean("pinned", pinned) }
     }
 
     /** Search returned zero results for a non-blank query. Debounced upstream to avoid keystroke noise. */
-    data class SearchZeroResults(val queryLength: Int) :
-        AnalyticsEvent(name = "search_zero_results", hasFirstVariant = true) {
+    data class SearchZeroResults(
+        val queryLength: Int,
+    ) : AnalyticsEvent(name = "search_zero_results", hasFirstVariant = true) {
         override fun params(): Bundle = Bundle().apply { putInt("query_length", queryLength) }
     }
 
@@ -79,7 +89,9 @@ sealed class AnalyticsEvent(val name: String, val hasFirstVariant: Boolean) {
      * Audio shared to an external app via the chooser. Uses Firebase's recommended `share` event for native reports;
      * the `first_share` variant is custom (Firebase does not auto-emit it).
      */
-    data class Share(val surface: String) : AnalyticsEvent(name = "share", hasFirstVariant = true) {
+    data class Share(
+        val surface: String,
+    ) : AnalyticsEvent(name = "share", hasFirstVariant = true) {
         override fun params(): Bundle = Bundle().apply { putString("surface", surface) }
     }
 
@@ -99,6 +111,7 @@ sealed class AnalyticsEvent(val name: String, val hasFirstVariant: Boolean) {
      * Audio-count milestone crossed for the first time on this install. The call-site gates emission via
      * [FirstFlagStore]; no additional `first_*` variant is emitted (the milestone is intrinsically one-shot).
      */
-    data class MilestoneAudios(val threshold: Int) :
-        AnalyticsEvent(name = "milestone_sounds_$threshold", hasFirstVariant = false)
+    data class MilestoneAudios(
+        val threshold: Int,
+    ) : AnalyticsEvent(name = "milestone_sounds_$threshold", hasFirstVariant = false)
 }

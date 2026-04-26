@@ -15,7 +15,10 @@ import android.content.SharedPreferences
  * Always uses [SharedPreferences.Editor.apply] (async) to avoid main-thread disk writes that would trip the
  * Strict Mode audit.
  */
-internal class SharedPrefsAnalyticsStore(context: Context) : FirstFlagStore, CounterStore {
+internal class SharedPrefsAnalyticsStore(
+    context: Context,
+) : FirstFlagStore,
+    CounterStore {
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 

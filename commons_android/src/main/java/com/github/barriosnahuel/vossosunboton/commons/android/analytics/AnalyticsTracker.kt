@@ -24,11 +24,17 @@ interface AnalyticsTracker {
     /**
      * Set a Firebase Analytics user property. Persistent across sessions until overwritten or the app is uninstalled.
      */
-    fun setUserProperty(name: String, value: String)
+    fun setUserProperty(
+        name: String,
+        value: String,
+    )
 
     /**
      * Emit Firebase's recommended `screen_view` event with a canonical [screenName]. Auto-tracking is disabled at the
      * manifest level, so every screen must call this manually. Re-emits on every visit (no first-variant).
      */
-    fun logScreen(screenName: String, extras: Bundle? = null)
+    fun logScreen(
+        screenName: String,
+        extras: Bundle? = null,
+    )
 }
