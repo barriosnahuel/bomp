@@ -6,7 +6,6 @@ An Android app made, by the moment, only for fun. Currently it's aimed to be use
 [![Semver](https://img.shields.io/badge/SemVer-v2.0.0-green.svg)](http://semver.org/spec/v2.0.0.html)
 [![stable](https://img.shields.io/badge/stability-experimental-green.svg)](https://nodejs.org/api/documentation.html#documentation_stability_index)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
-[![Sponsor](https://img.shields.io/github/sponsors/barriosnahuel?logo=github)](https://github.com/sponsors/barriosnahuel)
 
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://source.android.com/setup/start/build-numbers)
 [![API](https://img.shields.io/badge/API-33-brightgreen.svg?style=flat)](https://source.android.com/setup/start/build-numbers)
@@ -14,6 +13,11 @@ An Android app made, by the moment, only for fun. Currently it's aimed to be use
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/50c7ef07a05e47419c084c64dd460c9a)](https://www.codacy.com/app/barrios.nahuel/push-me?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=barriosnahuel/push-me&amp;utm_campaign=Badge_Grade)
 
 Wanna know about the entire tech stack? Check it at [techstack.md](techstack.md).
+
+## Support the project
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y31YIHWK)
+[![Invitame un café en cafecito.app](https://cdn.cafecito.app/imgs/buttons/button_1.svg)](https://cafecito.app/barriosnahuel)
 
 ## Features 🏁
 - Play packaged audios.
