@@ -143,10 +143,3 @@ dependencies {
     androidTestImplementation libs.truth
     androidTestImplementation libs.mockk
 }
-
-// Backtick test names with spaces (the project's convention for descriptive test names)
-// require DEX format 040, which D8 only emits when the dex's min API is >= 34. The app
-// keeps minSdk 23 (production), but the androidTest APK only ever runs on the local
-// emulator/device, so we override the dex builder's per-task min API to 34 without
-// touching the production app's surface. Drop this when the app's defaultConfig minSdk
-// reaches 34.
