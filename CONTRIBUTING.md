@@ -15,7 +15,9 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Logcat](#logcat-)
 - [Resources](#resources-)
 - [Signing](#signing-)
+- [Bundled audio files](#bundled-audio-files-)
 - [Store listing](#store-listing-)
+- [Analytics events](#analytics-events-)
 
 ## Local setup ⚙
 
@@ -128,6 +130,48 @@ Place the bundled `.mp3` and `.ogg` files there. Without them the debug build st
 ## Store listing 📄
 
 As mentioned before, under [store-listing/](/store-listing) there are the assets for the store listing and the original GIMP files to edit those assets.
+
+## Analytics events 📊
+
+This app uses Firebase Analytics. The full event contract — names, params,
+user properties, and naming rules — lives at `plans/04-firebase-analytics-core-funnel.md`
+in the sibling `push-me-backlog` repo. The `AnalyticsEvent` sealed class in
+`commons_android/.../analytics/AnalyticsEvent.kt` is the source of truth for
+custom events the app emits; screens are tracked via `AnalyticsTracker.logScreen(...)`
+emitting Firebase's recommended `screen_view` event with canonical names from
+`CanonicalScreenName`.
+
+**Important**: Firebase auto-tracking of `screen_view` is **disabled** via manifest
+meta-data (`google_analytics_automatic_screen_reporting_enabled = false`). Every
+screen must emit its `screen_view` manually with a canonical `screen_name` from
+the catalog in plan 04 §4.2.a. Do not rely on Firebase to auto-emit class names —
+those break on refactor.
+
+When adding a new tracked action:
+
+1. Decide: is it a **full screen** (user landed somewhere new)? → emit
+   `tracker.logScreen(CanonicalScreenName.X)`. Add the constant to
+   `CanonicalScreenName` and the name to plan 04 §4.2.a.
+2. Otherwise it's a **discrete action** → add a new `AnalyticsEvent` subclass
+   with the event name and params. Decide whether it needs a first-variant
+   (one-shot per install) — set `hasFirstVariant = true` if so.
+3. Apply the naming convention: snake_case, no PII in params, NO `_intent`/`_done`
+   suffixes (the event firing is itself the signal that the action happened;
+   intents that map to screens are covered by `screen_view`), `_open` only for
+   in-screen reveals (not full destinations), `surface` param when the action
+   originates from multiple UI surfaces — its values must match canonical
+   `screen_name` from `CanonicalScreenName`.
+4. Update the event table in `plans/04-firebase-analytics-core-funnel.md` §4.2.
+5. Add a wrapper-level test in `commons_android/src/test/.../analytics/`.
+6. Add the event/screen name to `EVENTS_WITH_REGRESSION_TEST` /
+   `SCREEN_VIEWS_WITH_REGRESSION_TEST` in `AnalyticsCoverageMatrixTest`. The
+   meta-test fails until you do — that is the regression net working.
+7. Add at least one call-site test that triggers the action and asserts via
+   `FakeAnalyticsTracker.assertEmitted("event_name")` or `.assertScreenView(...)`.
+   Without it, a future refactor that silences the track passes CI silently.
+
+Reserved Firebase event names are forbidden — check
+<https://firebase.google.com/docs/analytics/events> before naming.
 
 ## License 📄
 

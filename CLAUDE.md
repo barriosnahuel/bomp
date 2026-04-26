@@ -128,6 +128,74 @@ internal class MyScreenTest : AbstractRobolectricTest() {
 ```
 
 
+## Analytics events
+
+The app emits Firebase Analytics events through the `AnalyticsTracker` wrapper at
+`commons_android/.../analytics/`. The `AnalyticsEvent` sealed class is the single
+source of truth — every event has a subclass, every param is typed.
+`CanonicalScreenName` holds the catalogue of `screen_name` literals used by
+`AnalyticsTracker.logScreen(...)`.
+
+**Naming rules** (aligned with `plans/04-firebase-analytics-core-funnel.md` §4.1
+in the sibling backlog repo):
+
+- Snake case lowercase. Reserved Firebase event names forbidden.
+- Describe the **product fact**, not the **UI mechanic**: `about_credits_open`,
+  not `about_credits_expand`.
+- **`screen_view` (Firebase recommended) for full screens** — every canonical
+  destination emits `screen_view {screen_name}` with a snake_case name from
+  `CanonicalScreenName`. Auto-tracking is **disabled** via manifest meta-data;
+  all screens emit manually with canonical names (decoupled from class names that
+  break on refactor). NEVER create a custom event for "user opened screen X" when
+  a `screen_view` covers it.
+- **No `_intent` / `_done` suffixes** in the current set. The `screen_view`
+  for the matching screen IS the intent signal; the custom event firing IS the
+  done signal. So `sound_add` (not `sound_add_done`) pairs with
+  `screen_view {add_sound}`; `sound_edit` pairs with `screen_view {edit_sound}`.
+  Only revive `_intent`/`_done` if a future flow has a multi-step gap that does
+  NOT map to separate screens (e.g. an inline wizard).
+- `_open` suffix for "user revealed in-screen content" without a measurable
+  done AND without a dedicated screen (`about_credits_open`,
+  `about_license_open`, `about_source_open`). NOT used for full destinations.
+- `first_` prefix is added by the wrapper for events with `hasFirstVariant = true`
+  — never call it directly from a call-site.
+- `milestone_` prefix for one-shot numeric thresholds.
+- `surface` param on actions that fire from multiple UI entry points
+  (`sound_play`, `share`). **Values must match canonical `screen_name`** from
+  `CanonicalScreenName` (today: `my_sounds`, `explore_sounds`, `search_sound`,
+  `edit_sound`) — when a new surface is introduced, add it to BOTH the
+  `CanonicalScreenName` catalogue and the `surface` allowed values in lockstep.
+- **No PII in params**. Lengths, counts, and booleans derived from user input
+  are fine (`name_length`, `query_length`); the literal text is not.
+- Prefer Firebase recommended events (`share`, `select_content`) over custom
+  when the semantics match — gives access to pre-built reports and BigQuery
+  schema compatibility.
+
+**When adding a new tracked action**:
+
+1. Add the subclass to `AnalyticsEvent.kt` (or the constant to
+   `CanonicalScreenName.kt` for new screens).
+2. Add a wrapper-level unit test verifying name + params + first-variant
+   behaviour.
+3. Update the event table in `plans/04-firebase-analytics-core-funnel.md` §4.2
+   in the sibling backlog repo.
+4. **Add the simple class name (or canonical screen name) to
+   `EVENTS_WITH_REGRESSION_TEST` / `SCREEN_VIEWS_WITH_REGRESSION_TEST` in
+   `AnalyticsCoverageMatrixTest`**. The meta-test fails until you do — that's
+   the regression net working.
+5. **Add at least one call-site test** that triggers the action and asserts via
+   `FakeAnalyticsTracker.assertEmitted("event_name")` or
+   `.assertScreenView("screen_name")`. Tests pull the fake via
+   `testImplementation testFixtures(project(":commons_android"))`. Without it,
+   a future refactor that silences the track passes CI silently. The canonical
+   mapping lives in `plans/04-...md` §6 Paso 13.
+6. Verify smoke in Firebase DebugView before merging.
+
+User Properties (`current_sounds`, `current_pinned`, `lifetime_shares`,
+`lifetime_plays`) are set via `tracker.setUserProperty(...)` — see §4.3 of the
+plan for who updates each one and when.
+
+
 ## Worktree setup
 
 After creating a new worktree, always run these commands to replace the dummy `google-services.json` and copy the bundled audio files from the main worktree:
