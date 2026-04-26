@@ -219,7 +219,7 @@ private fun SearchField(
                 IconButton(onClick = { onQueryChange("") }) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.app_search_close),
+                        contentDescription = stringResource(R.string.app_search_clear),
                     )
                 }
             }

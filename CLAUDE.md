@@ -51,6 +51,16 @@ Push Me is an Android soundboard app with 5 Gradle modules:
 
 Dependency direction: `app` → `model`, `commons_android`, `commons_file`; `feature_addbutton` → `app`.
 
+## Product & brand context (when relevant)
+
+Product specs, brand language, and canonical naming live in the sibling backlog repo at `../push-me-backlog/`. Consult it when working on user-facing strings, micro-copy, feature/level naming, gamification, or social-layer behavior — these docs are the source of truth for the in-app vocabulary:
+
+- [`../push-me-backlog/docs/brand-dna.md`](../push-me-backlog/docs/brand-dna.md) — canonical terminology (Bomp, Bomper, Bompear, Escala Richter levels: Bompín / Bompazo / Bompardo / Bompión, Inmortal as cloud-state descriptor)
+- [`../push-me-backlog/CLAUDE.md`](../push-me-backlog/CLAUDE.md) — Product Language glossary and spec conventions
+- [`../push-me-backlog/backlog/`](../push-me-backlog/backlog/) — pending feature specs (the "why" behind features)
+
+Skip for refactors, dep bumps, build config, and platform-wiring fixes — those don't need brand context. If the sibling path isn't present (CI, alternate checkout layout), proceed with the in-repo strings as authoritative and surface the gap to the user.
+
 ## Bug fixes — TDD workflow
 
 When the user reports a bug or says we are going to fix a bug, always follow Test-Driven Development:
@@ -72,6 +82,22 @@ Before writing production code for a new feature, identify and agree on the mini
 Implement the tests **alongside** the feature, not after. Any scenario not listed before starting is out of scope for the current PR — note it in the PR description.
 
 Skip a test scenario only when it lives exclusively in platform wiring that cannot be exercised by unit or Robolectric tests (e.g. a pure layout change). In that case, note why it was skipped.
+
+## Test naming convention
+
+Test names are **descriptive sentences**, never opaque identifiers like `testFoo1`. Reports list them verbatim, so they should read like a spec.
+
+- **JVM tests** under `src/test/` (Robolectric, pure Kotlin): use **backtick-quoted strings**, sentence-case, no trailing period.
+  ```kotlin
+  @Test
+  fun `searchResults emits empty list when query is blank`() { ... }
+  ```
+- **Instrumented tests** under `src/androidTest/`: use **camelCase** descriptive names — backticks with spaces require DEX format 040, which D8 in the current AGP version refuses to emit even with `minSdk` overrides on the test variant.
+  ```kotlin
+  @Test
+  fun swipeRightPinsACustomSound() { ... }
+  ```
+  When the app's `minSdk` (currently 23) and AGP both move past the DEX 040 boundary, migrate instrumented tests to backticks for consistency.
 
 ## Activity smoke tests
 
@@ -177,6 +203,55 @@ Before pushing any branch, always run:
 ```
 
 This catches the same failures CI will report (ktlint, detekt, Spotless, Android lint, unit tests) without waiting for a full CI run.
+
+**Functional changes also require the local UI test suite** (see next section). If the change touches user-facing behavior — Composables, ViewModels, intents, navigation, deep links, persistence — run the instrumented suite on an emulator before pushing. CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
+
+## Local UI test suite
+
+Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a real emulator using Compose UI Test + Espresso + UI Automator + Espresso Accessibility Checks. CircleCI intentionally does not run them — the rationale, alternatives considered, and tradeoffs are in [`docs/adr/0001-local-ui-test-suite.md`](docs/adr/0001-local-ui-test-suite.md).
+
+### Setup (one-time)
+
+```bash
+# Creates the AVD `push_me_test` (idempotent, ~5 min the first time including system image download)
+./scripts/setup-test-emulator.sh
+```
+
+### Run the full suite
+
+```bash
+# 1. Boot the emulator (background)
+emulator -avd push_me_test -no-snapshot-save -no-boot-anim &
+adb wait-for-device shell 'while [[ $(getprop sys.boot_completed) != 1 ]]; do sleep 1; done'
+
+# 2. Run all instrumented tests (auto-downloads bundletool the first time)
+./scripts/run-ui-tests.sh
+```
+
+The wrapper builds the debug bundle, generates a universal APK (base +
+`feature_addbutton` fused), installs it and the test APK via `adb`, then runs
+`adb shell am instrument` directly — bypassing Gradle's UTP test runner,
+which always re-installs the base-only APK and would erase the dynamic
+feature. Raw output and pass/fail counts land at
+`app/build/reports/androidTests/local-ui/raw.txt`.
+
+### Re-run a single test class
+
+```bash
+./scripts/run-ui-tests.sh -e class \
+  com.github.barriosnahuel.vossosunboton.ui.home.SearchOverlayTest
+```
+
+Extra args after the script name are forwarded verbatim to `am instrument`,
+so any of its flags (`-e class`, `-e package`, `-e size small`, etc.) work.
+The full build + install always runs first; if you only changed test code
+and want to skip the rebuild, run `am instrument` yourself with the same
+arguments.
+
+### When to run
+
+- After any change to a Composable, ViewModel, intent flow, navigation, deep link, or persistence layer.
+- Not required for changes limited to: CHANGELOG, copy strings, README, comments, configuration of off-device tooling.
 
 ## Accessibility (WCAG 2.2 AA)
 
