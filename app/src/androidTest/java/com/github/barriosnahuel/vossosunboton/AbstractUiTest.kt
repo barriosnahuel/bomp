@@ -9,7 +9,11 @@ import android.content.Context
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.espresso.accessibility.AccessibilityChecks
 import androidx.test.espresso.intent.Intents
+import androidx.test.espresso.matcher.ViewMatchers.withClassName
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.android.apps.common.testing.accessibility.framework.AccessibilityCheckResultUtils
+import org.hamcrest.Matchers.allOf
+import org.hamcrest.Matchers.equalTo
 import org.junit.After
 import org.junit.Before
 import org.junit.BeforeClass
@@ -54,7 +58,19 @@ internal abstract class AbstractUiTest {
         @JvmStatic
         @BeforeClass
         fun enableAccessibilityChecks() {
-            AccessibilityChecks.enable().setRunChecksFromRootView(true)
+            // Compose drives a11y through the semantics tree, not the View's contentDescription.
+            // ATF runs against Android Views and flags AndroidComposeView root as missing a label.
+            // Suppress that specific false-positive so we can still catch real Espresso/UIAutomator
+            // a11y violations elsewhere.
+            val composeRootIsExempt =
+                allOf(
+                    AccessibilityCheckResultUtils.matchesViews(withClassName(equalTo("androidx.compose.ui.platform.AndroidComposeView"))),
+                    AccessibilityCheckResultUtils.matchesCheckNames(equalTo("SpeakableTextPresentCheck")),
+                )
+            AccessibilityChecks
+                .enable()
+                .setRunChecksFromRootView(true)
+                .setSuppressingResultMatcher(composeRootIsExempt)
         }
     }
 }

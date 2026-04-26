@@ -15,6 +15,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -26,6 +27,16 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 internal class AddButtonCreateFlowTest : AbstractUiTest() {
+    override fun setUp() {
+        super.setUp()
+        assumeTrue(
+            "AddButtonActivity lives in the :feature_addbutton dynamic feature, which " +
+                "connectedDebugAndroidTest does not install. Install the feature manually " +
+                "(e.g. via Android Studio Run, or 'bundletool install-apks') to exercise these tests.",
+            runCatching { Class.forName(ADD_BUTTON_ACTIVITY) }.isSuccess,
+        )
+    }
+
     @Test
     fun create_mode_without_uri_finishes_immediately() {
         ActivityScenario.launch<Activity>(launchIntent(uri = null)).use { scenario ->

@@ -22,9 +22,17 @@ case "$ARCH" in
 esac
 SYSTEM_IMAGE="system-images;android-${API_LEVEL};google_apis;${IMG_ARCH}"
 
-for cmd in sdkmanager avdmanager emulator; do
+# Auto-discover the Android SDK and prepend its tool dirs to PATH so each
+# command (sdkmanager, avdmanager, emulator, adb) is reachable even if the
+# user only has cmdline-tools on PATH.
+SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
+if [ -d "$SDK_ROOT" ]; then
+  PATH="$SDK_ROOT/cmdline-tools/latest/bin:$SDK_ROOT/platform-tools:$SDK_ROOT/emulator:$PATH"
+fi
+
+for cmd in sdkmanager avdmanager emulator adb; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "✘ '$cmd' not found on PATH. Install Android SDK command-line tools." >&2
+    echo "✘ '$cmd' not found on PATH (looked under $SDK_ROOT). Install Android SDK command-line tools and platform-tools." >&2
     exit 1
   fi
 done
@@ -35,7 +43,10 @@ if avdmanager list avd 2>/dev/null | grep -q "Name: ${AVD_NAME}$"; then
 fi
 
 echo "→ Installing system image: ${SYSTEM_IMAGE}"
-yes | sdkmanager --install "${SYSTEM_IMAGE}" >/dev/null
+# `yes` keeps writing past sdkmanager's last prompt and dies with SIGPIPE — under
+# `set -o pipefail` that fails the script even though the install succeeded. Send a
+# bounded burst of "y" lines instead, enough to accept any pending licenses.
+printf 'y\n%.0s' $(seq 1 50) | sdkmanager --install "${SYSTEM_IMAGE}" >/dev/null
 
 echo "→ Creating AVD '${AVD_NAME}' (${IMG_ARCH}, API ${API_LEVEL})"
 echo "no" | avdmanager create avd \

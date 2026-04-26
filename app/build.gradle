@@ -132,7 +132,13 @@ dependencies {
     androidTestImplementation libs.androidx.test.rules
     androidTestImplementation libs.espresso.core
     androidTestImplementation libs.espresso.intents
-    androidTestImplementation libs.espresso.accessibility
+    androidTestImplementation(libs.espresso.accessibility) {
+        // Old protobuf-lite (3.0.1) is missing methods that Firebase Perf's
+        // protobuf-javalite calls — when both end up in the test APK the app
+        // crashes at startup with NoSuchMethodError. Drop the old transitive
+        // dep and let Firebase's modern protobuf take over.
+        exclude group: 'com.google.protobuf', module: 'protobuf-lite'
+    }
     androidTestImplementation libs.androidx.uiautomator
     androidTestImplementation libs.truth
     androidTestImplementation libs.mockk

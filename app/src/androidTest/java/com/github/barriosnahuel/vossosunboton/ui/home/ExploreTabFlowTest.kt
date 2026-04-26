@@ -45,8 +45,10 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     fun bottom_bar_is_visible_when_bundled_sounds_exist() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(homeTabLabel()).assertIsDisplayed()
-            composeRule.onNodeWithContentDescription(exploreTabLabel()).assertIsDisplayed()
+            // Find by label text — the icon's contentDescription only lives in the unmerged
+            // tree, while the label (a Text composable) bubbles up through merge.
+            composeRule.onNodeWithText(homeTabLabel()).assertIsDisplayed()
+            composeRule.onNodeWithText(exploreTabLabel()).assertIsDisplayed()
         }
     }
 
@@ -57,7 +59,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(exploreTabLabel()).performClick()
+            composeRule.onNodeWithText(exploreTabLabel()).performClick()
             composeRule.waitForIdle()
             composeRule.onNodeWithText(firstBundledName).assertIsDisplayed()
             // The seeded "custom_1" lives only on Home; switching to Explore hides it.
@@ -71,7 +73,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(exploreTabLabel()).performClick()
+            composeRule.onNodeWithText(exploreTabLabel()).performClick()
             composeRule.waitForIdle()
             composeRule.onNodeWithText(firstBundledName).performTouchInput { swipeLeft() }
             composeRule.waitForIdle()
@@ -91,7 +93,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(exploreTabLabel()).performClick()
+            composeRule.onNodeWithText(exploreTabLabel()).performClick()
             composeRule.waitForIdle()
             composeRule.onNodeWithText(targetName).performTouchInput { swipeRight() }
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
@@ -109,7 +111,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(exploreTabLabel()).performClick()
+            composeRule.onNodeWithText(exploreTabLabel()).performClick()
             composeRule.waitForIdle()
             composeRule.onAllNodesWithContentDescription(pinLabel()).onFirst().performClick()
             composeRule.waitForIdle()
@@ -121,7 +123,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     fun explore_tab_exposes_a11y_content_descriptions() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(exploreTabLabel()).performClick()
+            composeRule.onNodeWithText(exploreTabLabel()).performClick()
             composeRule.waitForIdle()
             composeRule.onAllNodesWithContentDescription(playLabel()).onFirst().assertHasClickAction()
             composeRule.onAllNodesWithContentDescription(shareLabel()).onFirst().assertHasClickAction()

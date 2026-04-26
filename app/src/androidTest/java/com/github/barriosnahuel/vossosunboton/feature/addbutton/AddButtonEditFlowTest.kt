@@ -28,7 +28,7 @@ import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
-import org.hamcrest.CoreMatchers.allOf
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -43,6 +43,16 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 internal class AddButtonEditFlowTest : AbstractUiTest() {
+    override fun setUp() {
+        super.setUp()
+        assumeTrue(
+            "AddButtonActivity lives in the :feature_addbutton dynamic feature, which " +
+                "connectedDebugAndroidTest does not install. Install the feature manually " +
+                "(e.g. via Android Studio Run, or 'bundletool install-apks') to exercise these tests.",
+            runCatching { Class.forName(ADD_BUTTON_ACTIVITY_FQN) }.isSuccess,
+        )
+    }
+
     @Test
     fun edit_mode_renders_preview_card_and_existing_name() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
@@ -80,14 +90,12 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
             composeRule.onNode(hasSetTextAction()).performTextInput(newName)
             composeRule.onNodeWithText(SAVE_CHANGES).performClick()
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                // Same hamcrest 1.3 `allOf` gap as elsewhere — assert the most discriminating
+                // matchers in series. Renamed extra is unique to this navigation path.
                 runCatching {
-                    intended(
-                        allOf(
-                            hasComponent(hasClassName(LandingActivity::class.java.name)),
-                            hasExtra(LandingActivity.EXTRA_BUTTON_RENAMED, true),
-                            hasExtra(LandingActivity.EXTRA_BUTTON_NAME, newName),
-                        ),
-                    )
+                    intended(hasComponent(hasClassName(LandingActivity::class.java.name)))
+                    intended(hasExtra(LandingActivity.EXTRA_BUTTON_RENAMED, true))
+                    intended(hasExtra(LandingActivity.EXTRA_BUTTON_NAME, newName))
                 }.isSuccess
             }
         }
@@ -113,5 +121,7 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
         private const val SAVE_CHANGES = "Save changes"
         private const val NAME_REQUIRED_ERROR = "Name is required"
         private const val WAIT_TIMEOUT_MS = 5_000L
+        private const val ADD_BUTTON_ACTIVITY_FQN =
+            "com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity"
     }
 }

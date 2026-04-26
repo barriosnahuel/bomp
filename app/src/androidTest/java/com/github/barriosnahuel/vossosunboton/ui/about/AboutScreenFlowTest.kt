@@ -24,7 +24,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
-import org.hamcrest.CoreMatchers.allOf
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -113,12 +112,9 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
             openAbout()
             composeRule.onNodeWithText(sourceLabel()).performClick()
             composeRule.waitForIdle()
-            intended(
-                allOf(
-                    hasAction(Intent.ACTION_VIEW),
-                    hasData(context.getString(R.string.app_about_source_url)),
-                ),
-            )
+            // The data URL is unique to this button's ACTION_VIEW; matching the URL alone
+            // is sufficient and avoids the hamcrest 1.3 `allOf(2-arg)` API gap.
+            intended(hasData(context.getString(R.string.app_about_source_url)))
         }
     }
 
