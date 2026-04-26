@@ -51,6 +51,9 @@ We use Circle CI, so if you're gonna change the [config.yml](.circleci/config.ym
 
 > circleci config validate
 
+### Instrumented UI tests are local-only
+The instrumented suite under `app/src/androidTest/` is **intentionally not run on CircleCI**. It needs a booted emulator and is meant to replace manual end-to-end QA on the contributor's machine. Run it before pushing functional changes — see the *Local UI test suite* section in `CLAUDE.md` and [ADR 0001](docs/adr/0001-local-ui-test-suite.md) for the rationale.
+
 ## Platform upgrades
 ### API Level
 ⚠️ Remember to change not only the compile/target API levels but the tests config too. Check [`AbstractRobolectricTest`](/app/src/test/java/com/github/barriosnahuel/vossosunboton/AbstractRobolectricTest.kt).

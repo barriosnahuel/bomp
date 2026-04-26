@@ -178,6 +178,44 @@ Before pushing any branch, always run:
 
 This catches the same failures CI will report (ktlint, detekt, Spotless, Android lint, unit tests) without waiting for a full CI run.
 
+**Functional changes also require the local UI test suite** (see next section). If the change touches user-facing behavior — Composables, ViewModels, intents, navigation, deep links, persistence — run the instrumented suite on an emulator before pushing. CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
+
+## Local UI test suite
+
+Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a real emulator using Compose UI Test + Espresso + UI Automator + Espresso Accessibility Checks. CircleCI intentionally does not run them — the rationale, alternatives considered, and tradeoffs are in [`docs/adr/0001-local-ui-test-suite.md`](docs/adr/0001-local-ui-test-suite.md).
+
+### Setup (one-time)
+
+```bash
+# Creates the AVD `push_me_test` (idempotent, ~5 min the first time including system image download)
+./scripts/setup-test-emulator.sh
+```
+
+### Run the full suite
+
+```bash
+# 1. Boot the emulator (background)
+emulator -avd push_me_test -no-snapshot-save -no-boot-anim &
+adb wait-for-device shell 'while [[ $(getprop sys.boot_completed) != 1 ]]; do sleep 1; done'
+
+# 2. Run all instrumented tests
+./gradlew app:connectedDebugAndroidTest
+```
+
+HTML report: `app/build/reports/androidTests/connected/debug/index.html`.
+
+### Run a single test class
+
+```bash
+./gradlew app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.github.barriosnahuel.vossosunboton.ui.home.SearchOverlayTest
+```
+
+### When to run
+
+- After any change to a Composable, ViewModel, intent flow, navigation, deep link, or persistence layer.
+- Not required for changes limited to: CHANGELOG, copy strings, README, comments, configuration of off-device tooling.
+
 ## Accessibility (WCAG 2.2 AA)
 
 All UI development and generated assets (store listing, What's New, changelogs) must target **WCAG 2.2 Level AA**. Key requirements:
