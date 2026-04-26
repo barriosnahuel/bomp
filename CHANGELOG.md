@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Bundled audio files removed from version control; bottom navigation bar hidden in release builds (Explore tab only appears in debug when audio files are manually placed)
 
 ### Changed
+- Deeplink `push-me://open/explore` now falls back to Home when no bundled sounds are available (release builds and debug checkouts without the bundled `raw/` directory), avoiding a blank Explore tab
+- Search overlay's clear-query icon now announces "Clear search" (was "Close search", which collided with the back-arrow's label and confused screen readers)
 - Swipe-to-delete haptic feedback on custom sounds changed from double-pulse (reject) to single-pulse (confirm), matching the pin gesture — a successful delete is a confirmed action
 - Edit screen audio preview now shows total duration and date added, matching the home card layout
 - Normalized top-bar-to-content spacing to 16 dp across all screens
