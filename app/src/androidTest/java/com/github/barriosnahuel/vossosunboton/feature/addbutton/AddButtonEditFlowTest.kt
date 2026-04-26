@@ -42,7 +42,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 internal class AddButtonEditFlowTest : AbstractUiTest() {
     @Test
-    fun edit_mode_renders_preview_card_and_existing_name() {
+    fun editModeRendersPreviewCardAndExistingName() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch<Activity>(editIntent(sound)).use {
@@ -57,7 +57,7 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun save_with_blank_name_shows_required_error() {
+    fun saveWithBlankNameShowsRequiredError() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch<Activity>(editIntent(sound)).use {
@@ -72,7 +72,7 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun save_with_valid_name_navigates_back_to_landing_with_renamed_extra() {
+    fun saveWithValidNameNavigatesBackToLandingWithRenamedExtra() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
         val newName = "renamed_custom"
         intending(hasComponent(hasClassName(LandingActivity::class.java.name)))
@@ -96,7 +96,7 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun edit_screen_exposes_a11y_content_descriptions() {
+    fun editScreenExposesA11yContentDescriptions() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch<Activity>(editIntent(sound)).use {

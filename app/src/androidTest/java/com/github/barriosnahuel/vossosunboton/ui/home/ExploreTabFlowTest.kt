@@ -42,7 +42,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun bottom_bar_is_visible_when_bundled_sounds_exist() {
+    fun bottomBarIsVisibleWhenBundledSoundsExist() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.waitForIdle()
             // Find by label text — the icon's contentDescription only lives in the unmerged
@@ -53,7 +53,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun explore_tab_shows_bundled_and_hides_custom_when_seeded() {
+    fun exploreTabShowsBundledAndHidesCustomWhenSeeded() {
         TestData.seedCustomSounds(context, count = 1)
         val firstBundledName = bundled.first().name
 
@@ -68,7 +68,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun swipe_left_on_bundled_card_does_not_pin_or_remove() {
+    fun swipeLeftOnBundledCardDoesNotPinOrRemove() {
         val firstBundledName = bundled.first().name
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -88,7 +88,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun swipe_right_on_bundled_card_pins_it() {
+    fun swipeRightOnBundledCardPinsIt() {
         val targetName = bundled.first().name
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -106,7 +106,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun pin_icon_on_bundled_card_toggles_to_unpin() {
+    fun pinIconOnBundledCardTogglesToUnpin() {
         val targetName = bundled.first().name
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -120,7 +120,7 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun explore_tab_exposes_a11y_content_descriptions() {
+    fun exploreTabExposesA11yContentDescriptions() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.waitForIdle()
             composeRule.onNodeWithText(exploreTabLabel()).performClick()

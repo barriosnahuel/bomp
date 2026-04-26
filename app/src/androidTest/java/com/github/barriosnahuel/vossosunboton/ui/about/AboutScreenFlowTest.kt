@@ -30,7 +30,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 internal class AboutScreenFlowTest : AbstractUiTest() {
     @Test
-    fun overflow_menu_opens_about_screen() {
+    fun overflowMenuOpensAboutScreen() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule.onNodeWithContentDescription(backLabel()).assertIsDisplayed()
@@ -39,7 +39,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun back_arrow_returns_to_landing() {
+    fun backArrowReturnsToLanding() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule.onNodeWithContentDescription(backLabel()).performClick()
@@ -50,7 +50,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun system_back_returns_to_landing() {
+    fun systemBackReturnsToLanding() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             Espresso.pressBack()
@@ -60,7 +60,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun play_branding_audio_button_is_clickable() {
+    fun playBrandingAudioButtonIsClickable() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule
@@ -74,7 +74,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun tap_credits_row_expands_section_with_ai_attribution_cards() {
+    fun tapCreditsRowExpandsSectionWithAiAttributionCards() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             // Before expansion the AI cards are not in the tree.
@@ -89,7 +89,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun license_button_opens_modal_bottom_sheet_with_agpl_excerpt() {
+    fun licenseButtonOpensModalBottomSheetWithAgplExcerpt() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule.onNodeWithText(licenseLabel()).performClick()
@@ -104,7 +104,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun source_code_button_emits_action_view_intent_to_repo() {
+    fun sourceCodeButtonEmitsActionViewIntentToRepo() {
         intending(hasAction(Intent.ACTION_VIEW))
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
 
@@ -119,7 +119,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun about_screen_exposes_a11y_content_descriptions() {
+    fun aboutScreenExposesA11yContentDescriptions() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule.onNodeWithContentDescription(backLabel()).assertHasClickAction()

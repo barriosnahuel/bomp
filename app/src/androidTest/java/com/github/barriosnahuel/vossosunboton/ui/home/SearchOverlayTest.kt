@@ -26,7 +26,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 internal class SearchOverlayTest : AbstractUiTest() {
     @Test
-    fun fab_opens_search_overlay() {
+    fun fabOpensSearchOverlay() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -39,7 +39,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
     }
 
     @Test
-    fun typing_query_filters_results_to_matching_sound() {
+    fun typingQueryFiltersResultsToMatchingSound() {
         TestData.seedCustomSounds(context, count = 3)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -59,7 +59,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
     }
 
     @Test
-    fun query_with_no_match_shows_zero_results_message() {
+    fun queryWithNoMatchShowsZeroResultsMessage() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -77,7 +77,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
     }
 
     @Test
-    fun trailing_clear_icon_clears_query_without_closing_overlay() {
+    fun trailingClearIconClearsQueryWithoutClosingOverlay() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -97,7 +97,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
     }
 
     @Test
-    fun back_arrow_closes_overlay() {
+    fun backArrowClosesOverlay() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -113,7 +113,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
     }
 
     @Test
-    fun system_back_closes_overlay() {
+    fun systemBackClosesOverlay() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -127,7 +127,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
     }
 
     @Test
-    fun search_overlay_exposes_a11y_content_descriptions() {
+    fun searchOverlayExposesA11yContentDescriptions() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {

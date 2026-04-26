@@ -92,12 +92,12 @@ Test names are **descriptive sentences**, never opaque identifiers like `testFoo
   @Test
   fun `searchResults emits empty list when query is blank`() { ... }
   ```
-- **Instrumented tests** under `src/androidTest/`: use **snake_case** (or camelCase) descriptive names.
+- **Instrumented tests** under `src/androidTest/`: use **camelCase** descriptive names — backticks with spaces require DEX format 040, which D8 in the current AGP version refuses to emit even with `minSdk` overrides on the test variant.
   ```kotlin
   @Test
-  fun swipe_right_pins_a_custom_sound() { ... }
+  fun swipeRightPinsACustomSound() { ... }
   ```
-  Backticks with spaces would require DEX 040, which D8 only emits when `minSdk >= 34`. The app's `minSdk` is 23, so the dexer rejects spaces in method names with `Space characters in SimpleName 'X' are not allowed prior to DEX version 040`. Until the floor moves to 34, instrumented tests stay underscore-separated.
+  When the app's `minSdk` (currently 23) and AGP both move past the DEX 040 boundary, migrate instrumented tests to backticks for consistency.
 
 ## Activity smoke tests
 

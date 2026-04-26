@@ -25,7 +25,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 internal class DeepLinkTest : AbstractUiTest() {
     @Test
-    fun home_deeplink_lands_on_home_tab() {
+    fun homeDeeplinkLandsOnHomeTab() {
         val bundled = PackagedAudios.get(context)
         assumeTrue(
             "Need bundled sounds so the BottomBar (and an Explore tab to differ from) is visible.",
@@ -44,7 +44,7 @@ internal class DeepLinkTest : AbstractUiTest() {
     }
 
     @Test
-    fun explore_deeplink_with_bundled_lands_on_explore_tab() {
+    fun exploreDeeplinkWithBundledLandsOnExploreTab() {
         val bundled = PackagedAudios.get(context)
         assumeTrue(
             "Need bundled sounds for the Explore tab to be reachable.",
@@ -62,7 +62,7 @@ internal class DeepLinkTest : AbstractUiTest() {
     }
 
     @Test
-    fun explore_deeplink_without_bundled_falls_back_to_home() {
+    fun exploreDeeplinkWithoutBundledFallsBackToHome() {
         assumeFalse(
             "This test verifies the no-bundled fallback. Skip when local raw/ is populated.",
             PackagedAudios.get(context).isNotEmpty(),
@@ -81,7 +81,7 @@ internal class DeepLinkTest : AbstractUiTest() {
     }
 
     @Test
-    fun unknown_path_deeplink_routes_like_explore() {
+    fun unknownPathDeeplinkRoutesLikeExplore() {
         val bundled = PackagedAudios.get(context)
         assumeTrue(
             "Need bundled sounds so the unknown-path fallback to Explore is observable.",

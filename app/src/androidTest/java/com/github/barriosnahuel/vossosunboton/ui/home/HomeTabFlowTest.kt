@@ -35,7 +35,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 internal class HomeTabFlowTest : AbstractUiTest() {
     @Test
-    fun home_tab_renders_seeded_custom_sounds() {
+    fun homeTabRendersSeededCustomSounds() {
         TestData.seedCustomSounds(context, count = 2)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -46,7 +46,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun tap_play_swaps_play_icon_to_pause() {
+    fun tapPlaySwapsPlayIconToPause() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -63,7 +63,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun share_button_emits_action_send_chooser_intent() {
+    fun shareButtonEmitsActionSendChooserIntent() {
         TestData.seedCustomSounds(context, count = 1)
         intending(hasAction(Intent.ACTION_CHOOSER))
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
@@ -78,7 +78,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun edit_menu_item_launches_AddButtonActivity_with_sound_extras() {
+    fun editMenuItemLaunchesAddButtonActivityWithSoundExtras() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
         intending(hasComponent(hasClassName(ADD_BUTTON_ACTIVITY)))
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
@@ -98,7 +98,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun swipe_left_to_delete_then_undo_restores_sound() {
+    fun swipeLeftToDeleteThenUndoRestoresSound() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -115,7 +115,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun swipe_left_to_delete_without_undo_eventually_removes_the_sound() {
+    fun swipeLeftToDeleteWithoutUndoEventuallyRemovesTheSound() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -129,7 +129,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun pin_icon_button_marks_sound_as_pinned() {
+    fun pinIconButtonMarksSoundAsPinned() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -141,7 +141,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun swipe_right_pins_a_custom_sound() {
+    fun swipeRightPinsACustomSound() {
         TestData.seedCustomSounds(context, count = 2)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -157,7 +157,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun home_screen_exposes_a11y_content_descriptions_for_key_controls() {
+    fun homeScreenExposesA11yContentDescriptionsForKeyControls() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {

@@ -30,7 +30,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 internal class AddButtonCreateFlowTest : AbstractUiTest() {
     @Test
-    fun create_mode_without_uri_finishes_immediately() {
+    fun createModeWithoutUriFinishesImmediately() {
         ActivityScenario.launch<Activity>(launchIntent(uri = null)).use { scenario ->
             // The Activity shows a toast and calls finish() inside onCreate, so by the
             // time the launch returns, scenario.state is already DESTROYED. There's no
@@ -43,7 +43,7 @@ internal class AddButtonCreateFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun create_mode_with_uri_renders_save_button_and_form() {
+    fun createModeWithUriRendersSaveButtonAndForm() {
         ActivityScenario.launch<Activity>(launchIntent(uri = SAMPLE_URI)).use {
             composeRule.waitForIdle()
             composeRule.onNodeWithText(string("feature_addbutton_save", "feature_addbutton")).assertIsDisplayed()
@@ -52,7 +52,7 @@ internal class AddButtonCreateFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun save_with_blank_name_shows_required_error() {
+    fun saveWithBlankNameShowsRequiredError() {
         ActivityScenario.launch<Activity>(launchIntent(uri = SAMPLE_URI)).use {
             composeRule.waitForIdle()
             composeRule.onNodeWithText(string("feature_addbutton_save", "feature_addbutton")).performClick()
