@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-enum class AppTab { HOME, EXPLORE }
+enum class AppTab { MY_SOUNDS, EXPLORE_SOUNDS }
 
 data class DeletedSoundEvent(
     val sound: Sound,
@@ -50,7 +50,7 @@ class SoundsViewModel(
     private val searchDebounceMs: Long = 200L,
 ) : AndroidViewModel(application),
     PlayerControllerListener {
-    private val _selectedTab = MutableStateFlow(AppTab.HOME)
+    private val _selectedTab = MutableStateFlow(AppTab.MY_SOUNDS)
     val selectedTab: StateFlow<AppTab> = _selectedTab.asStateFlow()
 
     private val _sounds = MutableStateFlow<List<Sound>>(emptyList())
@@ -231,12 +231,12 @@ class SoundsViewModel(
     }
 
     fun onButtonSaved(name: String) {
-        selectTab(AppTab.HOME)
+        selectTab(AppTab.MY_SOUNDS)
         _buttonSavedEvent.trySend(name)
     }
 
     fun onButtonRenamed(name: String) {
-        selectTab(AppTab.HOME)
+        selectTab(AppTab.MY_SOUNDS)
         _buttonRenamedEvent.trySend(name)
     }
 
@@ -265,8 +265,8 @@ class SoundsViewModel(
         _sounds.update {
             val filtered =
                 when (_selectedTab.value) {
-                    AppTab.HOME -> allSounds.filter { !it.isBundled() }
-                    AppTab.EXPLORE -> allSounds.filter { it.isBundled() }
+                    AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
+                    AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
                 }.filter { it.name != deletedName }
             if (playingName == null) {
                 filtered

@@ -275,17 +275,17 @@ private fun AppBottomBar(
     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceVariant) {
         NavigationBarItem(
             colors = itemColors,
-            selected = selectedTab == AppTab.HOME,
-            onClick = { onTabSelected(AppTab.HOME) },
-            icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.app_navigation_menu_item_home)) },
-            label = { Text(stringResource(R.string.app_navigation_menu_item_home)) },
+            selected = selectedTab == AppTab.MY_SOUNDS,
+            onClick = { onTabSelected(AppTab.MY_SOUNDS) },
+            icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.app_navigation_menu_item_my_sounds)) },
+            label = { Text(stringResource(R.string.app_navigation_menu_item_my_sounds)) },
         )
         NavigationBarItem(
             colors = itemColors,
-            selected = selectedTab == AppTab.EXPLORE,
-            onClick = { onTabSelected(AppTab.EXPLORE) },
-            icon = { Icon(AppIcons.ViewComfyAlt, contentDescription = stringResource(R.string.app_navigation_menu_item_explore)) },
-            label = { Text(stringResource(R.string.app_navigation_menu_item_explore)) },
+            selected = selectedTab == AppTab.EXPLORE_SOUNDS,
+            onClick = { onTabSelected(AppTab.EXPLORE_SOUNDS) },
+            icon = { Icon(AppIcons.ViewComfyAlt, contentDescription = stringResource(R.string.app_navigation_menu_item_explore_sounds)) },
+            label = { Text(stringResource(R.string.app_navigation_menu_item_explore_sounds)) },
         )
     }
 }

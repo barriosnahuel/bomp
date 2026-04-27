@@ -99,5 +99,5 @@ internal class DeepLinkTest : AbstractUiTest() {
             setClassName(context, LandingActivity::class.java.name)
         }
 
-    private fun exploreTabLabel() = context.getString(R.string.app_navigation_menu_item_explore)
+    private fun exploreTabLabel() = context.getString(R.string.app_navigation_menu_item_explore_sounds)
 }
