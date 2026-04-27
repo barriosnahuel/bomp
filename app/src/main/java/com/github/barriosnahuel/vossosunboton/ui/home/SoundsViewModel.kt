@@ -11,6 +11,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -104,6 +107,20 @@ class SoundsViewModel(
         viewModelScope.launch(ioDispatcher) { loadSounds() }
     }
 
+    private val tracker get() = AnalyticsTrackerProvider.get(getApplication())
+
+    /**
+     * Surface label for events fired from this ViewModel. Mirrors the screen_view emitted by `LandingScreen` so
+     * `surface` and the most recent `screen_name` always agree.
+     */
+    private val currentSurface: String
+        get() =
+            when {
+                _isSearchVisible.value -> CanonicalScreenName.SEARCH_SOUND
+                _selectedTab.value == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
+                else -> CanonicalScreenName.EXPLORE_SOUNDS
+            }
+
     fun showSearch() {
         _isSearchVisible.value = true
     }
@@ -168,6 +185,8 @@ class SoundsViewModel(
         viewModelScope.launch(ioDispatcher) {
             SoundDao().savePin(getApplication(), sound.name, nowPinned)
         }
+        tracker.log(AnalyticsEvent.PinToggle(pinned = nowPinned))
+        tracker.setUserProperty("current_pinned", allSoundsCache.value.count { it.isPinned }.toString())
     }
 
     fun playOrStop(sound: Sound) {
@@ -175,6 +194,7 @@ class SoundsViewModel(
             PlayerControllerFactory.instance.stopPlayingSound()
         } else {
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
+            tracker.log(AnalyticsEvent.SoundPlay(surface = currentSurface))
         }
     }
 
@@ -211,6 +231,7 @@ class SoundsViewModel(
         }
         recomputeSearchResults()
         _deletedSoundEvent.value = null
+        tracker.log(AnalyticsEvent.SoundDeleteUndone)
     }
 
     fun confirmDelete(context: android.content.Context) {
@@ -220,6 +241,8 @@ class SoundsViewModel(
         if (!event.sound.isBundled()) {
             try {
                 SoundDao().delete(context, event.sound)
+                tracker.log(AnalyticsEvent.SoundDelete)
+                tracker.setUserProperty("current_sounds", allSoundsCache.value.count { !it.isBundled() }.toString())
             } catch (e: IllegalStateException) {
                 Timber.w(e, "Sound has no file on disk, skipping delete")
             }
@@ -274,6 +297,8 @@ class SoundsViewModel(
                 filtered.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
             }
         }
+        tracker.setUserProperty("current_sounds", allSounds.count { !it.isBundled() }.toString())
+        tracker.setUserProperty("current_pinned", allSounds.count { it.isPinned }.toString())
     }
 
     override fun onPlayerStart(

@@ -56,6 +56,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
@@ -82,6 +84,20 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val context = LocalContext.current
     val tabBackStack = remember { mutableStateListOf<AppTab>() }
     var isAboutVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedTab, isAboutVisible, isSearchVisible) {
+        val name =
+            when {
+                isSearchVisible -> CanonicalScreenName.SEARCH_SOUND
+                isAboutVisible -> CanonicalScreenName.ABOUT
+                selectedTab == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
+                selectedTab == AppTab.EXPLORE_SOUNDS -> CanonicalScreenName.EXPLORE_SOUNDS
+                else -> null
+            }
+        name?.let {
+            AnalyticsTrackerProvider.get(context.applicationContext).logScreen(it)
+        }
+    }
 
     if (isAboutVisible) {
         AboutScreen(onBack = { isAboutVisible = false })
