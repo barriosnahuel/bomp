@@ -23,7 +23,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
 internal class FirebaseAnalyticsTrackerTest {
     private lateinit var firebase: FirebaseAnalytics
-    private lateinit var store: FirstFlagStore
+    private lateinit var store: AnalyticsStore
     private lateinit var tracker: FirebaseAnalyticsTracker
 
     @Before
@@ -142,5 +142,15 @@ internal class FirebaseAnalyticsTrackerTest {
         tracker.setUserProperty("current_sounds", "3")
 
         verify { firebase.setUserProperty("current_sounds", "3") }
+    }
+
+    @Test
+    fun `incrementCounter delegates to the analytics store and returns the new value`() {
+        every { store.increment("lifetime_shares") } returns 7L
+
+        val result = tracker.incrementCounter("lifetime_shares")
+
+        assertThat(result).isEqualTo(7L)
+        verify { store.increment("lifetime_shares") }
     }
 }

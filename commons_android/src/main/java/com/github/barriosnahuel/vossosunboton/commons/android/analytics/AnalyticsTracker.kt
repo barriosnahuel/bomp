@@ -37,4 +37,10 @@ interface AnalyticsTracker {
         screenName: String,
         extras: Bundle? = null,
     )
+
+    /**
+     * Increment a persistent lifetime counter (e.g. `lifetime_shares`, `lifetime_plays`) and return the new value.
+     * Pair the result with [setUserProperty] to surface it on Firebase.
+     */
+    fun incrementCounter(name: String): Long
 }

@@ -14,6 +14,7 @@ import androidx.core.content.FileProvider
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -102,7 +103,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         val slot = slot<Intent>()
         every { mockedContext.startActivity(capture(slot)) } answers { nothing }
 
-        ShareFeature.instance.share(mockedContext, sound)
+        ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
 
         return slotFile.captured
     }
@@ -116,7 +117,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         val slot = slot<Intent>()
         every { mockedContext.startActivity(capture(slot)) } answers { nothing }
 
-        ShareFeature.instance.share(mockedContext, sound)
+        ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
 
         return slot.captured
     }

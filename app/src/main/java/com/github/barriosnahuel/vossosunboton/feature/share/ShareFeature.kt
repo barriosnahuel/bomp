@@ -11,6 +11,8 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -19,11 +21,13 @@ import java.io.FileOutputStream
 
 internal interface ShareFeature {
     /**
+     * @param surface canonical screen_name from `CanonicalScreenName` describing where the share originated.
      * @throws IllegalStateException when any required parameter is `null`
      */
     fun share(
         context: Context,
         sound: Sound,
+        surface: String,
     )
 
     companion object {
@@ -41,6 +45,7 @@ private class ShareFeatureImpl : ShareFeature {
     override fun share(
         context: Context,
         sound: Sound,
+        surface: String,
     ) {
         Timber.d("Trying to share button: %s", sound.name)
 
@@ -58,6 +63,11 @@ private class ShareFeatureImpl : ShareFeature {
             sound.file,
             sound.rawRes,
         )
+
+        val tracker = AnalyticsTrackerProvider.get(context.applicationContext)
+        tracker.log(AnalyticsEvent.Share(surface = surface))
+        val newCount = tracker.incrementCounter("lifetime_shares")
+        tracker.setUserProperty("lifetime_shares", newCount.toString())
 
         context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.app_share_chooser_title)))
     }

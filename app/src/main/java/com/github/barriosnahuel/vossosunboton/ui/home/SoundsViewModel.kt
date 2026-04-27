@@ -160,6 +160,9 @@ class SoundsViewModel(
                     .filter { it.name.contains(query, ignoreCase = true) }
                     .sortedWith(compareByDescending<Sound> { it.isPinned }.thenBy { it.name.lowercase() })
             }
+        if (query.isNotBlank() && _searchResults.value.isEmpty()) {
+            tracker.log(AnalyticsEvent.SearchZeroResults(queryLength = query.length))
+        }
     }
 
     fun selectTab(tab: AppTab) {

@@ -23,4 +23,6 @@ class NoOpAnalyticsTracker : AnalyticsTracker {
         screenName: String,
         extras: Bundle?,
     ) = Unit
+
+    override fun incrementCounter(name: String): Long = 0L
 }

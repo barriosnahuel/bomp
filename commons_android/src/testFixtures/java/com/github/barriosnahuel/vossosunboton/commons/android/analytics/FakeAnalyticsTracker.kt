@@ -17,6 +17,7 @@ class FakeAnalyticsTracker : AnalyticsTracker {
     val events: MutableList<RecordedEvent> = mutableListOf()
     val screens: MutableList<RecordedScreen> = mutableListOf()
     val userProperties: MutableMap<String, String> = mutableMapOf()
+    val counters: MutableMap<String, Long> = mutableMapOf()
 
     override fun log(event: AnalyticsEvent) {
         events += RecordedEvent(event.name, event.params().toReadableMap())
@@ -34,6 +35,12 @@ class FakeAnalyticsTracker : AnalyticsTracker {
         value: String,
     ) {
         userProperties[name] = value
+    }
+
+    override fun incrementCounter(name: String): Long {
+        val newValue = (counters[name] ?: 0L) + 1L
+        counters[name] = newValue
+        return newValue
     }
 
     /** Return the first emission with [eventName] or fail with the list of recorded names. */
@@ -57,6 +64,7 @@ class FakeAnalyticsTracker : AnalyticsTracker {
         events.clear()
         screens.clear()
         userProperties.clear()
+        counters.clear()
     }
 
     data class RecordedEvent(

@@ -155,7 +155,15 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             modifier = Modifier.padding(innerPadding),
             onPlayClick = { sound -> viewModel.playOrStop(sound) },
             onSeek = { positionMs -> viewModel.seekTo(positionMs) },
-            onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
+            onShareClick = { sound ->
+                val surface =
+                    if (selectedTab == AppTab.MY_SOUNDS) {
+                        CanonicalScreenName.MY_SOUNDS
+                    } else {
+                        CanonicalScreenName.EXPLORE_SOUNDS
+                    }
+                ShareFeature.instance.share(context, sound, surface)
+            },
             onDelete = { sound -> viewModel.deleteSound(sound) },
             onPinClick = { sound -> viewModel.togglePin(sound) },
             onEdit = { sound ->
@@ -175,7 +183,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onClose = viewModel::hideSearch,
             onPlayClick = viewModel::playOrStop,
             onSeek = viewModel::seekTo,
-            onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
+            onShareClick = { sound -> ShareFeature.instance.share(context, sound, CanonicalScreenName.SEARCH_SOUND) },
             onPinClick = viewModel::togglePin,
             onDelete = { sound ->
                 viewModel.hideSearch()

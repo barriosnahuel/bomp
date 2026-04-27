@@ -17,8 +17,7 @@ import android.content.SharedPreferences
  */
 internal class SharedPrefsAnalyticsStore(
     context: Context,
-) : FirstFlagStore,
-    CounterStore {
+) : AnalyticsStore {
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 

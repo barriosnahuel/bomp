@@ -14,7 +14,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
  */
 internal class FirebaseAnalyticsTracker(
     private val firebase: FirebaseAnalytics,
-    private val store: FirstFlagStore,
+    private val store: AnalyticsStore,
 ) : AnalyticsTracker {
     override fun log(event: AnalyticsEvent) {
         val params = event.params()
@@ -47,4 +47,6 @@ internal class FirebaseAnalyticsTracker(
             }
         firebase.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, params)
     }
+
+    override fun incrementCounter(name: String): Long = store.increment(name)
 }
