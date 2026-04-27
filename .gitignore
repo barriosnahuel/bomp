@@ -11,6 +11,7 @@ model/src/debug/res/raw/*.ogg
 ### Gradle files
 .gradle/
 build/
+gradle/gradle-daemon-jvm.properties
 
 ### JetBrains template
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and Webstorm
