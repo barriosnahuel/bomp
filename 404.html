@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="head.title.404">404 — Bomp</title>
+  <meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)" />
+  <meta http-equiv="refresh" content="5;url=/" />
+  <meta name="robots" content="noindex" />
+
+  <link rel="alternate" hreflang="es-AR" href="https://barriosnahuel.github.io/bomp/404.html?hl=es-AR" />
+  <link rel="alternate" hreflang="es-419" href="https://barriosnahuel.github.io/bomp/404.html?hl=es-419" />
+  <link rel="alternate" hreflang="es-ES" href="https://barriosnahuel.github.io/bomp/404.html?hl=es-ES" />
+  <link rel="alternate" hreflang="en" href="https://barriosnahuel.github.io/bomp/404.html?hl=en" />
+  <link rel="alternate" hreflang="pt-BR" href="https://barriosnahuel.github.io/bomp/404.html?hl=pt-BR" />
+  <link rel="alternate" hreflang="x-default" href="https://barriosnahuel.github.io/bomp/" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
+  <link rel="stylesheet" href="assets/css/tokens.css" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/landing.css" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("bomp-theme");
+        if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    .err {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: var(--space-2xl);
+      text-align: center;
+    }
+    .err__inner { max-width: 36ch; }
+    .err__num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-on-surface-variant);
+      margin-bottom: var(--space-lg);
+    }
+    .err__title {
+      font-size: clamp(40px, 7vw, 72px);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      font-weight: 700;
+      margin-bottom: var(--space-lg);
+    }
+    .err__title em { font-style: italic; color: var(--color-on-surface-variant); }
+    .err__sub {
+      font-size: 18px;
+      color: var(--color-on-surface-variant);
+      margin-bottom: var(--space-2xl);
+      text-wrap: pretty;
+    }
+    .err__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: 14px 22px;
+      border-radius: var(--radius-pill);
+      background: var(--ink-1000);
+      color: var(--paper);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    [data-theme="dark"] .err__cta { background: var(--paper); color: var(--ink-1000); }
+    .err__hint {
+      margin-top: var(--space-xl);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-on-surface-variant);
+    }
+  </style>
+</head>
+<body>
+  <div class="landing">
+    <main class="err">
+      <div class="err__inner">
+        <div class="err__num" data-i18n="404.num">404 · Página no encontrada</div>
+        <h1 class="err__title" data-i18n-html="404.title.html">Esta puerta no <em>abre</em>.</h1>
+        <p class="err__sub" data-i18n="404.sub">
+          Volvé al hub. Te redirigimos en 5 segundos.
+        </p>
+        <a class="err__cta" href="/">
+          <span data-i18n="404.cta">← Volver al hub</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14M13 5l7 7-7 7"/>
+          </svg>
+        </a>
+        <div class="err__hint" data-i18n="footer.pron">Bomp /bomp/</div>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/i18n.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="head.title.index">Bomp — La voz de los tuyos, a un toque</title>
+  <meta name="description" content="Guardá los audios que te llegan por WhatsApp, Telegram o WeChat, y Bompealos cuando los necesites. Como stickers, pero con la voz de tu gente." data-i18n-attr="content:head.description.index" />
+  <meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)" />
+  <link rel="canonical" href="https://barriosnahuel.github.io/bomp/" />
+
+  <!-- hreflang alternates: BCP 47 codes; x-default points to the canonical URL (default es-AR). -->
+  <link rel="alternate" hreflang="es-AR" href="https://barriosnahuel.github.io/bomp/?hl=es-AR" />
+  <link rel="alternate" hreflang="es-419" href="https://barriosnahuel.github.io/bomp/?hl=es-419" />
+  <link rel="alternate" hreflang="es-ES" href="https://barriosnahuel.github.io/bomp/?hl=es-ES" />
+  <link rel="alternate" hreflang="en" href="https://barriosnahuel.github.io/bomp/?hl=en" />
+  <link rel="alternate" hreflang="pt-BR" href="https://barriosnahuel.github.io/bomp/?hl=pt-BR" />
+  <link rel="alternate" hreflang="x-default" href="https://barriosnahuel.github.io/bomp/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://barriosnahuel.github.io/bomp/" />
+  <meta property="og:title" content="Bomp — La voz de los tuyos, a un toque" data-i18n-attr="content:head.title.index" />
+  <meta property="og:description" content="Guardá los audios que te llegan por WhatsApp, Telegram o WeChat, y Bompealos cuando los necesites. Como stickers, pero con la voz de tu gente." data-i18n-attr="content:head.description.index" />
+  <meta property="og:image" content="https://barriosnahuel.github.io/bomp/assets/img/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
+  <link rel="stylesheet" href="assets/css/tokens.css" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/landing.css" />
+
+  <!-- Theme init: avoid FOUC. Inline so it runs before first paint. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("bomp-theme");
+        if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) { /* private mode: fall back to prefers-color-scheme */ }
+    })();
+  </script>
+</head>
+<body>
+  <a href="#main" class="skip-link" data-i18n="skip.link">Saltar al contenido</a>
+
+  <div class="landing landing--v2 landing--v3">
+
+    <header class="l-header">
+      <div class="l-wordmark">
+        <span class="l-wordmark__dot" aria-hidden="true"></span>
+        Bomp
+      </div>
+      <nav class="l-nav" aria-label="Principal">
+        <a href="#como-funciona" data-i18n="nav.howItWorks">Cómo funciona</a>
+        <a href="#screenshots" data-i18n="nav.theApp">La app</a>
+        <a href="#open" data-i18n="nav.openSource">Open source</a>
+        <button class="l-theme-toggle" aria-label="Cambiar tema" aria-pressed="false" type="button" data-i18n-attr="aria-label:theme.toggle.aria">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <main id="main" class="l-hero">
+      <div class="l-hero__content">
+        <span class="l-eyebrow" data-i18n="hero.eyebrow">Beta · Android · gratis</span>
+        <h1 class="l-hero__title" data-i18n-html="hero.title.html">
+          La voz de los tuyos.<br>
+          <span class="acid">A un toque</span>.
+        </h1>
+        <p class="l-hero__sub" data-i18n="hero.sub">
+          Guardá los audios que te llegan por WhatsApp, Telegram o WeChat, y Bompealos cuando los necesites. Como stickers, pero con la voz de tu gente.
+        </p>
+        <div class="l-cta-row">
+          <!-- Official Google Play "Pre-register" badge per locale (270x80). Asset swap handled by i18n.js via [data-i18n-badge]. -->
+          <a href="#" class="l-playbadge l-playbadge--official"
+             aria-label="Resérvalo en Google Play (próximamente)"
+             data-i18n-attr="aria-label:hero.playBadge.aria">
+            <img data-i18n-badge
+                 src="assets/img/google-play/preregister-es-419.png"
+                 alt=""
+                 width="270" height="80" />
+          </a>
+        </div>
+      </div>
+
+      <div class="sticker-stage">
+        <span class="decoy decoy--1" data-i18n="decoy.1">Risa de mi vieja</span>
+        <span class="decoy decoy--2" data-i18n="decoy.2">¡Che, capo!</span>
+        <span class="decoy decoy--3" data-i18n="decoy.3">Llegué</span>
+        <span class="decoy decoy--4" data-i18n="decoy.4">La frase del jefe</span>
+
+        <div class="sticker-hero">
+          <button class="sticker-hero__btn" data-state="idle"
+                  aria-label="Tocá para escuchar a Bomp" aria-pressed="false" type="button"
+                  data-i18n-attr="aria-label:sticker.aria">
+            <svg class="sticker-hero__ring" viewBox="0 0 100 100" aria-hidden="true">
+              <circle cx="50" cy="50" r="49" />
+            </svg>
+            <span class="sticker-hero__inner">
+              <span class="sticker-hero__icon" data-icon="play">
+                <svg data-icon-play viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M7 5v14l12-7z"/>
+                </svg>
+                <svg data-icon-mic viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none">
+                  <rect x="9" y="3" width="6" height="12" rx="3"/>
+                  <path d="M5 11a7 7 0 0 0 14 0"/>
+                  <path d="M12 18v3"/>
+                </svg>
+              </span>
+              <span class="sticker-hero__label" data-i18n="sticker.label.idle">tocá</span>
+            </span>
+          </button>
+          <p class="sticker-hero__caption" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </main>
+
+    <section id="como-funciona" class="l-section">
+      <div class="l-section__head">
+        <div>
+          <div class="l-section__num" data-i18n="section.howItWorks.num">01 · Cómo funciona</div>
+          <h2 class="l-section__title" data-i18n="section.howItWorks.title">Guardá. Apodá. Bompeá.</h2>
+        </div>
+        <p class="l-section__lede" data-i18n="section.howItWorks.lede">Tres toques. Cero cuentas, cero nube, cero amigos a los que tengas que sumar.</p>
+      </div>
+      <div class="l-steps">
+        <div class="l-step">
+          <span class="l-step__num" data-i18n="step.1.num">01 · Guardar</span>
+          <div class="l-step__visual">
+            <div class="step-mic">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/>
+              </svg>
+            </div>
+          </div>
+          <h3 class="l-step__title" data-i18n="step.1.title">Mandá el audio a Bomp.</h3>
+          <p class="l-step__body" data-i18n="step.1.body">Desde WhatsApp, Telegram o WeChat: tocás "compartir" y elegís Bomp. El audio queda guardado en tu teléfono — solo en tu teléfono.</p>
+        </div>
+        <div class="l-step">
+          <span class="l-step__num" data-i18n="step.2.num">02 · Apodar</span>
+          <div class="l-step__visual">
+            <div class="step-tag">
+              <div class="step-tag__chip" data-i18n="step.2.chip.1">Risa de mi vieja</div>
+              <div class="step-tag__chip step-tag__chip--acid" data-i18n="step.2.chip.2">Che capo</div>
+            </div>
+          </div>
+          <h3 class="l-step__title" data-i18n="step.2.title">Hacelo tuyo. Ponele el apodo que solo vos vas a entender.</h3>
+          <p class="l-step__body" data-i18n="step.2.body">El que te haga reír cuando lo veas en la lista. Bomp no opina ni corrige.</p>
+        </div>
+        <div class="l-step">
+          <span class="l-step__num" data-i18n="step.3.num">03 · Bompear</span>
+          <div class="l-step__visual">
+            <div class="step-tap">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" aria-hidden="true">
+                <path d="M7 5v14l12-7z"/>
+              </svg>
+            </div>
+          </div>
+          <h3 class="l-step__title" data-i18n="step.3.title">Un toque, suena.</h3>
+          <p class="l-step__body" data-i18n="step.3.body">Sin esperas, sin "abriendo audio…", sin pantalla cargando. Bomp.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="screenshots" class="l-section">
+      <div class="l-section__head">
+        <div>
+          <div class="l-section__num" data-i18n="section.app.num">02 · La app</div>
+          <h2 class="l-section__title" data-i18n="section.app.title">Tus voces, en orden.</h2>
+        </div>
+      </div>
+      <div class="l-shots">
+        <!-- Shot A: list -->
+        <div class="l-shot l-shot--a">
+          <div class="l-shot__frame l-shot__frame--crop">
+            <div class="app-screen">
+              <div class="app-screen__bar"><span>9:41</span><span>● ●</span></div>
+              <div class="app-screen__title" data-i18n="shot.list.title">Mis audios</div>
+              <div class="app-screen__row">
+                <div class="app-screen__btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg></div>
+                <div class="app-screen__row-main"><span data-i18n="shot.list.row1">Risa de mi vieja</span><small>0:01</small></div>
+                <small class="app-screen__row-time"><span data-i18n="shot.list.timeAgo">hace</span> 1<span data-i18n="shot.list.day">d</span></small>
+              </div>
+              <div class="app-screen__row">
+                <div class="app-screen__btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg></div>
+                <div class="app-screen__row-main"><span data-i18n="shot.list.row2">Che capo</span><small>0:02</small></div>
+                <small class="app-screen__row-time"><span data-i18n="shot.list.timeAgo">hace</span> 2<span data-i18n="shot.list.day">d</span></small>
+              </div>
+              <div class="app-screen__row">
+                <div class="app-screen__btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg></div>
+                <div class="app-screen__row-main"><span data-i18n="shot.list.row3">Buen día rey</span><small>0:03</small></div>
+                <small class="app-screen__row-time"><span data-i18n="shot.list.timeAgo">hace</span> 3<span data-i18n="shot.list.day">d</span></small>
+              </div>
+              <div class="app-screen__row">
+                <div class="app-screen__btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg></div>
+                <div class="app-screen__row-main"><span data-i18n="shot.list.row4">La frase del jefe</span><small>0:04</small></div>
+                <small class="app-screen__row-time"><span data-i18n="shot.list.timeAgo">hace</span> 4<span data-i18n="shot.list.day">d</span></small>
+              </div>
+              <div class="app-screen__fab">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="l-shot__caption" data-i18n="shot.caption.list">↳ La risa que te alegra el lunes</div>
+        </div>
+
+        <!-- Shot B: import -->
+        <div class="l-shot l-shot--b">
+          <div class="l-shot__frame l-shot__frame--crop">
+            <div class="app-screen">
+              <div class="app-screen__bar"><span>9:41</span><span>● ●</span></div>
+              <div class="app-screen__title" data-i18n="shot.import.title">Trae ese audio que te gusta</div>
+              <div class="app-screen__import">
+                <div class="app-screen__import-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/>
+                  </svg>
+                </div>
+                <div class="app-screen__import-text">
+                  <strong data-i18n="shot.import.heading">Compartilo desde otra app</strong>
+                  <small>WhatsApp · Telegram · WeChat</small>
+                </div>
+              </div>
+              <div class="app-screen__row">
+                <div class="app-screen__btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg></div>
+                <div class="app-screen__row-main"><span data-i18n="shot.import.row">Risa de mi vieja</span></div>
+                <small class="app-screen__row-time" data-i18n="shot.import.rowMeta">Importado recién</small>
+              </div>
+            </div>
+          </div>
+          <div class="l-shot__caption" data-i18n="shot.caption.import">↳ Importá desde WhatsApp, Telegram, WeChat</div>
+        </div>
+
+        <!-- Shot C: search -->
+        <div class="l-shot l-shot--c">
+          <div class="l-shot__frame l-shot__frame--crop">
+            <div class="app-screen app-screen--search">
+              <div class="app-screen__bar"><span>9:41</span><span>● ●</span></div>
+              <div class="app-screen__searchbar">
+                <span class="app-screen__search-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+                  </svg>
+                </span>
+                <span class="app-screen__search-text">ris<span class="app-screen__caret"></span></span>
+              </div>
+              <div class="app-screen__row">
+                <div class="app-screen__btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg></div>
+                <div class="app-screen__row-main"><span><mark data-i18n="shot.search.matchPrefix">Ris</mark><span data-i18n="shot.search.matchRest">a de mi vieja</span></span><small data-i18n="shot.search.duration">0:01</small></div>
+                <small class="app-screen__row-time" data-i18n="shot.search.timeAgo">hace 1d</small>
+              </div>
+              <div class="app-keyboard" aria-hidden="true">
+                <div class="app-keyboard__suggestions">
+                  <span>risa</span><span>risita</span><span>risas</span>
+                </div>
+                <div class="app-keyboard__row">
+                  <span class="app-keyboard__key">q</span><span class="app-keyboard__key">w</span><span class="app-keyboard__key">e</span><span class="app-keyboard__key">r</span><span class="app-keyboard__key">t</span><span class="app-keyboard__key">y</span><span class="app-keyboard__key">u</span><span class="app-keyboard__key">i</span><span class="app-keyboard__key">o</span><span class="app-keyboard__key">p</span>
+                </div>
+                <div class="app-keyboard__row">
+                  <span class="app-keyboard__key">a</span><span class="app-keyboard__key">s</span><span class="app-keyboard__key">d</span><span class="app-keyboard__key">f</span><span class="app-keyboard__key">g</span><span class="app-keyboard__key">h</span><span class="app-keyboard__key">j</span><span class="app-keyboard__key">k</span><span class="app-keyboard__key">l</span>
+                </div>
+                <div class="app-keyboard__row">
+                  <span class="app-keyboard__key app-keyboard__key--mod">⇧</span><span class="app-keyboard__key">z</span><span class="app-keyboard__key">x</span><span class="app-keyboard__key">c</span><span class="app-keyboard__key">v</span><span class="app-keyboard__key">b</span><span class="app-keyboard__key">n</span><span class="app-keyboard__key">m</span><span class="app-keyboard__key app-keyboard__key--mod">⌫</span>
+                </div>
+                <div class="app-keyboard__row app-keyboard__row--last">
+                  <span class="app-keyboard__key app-keyboard__key--mod">123</span>
+                  <span class="app-keyboard__key app-keyboard__key--space" data-i18n="shot.search.kbSpace">espacio</span>
+                  <span class="app-keyboard__key app-keyboard__key--mod" data-i18n="shot.search.kbGo">ir</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="l-shot__caption" data-i18n="shot.caption.search">↳ Tipeá, encontrá, Bompeá</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="l-section">
+      <div class="l-section__head">
+        <div>
+          <div class="l-section__num" data-i18n="section.glossary.num">03 · Glosario</div>
+          <h2 class="l-section__title" data-i18n="section.glossary.title">Mini diccionario del Bomper.</h2>
+        </div>
+      </div>
+      <div class="l-gloss">
+        <div class="l-gloss__item">
+          <span class="l-gloss__pron" data-i18n="gloss.bomper.pos">/bom·per/ · sustantivo</span>
+          <span class="l-gloss__term">Bomper</span>
+          <p class="l-gloss__def" data-i18n="gloss.bomper.def">Vos, ahora. La persona que guarda audios como otros guardan abrazos.</p>
+        </div>
+        <div class="l-gloss__item">
+          <span class="l-gloss__pron" data-i18n="gloss.bompear.pos">/bom·pe·ár/ · verbo</span>
+          <span class="l-gloss__term">Bompear</span>
+          <p class="l-gloss__def" data-i18n="gloss.bompear.def">El acto de mandar el audio que justo necesitaba ese momento. Conjugación: bompo, bompás, bompea, bompeamos. (Sí, lo conjugamos.)</p>
+        </div>
+        <div class="l-gloss__item">
+          <span class="l-gloss__pron" data-i18n="gloss.bompeable.pos">/bom·pe·á·ble/ · adjetivo</span>
+          <span class="l-gloss__term">Bompeable</span>
+          <p class="l-gloss__def" data-i18n="gloss.bompeable.def">Esos audios que te encantan y no querés perder: cortos o largos, graciosos o sentimentales. Útiles. Si lo querés, guardalo.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="l-manifesto">
+      <div class="l-manifesto__inner" data-i18n-html="manifesto.html">
+        <span>Un audio de los tuyos </span>
+        <em>no es un mensaje</em>,
+        <strong>es un abrazo</strong> que se escucha.
+      </div>
+      <div class="l-manifesto__sig" data-i18n="manifesto.sig">— Bomp · /bomp/</div>
+    </section>
+
+    <div id="open" class="l-double">
+      <div>
+        <div>
+          <div class="l-double__eyebrow" data-i18n="section.openSource.num">04 · Open source</div>
+          <h3 class="l-double__title" data-i18n="section.openSource.title">Hecho a la luz, con licencia AGPL-3.0.</h3>
+          <p class="l-double__body" data-i18n="section.openSource.body">
+            El código está completo en GitHub. Si lo querés mejorar, romper, traducir o forkear: la puerta está abierta.
+          </p>
+        </div>
+        <a href="https://github.com/barriosnahuel/bomp" class="btn btn--ghost" style="align-self:flex-start">
+          <span data-i18n="cta.contributeGitHub">Contribuir en GitHub</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14M13 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+      <div id="donar">
+        <div>
+          <div class="l-double__eyebrow" data-i18n="section.donate.num">05 · Donar</div>
+          <h3 class="l-double__title" data-i18n="section.donate.title">Si te alegró el día, invitá un café.</h3>
+          <p class="l-double__body" data-i18n="section.donate.body">
+            Bomp es gratis y va a seguir siéndolo. Pero los servidores —y los cafés— se pagan. Cafecito (Argentina) o Ko-fi (internacional).
+          </p>
+        </div>
+        <div class="l-donate-buttons">
+          <!-- Cafecito · Argentina-only. Hidden by i18n.js when locale != es-AR. -->
+          <a class="l-donate-cafecito" data-i18n-locale-only="es-AR"
+             href="https://cafecito.app/barriosnahuel" rel="noopener" target="_blank">
+            <img
+              srcset="https://cdn.cafecito.app/imgs/buttons/button_1.png 1x,
+                      https://cdn.cafecito.app/imgs/buttons/button_1_2x.png 2x,
+                      https://cdn.cafecito.app/imgs/buttons/button_1_3.75x.png 3.75x"
+              src="https://cdn.cafecito.app/imgs/buttons/button_1.png"
+              alt="Invitame un café en cafecito.app"
+              data-i18n-attr="alt:donate.cafecito.alt"
+              loading="lazy" />
+          </a>
+          <!--
+            Ko-fi widget. Widget_2.js uses document.write at draw() time, so the script pair
+            renders the button inline at this position. Keep both scripts non-deferred and contiguous.
+          -->
+          <div class="l-donate-kofi">
+            <script type="text/javascript" src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
+            <script type="text/javascript">kofiwidget2.init('Support me on Ko-fi', '#72a4f2', 'Y8Y31YIHWK');kofiwidget2.draw();</script>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="l-footer">
+      <div>
+        <div class="l-wordmark" style="margin-bottom:12px">
+          <span class="l-wordmark__dot" aria-hidden="true"></span> Bomp
+        </div>
+        <p class="l-footer__brand" data-i18n="footer.brand">
+          Las voces que te importan, listas para Bompear.
+        </p>
+      </div>
+      <div>
+        <h4 data-i18n="footer.product">Producto</h4>
+        <ul>
+          <li><a href="#como-funciona" data-i18n="footer.product.howItWorks">Cómo funciona</a></li>
+          <li><a href="#screenshots" data-i18n="footer.product.theApp">La app</a></li>
+          <li><a href="#" data-i18n="footer.product.googlePlay">Google Play</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 data-i18n="footer.legal">Legales</h4>
+        <ul>
+          <li><a href="privacy-policy.html" data-i18n="nav.privacyPolicy">Privacy Policy</a></li>
+          <li><a href="data-safety.html" data-i18n="nav.dataSafety">Data Safety</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 data-i18n="footer.community">Comunidad</h4>
+        <ul>
+          <li><a href="https://github.com/barriosnahuel/bomp">GitHub</a></li>
+        </ul>
+      </div>
+      <div class="l-footer__bottom">
+        <span data-i18n="footer.copyright">© 2026 · Bomp · AGPL-3.0</span>
+        <label class="l-lang">
+          <span class="l-lang__label" data-i18n="footer.lang.label">Idioma</span>
+          <select class="l-lang__select" data-i18n-switcher aria-label="Idioma" data-i18n-attr="aria-label:footer.lang.label"></select>
+        </label>
+        <span data-i18n="footer.pron">Bomp /bomp/</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Sticker hero audio. Placeholder silencioso de 1s. -->
+  <!-- TODO: replace with the production welcome.mp3 (≤10s, ES) before Play Store launch. -->
+  <audio id="bomp-hero-audio" preload="metadata" src="assets/audio/welcome.mp3"></audio>
+
+  <script src="assets/js/i18n.js" defer></script>
+  <script src="assets/js/theme-toggle.js" defer></script>
+  <script src="assets/js/sticker-hero.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" fill="none">
+  <rect x="4" y="4" width="88" height="88" rx="22" fill="currentColor"></rect>
+  <path d="M38 30 L38 66 L68 48 Z" fill="var(--glyph-cut, #0B0B0C)"></path>
+  <text x="112" y="66" font-family="Fraunces, Times New Roman, serif" font-size="54" font-weight="500" letter-spacing="-1.5" fill="currentColor">
+    push<tspan font-style="italic">-me</tspan>
+  </text>
+</svg>

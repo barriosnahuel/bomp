@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://barriosnahuel.github.io/bomp/sitemap.xml

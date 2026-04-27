@@ -1,0 +1,50 @@
+/* Reset + base — shared across all pages */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font-sans);
+  font-size: var(--type-body-large);
+  line-height: 1.5;
+  color: var(--color-on-background);
+  background: var(--color-background);
+  text-rendering: optimizeLegibility;
+}
+
+img, svg, video { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+:focus-visible {
+  outline: 2px solid var(--color-on-background);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::selection { background: var(--acid-400); color: var(--ink-1000); }
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: var(--space-lg);
+  top: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-on-background);
+  color: var(--color-background);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  transform: translateY(-200%);
+  transition: transform .15s;
+  z-index: 100;
+}
+.skip-link:focus { transform: translateY(0); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,214 @@
+/* SOURCE OF TRUTH: AppTheme.kt in the `app` module of the bomp repo (develop branch).
+   Neo-Club palette — ink × acid. WCAG 2.2 AA verified.
+   Any change here MUST be mirrored in AppTheme.kt and viceversa. */
+
+:root {
+  /* Ink scale */
+  --ink-1000: #0B0B0C;
+  --ink-900:  #141415;
+  --ink-800:  #1C1C1D;
+  --ink-500:  #5A5A55;
+  --ink-400:  #8A8A83;
+  --ink-300:  #B8B7AE;
+  --ink-100:  #E5E4DE;
+  --ink-50:   #F1F0EA;
+  --paper:    #FAFAF7;
+
+  /* Acid — signal / primary */
+  --acid-400: #D7FF3A;
+  --acid-dark: #3E5400;
+
+  /* Blood — destructive / error */
+  --blood-700: #9E1B1D;
+  --blood-600: #C72C2F;
+  --blood-400: #F26163;
+  --blood-200: #FBD4D5;
+
+  /* ── Semantic roles (LIGHT — default) ── */
+  --color-background: var(--paper);
+  --color-on-background: var(--ink-1000);
+  --color-surface: var(--paper);
+  --color-on-surface: var(--ink-1000);
+  --color-surface-variant: var(--ink-50);
+  --color-on-surface-variant: var(--ink-500);
+
+  --color-primary: var(--acid-dark);
+  --color-on-primary: var(--paper);
+  --color-primary-container: var(--acid-400);
+  --color-on-primary-container: var(--ink-1000);
+
+  --color-secondary: var(--ink-1000);
+  --color-on-secondary: var(--paper);
+  --color-secondary-container: var(--ink-100);
+  --color-on-secondary-container: var(--ink-1000);
+
+  --color-outline: var(--ink-400);
+  --color-outline-variant: var(--ink-100);
+
+  --color-error: var(--blood-600);
+  --color-error-container: var(--blood-200);
+  --color-on-error-container: var(--blood-700);
+
+  --color-inverse-surface: var(--ink-800);
+  --color-inverse-on-surface: var(--paper);
+  --color-inverse-primary: var(--acid-400);
+
+  /* Spacing — mirror Spacing.kt */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+  --space-4xl: 72px;
+  --space-5xl: 112px;
+
+  /* Radii — Material 3 */
+  --radius-sm: 4px;
+  --radius-md: 12px;
+  --radius-lg: 28px;
+  --radius-pill: 9999px;
+
+  /* Elevation — soft, light mode */
+  --elev-1: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.10);
+  --elev-2: 0 2px 6px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.10);
+  --elev-3: 0 8px 24px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+
+  /* Sticker — hard offset shadow used for sticker-culture treatments */
+  --shadow-sticker: 6px 6px 0 var(--ink-1000);
+  --shadow-sticker-acid: 6px 6px 0 var(--acid-400);
+
+  /* Type scale — Material 3 */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --type-display-large:  clamp(56px, 9vw, 96px) / 1.05;
+  --type-display-medium: clamp(44px, 6.5vw, 72px) / 1.08;
+  --type-display-small:  clamp(36px, 5vw, 56px) / 1.12;
+  --type-headline-medium: 28px;
+  --type-title-large: 22px;
+  --type-title-medium: 16px;
+  --type-body-large: 16px;
+  --type-body-medium: 14px;
+  --type-label-large: 14px;
+}
+
+/* ── DARK MODE — system preference (root only; wrappers in design canvas
+   isolate via explicit [data-theme="light|dark"] blocks below) ── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-background: var(--ink-1000);
+    --color-on-background: var(--paper);
+    --color-surface: var(--ink-1000);
+    --color-on-surface: var(--paper);
+    --color-surface-variant: var(--ink-900);
+    --color-on-surface-variant: var(--ink-300);
+
+    --color-primary: var(--acid-400);
+    --color-on-primary: var(--ink-1000);
+    --color-primary-container: var(--acid-400);
+    --color-on-primary-container: var(--ink-1000);
+
+    --color-secondary: var(--ink-900);
+    --color-on-secondary: var(--paper);
+    --color-secondary-container: var(--ink-800);
+    --color-on-secondary-container: var(--paper);
+
+    --color-outline: var(--ink-400);
+    --color-outline-variant: var(--ink-800);
+
+    --color-error: var(--blood-400);
+    --color-error-container: var(--blood-600);
+    --color-on-error-container: var(--paper);
+
+    --color-inverse-surface: var(--paper);
+    --color-inverse-on-surface: var(--ink-1000);
+    --color-inverse-primary: var(--acid-dark);
+
+    --elev-1: 0 1px 2px rgba(0,0,0,.5);
+    --elev-2: 0 2px 6px rgba(0,0,0,.5);
+    --elev-3: 0 8px 24px rgba(0,0,0,.6);
+
+    --shadow-sticker: 6px 6px 0 var(--acid-400);
+    --shadow-sticker-acid: 6px 6px 0 var(--paper);
+  }
+}
+
+/* ── LIGHT MODE — explicit override (breaks dark inheritance in design canvas) ── */
+[data-theme="light"] {
+  --color-background: var(--paper);
+  --color-on-background: var(--ink-1000);
+  --color-surface: var(--paper);
+  --color-on-surface: var(--ink-1000);
+  --color-surface-variant: var(--ink-50);
+  --color-on-surface-variant: var(--ink-500);
+
+  --color-primary: var(--acid-dark);
+  --color-on-primary: var(--paper);
+  --color-primary-container: var(--acid-400);
+  --color-on-primary-container: var(--ink-1000);
+
+  --color-secondary: var(--ink-1000);
+  --color-on-secondary: var(--paper);
+  --color-secondary-container: var(--ink-100);
+  --color-on-secondary-container: var(--ink-1000);
+
+  --color-outline: var(--ink-400);
+  --color-outline-variant: var(--ink-100);
+
+  --color-error: var(--blood-600);
+  --color-error-container: var(--blood-200);
+  --color-on-error-container: var(--blood-700);
+
+  --color-inverse-surface: var(--ink-800);
+  --color-inverse-on-surface: var(--paper);
+  --color-inverse-primary: var(--acid-400);
+
+  --elev-1: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.10);
+  --elev-2: 0 2px 6px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.10);
+  --elev-3: 0 8px 24px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+
+  --shadow-sticker: 6px 6px 0 var(--ink-1000);
+  --shadow-sticker-acid: 6px 6px 0 var(--acid-400);
+}
+
+/* ── DARK MODE — manual override ── */
+/* Bare attribute selector so it matches both <html data-theme="dark"> in
+   production AND a wrapper div with data-theme="dark" in the design canvas. */
+[data-theme="dark"] {
+  --color-background: var(--ink-1000);
+  --color-on-background: var(--paper);
+  --color-surface: var(--ink-1000);
+  --color-on-surface: var(--paper);
+  --color-surface-variant: var(--ink-900);
+  --color-on-surface-variant: var(--ink-300);
+
+  --color-primary: var(--acid-400);
+  --color-on-primary: var(--ink-1000);
+  --color-primary-container: var(--acid-400);
+  --color-on-primary-container: var(--ink-1000);
+
+  --color-secondary: var(--ink-900);
+  --color-on-secondary: var(--paper);
+  --color-secondary-container: var(--ink-800);
+  --color-on-secondary-container: var(--paper);
+
+  --color-outline: var(--ink-400);
+  --color-outline-variant: var(--ink-800);
+
+  --color-error: var(--blood-400);
+  --color-error-container: var(--blood-600);
+  --color-on-error-container: var(--paper);
+
+  --color-inverse-surface: var(--paper);
+  --color-inverse-on-surface: var(--ink-1000);
+  --color-inverse-primary: var(--acid-dark);
+
+  --elev-1: 0 1px 2px rgba(0,0,0,.5);
+  --elev-2: 0 2px 6px rgba(0,0,0,.5);
+  --elev-3: 0 8px 24px rgba(0,0,0,.6);
+
+  --shadow-sticker: 6px 6px 0 var(--acid-400);
+  --shadow-sticker-acid: 6px 6px 0 var(--paper);
+}
