@@ -169,6 +169,35 @@ When adding a new tracked action:
 7. Add at least one call-site test that triggers the action and asserts via
    `FakeAnalyticsTracker.assertEmitted("event_name")` or `.assertScreenView(...)`.
    Without it, a future refactor that silences the track passes CI silently.
+8. **Verify on a real device or emulator that the new event reaches Firebase**
+   before merging. Two complementary options:
+
+   - **Firebase DebugView** (recommended for new events — visualises params and
+     user properties in 10–30 s). Required setup, per device, runtime-only —
+     does NOT persist across phone reboots:
+
+     ```bash
+     adb shell setprop debug.firebase.analytics.app com.github.barriosnahuel.vossosunboton.debug
+     adb shell am force-stop com.github.barriosnahuel.vossosunboton.debug
+     ```
+
+     Then exercise the new track and watch
+     `Firebase Console → DebugView`.
+   - **`adb logcat -s FA FA-SVC`** (faster for "is the SDK actually firing?"):
+
+     ```bash
+     adb shell setprop log.tag.FA VERBOSE
+     adb shell setprop log.tag.FA-SVC VERBOSE
+     adb logcat -s FA FA-SVC
+     ```
+
+     Each `tracker.log(...)` / `tracker.logScreen(...)` shows up immediately as
+     a `Logging event` line — no Firebase Console required. Pair with DebugView
+     when validating params.
+
+   The aggregated dashboards under `Firebase Console → Reports → Engagement /
+   Events / Realtime` are NOT a substitute — those aggregate over hours and
+   never confirm a single new event.
 
 Reserved Firebase event names are forbidden — check
 <https://firebase.google.com/docs/analytics/events> before naming.

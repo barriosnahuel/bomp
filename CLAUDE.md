@@ -189,7 +189,30 @@ in the sibling backlog repo):
    `testImplementation testFixtures(project(":commons_android"))`. Without it,
    a future refactor that silences the track passes CI silently. The canonical
    mapping lives in `plans/04-...md` §6 Paso 13.
-6. Verify smoke in Firebase DebugView before merging.
+6. **Manual smoke before merging** — events MUST be confirmed reaching Firebase
+   from a real install. Two complementary paths; recommend running BOTH the
+   first time a track is added so the user knows the verification surface.
+
+   - **Firebase DebugView** — visualises name, params and user properties in
+     10–30 s. Setup per device (runtime-only, lost on phone reboot):
+
+     ```bash
+     adb shell setprop debug.firebase.analytics.app com.github.barriosnahuel.vossosunboton.debug
+     adb shell am force-stop com.github.barriosnahuel.vossosunboton.debug
+     ```
+
+   - **`adb logcat -s FA FA-SVC`** — faster for "did the SDK fire it at all?".
+     Enable verbose first:
+
+     ```bash
+     adb shell setprop log.tag.FA VERBOSE
+     adb shell setprop log.tag.FA-SVC VERBOSE
+     adb logcat -s FA FA-SVC
+     ```
+
+   The aggregated `Reports → Engagement / Events / Realtime` dashboards are
+   NOT a substitute (they aggregate over hours and confirm nothing about a
+   single new event).
 
 User Properties (`current_sounds`, `current_pinned`, `lifetime_shares`,
 `lifetime_plays`) are set via `tracker.setUserProperty(...)` — see §4.3 of the
