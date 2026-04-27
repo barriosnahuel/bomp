@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### Added
 - Firebase Analytics instrumentation: emits events for every active user flow (add, edit, delete, play, pin, search, share, about) plus 6 canonical `screen_view` names (`my_sounds`, `explore_sounds`, `about`, `search_sound`, `add_sound`, `edit_sound`) with auto-tracking disabled, one-shot `first_*` variants on first invocation, and user properties (`current_sounds`, `current_pinned`, `lifetime_shares`, `lifetime_plays`) that unlock cohort segmentation in Firebase Console
-- Renamed the first bottom-nav tab from "Inicio"/"Home" to "Mi Botonera"/"My Sounds" so the visible label matches the canonical telemetry `screen_name` and reuses the brand glossary "Botonera" term
+- Renamed the first bottom-nav tab from "Inicio"/"Home" to "Mis audios"/"My Sounds" so the visible label matches the canonical telemetry `screen_name`
 - Bundled sounds (Explore tab) can now be pinned to the top via button tap or swipe right, with the pinned state persisting across app restarts
 - Swiping left or long-pressing a bundled sound gives haptic rejection feedback (double-pulse), indicating those actions are not available
 - Pinning any sound now automatically scrolls the list back to the top so the newly pinned item is immediately visible
