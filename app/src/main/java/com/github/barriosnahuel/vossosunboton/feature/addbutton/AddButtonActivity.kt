@@ -16,6 +16,8 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
@@ -61,6 +63,7 @@ class AddButtonActivity : ComponentActivity() {
                 )
             }
         }
+        AnalyticsTrackerProvider.get(this).logScreen(CanonicalScreenName.EDIT_SOUND)
     }
 
     private fun launchCreateAddButtonMode(uri: Uri) {
@@ -74,6 +77,8 @@ class AddButtonActivity : ComponentActivity() {
                 )
             }
         }
+        val extras = Bundle().apply { putString("source", SOURCE_SHARE) }
+        AnalyticsTrackerProvider.get(this).logScreen(CanonicalScreenName.ADD_SOUND, extras)
     }
 
     private fun navigateBackSaved(name: String) {
@@ -96,5 +101,10 @@ class AddButtonActivity : ComponentActivity() {
             },
         )
         finishAndRemoveTask()
+    }
+
+    companion object {
+        /** Source param for `screen_view {add_sound}` and `sound_add`. Today every Create flow comes from share. */
+        const val SOURCE_SHARE = "share"
     }
 }
