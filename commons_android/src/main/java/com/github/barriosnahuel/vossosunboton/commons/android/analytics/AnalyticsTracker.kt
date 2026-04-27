@@ -43,4 +43,11 @@ interface AnalyticsTracker {
      * Pair the result with [setUserProperty] to surface it on Firebase.
      */
     fun incrementCounter(name: String): Long
+
+    /**
+     * Atomically mark [flagName] as fired. Returns `true` only the first time on this install. Used by call-sites that
+     * gate one-shot custom events such as milestones (the wrapper itself manages first-variants for events declared
+     * with `hasFirstVariant = true`).
+     */
+    fun markFiredOnce(flagName: String): Boolean
 }

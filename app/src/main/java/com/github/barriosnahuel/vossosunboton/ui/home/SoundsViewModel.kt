@@ -198,6 +198,8 @@ class SoundsViewModel(
         } else {
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
             tracker.log(AnalyticsEvent.SoundPlay(surface = currentSurface))
+            val newCount = tracker.incrementCounter("lifetime_plays")
+            tracker.setUserProperty("lifetime_plays", newCount.toString())
         }
     }
 
@@ -300,8 +302,14 @@ class SoundsViewModel(
                 filtered.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
             }
         }
-        tracker.setUserProperty("current_sounds", allSounds.count { !it.isBundled() }.toString())
+        val userCreatedCount = allSounds.count { !it.isBundled() }
+        tracker.setUserProperty("current_sounds", userCreatedCount.toString())
         tracker.setUserProperty("current_pinned", allSounds.count { it.isPinned }.toString())
+        AUDIO_MILESTONES.forEach { threshold ->
+            if (userCreatedCount >= threshold && tracker.markFiredOnce("milestone_sounds_$threshold")) {
+                tracker.log(AnalyticsEvent.MilestoneAudios(threshold))
+            }
+        }
     }
 
     override fun onPlayerStart(
@@ -338,6 +346,8 @@ class SoundsViewModel(
     }
 
     companion object {
+        private val AUDIO_MILESTONES = listOf(3, 5, 10, 25)
+
         val Factory: ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {

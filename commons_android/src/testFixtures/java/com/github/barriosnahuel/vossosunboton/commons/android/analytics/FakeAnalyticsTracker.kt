@@ -18,6 +18,7 @@ class FakeAnalyticsTracker : AnalyticsTracker {
     val screens: MutableList<RecordedScreen> = mutableListOf()
     val userProperties: MutableMap<String, String> = mutableMapOf()
     val counters: MutableMap<String, Long> = mutableMapOf()
+    val firedFlags: MutableSet<String> = mutableSetOf()
 
     override fun log(event: AnalyticsEvent) {
         events += RecordedEvent(event.name, event.params().toReadableMap())
@@ -43,6 +44,8 @@ class FakeAnalyticsTracker : AnalyticsTracker {
         return newValue
     }
 
+    override fun markFiredOnce(flagName: String): Boolean = firedFlags.add(flagName)
+
     /** Return the first emission with [eventName] or fail with the list of recorded names. */
     fun assertEmitted(eventName: String): RecordedEvent =
         events.firstOrNull { it.name == eventName }
@@ -65,6 +68,7 @@ class FakeAnalyticsTracker : AnalyticsTracker {
         screens.clear()
         userProperties.clear()
         counters.clear()
+        firedFlags.clear()
     }
 
     data class RecordedEvent(

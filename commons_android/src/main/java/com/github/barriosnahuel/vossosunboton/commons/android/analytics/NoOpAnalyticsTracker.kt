@@ -25,4 +25,6 @@ class NoOpAnalyticsTracker : AnalyticsTracker {
     ) = Unit
 
     override fun incrementCounter(name: String): Long = 0L
+
+    override fun markFiredOnce(flagName: String): Boolean = false
 }

@@ -49,4 +49,10 @@ internal class FirebaseAnalyticsTracker(
     }
 
     override fun incrementCounter(name: String): Long = store.increment(name)
+
+    override fun markFiredOnce(flagName: String): Boolean {
+        if (!store.isFirstTime(flagName)) return false
+        store.markFired(flagName)
+        return true
+    }
 }

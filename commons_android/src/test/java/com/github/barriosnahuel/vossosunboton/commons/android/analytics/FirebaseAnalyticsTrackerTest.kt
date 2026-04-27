@@ -153,4 +153,24 @@ internal class FirebaseAnalyticsTrackerTest {
         assertThat(result).isEqualTo(7L)
         verify { store.increment("lifetime_shares") }
     }
+
+    @Test
+    fun `markFiredOnce returns true and persists when never fired`() {
+        every { store.isFirstTime("milestone_sounds_3") } returns true
+
+        val result = tracker.markFiredOnce("milestone_sounds_3")
+
+        assertThat(result).isTrue()
+        verify { store.markFired("milestone_sounds_3") }
+    }
+
+    @Test
+    fun `markFiredOnce returns false and skips persistence when already fired`() {
+        every { store.isFirstTime("milestone_sounds_3") } returns false
+
+        val result = tracker.markFiredOnce("milestone_sounds_3")
+
+        assertThat(result).isFalse()
+        verify(exactly = 0) { store.markFired(any()) }
+    }
 }
