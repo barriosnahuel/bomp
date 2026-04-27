@@ -5,10 +5,15 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.content.Context
 import android.os.Build
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
@@ -94,6 +99,30 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
 
         val mySoundsHits = fake.screens.count { it.name == CanonicalScreenName.MY_SOUNDS }
         assertThat(mySoundsHits).isAtLeast(2)
+    }
+
+    /**
+     * Regression for the assumption documented next to `SoundsViewModel.currentSurface`: while About is the active
+     * destination the FAB and the sound list (the only entry points for `playOrStop` / `share`) must be
+     * unreachable, so `surface` and the latest `screen_name` cannot disagree.
+     */
+    @Test
+    fun `no play or share UI is reachable while About is open`() {
+        val viewModel = givenAViewModel()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_overflow_menu)).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.app_about)).performClick()
+        composeTestRule.waitForIdle()
+
+        // About is the active destination — proven by both the screen_view emission and the absence of the FAB
+        // (which is the only entry point into `playOrStop` / `share` from the home shell).
+        fake.assertScreenView(CanonicalScreenName.ABOUT)
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_search)).assertDoesNotExist()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

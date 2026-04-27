@@ -113,6 +113,11 @@ class SoundsViewModel(
     /**
      * Surface label for events fired from this ViewModel. Mirrors the screen_view emitted by `LandingScreen` so
      * `surface` and the most recent `screen_name` always agree.
+     *
+     * The About screen is intentionally NOT modelled here: when `isAboutVisible == true`, `LandingScreen` early
+     * returns and the FAB / sound list / search overlay are not rendered, so neither `playOrStop` nor `share` can
+     * fire from the UI. The regression for that invariant lives in
+     * `LandingScreenAnalyticsTest.no play or share UI is reachable while About is open`.
      */
     private val currentSurface: String
         get() =
