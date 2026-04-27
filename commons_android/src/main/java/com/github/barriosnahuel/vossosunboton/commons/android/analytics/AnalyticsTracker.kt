@@ -8,8 +8,8 @@ package com.github.barriosnahuel.vossosunboton.commons.android.analytics
 import android.os.Bundle
 
 /**
- * Single entry point for emitting Firebase Analytics. Call-sites must use this wrapper instead of
- * `FirebaseAnalytics.getInstance(...).logEvent(...)` directly — the lint check in CI fails the build otherwise.
+ * Single entry point for emitting Firebase Analytics. Call-sites must use this wrapper instead of going to the
+ * Firebase SDK directly — the analytics-wrapper-guard CI check fails any build that bypasses it.
  *
  * The wrapper centralises three concerns: the consecutive-vs-first-variant toggle, the `screen_view` recommended
  * event with canonical names, and user property writes.
