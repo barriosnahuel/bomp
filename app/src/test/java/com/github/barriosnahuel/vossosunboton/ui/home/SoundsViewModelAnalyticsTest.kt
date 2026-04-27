@@ -9,6 +9,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
@@ -105,7 +106,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         viewModel.playOrStop(sound)
         viewModel.playOrStop(sound)
 
-        assertThat(fake.userProperties["lifetime_plays"]).isEqualTo("2")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_PLAYS]).isEqualTo("2")
     }
 
     @Test
@@ -165,7 +166,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
         viewModel.togglePin(sound)
 
-        assertThat(fake.userProperties["current_pinned"]).isEqualTo("1")
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_PINNED]).isEqualTo("1")
     }
 
     @Test

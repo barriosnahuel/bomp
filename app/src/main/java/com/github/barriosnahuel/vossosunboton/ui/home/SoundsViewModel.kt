@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
@@ -189,7 +190,10 @@ class SoundsViewModel(
             SoundDao().savePin(getApplication(), sound.name, nowPinned)
         }
         tracker.log(AnalyticsEvent.PinToggle(pinned = nowPinned))
-        tracker.setUserProperty("current_pinned", allSoundsCache.value.count { it.isPinned }.toString())
+        tracker.setUserProperty(
+            AnalyticsUserProperty.CURRENT_PINNED,
+            allSoundsCache.value.count { it.isPinned }.toString(),
+        )
     }
 
     fun playOrStop(sound: Sound) {
@@ -198,8 +202,8 @@ class SoundsViewModel(
         } else {
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
             tracker.log(AnalyticsEvent.SoundPlay(surface = currentSurface))
-            val newCount = tracker.incrementCounter("lifetime_plays")
-            tracker.setUserProperty("lifetime_plays", newCount.toString())
+            val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_PLAYS)
+            tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_PLAYS, newCount.toString())
         }
     }
 
@@ -247,7 +251,10 @@ class SoundsViewModel(
             try {
                 SoundDao().delete(context, event.sound)
                 tracker.log(AnalyticsEvent.SoundDelete)
-                tracker.setUserProperty("current_sounds", allSoundsCache.value.count { !it.isBundled() }.toString())
+                tracker.setUserProperty(
+                    AnalyticsUserProperty.CURRENT_SOUNDS,
+                    allSoundsCache.value.count { !it.isBundled() }.toString(),
+                )
             } catch (e: IllegalStateException) {
                 Timber.w(e, "Sound has no file on disk, skipping delete")
             }
@@ -303,8 +310,8 @@ class SoundsViewModel(
             }
         }
         val userCreatedCount = allSounds.count { !it.isBundled() }
-        tracker.setUserProperty("current_sounds", userCreatedCount.toString())
-        tracker.setUserProperty("current_pinned", allSounds.count { it.isPinned }.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_SOUNDS, userCreatedCount.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PINNED, allSounds.count { it.isPinned }.toString())
         AUDIO_MILESTONES.forEach { threshold ->
             if (userCreatedCount >= threshold && tracker.markFiredOnce("milestone_sounds_$threshold")) {
                 tracker.log(AnalyticsEvent.MilestoneAudios(threshold))

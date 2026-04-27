@@ -41,6 +41,16 @@ internal class AnalyticsCoverageMatrixTest {
         assertWithMessage(OBSOLETE_SCREEN_HINT).that(obsolete).isEmpty()
     }
 
+    @Test
+    fun `every canonical user property has a regression test`() {
+        val declared = AnalyticsUserProperty.ALL.toSet()
+        val missing = declared - USER_PROPERTIES_WITH_REGRESSION_TEST
+        assertWithMessage(MISSING_USER_PROPERTY_HINT).that(missing).isEmpty()
+
+        val obsolete = USER_PROPERTIES_WITH_REGRESSION_TEST - declared
+        assertWithMessage(OBSOLETE_USER_PROPERTY_HINT).that(obsolete).isEmpty()
+    }
+
     companion object {
         private val EVENTS_WITH_REGRESSION_TEST: Set<String> =
             setOf(
@@ -69,6 +79,14 @@ internal class AnalyticsCoverageMatrixTest {
                 CanonicalScreenName.EDIT_SOUND,
             )
 
+        private val USER_PROPERTIES_WITH_REGRESSION_TEST: Set<String> =
+            setOf(
+                AnalyticsUserProperty.CURRENT_SOUNDS,
+                AnalyticsUserProperty.CURRENT_PINNED,
+                AnalyticsUserProperty.LIFETIME_SHARES,
+                AnalyticsUserProperty.LIFETIME_PLAYS,
+            )
+
         private const val MISSING_EVENT_HINT =
             "AnalyticsEvent subclasses without a regression test. Add a call-site test under the matching module" +
                 " (see plan 04 §6 Paso 13) and add the simple name to EVENTS_WITH_REGRESSION_TEST."
@@ -79,5 +97,12 @@ internal class AnalyticsCoverageMatrixTest {
                 " for its hosting screen and add the literal to SCREEN_VIEWS_WITH_REGRESSION_TEST."
         private const val OBSOLETE_SCREEN_HINT =
             "SCREEN_VIEWS_WITH_REGRESSION_TEST mentions screens that no longer exist. Remove the stale entries."
+        private const val MISSING_USER_PROPERTY_HINT =
+            "AnalyticsUserProperty entries without a regression test. Cover the user property in the matching" +
+                " call-site test (`fake.userProperties[name]`) and add the constant to" +
+                " USER_PROPERTIES_WITH_REGRESSION_TEST."
+        private const val OBSOLETE_USER_PROPERTY_HINT =
+            "USER_PROPERTIES_WITH_REGRESSION_TEST mentions user properties that no longer exist. Remove the stale" +
+                " entries."
     }
 }

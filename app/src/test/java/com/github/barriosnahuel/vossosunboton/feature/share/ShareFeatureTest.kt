@@ -15,6 +15,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -58,7 +59,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         whenSharingThe(givenASoundWithUri())
         whenSharingThe(givenASoundWithUri())
 
-        assertThat(fake.userProperties["lifetime_shares"]).isEqualTo("2")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isEqualTo("2")
     }
 
     @Test

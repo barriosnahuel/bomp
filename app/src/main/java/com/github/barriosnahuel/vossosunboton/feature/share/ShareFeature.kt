@@ -13,6 +13,7 @@ import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -66,8 +67,8 @@ private class ShareFeatureImpl : ShareFeature {
 
         val tracker = AnalyticsTrackerProvider.get(context.applicationContext)
         tracker.log(AnalyticsEvent.Share(surface = surface))
-        val newCount = tracker.incrementCounter("lifetime_shares")
-        tracker.setUserProperty("lifetime_shares", newCount.toString())
+        val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_SHARES)
+        tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_SHARES, newCount.toString())
 
         context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.app_share_chooser_title)))
     }
