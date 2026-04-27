@@ -65,12 +65,15 @@ private class ShareFeatureImpl : ShareFeature {
             sound.rawRes,
         )
 
+        // Track AFTER the chooser actually launches: if `startActivity` throws (ActivityNotFoundException, OS reject)
+        // we want `lifetime_shares` to stay accurate. If the chooser shows but the user cancels there is no reliable
+        // callback, so "chooser displayed" remains the canonical share signal — matches Firebase's recommended event.
+        context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.app_share_chooser_title)))
+
         val tracker = AnalyticsTrackerProvider.get(context.applicationContext)
         tracker.log(AnalyticsEvent.Share(surface = surface))
         val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_SHARES)
         tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_SHARES, newCount.toString())
-
-        context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.app_share_chooser_title)))
     }
 
     private fun getContentUriForSound(

@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.share
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -60,6 +61,24 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         whenSharingThe(givenASoundWithUri())
 
         assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isEqualTo("2")
+    }
+
+    @Test
+    fun `share does not increment lifetime_shares when the chooser activity cannot be started`() {
+        val sound = givenASoundWithUri()
+        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
+        mockkStatic(FileProvider::class)
+        every { FileProvider.getUriForFile(mockedContext, any(), any()) } returns Uri.EMPTY
+        every { mockedContext.startActivity(any()) } throws ActivityNotFoundException("no app handles audio share")
+
+        try {
+            ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
+        } catch (_: ActivityNotFoundException) {
+            // expected — propagates so the caller can show an error UI
+        }
+
+        fake.assertNotEmitted("share")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
     }
 
     @Test
