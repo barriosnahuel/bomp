@@ -15,4 +15,13 @@ interface FirstFlagStore {
 
     /** Mark [event] as fired so subsequent [isFirstTime] calls return `false`. */
     fun markFired(event: String)
+
+    /**
+     * Atomically returns `true` exactly once on the first invocation per install for [event] and marks it fired on
+     * the same call. Concrete implementations MUST guarantee atomicity under concurrent callers — both [log] and
+     * [markFiredOnce] depend on this to avoid double-emission of `first_*` and `milestone_*` events when several
+     * coroutines hit the same path (e.g. `loadSounds` running on `Dispatchers.IO` triggered from both `init` and
+     * `selectTab`).
+     */
+    fun consumeFirstTime(event: String): Boolean
 }

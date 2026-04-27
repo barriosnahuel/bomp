@@ -30,7 +30,7 @@ internal class FirebaseAnalyticsTrackerTest {
     fun setUp() {
         firebase = mockk(relaxed = true)
         store = mockk(relaxed = true)
-        every { store.isFirstTime(any()) } returns false
+        every { store.consumeFirstTime(any()) } returns false
         tracker = FirebaseAnalyticsTracker(firebase, store)
     }
 
@@ -47,30 +47,29 @@ internal class FirebaseAnalyticsTrackerTest {
 
     @Test
     fun `log emits the first variant on first invocation when hasFirstVariant is true`() {
-        every { store.isFirstTime("first_sound_delete") } returns true
+        every { store.consumeFirstTime("first_sound_delete") } returns true
 
         tracker.log(AnalyticsEvent.SoundDelete)
 
         verify { firebase.logEvent("sound_delete", null) }
         verify { firebase.logEvent("first_sound_delete", null) }
-        verify { store.markFired("first_sound_delete") }
+        verify { store.consumeFirstTime("first_sound_delete") }
     }
 
     @Test
     fun `log does not re-emit the first variant once marked fired`() {
-        every { store.isFirstTime("first_sound_delete") } returns false
+        every { store.consumeFirstTime("first_sound_delete") } returns false
 
         tracker.log(AnalyticsEvent.SoundDelete)
 
         verify { firebase.logEvent("sound_delete", null) }
         verify(exactly = 0) { firebase.logEvent("first_sound_delete", any()) }
-        verify(exactly = 0) { store.markFired(any()) }
     }
 
     @Test
     fun `log keeps first-variant flags independent across events`() {
-        every { store.isFirstTime("first_sound_delete") } returns false
-        every { store.isFirstTime("first_pin_toggle") } returns true
+        every { store.consumeFirstTime("first_sound_delete") } returns false
+        every { store.consumeFirstTime("first_pin_toggle") } returns true
 
         tracker.log(AnalyticsEvent.SoundDelete)
         tracker.log(AnalyticsEvent.PinToggle(pinned = true))
@@ -81,12 +80,13 @@ internal class FirebaseAnalyticsTrackerTest {
 
     @Test
     fun `log never emits a first variant for events declared without one`() {
-        every { store.isFirstTime(any()) } returns true
+        every { store.consumeFirstTime(any()) } returns true
 
         tracker.log(AnalyticsEvent.SoundDeleteUndone)
 
         verify { firebase.logEvent("sound_delete_undone", null) }
         verify(exactly = 0) { firebase.logEvent("first_sound_delete_undone", any()) }
+        verify(exactly = 0) { store.consumeFirstTime(any()) }
     }
 
     @Test
@@ -155,22 +155,21 @@ internal class FirebaseAnalyticsTrackerTest {
     }
 
     @Test
-    fun `markFiredOnce returns true and persists when never fired`() {
-        every { store.isFirstTime("milestone_sounds_3") } returns true
+    fun `markFiredOnce delegates to the store's atomic consumeFirstTime`() {
+        every { store.consumeFirstTime("milestone_sounds_3") } returns true
 
         val result = tracker.markFiredOnce("milestone_sounds_3")
 
         assertThat(result).isTrue()
-        verify { store.markFired("milestone_sounds_3") }
+        verify { store.consumeFirstTime("milestone_sounds_3") }
     }
 
     @Test
-    fun `markFiredOnce returns false and skips persistence when already fired`() {
-        every { store.isFirstTime("milestone_sounds_3") } returns false
+    fun `markFiredOnce returns false when the store reports the flag was already fired`() {
+        every { store.consumeFirstTime("milestone_sounds_3") } returns false
 
         val result = tracker.markFiredOnce("milestone_sounds_3")
 
         assertThat(result).isFalse()
-        verify(exactly = 0) { store.markFired(any()) }
     }
 }

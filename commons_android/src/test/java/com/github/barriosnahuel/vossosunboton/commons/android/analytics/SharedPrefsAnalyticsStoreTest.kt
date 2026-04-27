@@ -15,6 +15,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
@@ -68,5 +72,43 @@ internal class SharedPrefsAnalyticsStoreTest {
 
         assertThat(store.isFirstTime("first_sound_play")).isFalse()
         assertThat(store.get("first_sound_play")).isEqualTo(1L)
+    }
+
+    @Test
+    fun `consumeFirstTime returns true exactly once and persists across instances`() {
+        val store = SharedPrefsAnalyticsStore(context)
+
+        assertThat(store.consumeFirstTime("milestone_sounds_3")).isTrue()
+        assertThat(store.consumeFirstTime("milestone_sounds_3")).isFalse()
+        assertThat(SharedPrefsAnalyticsStore(context).consumeFirstTime("milestone_sounds_3")).isFalse()
+    }
+
+    /**
+     * Twenty threads race on the same flag. Exactly one of them must observe `true` and the rest `false` —
+     * a non-atomic implementation would leak duplicate `true` results and emit `first_*` / `milestone_*`
+     * events more than once.
+     */
+    @Test
+    fun `consumeFirstTime is atomic under concurrent callers`() {
+        val store = SharedPrefsAnalyticsStore(context)
+        val threadCount = 20
+        val pool = Executors.newFixedThreadPool(threadCount)
+        val ready = CountDownLatch(threadCount)
+        val start = CountDownLatch(1)
+        val winners = AtomicInteger(0)
+
+        repeat(threadCount) {
+            pool.submit {
+                ready.countDown()
+                start.await()
+                if (store.consumeFirstTime("milestone_sounds_3")) winners.incrementAndGet()
+            }
+        }
+        ready.await(2, TimeUnit.SECONDS)
+        start.countDown()
+        pool.shutdown()
+        pool.awaitTermination(5, TimeUnit.SECONDS)
+
+        assertThat(winners.get()).isEqualTo(1)
     }
 }

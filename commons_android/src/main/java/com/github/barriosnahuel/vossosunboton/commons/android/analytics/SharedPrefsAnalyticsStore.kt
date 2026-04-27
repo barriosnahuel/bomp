@@ -28,6 +28,14 @@ internal class SharedPrefsAnalyticsStore(
     }
 
     @Synchronized
+    override fun consumeFirstTime(event: String): Boolean {
+        val key = flagKey(event)
+        if (prefs.getBoolean(key, false)) return false
+        prefs.edit().putBoolean(key, true).apply()
+        return true
+    }
+
+    @Synchronized
     override fun increment(key: String): Long {
         val newValue = prefs.getLong(counterKey(key), 0L) + 1L
         prefs.edit().putLong(counterKey(key), newValue).apply()

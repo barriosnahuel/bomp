@@ -22,9 +22,8 @@ internal class FirebaseAnalyticsTracker(
 
         if (event.hasFirstVariant) {
             val firstName = "first_${event.name}"
-            if (store.isFirstTime(firstName)) {
+            if (store.consumeFirstTime(firstName)) {
                 firebase.logEvent(firstName, params)
-                store.markFired(firstName)
             }
         }
     }
@@ -50,9 +49,5 @@ internal class FirebaseAnalyticsTracker(
 
     override fun incrementCounter(name: String): Long = store.increment(name)
 
-    override fun markFiredOnce(flagName: String): Boolean {
-        if (!store.isFirstTime(flagName)) return false
-        store.markFired(flagName)
-        return true
-    }
+    override fun markFiredOnce(flagName: String): Boolean = store.consumeFirstTime(flagName)
 }
