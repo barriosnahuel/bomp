@@ -14,18 +14,52 @@ import androidx.core.content.FileProvider
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.spyk
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.io.File
 
 internal class ShareFeatureTest : AbstractRobolectricTest() {
     private val dummyButtonName = "my button name"
+    private lateinit var fake: FakeAnalyticsTracker
+
+    @Before
+    fun setUpAnalytics() {
+        fake = FakeAnalyticsTracker()
+        AnalyticsTrackerProvider.setForTest(fake)
+    }
+
+    @After
+    fun tearDownAnalytics() {
+        AnalyticsTrackerProvider.setForTest(null)
+    }
+
+    @Test
+    fun `share emits Share with the surface passed in by the caller`() {
+        val sound = givenASoundWithUri()
+
+        whenSharingThe(sound)
+
+        val event = fake.assertEmitted("share")
+        assertThat(event.params["surface"]).isEqualTo(CanonicalScreenName.MY_SOUNDS)
+    }
+
+    @Test
+    fun `share increments lifetime_shares user property monotonically across calls`() {
+        whenSharingThe(givenASoundWithUri())
+        whenSharingThe(givenASoundWithUri())
+
+        assertThat(fake.userProperties["lifetime_shares"]).isEqualTo("2")
+    }
 
     @Test
     fun `share when sound Uri and resource are null must throw an exception`() {
