@@ -145,6 +145,9 @@ Hard rules that affect how to write code:
   `tracker.logScreen(CanonicalScreenName.X)` manually with a canonical literal.
 - The `first_*` variant is emitted by the wrapper when the event declares
   `hasFirstVariant = true` — call-sites never reference `first_*` directly.
+- In tests, substitute the tracker via `AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())`
+  and assert with `fake.assertEmitted(...)` / `fake.assertScreenView(...)` — never mock
+  `AnalyticsTracker` directly. The fake lives in `:commons_android` test fixtures.
 
 When adding a new track, follow `CONTRIBUTING.md` § "Analytics events 📊" — the
 naming rules, regression-test matrix, and DebugView / `adb logcat -s FA FA-SVC`
