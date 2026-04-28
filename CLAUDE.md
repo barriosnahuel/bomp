@@ -90,14 +90,23 @@ Igual que en la app:
 
 ## Pre-merge checklist (correr antes de commit + push)
 
-1. Smoke local: abrir directamente los HTML en el browser (doble clic o arrastrarlos a la
-   ventana — `file://...`). Es HTML estático sin fetch dinámico, **no hace falta levantar
-   ningún server**. Probar:
-   - `index.html` (landing V3)
-   - `privacy-policy.html`
-   - `data-safety.html`
-   - `404.html` (abrir como archivo — el comportamiento "ruta inexistente → 404" es
-     responsabilidad de GitHub Pages y se valida en deploy, no localmente)
+1. Smoke local: levantar un server local desde la raíz del worktree y probar las páginas
+   en `http://localhost:8000/`:
+   ```bash
+   python3 -m http.server 8000
+   ```
+   **Por qué no `file://`:** Chrome trata cada archivo `file://` como *unique security origin*
+   y dispara warnings tipo `Unsafe attempt to load URL ... from frame with URL ...` cuando
+   el `<audio preload="metadata">` o el widget de Ko-fi hacen sub-resource requests. Sirviendo
+   por `http://` esos warnings desaparecen y el smoke refleja mejor el entorno real (GitHub
+   Pages sirve por `https://`). Páginas a probar:
+   - `http://localhost:8000/` (landing V3)
+   - `http://localhost:8000/privacy-policy.html`
+   - `http://localhost:8000/data-safety.html`
+   - `404.html` queda fuera del smoke local: `python3 -m http.server` no tiene fallback a
+     `404.html` para rutas inexistentes (responde con su propia página 404 plain). El
+     comportamiento "ruta inexistente → `404.html` con tu chrome" es responsabilidad de
+     GitHub Pages y se valida en deploy, no localmente.
 2. Probar **light mode + dark mode + toggle manual con persistencia** (sin FOUC).
 3. **Tap del sticker hero**: audio reproduce, anillo radial se llena, `aria-pressed=true`.
 4. **DevTools → Disable JavaScript**: las 3 páginas siguen siendo navegables y los links
