@@ -60,12 +60,12 @@
         <nav aria-label="Tabla de contenidos">
           <h2 data-i18n="legal.toc.heading">Contenido</h2>
           <ol>
-            <li><a href="#confianza">01 · Encabezado de confianza</a></li>
-            <li><a href="#datos-audio">02 · Datos sensibles (audio)</a></li>
-            <li><a href="#terceros">03 · Ecosistema de terceros</a></li>
-            <li><a href="#menores">04 · Política de menores</a></li>
-            <li><a href="#arco">05 · Derechos del usuario (ARCO)</a></li>
-            <li><a href="#vigencia">06 · Vigencia y cambios</a></li>
+            <li><a href="#confianza" data-i18n="pp.toc.s01">01 · Encabezado de confianza</a></li>
+            <li><a href="#datos-audio" data-i18n="pp.toc.s02">02 · Datos sensibles (audio)</a></li>
+            <li><a href="#terceros" data-i18n="pp.toc.s03">03 · Ecosistema de terceros</a></li>
+            <li><a href="#menores" data-i18n="pp.toc.s04">04 · Política de menores</a></li>
+            <li><a href="#arco" data-i18n="pp.toc.s05">05 · Derechos del usuario (ARCO)</a></li>
+            <li><a href="#vigencia" data-i18n="pp.toc.s06">06 · Vigencia y cambios</a></li>
           </ol>
         </nav>
       </aside>
@@ -74,15 +74,12 @@
         <span class="legal__eyebrow" data-i18n="legal.eyebrow">Documento legal</span>
         <h1 class="legal__title">Privacy Policy</h1>
         <div class="legal__meta">
-          <span>App: <strong>Bomp</strong></span>
-          <span>Versión política: <strong>1.0</strong></span>
-          <span>Última actualización: <strong>2026-04-26</strong></span>
+          <span data-i18n-html="pp.meta.app">App: <strong>Bomp</strong></span>
+          <span data-i18n-html="pp.meta.version">Versión política: <strong>1.0</strong></span>
+          <span data-i18n-html="pp.meta.lastUpdated">Última actualización: <strong>2026-04-26</strong></span>
         </div>
 
-        <!-- Translation notice for non-default locales — body content stays in es-AR until a legal redactor produces translations. -->
-        <p class="legal__notice" data-i18n="legal.translation.notice" hidden>Este documento aún solo está disponible en español. Estamos trabajando en las traducciones.</p>
-
-        <p>
+        <p data-i18n-html="pp.intro">
           Esta política describe cómo Bomp ("nosotros", "la app") maneja los datos del usuario
           ("vos", "el Bomper"). Bomp es una app de soundboard local: los audios que importás
           viven en tu teléfono. La app no tiene cuentas ni nube de usuario; sí envía a Google
@@ -91,24 +88,24 @@
           <a href="data-safety.html">Data Safety</a>.
         </p>
 
-        <h2 id="confianza" tabindex="-1">01 · Encabezado de confianza</h2>
-        <p>
+        <h2 id="confianza" tabindex="-1" data-i18n="pp.toc.s01">01 · Encabezado de confianza</h2>
+        <p data-i18n-html="pp.s01.body">
           <strong>Bomp v1.0</strong>. Política de privacidad vigente desde el 2026-04-26.
           Distribución exclusiva por <a href="https://play.google.com/">Google Play</a> en Argentina y
           la región de habla hispana.
         </p>
 
-        <h2 id="datos-audio" tabindex="-1">02 · Datos sensibles (audio)</h2>
-        <p>
+        <h2 id="datos-audio" tabindex="-1" data-i18n="pp.toc.s02">02 · Datos sensibles (audio)</h2>
+        <p data-i18n-html="pp.s02.intro">
           Bomp guarda <strong>audios que vos elegís importar</strong> desde otras apps
           (WhatsApp, Telegram, WeChat) usando el sistema de "Compartir" de Android.
           La app necesita acceso a archivos de audio compartidos para esa operación.
         </p>
         <ul>
-          <li>Los audios se almacenan en el almacenamiento interno asignado a Bomp por Android.
+          <li data-i18n-html="pp.s02.li1">Los audios se almacenan en el almacenamiento interno asignado a Bomp por Android.
             Bomp <strong>no los sube a servidores del desarrollador</strong> ni los comparte
             automáticamente con terceros.</li>
-          <li><strong>Backup automático de Android.</strong> Bomp tiene habilitado el
+          <li data-i18n-html="pp.s02.li2"><strong>Backup automático de Android.</strong> Bomp tiene habilitado el
             <a href="https://developer.android.com/identity/data/autobackup">Auto Backup
             de Android</a>: si vos lo tenés activo en tu teléfono (Configuración del sistema →
             Sistema → Backup), Google respalda los datos de Bomp (incluidos los audios
@@ -116,35 +113,35 @@
             por la app, hasta 25 MB. Es Google quien gestiona ese backup; Bomp no lo controla
             ni accede a él, y podés desactivarlo desde la configuración de tu teléfono. Si
             preferís que tus audios no se respalden, desactivá el backup antes de importarlos.</li>
-          <li>Cuando vos compartís un audio desde Bomp hacia otra app, la transferencia ocurre
+          <li data-i18n-html="pp.s02.li3">Cuando vos compartís un audio desde Bomp hacia otra app, la transferencia ocurre
             a través del sistema de "Compartir" de Android; Bomp no tiene visibilidad sobre
             qué hace la app receptora.</li>
-          <li>Cuando borrás un audio desde la app, el archivo se elimina del almacenamiento
+          <li data-i18n-html="pp.s02.li4">Cuando borrás un audio desde la app, el archivo se elimina del almacenamiento
             local. Cuando desinstalás la app, todos los audios se eliminan junto con los
             datos de la app (el backup en tu Google Drive se purga según la política de
             Google Backup).</li>
         </ul>
 
-        <h2 id="terceros" tabindex="-1">03 · Ecosistema de terceros</h2>
-        <p>
+        <h2 id="terceros" tabindex="-1" data-i18n="pp.toc.s03">03 · Ecosistema de terceros</h2>
+        <p data-i18n="pp.s03.intro">
           Bomp utiliza servicios de Google integrados en el ecosistema Android:
         </p>
         <ul>
-          <li><strong>Google Play Services</strong> — sistema base de Google Play para distribución
+          <li data-i18n-html="pp.s03.li1"><strong>Google Play Services</strong> — sistema base de Google Play para distribución
             de la app y entrega de feature modules dinámicos (la pantalla "Agregar botón" se
             descarga bajo demanda).</li>
-          <li><strong>Firebase Crashlytics</strong> — diagnóstico de fallos. Recopila
+          <li data-i18n-html="pp.s03.li2"><strong>Firebase Crashlytics</strong> — diagnóstico de fallos. Recopila
             <em>logs de fallos</em> de forma pseudónima cuando la app crashea, para que podamos
             arreglar el bug. No se recopila contenido del usuario (audios, nombres de botones).</li>
-          <li><strong>Firebase Performance Monitoring</strong> — recopila
+          <li data-i18n-html="pp.s03.li3"><strong>Firebase Performance Monitoring</strong> — recopila
             <em>diagnósticos de rendimiento</em> agregados (tiempo de arranque, uso de memoria,
             latencias) con propósito de detectar regresiones release a release.</li>
-          <li><strong>Firebase Analytics</strong> — recopila <em>eventos agregados de uso</em>
+          <li data-i18n-html="pp.s03.li4"><strong>Firebase Analytics</strong> — recopila <em>eventos agregados de uso</em>
             (cantidad de Bomps, sesiones, interacciones con la UI) sin vincularlos a ningún
             usuario identificado, con propósito de entender patrones de uso y priorizar
             mejoras.</li>
         </ul>
-        <p>
+        <p data-i18n-html="pp.s03.body">
           Bomp <strong>no usa</strong>: redes de publicidad, tracking pixels, cookies de
           tracking, fingerprinting de dispositivo. <strong>Bomp no vende datos.</strong>
           Los datos pseudónimos que sí compartimos con Google Firebase (logs de fallos,
@@ -153,8 +150,8 @@
           están en <a href="data-safety.html">Data Safety</a>.
         </p>
 
-        <h2 id="menores" tabindex="-1">04 · Política de menores</h2>
-        <p>
+        <h2 id="menores" tabindex="-1" data-i18n="pp.toc.s04">04 · Política de menores</h2>
+        <p data-i18n-html="pp.s04.body1">
           Bomp está diseñado para uso general y no se dirige a menores de 13 años. La app no
           requiere creación de cuenta, no pide email, ni recolecta nombre, edad ni datos que
           identifiquen directamente al usuario. Si un menor utiliza la app, los únicos datos que
@@ -163,7 +160,7 @@
           rendimiento, interacciones agregadas), enviados a Google Firebase sin asociarse a
           información identificable.
         </p>
-        <p>
+        <p data-i18n-html="pp.s04.body2">
           Bomp se alinea con los lineamientos de COPPA (USA) y GDPR (UE) por diseño:
           no recolectamos datos directamente identificables. Si sos madre/padre/tutor y
           querés que purguemos el identificador de instalación pseudónimo asociado al
@@ -171,50 +168,50 @@
           <a href="#arco">Derechos del usuario (ARCO)</a>.
         </p>
 
-        <h2 id="arco" tabindex="-1">05 · Derechos del usuario (ARCO)</h2>
-        <p>
+        <h2 id="arco" tabindex="-1" data-i18n="pp.toc.s05">05 · Derechos del usuario (ARCO)</h2>
+        <p data-i18n="pp.s05.intro">
           Bajo la Ley 25.326 (Argentina) y el GDPR (UE), tenés derecho a:
         </p>
         <ul>
-          <li><strong>Acceder</strong> a los datos en tu teléfono: abrí la app y vas a ver
+          <li data-i18n-html="pp.s05.li1"><strong>Acceder</strong> a los datos en tu teléfono: abrí la app y vas a ver
             todos los audios y botones que importaste.</li>
-          <li><strong>Rectificarlos</strong>: renombrá o re-importá audios desde la app.</li>
-          <li><strong>Cancelarlos</strong>: borralos desde la app, o desinstalá Bomp para
+          <li data-i18n-html="pp.s05.li2"><strong>Rectificarlos</strong>: renombrá o re-importá audios desde la app.</li>
+          <li data-i18n-html="pp.s05.li3"><strong>Cancelarlos</strong>: borralos desde la app, o desinstalá Bomp para
             borrarlos todos.</li>
-          <li><strong>Oponerte</strong> al tratamiento de los datos pseudónimos en Firebase.</li>
+          <li data-i18n-html="pp.s05.li4"><strong>Oponerte</strong> al tratamiento de los datos pseudónimos en Firebase.</li>
         </ul>
-        <p>
+        <p data-i18n="pp.s05.body2">
           Para los datos pseudónimos que viven en Google Firebase (logs de fallos, diagnósticos
           de rendimiento, interacciones agregadas), Bomp no almacena tu nombre, email ni
           teléfono — solo un identificador opaco de instalación que Google asigna al instalar
           la app. Para ejercer derechos sobre esos datos:
         </p>
         <ul>
-          <li><strong>Desinstalá la app</strong>: corta la recolección y Google purga
+          <li data-i18n-html="pp.s05.li5"><strong>Desinstalá la app</strong>: corta la recolección y Google purga
             eventualmente los datos asociados al identificador.</li>
-          <li><strong>Reseteá tu Advertising ID</strong> desde Configuración de Android →
+          <li data-i18n-html="pp.s05.li6"><strong>Reseteá tu Advertising ID</strong> desde Configuración de Android →
             Privacidad → Anuncios. Esto desvincula sesiones futuras.</li>
-          <li><strong>Pedido manual</strong>: escribinos a
+          <li data-i18n-html="pp.s05.li7"><strong>Pedido manual</strong>: escribinos a
             <a href="mailto:barrios.nahuel+bomp@gmail.com"><code>barrios.nahuel+bomp@gmail.com</code></a>
             con tu Firebase Installation ID y borramos el registro asociado en Firebase Console.</li>
-          <li><strong>Vía Google</strong>:
+          <li data-i18n-html="pp.s05.li8"><strong>Vía Google</strong>:
             <a href="https://safety.google/privacy/data/">safety.google/privacy/data</a>
             te permite pedir borrado a Google directamente, ya que actúa como sub-procesador.</li>
         </ul>
-        <p>
+        <p data-i18n="pp.s05.body3">
           Bajo GDPR Art. 11, como Bomp no puede identificarte sin tu cooperación (no
           almacenamos información que te conecte con tu Installation ID), no estamos obligados
           a mantener un mecanismo de identificación adicional. Tu cooperación, mandando el
           Installation ID, es lo que habilita el borrado puntual.
         </p>
 
-        <h2 id="vigencia" tabindex="-1">06 · Vigencia y cambios</h2>
-        <p>
+        <h2 id="vigencia" tabindex="-1" data-i18n="pp.toc.s06">06 · Vigencia y cambios</h2>
+        <p data-i18n-html="pp.s06.body1">
           Esta política entra en vigencia el 2026-04-26. Si modificamos términos significativos,
           actualizaremos la fecha de "Última actualización" arriba y publicaremos un changelog
           en <a href="https://github.com/barriosnahuel/bomp/releases">GitHub Releases</a>.
         </p>
-        <p>
+        <p data-i18n-html="pp.s06.body2">
           El código fuente de Bomp está disponible bajo licencia
           <a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL-3.0</a> en
           <a href="https://github.com/barriosnahuel/bomp">github.com/barriosnahuel/bomp</a>.
@@ -274,14 +271,5 @@
   <script src="assets/js/i18n.js" defer></script>
   <script src="assets/js/theme-toggle.js" defer></script>
   <script src="assets/js/anchor-focus.js" defer></script>
-  <!-- legal-notice.js: shows the translation notice when locale != es-AR -->
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      var notice = document.querySelector(".legal__notice");
-      if (!notice) return;
-      var locale = (window.BompI18n && window.BompI18n.locale && window.BompI18n.locale()) || "es-AR";
-      if (locale !== "es-AR") notice.removeAttribute("hidden");
-    });
-  </script>
 </body>
 </html>
