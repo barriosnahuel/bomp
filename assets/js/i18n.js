@@ -38,7 +38,7 @@
       "head.title.404": "404 — Bomp",
       "head.description.index": "Guardá los audios que te llegan por WhatsApp, Telegram o WeChat, y Bompealos cuando los necesites. Como stickers, pero con la voz de tu gente.",
       "head.description.privacy": "Política de privacidad de Bomp — qué datos se manejan, cómo se almacenan, qué hacen los terceros, derechos del usuario.",
-      "head.description.dataSafety": "Espejo legible del CSV de Data Safety de Google Play: qué datos recolecta Bomp, por qué, si se comparten y si son opcionales.",
+      "head.description.dataSafety": "Detalle de qué datos recolecta Bomp en su ficha de Google Play, por qué, si se comparten y si son opcionales.",
       "skip.link": "Saltar al contenido",
       "nav.howItWorks": "Cómo funciona",
       "nav.theApp": "La app",
@@ -141,7 +141,8 @@
       "legal.toc.heading": "Contenido",
       "legal.back.hub": "← Volver al hub",
       "legal.back.top": "↑ Volver arriba",
-      "legal.translation.notice": "Este documento aún solo está disponible en español. Estamos trabajando en las traducciones."
+      "legal.translation.notice": "Este documento aún solo está disponible en español. Estamos trabajando en las traducciones.",
+      "footer.embeds.notice": "Los botones de donación de este sitio cargan recursos de Cafecito y Ko-fi (CDNs externos). Cada uno se rige por su propia política de privacidad."
     },
 
     // ── es-419 — neutral LATAM tuteo (no Cafecito; solo Ko-fi) ─
@@ -153,7 +154,7 @@
       "head.title.404": "404 — Bomp",
       "head.description.index": "Guarda los audios que te llegan por WhatsApp, Telegram o WeChat, y Bompéalos cuando los necesites. Como stickers, pero con la voz de tu gente.",
       "head.description.privacy": "Política de privacidad de Bomp — qué datos se manejan, cómo se almacenan, qué hacen los terceros, derechos del usuario.",
-      "head.description.dataSafety": "Espejo legible del CSV de Data Safety de Google Play: qué datos recolecta Bomp, por qué, si se comparten y si son opcionales.",
+      "head.description.dataSafety": "Detalle de qué datos recolecta Bomp en su ficha de Google Play, por qué, si se comparten y si son opcionales.",
       "skip.link": "Saltar al contenido",
       "nav.howItWorks": "Cómo funciona",
       "nav.theApp": "La app",
@@ -256,7 +257,8 @@
       "legal.toc.heading": "Contenido",
       "legal.back.hub": "← Volver al hub",
       "legal.back.top": "↑ Volver arriba",
-      "legal.translation.notice": "Este documento aún solo está disponible en español rioplatense. Estamos trabajando en las traducciones."
+      "legal.translation.notice": "Este documento aún solo está disponible en español rioplatense. Estamos trabajando en las traducciones.",
+      "footer.embeds.notice": "El botón de donación de este sitio carga recursos de Ko-fi (CDN externo). Se rige por la política de privacidad de Ko-fi."
     },
 
     // ── es-ES — Spain Spanish (Cafecito hidden; only Ko-fi) ───
@@ -268,7 +270,7 @@
       "head.title.404": "404 — Bomp",
       "head.description.index": "Guarda los audios que te llegan por WhatsApp, Telegram o WeChat, y Bompéalos cuando los necesites. Como stickers, pero con la voz de tu gente.",
       "head.description.privacy": "Política de privacidad de Bomp — qué datos se manejan, cómo se almacenan, qué hacen los terceros, derechos del usuario.",
-      "head.description.dataSafety": "Espejo legible del CSV de Data Safety de Google Play: qué datos recolecta Bomp, por qué, si se comparten y si son opcionales.",
+      "head.description.dataSafety": "Detalle de qué datos recolecta Bomp en su ficha de Google Play, por qué, si se comparten y si son opcionales.",
       "skip.link": "Saltar al contenido",
       "nav.howItWorks": "Cómo funciona",
       "nav.theApp": "La app",
@@ -371,7 +373,8 @@
       "legal.toc.heading": "Contenido",
       "legal.back.hub": "← Volver al hub",
       "legal.back.top": "↑ Volver arriba",
-      "legal.translation.notice": "Este documento solo está disponible en español rioplatense por ahora. Estamos trabajando en las traducciones."
+      "legal.translation.notice": "Este documento solo está disponible en español rioplatense por ahora. Estamos trabajando en las traducciones.",
+      "footer.embeds.notice": "El botón de donación de este sitio carga recursos de Ko-fi (CDN externo). Se rige por la política de privacidad de Ko-fi."
     },
 
     // ── en — English ──────────────────────────
@@ -383,7 +386,7 @@
       "head.title.404": "404 — Bomp",
       "head.description.index": "Save the audios you get on WhatsApp, Telegram or WeChat, and Bomp them when you need to. Like stickers, but with the voices of your people.",
       "head.description.privacy": "Bomp's privacy policy — what data is handled, how it is stored, what third parties do, user rights.",
-      "head.description.dataSafety": "Readable mirror of Bomp's Google Play Data Safety CSV: what data is collected, why, whether shared, and whether optional.",
+      "head.description.dataSafety": "What data Bomp collects in its Google Play listing, why, whether shared, and whether optional.",
       "skip.link": "Skip to content",
       "nav.howItWorks": "How it works",
       "nav.theApp": "The app",
@@ -486,7 +489,8 @@
       "legal.toc.heading": "Contents",
       "legal.back.hub": "← Back to the hub",
       "legal.back.top": "↑ Back to top",
-      "legal.translation.notice": "This document is only available in Spanish (Río de la Plata) for now. We're working on translations."
+      "legal.translation.notice": "This document is only available in Spanish (Río de la Plata) for now. We're working on translations.",
+      "footer.embeds.notice": "The donation button on this site loads resources from Ko-fi (external CDN). Subject to Ko-fi's privacy policy."
     },
 
     // ── pt-BR — Brazilian Portuguese ──────────
@@ -498,7 +502,7 @@
       "head.title.404": "404 — Bomp",
       "head.description.index": "Salve os áudios que chegam pelo WhatsApp, Telegram ou WeChat, e Bompe quando precisar. Como stickers, mas com a voz da sua gente.",
       "head.description.privacy": "Política de privacidade do Bomp — quais dados são tratados, como são armazenados, o que terceiros fazem, direitos do usuário.",
-      "head.description.dataSafety": "Espelho legível do CSV de Data Safety do Google Play: quais dados o Bomp coleta, por quê, se compartilha e se é opcional.",
+      "head.description.dataSafety": "Detalhes dos dados que o Bomp coleta em sua ficha do Google Play: quais, por quê, se compartilha e se é opcional.",
       "skip.link": "Pular para o conteúdo",
       "nav.howItWorks": "Como funciona",
       "nav.theApp": "O app",
@@ -601,7 +605,8 @@
       "legal.toc.heading": "Conteúdo",
       "legal.back.hub": "← Voltar pro hub",
       "legal.back.top": "↑ Voltar ao topo",
-      "legal.translation.notice": "Este documento ainda só está disponível em espanhol rio-platense. Estamos trabalhando nas traduções."
+      "legal.translation.notice": "Este documento ainda só está disponível em espanhol rio-platense. Estamos trabalhando nas traduções.",
+      "footer.embeds.notice": "O botão de doação deste site carrega recursos do Ko-fi (CDN externo). Sujeito à política de privacidade do Ko-fi."
     }
   };
 

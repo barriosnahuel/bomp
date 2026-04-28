@@ -83,15 +83,12 @@
         <p class="legal__notice" data-i18n="legal.translation.notice" hidden>Este documento aún solo está disponible en español. Estamos trabajando en las traducciones.</p>
 
         <p>
-          <span class="legal__badge">No compartimos datos con terceros</span>
-        </p>
-
-        <p>
-          <!-- TODO: copy legal final por redactor humano. Este placeholder cumple
-               estructuralmente el formato Privacy Policy de Google Play. -->
           Esta política describe cómo Bomp ("nosotros", "la app") maneja los datos del usuario
-          ("vos", "el Bomper"). Bomp es una app de soundboard local: los audios viven en tu
-          teléfono. No tenemos servidores, no tenemos cuentas, no hay nube.
+          ("vos", "el Bomper"). Bomp es una app de soundboard local: los audios que importás
+          viven en tu teléfono. La app no tiene cuentas ni nube de usuario; sí envía a Google
+          Firebase un conjunto acotado de datos pseudónimos (logs de fallos, diagnósticos de
+          rendimiento e interacciones agregadas) que se detalla en
+          <a href="data-safety.html">Data Safety</a>.
         </p>
 
         <h2 id="confianza" tabindex="-1">01 · Encabezado de confianza</h2>
@@ -108,58 +105,70 @@
           La app necesita acceso a archivos de audio compartidos para esa operación.
         </p>
         <ul>
-          <li>Los audios se almacenan <strong>solo en tu teléfono</strong>, en el almacenamiento
-            interno asignado a Bomp por Android.</li>
-          <li>No se suben a ningún servidor. No se sincronizan con la nube. No se comparten
+          <li>Los audios se almacenan en el almacenamiento interno asignado a Bomp por Android.
+            Bomp <strong>no los sube a servidores del desarrollador</strong> ni los comparte
             automáticamente con terceros.</li>
+          <li><strong>Backup automático de Android.</strong> Bomp tiene habilitado el
+            <a href="https://developer.android.com/identity/data/autobackup">Auto Backup
+            de Android</a>: si vos lo tenés activo en tu teléfono (Configuración del sistema →
+            Sistema → Backup), Google respalda los datos de Bomp (incluidos los audios
+            importados) en <em>tu propio</em> Google Drive, en una zona privada accesible solo
+            por la app, hasta 25 MB. Es Google quien gestiona ese backup; Bomp no lo controla
+            ni accede a él, y podés desactivarlo desde la configuración de tu teléfono. Si
+            preferís que tus audios no se respalden, desactivá el backup antes de importarlos.</li>
           <li>Cuando vos compartís un audio desde Bomp hacia otra app, la transferencia ocurre
             a través del sistema de "Compartir" de Android; Bomp no tiene visibilidad sobre
             qué hace la app receptora.</li>
-          <li>Cuando borrás un audio en Bomp (swipe a la izquierda), el archivo se elimina del
-            almacenamiento local. Cuando desinstalás la app, todos los audios se eliminan junto
-            con los datos de la app.</li>
+          <li>Cuando borrás un audio desde la app, el archivo se elimina del almacenamiento
+            local. Cuando desinstalás la app, todos los audios se eliminan junto con los
+            datos de la app (el backup en tu Google Drive se purga según la política de
+            Google Backup).</li>
         </ul>
 
         <h2 id="terceros" tabindex="-1">03 · Ecosistema de terceros</h2>
         <p>
-          Bomp utiliza dos servicios de Google integrados en el ecosistema Android:
+          Bomp utiliza servicios de Google integrados en el ecosistema Android:
         </p>
         <ul>
           <li><strong>Google Play Services</strong> — sistema base de Google Play para distribución
             de la app y entrega de feature modules dinámicos (la pantalla "Agregar botón" se
             descarga bajo demanda).</li>
           <li><strong>Firebase Crashlytics</strong> — diagnóstico de fallos. Recopila
-            <em>logs de fallos</em> y <em>diagnósticos de rendimiento</em> de forma anónima cuando
-            la app crashea, para que podamos arreglar el bug. No se recopila contenido del usuario
-            (audios, nombres de botones).</li>
+            <em>logs de fallos</em> de forma pseudónima cuando la app crashea, para que podamos
+            arreglar el bug. No se recopila contenido del usuario (audios, nombres de botones).</li>
+          <li><strong>Firebase Performance Monitoring</strong> — recopila
+            <em>diagnósticos de rendimiento</em> agregados (tiempo de arranque, uso de memoria,
+            latencias) con propósito de detectar regresiones release a release.</li>
+          <li><strong>Firebase Analytics</strong> — recopila <em>eventos agregados de uso</em>
+            (cantidad de Bomps, sesiones, interacciones con la UI) sin vincularlos a ningún
+            usuario identificado, con propósito de entender patrones de uso y priorizar
+            mejoras.</li>
         </ul>
         <p>
-          <strong>Sitio público (gh-pages).</strong> El hub de Bomp embebe dos servicios de donaciones
-          (<a href="https://cafecito.app/barriosnahuel">Cafecito</a> y
-          <a href="https://ko-fi.com/Y8Y31YIHWK">Ko-fi</a>). Cargan recursos desde sus propios CDNs y
-          se rigen por sus propias políticas de privacidad. Si no querés contactarte con ellos,
-          simplemente no toques los botones de donar.
-        </p>
-        <p>
-          Bomp <strong>no usa</strong>: servicios de analytics de uso, redes de publicidad,
-          tracking pixels, cookies de tracking, fingerprinting de dispositivo. Bomp no vende
-          ni cede tus datos a nadie.
-        </p>
-        <p>
-          Detalle exhaustivo de los datos recopilados, su propósito y el cifrado en tránsito:
-          ver <a href="data-safety.html">Data Safety</a>.
+          Bomp <strong>no usa</strong>: redes de publicidad, tracking pixels, cookies de
+          tracking, fingerprinting de dispositivo. <strong>Bomp no vende datos.</strong>
+          Los datos pseudónimos que sí compartimos con Google Firebase (logs de fallos,
+          diagnósticos de rendimiento, interacciones agregadas) se procesan con propósito
+          de diagnóstico y analytics agregados; el detalle exhaustivo y el cifrado en tránsito
+          están en <a href="data-safety.html">Data Safety</a>.
         </p>
 
         <h2 id="menores" tabindex="-1">04 · Política de menores</h2>
         <p>
-          Bomp está diseñado para uso general y no recopila intencionalmente datos de menores
-          de 13 años. La app no requiere creación de cuenta, no pide email, ni recolecta datos
-          que permitan identificar a un menor. Si un menor utiliza la app, ningún dato sale del
-          dispositivo (más allá de los logs de fallo anónimos de Firebase Crashlytics).
+          Bomp está diseñado para uso general y no se dirige a menores de 13 años. La app no
+          requiere creación de cuenta, no pide email, ni recolecta nombre, edad ni datos que
+          identifiquen directamente al usuario. Si un menor utiliza la app, los únicos datos que
+          salen del dispositivo son los pseudónimos descritos en
+          <a href="data-safety.html">Data Safety</a> (logs de fallos, diagnósticos de
+          rendimiento, interacciones agregadas), enviados a Google Firebase sin asociarse a
+          información identificable.
         </p>
         <p>
-          Bomp cumple con los lineamientos de COPPA (USA) y GDPR (UE) por diseño: <strong>no hay
-          datos personales que recolectar</strong>.
+          Bomp se alinea con los lineamientos de COPPA (USA) y GDPR (UE) por diseño:
+          no recolectamos datos directamente identificables. Si sos madre/padre/tutor y
+          querés que purguemos el identificador de instalación pseudónimo asociado al
+          dispositivo de un menor, escribinos por el canal de
+          <a href="#arco">Derechos del usuario (ARCO)</a>.
         </p>
 
         <h2 id="arco" tabindex="-1">05 · Derechos del usuario (ARCO)</h2>
@@ -167,20 +176,36 @@
           Bajo la Ley 25.326 (Argentina) y el GDPR (UE), tenés derecho a:
         </p>
         <ul>
-          <li><strong>Acceder</strong> a los datos que Bomp tiene sobre vos.
-            <em>Respuesta:</em> los datos viven en tu teléfono. Abrí la app y vas a verlos
-            todos.</li>
-          <li><strong>Rectificarlos.</strong> Renombrá o re-importá los audios desde la app.</li>
-          <li><strong>Cancelarlos.</strong> Borralos desde la app (swipe a la izquierda) o
-            desinstalá Bomp.</li>
-          <li><strong>Oponerte</strong> a su tratamiento. Como no salen de tu teléfono, no hay
-            tratamiento del lado del desarrollador.</li>
+          <li><strong>Acceder</strong> a los datos en tu teléfono: abrí la app y vas a ver
+            todos los audios y botones que importaste.</li>
+          <li><strong>Rectificarlos</strong>: renombrá o re-importá audios desde la app.</li>
+          <li><strong>Cancelarlos</strong>: borralos desde la app, o desinstalá Bomp para
+            borrarlos todos.</li>
+          <li><strong>Oponerte</strong> al tratamiento de los datos pseudónimos en Firebase.</li>
         </ul>
         <p>
-          Para los logs de Firebase Crashlytics, podés solicitar el borrado de tu identificador
-          de instalación enviando un email a:
-          <!-- TODO: confirmar email ARCO operativo antes del release a Play. -->
-          <code>arco@bomp.app</code> (placeholder — pendiente de configurar).
+          Para los datos pseudónimos que viven en Google Firebase (logs de fallos, diagnósticos
+          de rendimiento, interacciones agregadas), Bomp no almacena tu nombre, email ni
+          teléfono — solo un identificador opaco de instalación que Google asigna al instalar
+          la app. Para ejercer derechos sobre esos datos:
+        </p>
+        <ul>
+          <li><strong>Desinstalá la app</strong>: corta la recolección y Google purga
+            eventualmente los datos asociados al identificador.</li>
+          <li><strong>Reseteá tu Advertising ID</strong> desde Configuración de Android →
+            Privacidad → Anuncios. Esto desvincula sesiones futuras.</li>
+          <li><strong>Pedido manual</strong>: escribinos a
+            <a href="mailto:barrios.nahuel+bomp@gmail.com"><code>barrios.nahuel+bomp@gmail.com</code></a>
+            con tu Firebase Installation ID y borramos el registro asociado en Firebase Console.</li>
+          <li><strong>Vía Google</strong>:
+            <a href="https://safety.google/privacy/data/">safety.google/privacy/data</a>
+            te permite pedir borrado a Google directamente, ya que actúa como sub-procesador.</li>
+        </ul>
+        <p>
+          Bajo GDPR Art. 11, como Bomp no puede identificarte sin tu cooperación (no
+          almacenamos información que te conecte con tu Installation ID), no estamos obligados
+          a mantener un mecanismo de identificación adicional. Tu cooperación, mandando el
+          Installation ID, es lo que habilita el borrado puntual.
         </p>
 
         <h2 id="vigencia" tabindex="-1">06 · Vigencia y cambios</h2>

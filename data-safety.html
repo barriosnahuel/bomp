@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title data-i18n="head.title.dataSafety">Data Safety — Bomp</title>
-  <meta name="description" content="Espejo legible del CSV de Data Safety de Google Play: qué datos recolecta Bomp, por qué, si se comparten y si son opcionales." data-i18n-attr="content:head.description.dataSafety" />
+  <meta name="description" content="Detalle de qué datos recolecta Bomp en su ficha de Google Play, por qué, si se comparten y si son opcionales." data-i18n-attr="content:head.description.dataSafety" />
   <meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)" />
   <link rel="canonical" href="https://barriosnahuel.github.io/bomp/data-safety.html" />
@@ -60,11 +60,9 @@
         <nav aria-label="Tabla de contenidos">
           <h2 data-i18n="legal.toc.heading">Contenido</h2>
           <ol>
-            <li><a href="#resumen">01 · Resumen rápido</a></li>
-            <li><a href="#datos">02 · Datos recolectados</a></li>
-            <li><a href="#cuentas">03 · Cuentas y eliminación</a></li>
-            <li><a href="#cifrado">04 · Cifrado en tránsito</a></li>
-            <li><a href="#fuente">05 · Fuente del CSV</a></li>
+            <li><a href="#datos">01 · Datos recolectados</a></li>
+            <li><a href="#cuentas">02 · Cuentas y eliminación</a></li>
+            <li><a href="#cifrado">03 · Cifrado en tránsito</a></li>
           </ol>
         </nav>
       </aside>
@@ -74,28 +72,27 @@
         <h1 class="legal__title">Data Safety</h1>
         <div class="legal__meta">
           <span>App: <strong>Bomp</strong></span>
-          <span>CSV exportado: <strong>Play Console</strong></span>
+          <span>Fuente: <strong>ficha de Bomp en Google Play</strong></span>
           <span>Última actualización: <strong>2026-04-26</strong></span>
         </div>
 
         <p class="legal__notice" data-i18n="legal.translation.notice" hidden>Este documento aún solo está disponible en español. Estamos trabajando en las traducciones.</p>
 
-        <h2 id="resumen" tabindex="-1">01 · Resumen rápido</h2>
         <p>
-          <span class="legal__badge">Cifrado en tránsito</span>
-          <span class="legal__badge">No requiere cuenta</span>
-          <span class="legal__badge legal__badge--no">No vende datos</span>
-        </p>
-        <p>
-          Bomp recolecta una cantidad mínima de datos, exclusivamente para hacer que la app
-          funcione y para diagnosticar fallos. <strong>No vendemos ni compartimos datos con
-          terceros para fines comerciales.</strong>
+          Esta página replica las declaraciones de Bomp en el formulario de Data Safety de
+          Google Play. La fuente de verdad pública es la
+          <a href="https://play.google.com/store/apps/details?id=com.github.barriosnahuel.vossosunboton">ficha
+          de Bomp en Google Play</a>; si hubiera un conflicto entre esta página y lo que
+          figura ahí, gana Play.
         </p>
 
-        <h2 id="datos" tabindex="-1">02 · Datos recolectados</h2>
+        <!-- Maintenance note: this page is the human-readable mirror of
+             data_safety_export.csv (lives in push-me-backlog/google-play-console-policies/).
+             Keep them in sync on every Play submission. -->
+
+        <h2 id="datos" tabindex="-1">01 · Datos recolectados</h2>
         <p>
-          Esta tabla mapea 1:1 las respuestas marcadas como <code>true</code> en el CSV de
-          Play Console (<code>data_safety_export.csv</code>):
+          Estos son los tipos de datos que Bomp declara recolectar en su ficha de Data Safety:
         </p>
         <table class="legal__table">
           <thead>
@@ -113,34 +110,48 @@
               <td>Funcionalidad de la app: son los audios que vos elegís Bompear. Se almacenan
                 solo en tu teléfono.</td>
               <td>No.</td>
-              <td>Sí — vos decidís qué audios importar.</td>
+              <td>No — el control que tenés es decidir qué archivos importar voluntariamente;
+                una vez importados, el almacenamiento local de Bomp los retiene hasta que
+                vos los borres.</td>
             </tr>
             <tr>
               <td><strong>Logs de fallos</strong><br><small>Stack traces y estado del dispositivo
                 cuando la app crashea.</small></td>
               <td>Diagnóstico de fallos vía Firebase Crashlytics. Nos permite arreglar bugs.</td>
-              <td>Sí, con Google Firebase (procesador del dato).</td>
-              <td>No — los logs anónimos se envían cuando hay un crash.</td>
+              <td>No (solo recolectado). Procesado por Google Firebase como sub-procesador.</td>
+              <td>No — los logs pseudónimos se envían cuando hay un crash.</td>
             </tr>
             <tr>
-              <td><strong>Diagnósticos de rendimiento</strong><br><small>Métricas anónimas de uso
-                de memoria, tiempo de arranque, etc.</small></td>
-              <td>Detección de regresiones de rendimiento vía Firebase.</td>
-              <td>Sí, con Google Firebase.</td>
+              <td><strong>Diagnósticos de rendimiento</strong><br><small>Métricas pseudónimas de
+                uso de memoria, tiempo de arranque, latencias.</small></td>
+              <td>Detección de regresiones de rendimiento vía Firebase Performance Monitoring.</td>
+              <td>No (solo recolectado). Procesado por Google Firebase como sub-procesador.</td>
               <td>No.</td>
             </tr>
             <tr>
               <td><strong>Interacciones con la app</strong><br><small>Eventos agregados (cantidad
                 de Bomps, sesiones).</small></td>
-              <td>Entender patrones de uso para priorizar mejoras. Sin asociar a ningún usuario
-                identificado.</td>
-              <td>Sí, con Google Firebase.</td>
+              <td>Entender patrones de uso para priorizar mejoras vía Firebase Analytics.
+                Sin asociar a ningún usuario identificado.</td>
+              <td>No (solo recolectado). Procesado por Google Firebase como sub-procesador.</td>
               <td>No.</td>
             </tr>
           </tbody>
         </table>
 
-        <h2 id="cuentas" tabindex="-1">03 · Cuentas y eliminación</h2>
+        <p>
+          <strong>Backup automático de Android.</strong> Bomp tiene habilitado el
+          <a href="https://developer.android.com/identity/data/autobackup">Auto Backup de
+          Android</a>: si lo tenés activo en tu teléfono, Google respalda los datos de la
+          app (incluidos los audios importados) en <em>tu propio</em> Google Drive, en una
+          zona privada accesible solo por la app, hasta 25 MB. Esto no aparece en la tabla
+          porque el formulario de Data Safety de Play declara solo lo que la app comparte
+          con el desarrollador o con terceros: el backup va a tu cuenta de Google y es
+          gestionado por Google, no por Bomp. Podés desactivarlo desde Configuración del
+          sistema → Sistema → Backup.
+        </p>
+
+        <h2 id="cuentas" tabindex="-1">02 · Cuentas y eliminación</h2>
         <p>
           <strong>Bomp no requiere creación de cuenta.</strong> No usás email, no usás contraseña,
           no usás OAuth, no usás SIM. La app abre y funciona.
@@ -150,33 +161,25 @@
           cuenta". Los datos viven en tu teléfono y los borrás vos:
         </p>
         <ul>
-          <li>Borrar audios uno a uno: swipe a la izquierda en la lista de Bomp.</li>
+          <li>Borrar audios uno a uno desde la lista de Bomp.</li>
           <li>Borrar todos los audios: desinstalá la app desde el sistema. Android limpia
             el almacenamiento asignado a Bomp.</li>
-          <li>Para los logs anónimos en Firebase: ver
+          <li>Para los datos pseudónimos en Firebase: ver
             <a href="privacy-policy.html#arco">Privacy Policy → Derechos ARCO</a>.</li>
         </ul>
-
-        <h2 id="cifrado" tabindex="-1">04 · Cifrado en tránsito</h2>
         <p>
-          <span class="legal__badge">Sí, los datos se cifran en tránsito</span>
+          <strong>Sobre el flujo de borrado en Play.</strong> En la ficha de Bomp en Play
+          declaramos que la app no provee un flujo de auto-servicio de eliminación de datos.
+          La razón: los datos en tu teléfono se borran al desinstalar, y los datos pseudónimos
+          en Firebase no están asociados a una cuenta que se pueda "cerrar"; el procedimiento
+          manual está en <a href="privacy-policy.html#arco">Privacy Policy → Derechos ARCO</a>.
         </p>
+
+        <h2 id="cifrado" tabindex="-1">03 · Cifrado en tránsito</h2>
         <p>
           Toda la comunicación entre Bomp y los servidores de Google Firebase utiliza HTTPS
           (TLS 1.2 o superior). Las llamadas a Google Play Services siguen el estándar de
           cifrado del SDK oficial.
-        </p>
-
-        <h2 id="fuente" tabindex="-1">05 · Fuente del CSV</h2>
-        <p>
-          Esta página es un espejo legible del archivo
-          <code>data_safety_export.csv</code> exportado desde Google Play Console.
-          La fuente de verdad es el CSV; si hay un conflicto entre lo que dice esta página y
-          lo que dice Play Console, gana Play Console.
-        </p>
-        <p>
-          Cualquier cambio en el CSV de Play (agregar un tipo de dato, cambiar un propósito)
-          dispara una actualización manual de esta página antes del próximo release.
         </p>
 
         <div class="legal__back">
