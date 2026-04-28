@@ -37,14 +37,21 @@
   font-size: 20px;
   letter-spacing: -0.02em;
 }
-.l-wordmark__dot {
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-pill);
+.l-wordmark__mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 32% 68% 70% 30% / 30% 30% 70% 70%;
   background: var(--acid-400);
-  box-shadow: 0 0 0 3px var(--ink-1000);
+  color: var(--ink-1000);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transform: rotate(-4deg);
 }
-[data-theme="dark"] .l-wordmark__dot { box-shadow: 0 0 0 3px var(--paper); }
+.l-wordmark__mark-play {
+  width: 14px;
+  height: 14px;
+}
 
 .l-nav {
   display: flex;
