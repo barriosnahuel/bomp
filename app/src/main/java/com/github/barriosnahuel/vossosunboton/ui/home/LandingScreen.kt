@@ -56,6 +56,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
@@ -82,6 +84,20 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val context = LocalContext.current
     val tabBackStack = remember { mutableStateListOf<AppTab>() }
     var isAboutVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedTab, isAboutVisible, isSearchVisible) {
+        val name =
+            when {
+                isSearchVisible -> CanonicalScreenName.SEARCH_SOUND
+                isAboutVisible -> CanonicalScreenName.ABOUT
+                selectedTab == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
+                selectedTab == AppTab.EXPLORE_SOUNDS -> CanonicalScreenName.EXPLORE_SOUNDS
+                else -> null
+            }
+        name?.let {
+            AnalyticsTrackerProvider.get(context.applicationContext).logScreen(it)
+        }
+    }
 
     if (isAboutVisible) {
         AboutScreen(onBack = { isAboutVisible = false })
@@ -139,7 +155,15 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             modifier = Modifier.padding(innerPadding),
             onPlayClick = { sound -> viewModel.playOrStop(sound) },
             onSeek = { positionMs -> viewModel.seekTo(positionMs) },
-            onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
+            onShareClick = { sound ->
+                val surface =
+                    if (selectedTab == AppTab.MY_SOUNDS) {
+                        CanonicalScreenName.MY_SOUNDS
+                    } else {
+                        CanonicalScreenName.EXPLORE_SOUNDS
+                    }
+                ShareFeature.instance.share(context, sound, surface)
+            },
             onDelete = { sound -> viewModel.deleteSound(sound) },
             onPinClick = { sound -> viewModel.togglePin(sound) },
             onEdit = { sound ->
@@ -159,7 +183,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onClose = viewModel::hideSearch,
             onPlayClick = viewModel::playOrStop,
             onSeek = viewModel::seekTo,
-            onShareClick = { sound -> ShareFeature.instance.share(context, sound) },
+            onShareClick = { sound -> ShareFeature.instance.share(context, sound, CanonicalScreenName.SEARCH_SOUND) },
             onPinClick = viewModel::togglePin,
             onDelete = { sound ->
                 viewModel.hideSearch()
@@ -275,17 +299,17 @@ private fun AppBottomBar(
     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceVariant) {
         NavigationBarItem(
             colors = itemColors,
-            selected = selectedTab == AppTab.HOME,
-            onClick = { onTabSelected(AppTab.HOME) },
-            icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.app_navigation_menu_item_home)) },
-            label = { Text(stringResource(R.string.app_navigation_menu_item_home)) },
+            selected = selectedTab == AppTab.MY_SOUNDS,
+            onClick = { onTabSelected(AppTab.MY_SOUNDS) },
+            icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.app_navigation_menu_item_my_sounds)) },
+            label = { Text(stringResource(R.string.app_navigation_menu_item_my_sounds)) },
         )
         NavigationBarItem(
             colors = itemColors,
-            selected = selectedTab == AppTab.EXPLORE,
-            onClick = { onTabSelected(AppTab.EXPLORE) },
-            icon = { Icon(AppIcons.ViewComfyAlt, contentDescription = stringResource(R.string.app_navigation_menu_item_explore)) },
-            label = { Text(stringResource(R.string.app_navigation_menu_item_explore)) },
+            selected = selectedTab == AppTab.EXPLORE_SOUNDS,
+            onClick = { onTabSelected(AppTab.EXPLORE_SOUNDS) },
+            icon = { Icon(AppIcons.ViewComfyAlt, contentDescription = stringResource(R.string.app_navigation_menu_item_explore_sounds)) },
+            label = { Text(stringResource(R.string.app_navigation_menu_item_explore_sounds)) },
         )
     }
 }

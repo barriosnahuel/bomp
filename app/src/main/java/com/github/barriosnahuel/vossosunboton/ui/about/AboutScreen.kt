@@ -73,6 +73,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
 import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import java.util.Locale
@@ -156,8 +158,14 @@ fun AboutScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(Spacing.LG))
             LegalSection(
-                onLicenseClick = { isLicenseSheetVisible = true },
-                onSourceClick = { openUrl(context, sourceUrl) },
+                onLicenseClick = {
+                    AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutLicenseOpen)
+                    isLicenseSheetVisible = true
+                },
+                onSourceClick = {
+                    AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutSourceOpen)
+                    openUrl(context, sourceUrl)
+                },
             )
             Spacer(Modifier.height(Spacing.XXL))
         }
@@ -206,9 +214,17 @@ private fun HeroSection(
 
     Spacer(Modifier.height(Spacing.LG))
 
+    val context = LocalContext.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         FilledIconButton(
-            onClick = { if (soundId > 0) soundPool.play(soundId, 1f, 1f, 1, 0, 1f) },
+            onClick = {
+                if (soundId > 0) {
+                    soundPool.play(soundId, 1f, 1f, 1, 0, 1f)
+                    AnalyticsTrackerProvider
+                        .get(context.applicationContext)
+                        .log(AnalyticsEvent.AboutBrandingAudioPlay)
+                }
+            },
             modifier = Modifier.size(44.dp),
             colors =
                 IconButtonDefaults.filledIconButtonColors(
@@ -267,13 +283,21 @@ private fun CreditsSection(creditEntries: List<CreditEntry>) {
         targetValue = if (isExpanded) 90f else 0f,
         label = "credits_arrow",
     )
+    val context = LocalContext.current
 
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { isExpanded = !isExpanded }
-                .padding(horizontal = Spacing.LG, vertical = Spacing.MD),
+                .clickable {
+                    val opening = !isExpanded
+                    isExpanded = opening
+                    if (opening) {
+                        AnalyticsTrackerProvider
+                            .get(context.applicationContext)
+                            .log(AnalyticsEvent.AboutCreditsOpen)
+                    }
+                }.padding(horizontal = Spacing.LG, vertical = Spacing.MD),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {

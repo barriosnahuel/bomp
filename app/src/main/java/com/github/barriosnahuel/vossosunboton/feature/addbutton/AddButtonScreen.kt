@@ -58,7 +58,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
@@ -90,13 +93,38 @@ fun AddButtonScreen(
         }
         keyboardController?.hide()
         coroutineScope.launch {
+            val trimmedName = name.trim()
+            val tracker = AnalyticsTrackerProvider.get(context.applicationContext)
             when (val m = mode) {
-                is AddButtonMode.Create ->
-                    AddButtonFeature.instance.saveNewButtonAsync(context, name.trim(), m.uri.toString()).await()
-                is AddButtonMode.Edit ->
-                    AddButtonFeature.instance.renameButtonAsync(context, m.sound, name.trim()).await()
+                is AddButtonMode.Create -> {
+                    val feedbackId =
+                        AddButtonFeature.instance.saveNewButtonAsync(context, trimmedName, m.uri.toString()).await()
+                    if (feedbackId == R.string.app_addbutton_feedback_saved_ok) {
+                        val totalSounds = withContext(Dispatchers.IO) { SoundDao().find(context).size }
+                        tracker.log(
+                            AnalyticsEvent.SoundAdd(
+                                source = AddButtonActivity.SOURCE_SHARE,
+                                nameLength = trimmedName.length,
+                                nameWordCount = trimmedName.split(WORD_SPLIT_REGEX).count(),
+                                nameHitLimit = trimmedName.length == MAX_NAME_LENGTH,
+                                currentSounds = totalSounds,
+                            ),
+                        )
+                    }
+                }
+                is AddButtonMode.Edit -> {
+                    AddButtonFeature.instance.renameButtonAsync(context, m.sound, trimmedName).await()
+                    tracker.log(
+                        AnalyticsEvent.SoundEdit(
+                            nameLength = trimmedName.length,
+                            nameWordCount = trimmedName.split(WORD_SPLIT_REGEX).count(),
+                            nameHitLimit = trimmedName.length == MAX_NAME_LENGTH,
+                            nameChanged = trimmedName != m.sound.name,
+                        ),
+                    )
+                }
             }
-            withContext(Dispatchers.Main) { onSaved(name.trim()) }
+            withContext(Dispatchers.Main) { onSaved(trimmedName) }
         }
     }
 
@@ -316,6 +344,8 @@ private fun AudioPreview(
 }
 
 private const val MAX_NAME_LENGTH = 50
+
+private val WORD_SPLIT_REGEX = "\\s+".toRegex()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

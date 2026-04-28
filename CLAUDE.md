@@ -128,6 +128,31 @@ internal class MyScreenTest : AbstractRobolectricTest() {
 ```
 
 
+## Analytics events
+
+Firebase Analytics goes through the `AnalyticsTracker` wrapper at
+`commons_android/.../analytics/`. Three sibling files are the catalogue the
+rest of the app references — read them when in doubt:
+`AnalyticsEvent` (sealed class, one subclass per custom event),
+`CanonicalScreenName` (every `screen_view` literal),
+`AnalyticsUserProperty` (user property names + lifetime counter keys).
+
+Hard rules that affect how to write code:
+
+- Never call `FirebaseAnalytics.getInstance(...)` or `.logEvent(...)` outside
+  the wrapper — the `analytics-wrapper-guard` CI job fails the build.
+- Auto `screen_view` is disabled via manifest meta-data; every screen emits
+  `tracker.logScreen(CanonicalScreenName.X)` manually with a canonical literal.
+- The `first_*` variant is emitted by the wrapper when the event declares
+  `hasFirstVariant = true` — call-sites never reference `first_*` directly.
+
+When adding a new track, follow `CONTRIBUTING.md` § "Analytics events 📊" — the
+naming rules, regression-test matrix, and DebugView / `adb logcat -s FA FA-SVC`
+verification commands live there. Do not shortcut the manual smoke step before
+merging; the aggregated Reports dashboards have a 24–48 h delay and do not
+confirm a single new event.
+
+
 ## Worktree setup
 
 After creating a new worktree, always run these commands to replace the dummy `google-services.json` and copy the bundled audio files from the main worktree:

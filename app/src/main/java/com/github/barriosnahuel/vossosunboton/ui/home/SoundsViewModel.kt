@@ -11,6 +11,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -29,7 +33,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-enum class AppTab { HOME, EXPLORE }
+enum class AppTab { MY_SOUNDS, EXPLORE_SOUNDS }
 
 data class DeletedSoundEvent(
     val sound: Sound,
@@ -50,7 +54,7 @@ class SoundsViewModel(
     private val searchDebounceMs: Long = 200L,
 ) : AndroidViewModel(application),
     PlayerControllerListener {
-    private val _selectedTab = MutableStateFlow(AppTab.HOME)
+    private val _selectedTab = MutableStateFlow(AppTab.MY_SOUNDS)
     val selectedTab: StateFlow<AppTab> = _selectedTab.asStateFlow()
 
     private val _sounds = MutableStateFlow<List<Sound>>(emptyList())
@@ -104,6 +108,25 @@ class SoundsViewModel(
         viewModelScope.launch(ioDispatcher) { loadSounds() }
     }
 
+    private val tracker get() = AnalyticsTrackerProvider.get(getApplication())
+
+    /**
+     * Surface label for events fired from this ViewModel. Mirrors the screen_view emitted by `LandingScreen` so
+     * `surface` and the most recent `screen_name` always agree.
+     *
+     * The About screen is intentionally NOT modelled here: when `isAboutVisible == true`, `LandingScreen` early
+     * returns and the FAB / sound list / search overlay are not rendered, so neither `playOrStop` nor `share` can
+     * fire from the UI. The regression for that invariant lives in
+     * `LandingScreenAnalyticsTest.no play or share UI is reachable while About is open`.
+     */
+    private val currentSurface: String
+        get() =
+            when {
+                _isSearchVisible.value -> CanonicalScreenName.SEARCH_SOUND
+                _selectedTab.value == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
+                else -> CanonicalScreenName.EXPLORE_SOUNDS
+            }
+
     fun showSearch() {
         _isSearchVisible.value = true
     }
@@ -143,6 +166,9 @@ class SoundsViewModel(
                     .filter { it.name.contains(query, ignoreCase = true) }
                     .sortedWith(compareByDescending<Sound> { it.isPinned }.thenBy { it.name.lowercase() })
             }
+        if (query.isNotBlank() && _searchResults.value.isEmpty()) {
+            tracker.log(AnalyticsEvent.SearchZeroResults(queryLength = query.length))
+        }
     }
 
     fun selectTab(tab: AppTab) {
@@ -168,6 +194,11 @@ class SoundsViewModel(
         viewModelScope.launch(ioDispatcher) {
             SoundDao().savePin(getApplication(), sound.name, nowPinned)
         }
+        tracker.log(AnalyticsEvent.PinToggle(pinned = nowPinned))
+        tracker.setUserProperty(
+            AnalyticsUserProperty.CURRENT_PINNED,
+            allSoundsCache.value.count { it.isPinned }.toString(),
+        )
     }
 
     fun playOrStop(sound: Sound) {
@@ -175,6 +206,9 @@ class SoundsViewModel(
             PlayerControllerFactory.instance.stopPlayingSound()
         } else {
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
+            tracker.log(AnalyticsEvent.SoundPlay(surface = currentSurface))
+            val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_PLAYS)
+            tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_PLAYS, newCount.toString())
         }
     }
 
@@ -211,6 +245,7 @@ class SoundsViewModel(
         }
         recomputeSearchResults()
         _deletedSoundEvent.value = null
+        tracker.log(AnalyticsEvent.SoundDeleteUndone)
     }
 
     fun confirmDelete(context: android.content.Context) {
@@ -220,6 +255,11 @@ class SoundsViewModel(
         if (!event.sound.isBundled()) {
             try {
                 SoundDao().delete(context, event.sound)
+                tracker.log(AnalyticsEvent.SoundDelete)
+                tracker.setUserProperty(
+                    AnalyticsUserProperty.CURRENT_SOUNDS,
+                    allSoundsCache.value.count { !it.isBundled() }.toString(),
+                )
             } catch (e: IllegalStateException) {
                 Timber.w(e, "Sound has no file on disk, skipping delete")
             }
@@ -231,12 +271,12 @@ class SoundsViewModel(
     }
 
     fun onButtonSaved(name: String) {
-        selectTab(AppTab.HOME)
+        selectTab(AppTab.MY_SOUNDS)
         _buttonSavedEvent.trySend(name)
     }
 
     fun onButtonRenamed(name: String) {
-        selectTab(AppTab.HOME)
+        selectTab(AppTab.MY_SOUNDS)
         _buttonRenamedEvent.trySend(name)
     }
 
@@ -265,13 +305,21 @@ class SoundsViewModel(
         _sounds.update {
             val filtered =
                 when (_selectedTab.value) {
-                    AppTab.HOME -> allSounds.filter { !it.isBundled() }
-                    AppTab.EXPLORE -> allSounds.filter { it.isBundled() }
+                    AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
+                    AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
                 }.filter { it.name != deletedName }
             if (playingName == null) {
                 filtered
             } else {
                 filtered.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
+            }
+        }
+        val userCreatedCount = allSounds.count { !it.isBundled() }
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_SOUNDS, userCreatedCount.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PINNED, allSounds.count { it.isPinned }.toString())
+        AUDIO_MILESTONES.forEach { threshold ->
+            if (userCreatedCount >= threshold && tracker.markFiredOnce("milestone_sounds_$threshold")) {
+                tracker.log(AnalyticsEvent.MilestoneAudios(threshold))
             }
         }
     }
@@ -310,6 +358,8 @@ class SoundsViewModel(
     }
 
     companion object {
+        private val AUDIO_MILESTONES = listOf(3, 5, 10, 25)
+
         val Factory: ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {

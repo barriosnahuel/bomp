@@ -55,15 +55,15 @@ class LandingActivity : ComponentActivity() {
         val uri = intent.data ?: return
         val requested =
             when (uri.path) {
-                "/home" -> AppTab.HOME
-                else -> AppTab.EXPLORE
+                "/home" -> AppTab.MY_SOUNDS
+                else -> AppTab.EXPLORE_SOUNDS
             }
         // Explore is empty in release builds (no bundled audios) and in any debug build that
         // hasn't populated model/src/debug/res/raw/. Routing there would land on a blank tab,
         // so fall back to Home when there's nothing to explore.
         val resolved =
-            if (requested == AppTab.EXPLORE && PackagedAudios.get(this).isEmpty()) {
-                AppTab.HOME
+            if (requested == AppTab.EXPLORE_SOUNDS && PackagedAudios.get(this).isEmpty()) {
+                AppTab.MY_SOUNDS
             } else {
                 requested
             }

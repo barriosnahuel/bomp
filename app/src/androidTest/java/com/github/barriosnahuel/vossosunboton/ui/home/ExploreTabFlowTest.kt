@@ -139,9 +139,9 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
 
     private fun unpinLabel() = context.getString(R.string.app_unpin)
 
-    private fun homeTabLabel() = context.getString(R.string.app_navigation_menu_item_home)
+    private fun homeTabLabel() = context.getString(R.string.app_navigation_menu_item_my_sounds)
 
-    private fun exploreTabLabel() = context.getString(R.string.app_navigation_menu_item_explore)
+    private fun exploreTabLabel() = context.getString(R.string.app_navigation_menu_item_explore_sounds)
 
     companion object {
         private const val WAIT_TIMEOUT_MS = 5_000L

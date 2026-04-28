@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.share
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -14,17 +15,71 @@ import androidx.core.content.FileProvider
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.spyk
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.io.File
 
 internal class ShareFeatureTest : AbstractRobolectricTest() {
     private val dummyButtonName = "my button name"
+    private lateinit var fake: FakeAnalyticsTracker
+
+    @Before
+    fun setUpAnalytics() {
+        fake = FakeAnalyticsTracker()
+        AnalyticsTrackerProvider.setForTest(fake)
+    }
+
+    @After
+    fun tearDownAnalytics() {
+        AnalyticsTrackerProvider.setForTest(null)
+    }
+
+    @Test
+    fun `share emits Share with the surface passed in by the caller`() {
+        val sound = givenASoundWithUri()
+
+        whenSharingThe(sound)
+
+        val event = fake.assertEmitted("share")
+        assertThat(event.params["surface"]).isEqualTo(CanonicalScreenName.MY_SOUNDS)
+    }
+
+    @Test
+    fun `share increments lifetime_shares user property monotonically across calls`() {
+        whenSharingThe(givenASoundWithUri())
+        whenSharingThe(givenASoundWithUri())
+
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isEqualTo("2")
+    }
+
+    @Test
+    fun `share does not increment lifetime_shares when the chooser activity cannot be started`() {
+        val sound = givenASoundWithUri()
+        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
+        mockkStatic(FileProvider::class)
+        every { FileProvider.getUriForFile(mockedContext, any(), any()) } returns Uri.EMPTY
+        every { mockedContext.startActivity(any()) } throws ActivityNotFoundException("no app handles audio share")
+
+        try {
+            ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
+        } catch (_: ActivityNotFoundException) {
+            // expected — propagates so the caller can show an error UI
+        }
+
+        fake.assertNotEmitted("share")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
+    }
 
     @Test
     fun `share when sound Uri and resource are null must throw an exception`() {
@@ -102,7 +157,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         val slot = slot<Intent>()
         every { mockedContext.startActivity(capture(slot)) } answers { nothing }
 
-        ShareFeature.instance.share(mockedContext, sound)
+        ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
 
         return slotFile.captured
     }
@@ -116,7 +171,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         val slot = slot<Intent>()
         every { mockedContext.startActivity(capture(slot)) } answers { nothing }
 
-        ShareFeature.instance.share(mockedContext, sound)
+        ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
 
         return slot.captured
     }

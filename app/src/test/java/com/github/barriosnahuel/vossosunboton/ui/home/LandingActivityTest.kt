@@ -41,7 +41,7 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `LandingActivity with EXTRA_BUTTON_SAVED in onCreate navigates to HOME tab`() {
+    fun `LandingActivity with EXTRA_BUTTON_SAVED in onCreate navigates to MY_SOUNDS tab`() {
         val intent =
             Intent(ApplicationProvider.getApplicationContext(), LandingActivity::class.java).apply {
                 putExtra(LandingActivity.EXTRA_BUTTON_SAVED, true)
@@ -49,13 +49,13 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
         ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
             scenario.onActivity { activity ->
                 val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.HOME)
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
             }
         }
     }
 
     @Test
-    fun `LandingActivity with EXTRA_BUTTON_SAVED in onNewIntent navigates to HOME tab`() {
+    fun `LandingActivity with EXTRA_BUTTON_SAVED in onNewIntent navigates to MY_SOUNDS tab`() {
         val controller =
             Robolectric
                 .buildActivity(LandingActivity::class.java)
@@ -67,6 +67,6 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
         controller.newIntent(intent)
 
         val viewModel = ViewModelProvider(controller.get(), SoundsViewModel.Factory)[SoundsViewModel::class.java]
-        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.HOME)
+        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
     }
 }

@@ -95,6 +95,35 @@ jobs:
       - store_artifacts:
           path: "app/build/reports/tests/"
 
+  "analytics-wrapper-guard":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+    steps:
+      - checkout
+      - run:
+          name: "Verify nothing bypasses the AnalyticsTracker wrapper"
+          command: |
+            # Production sourcesets only — tests legitimately mock FirebaseAnalytics inside the wrapper's own tests.
+            MAIN_DIRS="app/src/main commons_android/src/main commons_file/src/main model/src/main"
+            # Any FirebaseAnalytics.getInstance(...) call must originate inside the wrapper provider.
+            if grep -rnE 'FirebaseAnalytics\s*\.\s*getInstance' \
+                --include='*.kt' --include='*.java' \
+                --exclude='AnalyticsTrackerProvider.kt' \
+                --exclude='FirebaseAnalyticsTracker.kt' \
+                $MAIN_DIRS; then
+                echo "ERROR: Direct FirebaseAnalytics.getInstance(...) call detected outside the wrapper. Use AnalyticsTrackerProvider.get(context)."
+                exit 1
+            fi
+            # And only FirebaseAnalyticsTracker.kt is allowed to call .logEvent(.
+            if grep -rnE '\.logEvent\s*\(' \
+                --include='*.kt' --include='*.java' \
+                --exclude='FirebaseAnalyticsTracker.kt' \
+                $MAIN_DIRS; then
+                echo "ERROR: Direct .logEvent(...) call detected outside FirebaseAnalyticsTracker.kt. Add an AnalyticsEvent subclass and call tracker.log(...) instead."
+                exit 1
+            fi
+
   "bundle":
     executor:
       name: android/android_docker
@@ -132,6 +161,8 @@ workflows:
             - ktlint
             - spotless
             - lint
+      - analytics-wrapper-guard
       - bundle:
           requires:
             - test
+            - analytics-wrapper-guard

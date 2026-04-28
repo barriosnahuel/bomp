@@ -46,19 +46,19 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `initial tab is HOME`() {
+    fun `initial tab is MY_SOUNDS`() {
         val viewModel = givenAViewModel()
 
-        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.HOME)
+        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
     }
 
     @Test
     fun `selectTab updates the selected tab`() {
         val viewModel = givenAViewModel()
 
-        viewModel.selectTab(AppTab.HOME)
+        viewModel.selectTab(AppTab.MY_SOUNDS)
 
-        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.HOME)
+        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
     }
 
     @Test
@@ -250,12 +250,12 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `onButtonSaved selects HOME tab`() {
+    fun `onButtonSaved selects MY_SOUNDS tab`() {
         val viewModel = givenAViewModel()
 
         viewModel.onButtonSaved("test")
 
-        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.HOME)
+        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
     }
 
     @Test
@@ -362,8 +362,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val sound = viewModel.sounds.value.first()
 
         viewModel.deleteSound(sound)
-        viewModel.selectTab(AppTab.EXPLORE)
-        viewModel.selectTab(AppTab.HOME)
+        viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+        viewModel.selectTab(AppTab.MY_SOUNDS)
 
         assertThat(viewModel.sounds.value.none { it.name == sound.name }).isTrue()
     }
@@ -375,8 +375,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             val playingSound = viewModel.sounds.value.first()
 
             viewModel.onPlayerStart(playingSound, durationMs = 1000)
-            viewModel.selectTab(AppTab.EXPLORE)
-            viewModel.selectTab(AppTab.HOME)
+            viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+            viewModel.selectTab(AppTab.MY_SOUNDS)
 
             assertThat(
                 viewModel.sounds.value

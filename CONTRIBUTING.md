@@ -15,7 +15,9 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Logcat](#logcat-)
 - [Resources](#resources-)
 - [Signing](#signing-)
+- [Bundled audio files](#bundled-audio-files-)
 - [Store listing](#store-listing-)
+- [Analytics events](#analytics-events-)
 
 ## Local setup ⚙
 
@@ -128,6 +130,83 @@ Place the bundled `.mp3` and `.ogg` files there. Without them the debug build st
 ## Store listing 📄
 
 As mentioned before, under [store-listing/](/store-listing) there are the assets for the store listing and the original GIMP files to edit those assets.
+
+## Analytics events 📊
+
+The app emits Firebase Analytics through the `AnalyticsTracker` wrapper at
+`commons_android/.../analytics/`. Three sibling files form the catalogue:
+`AnalyticsEvent` (sealed class, one subclass per custom event),
+`CanonicalScreenName` (every `screen_view` literal), and
+`AnalyticsUserProperty` (user property names + lifetime counter keys). The
+full contract with rationale per event lives at
+[`plans/04-firebase-analytics-core-funnel.md`](https://github.com/barriosnahuel/bomp-backlog/blob/main/plans/04-firebase-analytics-core-funnel.md)
+in the sibling backlog repo.
+
+Firebase auto-tracking of `screen_view` is **disabled** in
+`AndroidManifest.xml` so reports never get coupled to class names that break
+on refactor — every screen calls `tracker.logScreen(CanonicalScreenName.X)`
+manually.
+
+### Naming rules
+
+- `snake_case` lowercase. Reserved Firebase event names are forbidden — check
+  <https://firebase.google.com/docs/analytics/events> before naming.
+- Describe the **product fact**, not the **UI mechanic**: `about_credits_open`,
+  not `about_credits_expand`.
+- `screen_view` for full destinations; custom events for discrete actions.
+  Never create a custom event for "user opened screen X" when a `screen_view`
+  covers it.
+- No `_intent` / `_done` suffixes — `screen_view` IS the intent signal, the
+  custom event firing IS the done signal.
+- `_open` only for in-screen reveals without a dedicated destination
+  (`about_credits_open`, `about_license_open`).
+- `first_*` is emitted by the wrapper when the event declares
+  `hasFirstVariant = true` — never reference it from a call-site.
+- `milestone_*` for one-shot numeric thresholds (the call-site gates emission
+  via `tracker.markFiredOnce(...)`).
+- `surface` param on actions that fire from multiple UI entry points
+  (`sound_play`, `share`). Values MUST match `CanonicalScreenName` — when a
+  new surface ships, add it to both lists in lockstep.
+- No PII in params. Lengths, counts, booleans derived from input are fine
+  (`name_length`, `query_length`); the literal text is not.
+- Prefer Firebase recommended events (`share`, `select_content`, …) over
+  custom when the semantics match — gives access to pre-built reports and
+  BigQuery schema compatibility.
+
+### When adding a new tracked action
+
+1. Decide: full screen → `tracker.logScreen(CanonicalScreenName.X)` and add
+   the constant. Discrete action → add an `AnalyticsEvent` subclass; decide
+   `hasFirstVariant`.
+2. Update the event table in plan 04 §4.2 (sibling backlog repo).
+3. Add a wrapper-level test in `commons_android/src/test/.../analytics/`.
+4. Add the simple class name (or screen name) to
+   `EVENTS_WITH_REGRESSION_TEST` / `SCREEN_VIEWS_WITH_REGRESSION_TEST` /
+   `USER_PROPERTIES_WITH_REGRESSION_TEST` in `AnalyticsCoverageMatrixTest`.
+   The meta-test fails until you do — that is the regression net working.
+5. Add at least one call-site test that triggers the action and asserts via
+   `FakeAnalyticsTracker.assertEmitted(...)` / `.assertScreenView(...)`.
+   Tests pull the fake via `testImplementation testFixtures(project(":commons_android"))`.
+6. **Manual smoke before merging** — required, see below. The aggregated
+   `Reports → Engagement / Events / Realtime` dashboards are NOT a substitute
+   (24–48 h delay, never confirm a single new event).
+
+### Manual verification
+
+Two complementary paths. DebugView for params + user properties; logcat for
+"did the SDK fire it at all?". Run BOTH the first time you add a track.
+
+```bash
+# Firebase DebugView (per device, runtime-only — phone reboot resets it)
+adb shell setprop debug.firebase.analytics.app com.github.barriosnahuel.vossosunboton.debug
+adb shell am force-stop com.github.barriosnahuel.vossosunboton.debug
+# Then exercise the track and watch Firebase Console → DebugView (10–30 s).
+
+# Local logcat (immediate)
+adb shell setprop log.tag.FA VERBOSE
+adb shell setprop log.tag.FA-SVC VERBOSE
+adb logcat -s FA FA-SVC
+```
 
 ## License 📄
 
