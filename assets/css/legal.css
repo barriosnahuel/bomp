@@ -3,9 +3,12 @@
    Reuses the V3 header/footer + tokens; content layout is narrow editorial.
    ───────────────────────────────────────────── */
 
+/* The wrapper element also carries `.landing`, which already declares
+   `container-type: inline-size; container-name: landing`. Re-declaring a
+   container here would override the name (legal.css loads after landing.css),
+   silently disabling every `@container landing` rule — including the mobile
+   header/footer collapse — and causing horizontal overflow on phones. */
 .legal {
-  container-type: inline-size;
-  container-name: legal;
   background: var(--color-background);
   color: var(--color-on-background);
   font-family: var(--font-sans);
@@ -205,8 +208,9 @@
 }
 .legal__back a:hover { color: var(--color-on-background); }
 
-/* Responsive */
-@container legal (max-width: 900px) {
+/* Responsive — uses the shared `landing` container so the article layout
+   collapses in lockstep with the header/footer mobile rules. */
+@container landing (max-width: 900px) {
   .legal__layout {
     grid-template-columns: 1fr;
     gap: var(--space-xl);
@@ -222,6 +226,45 @@
   }
   .legal__article { order: 1; }
   .legal__title { font-size: clamp(32px, 7vw, 48px); }
+}
+
+/* On phones the 4-column data-safety table can't shrink below the intrinsic
+   min column widths (palabras como "Crashlytics", "WhatsApp") and overflowea
+   horizontalmente la página. Lo desplegamos como stack de tarjetas, una por
+   fila, etiquetando cada celda con el header de su columna vía data-label. */
+@container landing (max-width: 720px) {
+  .legal__table { display: block; }
+  .legal__table thead { display: none; }
+  .legal__table tbody { display: block; }
+  .legal__table tr {
+    display: block;
+    margin-bottom: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid var(--color-outline-variant);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-variant);
+  }
+  .legal__table tr:last-child { margin-bottom: 0; }
+  .legal__table td {
+    display: block;
+    padding: var(--space-sm) 0;
+    border-bottom: 0;
+  }
+  .legal__table td + td {
+    border-top: 1px dashed var(--color-outline-variant);
+    padding-top: var(--space-md);
+    margin-top: var(--space-xs);
+  }
+  .legal__table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-on-surface-variant);
+    margin-bottom: 4px;
+  }
 }
 
 /* Print stylesheet */
