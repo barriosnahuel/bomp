@@ -95,10 +95,11 @@ fun AddButtonScreen(
         coroutineScope.launch {
             val trimmedName = name.trim()
             val tracker = AnalyticsTrackerProvider.get(context.applicationContext)
+            val feature = AddButtonFeatureProvider.get()
             when (val m = mode) {
                 is AddButtonMode.Create -> {
                     val feedbackId =
-                        AddButtonFeature.instance.saveNewButtonAsync(context, trimmedName, m.uri.toString()).await()
+                        feature.saveNewButtonAsync(context, trimmedName, m.uri.toString()).await()
                     if (feedbackId == R.string.app_addbutton_feedback_saved_ok) {
                         val totalSounds = withContext(Dispatchers.IO) { SoundDao().find(context).size }
                         tracker.log(
@@ -113,7 +114,7 @@ fun AddButtonScreen(
                     }
                 }
                 is AddButtonMode.Edit -> {
-                    AddButtonFeature.instance.renameButtonAsync(context, m.sound, trimmedName).await()
+                    feature.renameButtonAsync(context, m.sound, trimmedName).await()
                     tracker.log(
                         AnalyticsEvent.SoundEdit(
                             nameLength = trimmedName.length,
