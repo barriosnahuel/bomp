@@ -5,13 +5,16 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
@@ -68,5 +71,55 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
 
         val viewModel = ViewModelProvider(controller.get(), SoundsViewModel.Factory)[SoundsViewModel::class.java]
         assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
+    }
+
+    @Test
+    fun `deep link with home path opens MY_SOUNDS tab`() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open/home"))
+        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
+            scenario.onActivity { activity ->
+                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
+            }
+        }
+    }
+
+    @Test
+    fun `deep link with explore path opens EXPLORE_SOUNDS tab when bundled audios exist`() {
+        // Skip when this checkout has no bundled audios — the empty-Explore UX fallback would
+        // mask the allowlist behaviour we want to assert. Run only on debug builds with raw/.
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        if (PackagedAudios.get(ctx).isEmpty()) {
+            return
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open/explore"))
+        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
+            scenario.onActivity { activity ->
+                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.EXPLORE_SOUNDS)
+            }
+        }
+    }
+
+    @Test
+    fun `deep link with unknown path falls back to MY_SOUNDS tab`() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open/unknown"))
+        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
+            scenario.onActivity { activity ->
+                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
+            }
+        }
+    }
+
+    @Test
+    fun `deep link with no path falls back to MY_SOUNDS tab`() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open"))
+        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
+            scenario.onActivity { activity ->
+                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
+            }
+        }
     }
 }

@@ -284,6 +284,60 @@ All UI development and generated assets (store listing, What's New, changelogs) 
 
 Verify contrast when adding or changing colors. Use the [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) or the Material Theme Builder. The brand palette in `AppTheme.kt` was designed to meet AA across all color roles. **All critical role pairs are automatically verified by `AppThemeContrastTest`** — if you change the palette and a test fails, fix the theme, not the test.
 
+## Security boundaries
+
+Concrete rules for input/output validation and component exposure. These match
+the existing concrete style of the rest of this doc — narrow, enforceable, no
+generic policy framing.
+
+### Inbound URI validation
+
+When the app receives a `Uri` via `Intent.EXTRA_STREAM` or `ACTION_SEND` (today
+only `AddButtonActivity`), validate it before opening the stream:
+
+- **Scheme allowlist:** only `content` and `file` pass; reject everything else
+  (e.g. `http`, `javascript`, `data`).
+- **MIME type:** `ContentResolver.getType(uri)` must start with `audio/`. If
+  null, reject — no MIME means we don't know what we're opening.
+- **Size cap:** reject inputs over 50 MB (≈4× a 5-min MP3 at 320 kbps; rejects
+  pathological inputs while leaving headroom). Resolve size via
+  `ContentResolver.openAssetFileDescriptor(uri, "r")?.length` or
+  `OpenableColumns.SIZE`. Unknown size also rejects.
+- **Failure mode:** surface a typed feedback string-res to the caller (same
+  channel as `app_feedback_generic_error_contact_support`). Never throw raw.
+
+The canonical implementation lives in `AddButtonFeature.saveNewButtonAsync`.
+Any future inbound-URI surface must call the same validator.
+
+### Deep link path allowlist
+
+`push-me://open<path>` routes against a closed allowlist of known destinations
+declared in `LandingActivity.handleDeeplink`. Today: `/home` → `MY_SOUNDS`,
+`/explore` → `EXPLORE_SOUNDS`. **Unknown paths fall back to `MY_SOUNDS`** (the
+safe default) — never silently route to Explore or any other tab. New
+destinations require an explicit branch in the `when`; the `else` stays
+`MY_SOUNDS`.
+
+### Backup hygiene
+
+Before adding any new SharedPreferences key or file path that could contain
+sensitive data (auth tokens, account identifiers, private user content), add
+explicit `<exclude>` entries to both `app/src/main/res/xml/app_backup_rules.xml`
+and `app/src/main/res/xml/app_data_extraction_rules.xml`. Today nothing
+sensitive is stored, so the rules are intentionally permissive (`<include>` of
+`my-prefs` and the `Music` external dir). When that changes, the exclusion
+ships in the same commit as the new key.
+
+### Exported components default to false
+
+New `Activity`/`Service`/`Receiver` declarations in `AndroidManifest.xml`
+default `android:exported="false"`. Set `true` only when the component has an
+`<intent-filter>` for external callers; in that case, add a comment above the
+declaration documenting which intents it accepts and from where (launcher,
+system share sheet, deep link, etc.). The two exported activities today are
+`LandingActivity` (LAUNCHER + `push-me://open` deep link) and
+`AddButtonActivity` (system share-sheet `ACTION_SEND` with `audio/*`).
+
 ## Design system
 
 The app uses the **Neo-Club** palette (ink × acid). Single source of truth: `app/src/main/java/…/ui/theme/AppTheme.kt`.

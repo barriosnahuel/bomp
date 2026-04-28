@@ -64,6 +64,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Custom button audio files are now named after the user-provided sound name (non-alphanumeric chars replaced by underscores) instead of the generic "Button-custom-" prefix.
 
 ### Fixed
+- Validate inbound audio URIs by scheme, MIME type, and size before importing
+- Restrict deep link routing to a known path allowlist with a safe fallback to My Sounds
 - The app now opens the Home tab on launch instead of the Search tab
 - After saving a button via the share intent, the app now navigates to the Home tab and shows a "Saved!" confirmation Snackbar instead of silently returning to the previous app
 - The Add Button screen no longer appears in the recent apps tray after saving

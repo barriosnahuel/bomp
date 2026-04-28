@@ -1,0 +1,114 @@
+/*
+ * Copyright (c) 2016-2026 Nahuel Barrios. All rights reserved.
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See LICENSE in the project root for full license information.
+ */
+package com.github.barriosnahuel.vossosunboton.feature.addbutton
+
+import android.content.ContentResolver
+import android.content.Context
+import android.content.res.AssetFileDescriptor
+import android.net.Uri
+import androidx.test.core.app.ApplicationProvider
+import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.R
+import com.google.common.truth.Truth.assertThat
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import kotlinx.coroutines.runBlocking
+import org.junit.Test
+import org.robolectric.Shadows.shadowOf
+import java.io.ByteArrayInputStream
+
+internal class AddButtonFeatureTest : AbstractRobolectricTest() {
+    private val realContext: Context = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun `saveNewButtonAsync saves a valid audio URI and returns saved_ok`() {
+        val uri = Uri.parse("content://test/valid-audio")
+        val context = contextWith(uri, mime = "audio/mpeg", sizeBytes = 1024L)
+
+        val result =
+            runBlocking {
+                AddButtonFeature.instance.saveNewButtonAsync(context, "valid", uri.toString()).await()
+            }
+
+        assertThat(result).isEqualTo(R.string.app_addbutton_feedback_saved_ok)
+    }
+
+    @Test
+    fun `saveNewButtonAsync rejects URIs with non-audio MIME types`() {
+        val uri = Uri.parse("content://test/zip-file")
+        val context = contextWith(uri, mime = "application/zip", sizeBytes = 1024L)
+
+        val result =
+            runBlocking {
+                AddButtonFeature.instance.saveNewButtonAsync(context, "zip", uri.toString()).await()
+            }
+
+        assertThat(result).isEqualTo(R.string.app_feedback_generic_error_contact_support)
+    }
+
+    @Test
+    fun `saveNewButtonAsync rejects URIs that exceed the maximum allowed size`() {
+        val uri = Uri.parse("content://test/huge-audio")
+        val tooLarge = 50L * 1024 * 1024 + 1
+        val context = contextWith(uri, mime = "audio/mpeg", sizeBytes = tooLarge)
+
+        val result =
+            runBlocking {
+                AddButtonFeature.instance.saveNewButtonAsync(context, "huge", uri.toString()).await()
+            }
+
+        assertThat(result).isEqualTo(R.string.app_feedback_generic_error_contact_support)
+    }
+
+    @Test
+    fun `saveNewButtonAsync rejects URIs with unsupported schemes`() {
+        val uri = Uri.parse("http://example.com/foo.mp3")
+
+        val result =
+            runBlocking {
+                AddButtonFeature.instance.saveNewButtonAsync(realContext, "http", uri.toString()).await()
+            }
+
+        assertThat(result).isEqualTo(R.string.app_feedback_generic_error_contact_support)
+    }
+
+    @Test
+    fun `saveNewButtonAsync rejects URIs whose MIME type is unknown`() {
+        val uri = Uri.parse("content://test/no-mime")
+        val context = contextWith(uri, mime = null, sizeBytes = 1024L)
+
+        val result =
+            runBlocking {
+                AddButtonFeature.instance.saveNewButtonAsync(context, "nomime", uri.toString()).await()
+            }
+
+        assertThat(result).isEqualTo(R.string.app_feedback_generic_error_contact_support)
+    }
+
+    /**
+     * Wraps the Robolectric application in a spy so we can stub the [ContentResolver] surfaces
+     * the validator depends on (`getType`, `openAssetFileDescriptor`) without touching the real
+     * MediaStore. The shadow resolver still serves `openInputStream` for the happy-path copy.
+     */
+    private fun contextWith(
+        uri: Uri,
+        mime: String?,
+        sizeBytes: Long,
+    ): Context {
+        val baseResolver = realContext.contentResolver
+        shadowOf(baseResolver).registerInputStream(uri, ByteArrayInputStream(ByteArray(0)))
+        val resolver = spyk(baseResolver)
+        every { resolver.getType(uri) } returns mime
+        val afd = mockk<AssetFileDescriptor>(relaxed = true)
+        every { afd.length } returns sizeBytes
+        every { resolver.openAssetFileDescriptor(uri, "r") } returns afd
+
+        val context = spyk(realContext)
+        every { context.contentResolver } returns resolver
+        return context
+    }
+}
