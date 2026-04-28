@@ -53,10 +53,13 @@ class LandingActivity : ComponentActivity() {
 
     private fun handleDeeplink(intent: Intent) {
         val uri = intent.data ?: return
+        // Closed allowlist of known deep-link destinations. Unknown paths fall back to MY_SOUNDS
+        // (the safe default) so we never silently route to a tab the link did not name.
         val requested =
             when (uri.path) {
                 "/home" -> AppTab.MY_SOUNDS
-                else -> AppTab.EXPLORE_SOUNDS
+                "/explore" -> AppTab.EXPLORE_SOUNDS
+                else -> AppTab.MY_SOUNDS
             }
         // Explore is empty in release builds (no bundled audios) and in any debug build that
         // hasn't populated model/src/debug/res/raw/. Routing there would land on a blank tab,
