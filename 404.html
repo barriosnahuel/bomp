@@ -82,8 +82,9 @@
   </style>
 </head>
 <body>
+  <a href="#main" class="skip-link" data-i18n="skip.link">Saltar al contenido</a>
   <div class="landing">
-    <main class="err">
+    <main id="main" class="err" tabindex="-1">
       <div class="err__inner">
         <div class="err__num" data-i18n="404.num">404 · Página no encontrada</div>
         <h1 class="err__title" data-i18n-html="404.title.html">Esta puerta no <em>abre</em>.</h1>
@@ -102,5 +103,6 @@
   </div>
 
   <script src="assets/js/i18n.js" defer></script>
+  <script src="assets/js/anchor-focus.js" defer></script>
 </body>
 </html>

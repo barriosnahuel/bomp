@@ -53,7 +53,7 @@
       </nav>
     </header>
 
-    <main id="main" class="legal__layout">
+    <main id="main" class="legal__layout" tabindex="-1">
       <aside class="legal__toc">
         <nav aria-label="Tabla de contenidos">
           <h2 data-i18n="legal.toc.heading">Contenido</h2>
@@ -92,14 +92,14 @@
           teléfono. No tenemos servidores, no tenemos cuentas, no hay nube.
         </p>
 
-        <h2 id="confianza">01 · Encabezado de confianza</h2>
+        <h2 id="confianza" tabindex="-1">01 · Encabezado de confianza</h2>
         <p>
           <strong>Bomp v1.0</strong>. Política de privacidad vigente desde el 2026-04-26.
           Distribución exclusiva por <a href="https://play.google.com/">Google Play</a> en Argentina y
           la región de habla hispana.
         </p>
 
-        <h2 id="datos-audio">02 · Datos sensibles (audio)</h2>
+        <h2 id="datos-audio" tabindex="-1">02 · Datos sensibles (audio)</h2>
         <p>
           Bomp guarda <strong>audios que vos elegís importar</strong> desde otras apps
           (WhatsApp, Telegram, WeChat) usando el sistema de "Compartir" de Android.
@@ -118,7 +118,7 @@
             con los datos de la app.</li>
         </ul>
 
-        <h2 id="terceros">03 · Ecosistema de terceros</h2>
+        <h2 id="terceros" tabindex="-1">03 · Ecosistema de terceros</h2>
         <p>
           Bomp utiliza dos servicios de Google integrados en el ecosistema Android:
         </p>
@@ -148,7 +148,7 @@
           ver <a href="data-safety.html">Data Safety</a>.
         </p>
 
-        <h2 id="menores">04 · Política de menores</h2>
+        <h2 id="menores" tabindex="-1">04 · Política de menores</h2>
         <p>
           Bomp está diseñado para uso general y no recopila intencionalmente datos de menores
           de 13 años. La app no requiere creación de cuenta, no pide email, ni recolecta datos
@@ -160,7 +160,7 @@
           datos personales que recolectar</strong>.
         </p>
 
-        <h2 id="arco">05 · Derechos del usuario (ARCO)</h2>
+        <h2 id="arco" tabindex="-1">05 · Derechos del usuario (ARCO)</h2>
         <p>
           Bajo la Ley 25.326 (Argentina) y el GDPR (UE), tenés derecho a:
         </p>
@@ -181,7 +181,7 @@
           <code>arco@bomp.app</code> (placeholder — pendiente de configurar).
         </p>
 
-        <h2 id="vigencia">06 · Vigencia y cambios</h2>
+        <h2 id="vigencia" tabindex="-1">06 · Vigencia y cambios</h2>
         <p>
           Esta política entra en vigencia el 2026-04-26. Si modificamos términos significativos,
           actualizaremos la fecha de "Última actualización" arriba y publicaremos un changelog
@@ -243,6 +243,7 @@
 
   <script src="assets/js/i18n.js" defer></script>
   <script src="assets/js/theme-toggle.js" defer></script>
+  <script src="assets/js/anchor-focus.js" defer></script>
   <!-- legal-notice.js: shows the translation notice when locale != es-AR -->
   <script>
     document.addEventListener("DOMContentLoaded", function () {

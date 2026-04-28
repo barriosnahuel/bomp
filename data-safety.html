@@ -53,7 +53,7 @@
       </nav>
     </header>
 
-    <main id="main" class="legal__layout">
+    <main id="main" class="legal__layout" tabindex="-1">
       <aside class="legal__toc">
         <nav aria-label="Tabla de contenidos">
           <h2 data-i18n="legal.toc.heading">Contenido</h2>
@@ -78,7 +78,7 @@
 
         <p class="legal__notice" data-i18n="legal.translation.notice" hidden>Este documento aún solo está disponible en español. Estamos trabajando en las traducciones.</p>
 
-        <h2 id="resumen">01 · Resumen rápido</h2>
+        <h2 id="resumen" tabindex="-1">01 · Resumen rápido</h2>
         <p>
           <span class="legal__badge">Cifrado en tránsito</span>
           <span class="legal__badge">No requiere cuenta</span>
@@ -90,7 +90,7 @@
           terceros para fines comerciales.</strong>
         </p>
 
-        <h2 id="datos">02 · Datos recolectados</h2>
+        <h2 id="datos" tabindex="-1">02 · Datos recolectados</h2>
         <p>
           Esta tabla mapea 1:1 las respuestas marcadas como <code>true</code> en el CSV de
           Play Console (<code>data_safety_export.csv</code>):
@@ -138,7 +138,7 @@
           </tbody>
         </table>
 
-        <h2 id="cuentas">03 · Cuentas y eliminación</h2>
+        <h2 id="cuentas" tabindex="-1">03 · Cuentas y eliminación</h2>
         <p>
           <strong>Bomp no requiere creación de cuenta.</strong> No usás email, no usás contraseña,
           no usás OAuth, no usás SIM. La app abre y funciona.
@@ -155,7 +155,7 @@
             <a href="privacy-policy.html#arco">Privacy Policy → Derechos ARCO</a>.</li>
         </ul>
 
-        <h2 id="cifrado">04 · Cifrado en tránsito</h2>
+        <h2 id="cifrado" tabindex="-1">04 · Cifrado en tránsito</h2>
         <p>
           <span class="legal__badge">Sí, los datos se cifran en tránsito</span>
         </p>
@@ -165,7 +165,7 @@
           cifrado del SDK oficial.
         </p>
 
-        <h2 id="fuente">05 · Fuente del CSV</h2>
+        <h2 id="fuente" tabindex="-1">05 · Fuente del CSV</h2>
         <p>
           Esta página es un espejo legible del archivo
           <code>data_safety_export.csv</code> exportado desde Google Play Console.
@@ -227,6 +227,7 @@
 
   <script src="assets/js/i18n.js" defer></script>
   <script src="assets/js/theme-toggle.js" defer></script>
+  <script src="assets/js/anchor-focus.js" defer></script>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       var notice = document.querySelector(".legal__notice");

@@ -64,7 +64,7 @@
       </nav>
     </header>
 
-    <main id="main" class="l-hero">
+    <main id="main" class="l-hero" tabindex="-1">
       <div class="l-hero__content">
         <span class="l-eyebrow" data-i18n="hero.eyebrow">Beta · Android · gratis</span>
         <h1 class="l-hero__title" data-i18n-html="hero.title.html">
@@ -76,8 +76,10 @@
         </p>
         <div class="l-cta-row">
           <!-- Official Google Play "Pre-register" badge per locale (270x80). Asset swap handled by i18n.js via [data-i18n-badge]. -->
-          <a href="#" class="l-playbadge l-playbadge--official"
-             aria-label="Resérvalo en Google Play (próximamente)"
+          <a href="https://play.google.com/store/apps/details?id=com.github.barriosnahuel.vossosunboton"
+             class="l-playbadge l-playbadge--official"
+             rel="noopener" target="_blank"
+             aria-label="Resérvalo en Google Play"
              data-i18n-attr="aria-label:hero.playBadge.aria">
             <img data-i18n-badge
                  src="assets/img/google-play/preregister-es-419.png"
@@ -88,10 +90,10 @@
       </div>
 
       <div class="sticker-stage">
-        <span class="decoy decoy--1" data-i18n="decoy.1">Risa de mi vieja</span>
-        <span class="decoy decoy--2" data-i18n="decoy.2">¡Che, capo!</span>
-        <span class="decoy decoy--3" data-i18n="decoy.3">Llegué</span>
-        <span class="decoy decoy--4" data-i18n="decoy.4">La frase del jefe</span>
+        <span class="decoy decoy--1" aria-hidden="true" data-i18n="decoy.1">Risa de mi vieja</span>
+        <span class="decoy decoy--2" aria-hidden="true" data-i18n="decoy.2">¡Che, capo!</span>
+        <span class="decoy decoy--3" aria-hidden="true" data-i18n="decoy.3">Llegué</span>
+        <span class="decoy decoy--4" aria-hidden="true" data-i18n="decoy.4">La frase del jefe</span>
 
         <div class="sticker-hero">
           <button class="sticker-hero__btn" data-state="idle"
@@ -119,7 +121,7 @@
       </div>
     </main>
 
-    <section id="como-funciona" class="l-section">
+    <section id="como-funciona" class="l-section" tabindex="-1">
       <div class="l-section__head">
         <div>
           <div class="l-section__num" data-i18n="section.howItWorks.num">01 · Cómo funciona</div>
@@ -166,7 +168,7 @@
       </div>
     </section>
 
-    <section id="screenshots" class="l-section">
+    <section id="screenshots" class="l-section" tabindex="-1">
       <div class="l-section__head">
         <div>
           <div class="l-section__num" data-i18n="section.app.num">02 · La app</div>
@@ -176,8 +178,10 @@
       <div class="l-shots">
         <!-- Shot A: identidad -->
         <div class="l-shot l-shot--a">
-          <div class="l-shot__frame l-shot__frame--crop">
-            <div class="app-screen">
+          <div class="l-shot__frame l-shot__frame--crop"
+               role="img"
+               aria-label="Lista de audios apodados: 'Mamá dice qué', 'Risa de Pedro', 'Llegué', 'La frase del jefe'.">
+            <div class="app-screen" aria-hidden="true">
               <div class="app-screen__bar"><span>9:41</span><span>● ●</span></div>
               <div class="app-screen__title" data-i18n="shot.list.title">Mis audios</div>
               <div class="app-screen__row">
@@ -203,8 +207,10 @@
 
         <!-- Shot B: regalo -->
         <div class="l-shot l-shot--b">
-          <div class="l-shot__frame l-shot__frame--crop">
-            <div class="app-screen">
+          <div class="l-shot__frame l-shot__frame--crop"
+               role="img"
+               aria-label="Audio 'Risa de Pedro' listo para compartir hacia WhatsApp, Telegram u otra app.">
+            <div class="app-screen" aria-hidden="true">
               <div class="app-screen__bar"><span>9:41</span><span>● ●</span></div>
               <div class="app-screen__title" data-i18n="shot.share.title">Compartir</div>
               <div class="app-screen__card-audio">
@@ -243,8 +249,10 @@
 
         <!-- Shot C: recepción humana -->
         <div class="l-shot l-shot--c">
-          <div class="l-shot__frame l-shot__frame--crop">
-            <div class="app-screen app-screen--chat">
+          <div class="l-shot__frame l-shot__frame--crop"
+               role="img"
+               aria-label="Lucía manda un audio en un chat; la respuesta es 'JAJAJAJA no puedo'.">
+            <div class="app-screen app-screen--chat" aria-hidden="true">
               <div class="app-screen__bar"><span>9:41</span><span>● ●</span></div>
               <div class="app-screen__chat-header">
                 <span class="app-screen__chat-avatar" aria-hidden="true">L</span>
@@ -307,7 +315,7 @@
       <div class="l-manifesto__sig" data-i18n="manifesto.sig">— Bomp · /bomp/</div>
     </section>
 
-    <div id="open" class="l-double">
+    <section id="open" class="l-double" tabindex="-1">
       <div>
         <div>
           <div class="l-double__eyebrow" data-i18n="section.openSource.num">04 · Open source</div>
@@ -323,7 +331,7 @@
           </svg>
         </a>
       </div>
-      <div id="donar">
+      <section id="donar" tabindex="-1">
         <div>
           <div class="l-double__eyebrow" data-i18n="section.donate.num">05 · Donar</div>
           <h3 class="l-double__title" data-i18n="section.donate.title">Si te alegró el día, invitá un café.</h3>
@@ -353,8 +361,8 @@
             <script type="text/javascript">kofiwidget2.init('Support me on Ko-fi', '#72a4f2', 'Y8Y31YIHWK');kofiwidget2.draw();</script>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </section>
 
     <footer class="l-footer">
       <div>
@@ -372,7 +380,7 @@
         <ul>
           <li><a href="#como-funciona" data-i18n="footer.product.howItWorks">Cómo funciona</a></li>
           <li><a href="#screenshots" data-i18n="footer.product.theApp">La app</a></li>
-          <li><a href="#" data-i18n="footer.product.googlePlay">Google Play</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=com.github.barriosnahuel.vossosunboton" rel="noopener" target="_blank" data-i18n="footer.product.googlePlay">Google Play</a></li>
         </ul>
       </div>
       <div>
@@ -407,5 +415,6 @@
   <script src="assets/js/i18n.js" defer></script>
   <script src="assets/js/theme-toggle.js" defer></script>
   <script src="assets/js/sticker-hero.js" defer></script>
+  <script src="assets/js/anchor-focus.js" defer></script>
 </body>
 </html>

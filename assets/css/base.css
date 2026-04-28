@@ -22,6 +22,11 @@ a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; 
   border-radius: 2px;
 }
 
+/* Landmarks/sections/headings que sólo son focusables como destino de anchors:
+   sin outline cuando reciben foco programático — el feedback ya viene del scroll.
+   Los focusables nativos (a, button, input) conservan su outline. */
+:where(main, section, h2)[tabindex="-1"]:focus { outline: none; }
+
 ::selection { background: var(--acid-400); color: var(--ink-1000); }
 
 /* Skip link */
