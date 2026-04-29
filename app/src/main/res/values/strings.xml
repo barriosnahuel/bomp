@@ -45,6 +45,7 @@
     <string name="app_about_privacy_policy">Privacy Policy</string>
     <string name="app_about_data_safety">Data Safety</string>
     <string name="app_about_open_in_browser">Opens in browser</string>
+    <string name="app_about_error_no_browser">Couldn\'t open in a browser</string>
     <string name="app_about_privacy_policy_url" translatable="false">https://barriosnahuel.github.io/bomp/privacy-policy.html</string>
     <string name="app_about_data_safety_url" translatable="false">https://barriosnahuel.github.io/bomp/data-safety.html</string>
 

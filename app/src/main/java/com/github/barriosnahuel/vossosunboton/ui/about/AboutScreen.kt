@@ -7,6 +7,7 @@
 
 package com.github.barriosnahuel.vossosunboton.ui.about
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -45,6 +46,8 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -55,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +81,8 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import com.github.barriosnahuel.vossosunboton.util.withDeviceHl
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.Locale
 
 private val COLLABORATORS: List<Collaborator> = emptyList()
@@ -92,7 +98,10 @@ fun AboutScreen(onBack: () -> Unit) {
     val sourceUrl = stringResource(R.string.app_about_source_url)
     val privacyPolicyUrl = stringResource(R.string.app_about_privacy_policy_url)
     val dataSafetyUrl = stringResource(R.string.app_about_data_safety_url)
+    val noBrowserMessage = stringResource(R.string.app_about_error_no_browser)
     val isEnglishLocale = remember { Locale.getDefault().language == "en" }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     var soundId by remember { mutableIntStateOf(0) }
     val soundPool =
@@ -137,6 +146,7 @@ fun AboutScreen(onBack: () -> Unit) {
                     ),
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(
             modifier =
@@ -165,16 +175,25 @@ fun AboutScreen(onBack: () -> Unit) {
                     isLicenseSheetVisible = true
                 },
                 onPrivacyPolicyClick = {
-                    AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutPrivacyPolicyOpen)
-                    openUrl(context, privacyPolicyUrl.withDeviceHl())
+                    if (openUrl(context, privacyPolicyUrl.withDeviceHl())) {
+                        AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutPrivacyPolicyOpen)
+                    } else {
+                        scope.launch { snackbarHostState.showSnackbar(noBrowserMessage) }
+                    }
                 },
                 onDataSafetyClick = {
-                    AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutDataSafetyOpen)
-                    openUrl(context, dataSafetyUrl.withDeviceHl())
+                    if (openUrl(context, dataSafetyUrl.withDeviceHl())) {
+                        AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutDataSafetyOpen)
+                    } else {
+                        scope.launch { snackbarHostState.showSnackbar(noBrowserMessage) }
+                    }
                 },
                 onSourceClick = {
-                    AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutSourceOpen)
-                    openUrl(context, sourceUrl)
+                    if (openUrl(context, sourceUrl)) {
+                        AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutSourceOpen)
+                    } else {
+                        scope.launch { snackbarHostState.showSnackbar(noBrowserMessage) }
+                    }
                 },
             )
             Spacer(Modifier.height(Spacing.XXL))
@@ -458,6 +477,11 @@ private fun Context.readRawResource(resId: Int): String = resources.openRawResou
 private fun openUrl(
     context: Context,
     url: String,
-) {
-    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-}
+): Boolean =
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        true
+    } catch (e: ActivityNotFoundException) {
+        Timber.e(e, "Could not launch ACTION_VIEW for %s", url)
+        false
+    }

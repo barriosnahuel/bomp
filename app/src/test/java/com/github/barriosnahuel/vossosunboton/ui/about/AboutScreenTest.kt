@@ -200,6 +200,19 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `tap on privacy policy when the intent succeeds does not show the no-browser snackbar`() {
+        launch()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_privacy_policy))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_error_no_browser))
+            .assertDoesNotExist()
+    }
+
+    @Test
     fun `license bottom sheet opens on license item click`() {
         launch()
         composeTestRule.onNodeWithText(context.getString(R.string.app_about_license)).performScrollTo().performClick()
