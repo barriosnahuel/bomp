@@ -78,11 +78,11 @@ import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import com.github.barriosnahuel.vossosunboton.util.withDeviceHl
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import java.util.Locale
 
 private val COLLABORATORS: List<Collaborator> = emptyList()
@@ -482,6 +482,6 @@ private fun openUrl(
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         true
     } catch (e: ActivityNotFoundException) {
-        Timber.e(e, "Could not launch ACTION_VIEW for %s", url)
+        Tracker.track(RuntimeException("Could not launch ACTION_VIEW for $url", e))
         false
     }
