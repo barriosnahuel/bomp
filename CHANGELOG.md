@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Added a branded launch screen showing the Bomp brand mark on a theme-aware background (Paper in light mode, Ink in dark) — Android 12+ system splash plus core-splashscreen backport for API 23-30
 - Refined the launcher icon: the brand container is now Acid (Neo-Club signal yellow-green) with an Ink play triangle, replacing the organic blob composition that fought system masks (rounded squares in Play Store, circles on Pixel). The blob remains the brand mark on web surfaces (favicon, wordmark, feature graphic) where there is no system mask
 - Renamed app to **Bomp**: launcher label, About screen heading and Play Store listing now align with the canonical brand. Old name `Sos Un Boton` retired
+- Enabled Gradle configuration cache to speed up incremental builds and CI runs
 - Promoted the Add Button flow from a `:feature_addbutton` dynamic feature module into the core `:app` module (creating buttons is core, not a freemium add-on). Eliminates the bundletool wrapper script and lets the local UI test suite run as plain `./gradlew app:connectedDebugAndroidTest`
 - Deeplink `push-me://open/explore` now falls back to Home when no bundled sounds are available (release builds and debug checkouts without the bundled `raw/` directory), avoiding a blank Explore tab
 - Search overlay's clear-query icon now announces "Clear search" (was "Close search", which collided with the back-arrow's label and confused screen readers)
