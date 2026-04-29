@@ -21,11 +21,9 @@ import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import junit.framework.TestCase.assertTrue
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.robolectric.annotation.Config
-import java.util.Locale
 
 @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
 @Suppress("TooManyFunctions")
@@ -34,13 +32,6 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
     val composeTestRule = createComposeRule()
 
     private val context: Context get() = ApplicationProvider.getApplicationContext()
-
-    private val originalLocale = Locale.getDefault()
-
-    @After
-    fun restoreLocale() {
-        Locale.setDefault(originalLocale)
-    }
 
     private fun launch(onBack: () -> Unit = {}) {
         composeTestRule.setContent { AppTheme { AboutScreen(onBack = onBack) } }
@@ -66,24 +57,6 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
         composeTestRule
             .onNodeWithText(context.getString(R.string.app_about_tagline), substring = true)
             .assertIsDisplayed()
-    }
-
-    @Test
-    fun `pronunciation is shown when locale is English`() {
-        Locale.setDefault(Locale.ENGLISH)
-        launch()
-        composeTestRule
-            .onNodeWithText(context.getString(R.string.app_about_pronunciation))
-            .assertIsDisplayed()
-    }
-
-    @Test
-    fun `pronunciation is hidden when locale is not English`() {
-        Locale.setDefault(Locale("es"))
-        launch()
-        composeTestRule
-            .onNodeWithText(context.getString(R.string.app_about_pronunciation))
-            .assertDoesNotExist()
     }
 
     // --- Audio button ---

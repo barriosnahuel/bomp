@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Sos Un Boton</string>
+    <string name="app_name">Bomp</string>
 
     <string name="app_share_chooser_title">Share vía</string>
     <string name="app_undo">Undo!</string>
@@ -30,7 +30,6 @@
     <string name="app_about">About</string>
     <string name="app_about_back">Back</string>
     <string name="app_about_tagline">Porque un audio de los tuyos no es un mensaje, es un abrazo que se escucha</string>
-    <string name="app_about_pronunciation" translatable="false">/sohs oon boh-TOHN/</string>
     <string name="app_about_play_branding_audio">Play brand audio</string>
     <string name="app_about_ai_gemini_name">Google Gemini</string>
     <string name="app_about_ai_gemini_role">Helped think through ideas and decide what to build</string>

@@ -6,8 +6,13 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ## \[unreleased] (v2.0.0)
 ### Removed
 - Bundled audio files removed from version control; bottom navigation bar hidden in release builds (Explore tab only appears in debug when audio files are manually placed)
+- About screen pronunciation block (`/sohs oon boh-TOHN/`) removed alongside the rename to Bomp
 
 ### Changed
+- Replaced launcher icon with the Bomp brand mark and added adaptive + themed icon support
+- Added a branded launch screen showing the Bomp brand mark on a theme-aware background (Paper in light mode, Ink in dark) — Android 12+ system splash plus core-splashscreen backport for API 23-30
+- Refined the launcher icon: the brand container is now Acid (Neo-Club signal yellow-green) with an Ink play triangle, replacing the organic blob composition that fought system masks (rounded squares in Play Store, circles on Pixel). The blob remains the brand mark on web surfaces (favicon, wordmark, feature graphic) where there is no system mask
+- Renamed app to **Bomp**: launcher label, About screen heading and Play Store listing now align with the canonical brand. Old name `Sos Un Boton` retired
 - Promoted the Add Button flow from a `:feature_addbutton` dynamic feature module into the core `:app` module (creating buttons is core, not a freemium add-on). Eliminates the bundletool wrapper script and lets the local UI test suite run as plain `./gradlew app:connectedDebugAndroidTest`
 - Deeplink `push-me://open/explore` now falls back to Home when no bundled sounds are available (release builds and debug checkouts without the bundled `raw/` directory), avoiding a blank Explore tab
 - Search overlay's clear-query icon now announces "Clear search" (was "Close search", which collided with the back-arrow's label and confused screen readers)
@@ -20,6 +25,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### Added
 - Privacy Policy and Data Safety links added to the About screen's new "Legal & Privacy" section, opening the published pages with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
+- Initial Google Play Store listing assets in es-AR under `store-listing/`: title, short and full description, what's new, brand mark SVG, and design briefs for icon, feature graphic, screenshots and preview video
 - Firebase Analytics instrumentation: emits events for every active user flow (add, edit, delete, play, pin, search, share, about) plus 6 canonical `screen_view` names (`my_sounds`, `explore_sounds`, `about`, `search_sound`, `add_sound`, `edit_sound`) with auto-tracking disabled, one-shot `first_*` variants on first invocation, and user properties (`current_sounds`, `current_pinned`, `lifetime_shares`, `lifetime_plays`) that unlock cohort segmentation in Firebase Console
 - Renamed the first bottom-nav tab from "Inicio"/"Home" to "Mis audios"/"My Sounds" so the visible label matches the canonical telemetry `screen_name`
 - Bundled sounds (Explore tab) can now be pinned to the top via button tap or swipe right, with the pinned state persisting across app restarts

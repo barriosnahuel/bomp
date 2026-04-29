@@ -63,8 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -74,7 +72,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
-import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
@@ -83,7 +80,6 @@ import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import com.github.barriosnahuel.vossosunboton.util.withDeviceHl
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 private val COLLABORATORS: List<Collaborator> = emptyList()
 
@@ -99,7 +95,6 @@ fun AboutScreen(onBack: () -> Unit) {
     val privacyPolicyUrl = stringResource(R.string.app_about_privacy_policy_url)
     val dataSafetyUrl = stringResource(R.string.app_about_data_safety_url)
     val noBrowserMessage = stringResource(R.string.app_about_error_no_browser)
-    val isEnglishLocale = remember { Locale.getDefault().language == "en" }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -160,7 +155,6 @@ fun AboutScreen(onBack: () -> Unit) {
                 versionInfo = versionInfo,
                 soundPool = soundPool,
                 soundId = soundId,
-                isEnglishLocale = isEnglishLocale,
             )
             Spacer(Modifier.height(Spacing.XL))
             CreditsSection(creditEntries = creditEntries)
@@ -225,20 +219,13 @@ private fun HeroSection(
     versionInfo: String,
     soundPool: SoundPool,
     soundId: Int,
-    isEnglishLocale: Boolean,
 ) {
     Spacer(Modifier.height(Spacing.XXL))
 
     Image(
-        painter = painterResource(R.mipmap.app_ic_launcher),
+        painter = painterResource(R.drawable.app_brand_mark),
         contentDescription = null,
         modifier = Modifier.size(96.dp),
-        colorFilter =
-            if (BuildConfig.DEBUG) {
-                ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-            } else {
-                null
-            },
     )
 
     Spacer(Modifier.height(Spacing.LG))
@@ -273,15 +260,6 @@ private fun HeroSection(
         )
         Spacer(Modifier.width(Spacing.SM))
         Spacer(Modifier.size(44.dp))
-    }
-
-    if (isEnglishLocale) {
-        Text(
-            text = stringResource(R.string.app_about_pronunciation),
-            style = MaterialTheme.typography.bodyLarge,
-            fontStyle = FontStyle.Italic,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 
     Spacer(Modifier.height(Spacing.MD))

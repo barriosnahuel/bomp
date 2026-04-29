@@ -34,7 +34,8 @@
             android:name=".ui.home.LandingActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="true"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:theme="@style/app_Theme_Starting">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
