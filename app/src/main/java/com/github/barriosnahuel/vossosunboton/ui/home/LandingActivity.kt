@@ -14,6 +14,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
@@ -22,6 +23,7 @@ class LandingActivity : ComponentActivity() {
     private val viewModel: SoundsViewModel by viewModels { SoundsViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         // The TopAppBar is always a dark violet in both light and dark modes, so status
         // bar icons must always be light (white). SystemBarStyle.dark forces this.
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
