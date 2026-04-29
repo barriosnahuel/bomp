@@ -39,6 +39,10 @@
     <string name="app_about_license">Licencia de código</string>
     <string name="app_about_credits">Créditos de terceros</string>
     <string name="app_about_source">Código fuente</string>
+    <string name="app_about_legal_section_title">Legal y privacidad</string>
+    <string name="app_about_privacy_policy">Política de privacidad</string>
+    <string name="app_about_data_safety">Seguridad de datos</string>
+    <string name="app_about_open_in_browser">Se abre en el navegador</string>
 
     <string name="app_addbutton_activity_title">Nuevo botón</string>
     <string name="app_addbutton_activity_title_edit">Editar botón</string>

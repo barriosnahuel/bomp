@@ -65,6 +65,8 @@ internal class AnalyticsCoverageMatrixTest {
                 "AboutCreditsOpen",
                 "AboutLicenseOpen",
                 "AboutSourceOpen",
+                "AboutPrivacyPolicyOpen",
+                "AboutDataSafetyOpen",
                 "AboutBrandingAudioPlay",
                 "MilestoneAudios",
             )

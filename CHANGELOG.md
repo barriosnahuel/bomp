@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Sound cards now have a subtle 1dp hairline border for visual separation on dark and light backgrounds
 
 ### Added
+- Privacy Policy and Data Safety links added to the About screen's new "Legal & Privacy" section, opening the published pages with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
 - Firebase Analytics instrumentation: emits events for every active user flow (add, edit, delete, play, pin, search, share, about) plus 6 canonical `screen_view` names (`my_sounds`, `explore_sounds`, `about`, `search_sound`, `add_sound`, `edit_sound`) with auto-tracking disabled, one-shot `first_*` variants on first invocation, and user properties (`current_sounds`, `current_pinned`, `lifetime_shares`, `lifetime_plays`) that unlock cohort segmentation in Firebase Console
 - Renamed the first bottom-nav tab from "Inicio"/"Home" to "Mis audios"/"My Sounds" so the visible label matches the canonical telemetry `screen_name`
 - Bundled sounds (Explore tab) can now be pinned to the top via button tap or swipe right, with the pinned state persisting across app restarts

@@ -41,6 +41,12 @@
     <string name="app_about_credits">Third-party credits</string>
     <string name="app_about_source">Source code</string>
     <string name="app_about_source_url" translatable="false">https://github.com/barriosnahuel/push-me</string>
+    <string name="app_about_legal_section_title">Legal &amp; Privacy</string>
+    <string name="app_about_privacy_policy">Privacy Policy</string>
+    <string name="app_about_data_safety">Data Safety</string>
+    <string name="app_about_open_in_browser">Opens in browser</string>
+    <string name="app_about_privacy_policy_url" translatable="false">https://barriosnahuel.github.io/bomp/privacy-policy.html</string>
+    <string name="app_about_data_safety_url" translatable="false">https://barriosnahuel.github.io/bomp/data-safety.html</string>
 
     <string name="app_addbutton_activity_title">New button</string>
     <string name="app_addbutton_activity_title_edit">Edit button</string>

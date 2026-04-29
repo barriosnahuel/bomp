@@ -8,12 +8,15 @@ package com.github.barriosnahuel.vossosunboton.ui.about
 import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.intent.Intents.intended
@@ -24,6 +27,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
+import org.hamcrest.Description
+import org.hamcrest.Matcher
+import org.hamcrest.TypeSafeMatcher
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -110,11 +116,53 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
-            composeRule.onNodeWithText(sourceLabel()).performClick()
+            composeRule.onNodeWithText(sourceLabel()).performScrollTo().performClick()
             composeRule.waitForIdle()
             // The data URL is unique to this button's ACTION_VIEW; matching the URL alone
             // is sufficient and avoids the hamcrest 1.3 `allOf(2-arg)` API gap.
             intended(hasData(context.getString(R.string.app_about_source_url)))
+        }
+    }
+
+    @Test
+    fun privacyPolicyItemEmitsActionViewIntentWithLocalizedHl() {
+        intending(hasAction(Intent.ACTION_VIEW))
+            .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openAbout()
+            composeRule.onNodeWithText(privacyPolicyLabel()).performScrollTo().performClick()
+            composeRule.waitForIdle()
+            intended(hasData(matchesSupportedHl(context.getString(R.string.app_about_privacy_policy_url))))
+        }
+    }
+
+    @Test
+    fun dataSafetyItemEmitsActionViewIntentWithLocalizedHl() {
+        intending(hasAction(Intent.ACTION_VIEW))
+            .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openAbout()
+            composeRule.onNodeWithText(dataSafetyLabel()).performScrollTo().performClick()
+            composeRule.waitForIdle()
+            intended(hasData(matchesSupportedHl(context.getString(R.string.app_about_data_safety_url))))
+        }
+    }
+
+    @Test
+    fun externalLegalItemsExposeOpensInBrowserHint() {
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openAbout()
+            composeRule.onNodeWithText(privacyPolicyLabel()).performScrollTo()
+            composeRule
+                .onAllNodesWithContentDescription(context.getString(R.string.app_about_open_in_browser))
+                .fetchSemanticsNodes()
+                .let { nodes ->
+                    assert(nodes.size == EXTERNAL_LEGAL_ITEMS) {
+                        "Expected $EXTERNAL_LEGAL_ITEMS open-in-browser hints, got ${nodes.size}"
+                    }
+                }
         }
     }
 
@@ -149,7 +197,26 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
 
     private fun claudeName() = context.getString(R.string.app_about_ai_claude_name)
 
+    private fun privacyPolicyLabel() = context.getString(R.string.app_about_privacy_policy)
+
+    private fun dataSafetyLabel() = context.getString(R.string.app_about_data_safety)
+
+    private fun matchesSupportedHl(baseUrl: String): Matcher<Uri> =
+        object : TypeSafeMatcher<Uri>() {
+            override fun describeTo(description: Description) {
+                description.appendText("URI matching $baseUrl with supported ?hl= value")
+            }
+
+            override fun matchesSafely(uri: Uri): Boolean {
+                if ("${uri.scheme}://${uri.authority}${uri.path}" != baseUrl) return false
+                val hl = uri.getQueryParameter("hl") ?: return false
+                return hl in SUPPORTED_HL
+            }
+        }
+
     companion object {
         private const val WAIT_TIMEOUT_MS = 5_000L
+        private const val EXTERNAL_LEGAL_ITEMS = 3
+        private val SUPPORTED_HL = setOf("es-AR", "es-419", "es-ES", "en", "pt-BR")
     }
 }

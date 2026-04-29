@@ -104,6 +104,12 @@ sealed class AnalyticsEvent(
     /** External "Source code" link followed from About. The user leaves the app. */
     object AboutSourceOpen : AnalyticsEvent(name = "about_source_open", hasFirstVariant = true)
 
+    /** External Privacy Policy link followed from About. The user leaves the app. */
+    object AboutPrivacyPolicyOpen : AnalyticsEvent(name = "about_privacy_policy_open", hasFirstVariant = true)
+
+    /** External Data Safety link followed from About. The user leaves the app. */
+    object AboutDataSafetyOpen : AnalyticsEvent(name = "about_data_safety_open", hasFirstVariant = true)
+
     /** Branding audio (Sticker Cero) played from the About hero section. */
     object AboutBrandingAudioPlay : AnalyticsEvent(name = "about_branding_audio_play", hasFirstVariant = true)
 

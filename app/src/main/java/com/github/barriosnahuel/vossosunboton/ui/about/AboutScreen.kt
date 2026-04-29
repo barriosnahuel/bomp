@@ -44,7 +44,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -77,6 +76,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
+import com.github.barriosnahuel.vossosunboton.util.withDeviceHl
 import java.util.Locale
 
 private val COLLABORATORS: List<Collaborator> = emptyList()
@@ -90,6 +90,8 @@ fun AboutScreen(onBack: () -> Unit) {
     val creditEntries = remember { parseCreditEntries(creditsText) }
     val versionInfo = remember { context.versionInfo() }
     val sourceUrl = stringResource(R.string.app_about_source_url)
+    val privacyPolicyUrl = stringResource(R.string.app_about_privacy_policy_url)
+    val dataSafetyUrl = stringResource(R.string.app_about_data_safety_url)
     val isEnglishLocale = remember { Locale.getDefault().language == "en" }
 
     var soundId by remember { mutableIntStateOf(0) }
@@ -156,11 +158,19 @@ fun AboutScreen(onBack: () -> Unit) {
                 Spacer(Modifier.height(Spacing.LG))
                 CollaboratorsSection(COLLABORATORS)
             }
-            Spacer(Modifier.height(Spacing.LG))
-            LegalSection(
+            Spacer(Modifier.height(Spacing.XL))
+            LegalAndPrivacySection(
                 onLicenseClick = {
                     AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutLicenseOpen)
                     isLicenseSheetVisible = true
+                },
+                onPrivacyPolicyClick = {
+                    AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutPrivacyPolicyOpen)
+                    openUrl(context, privacyPolicyUrl.withDeviceHl())
+                },
+                onDataSafetyClick = {
+                    AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutDataSafetyOpen)
+                    openUrl(context, dataSafetyUrl.withDeviceHl())
                 },
                 onSourceClick = {
                     AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutSourceOpen)
@@ -432,31 +442,6 @@ private fun CollaboratorsSection(collaborators: List<Collaborator>) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun LegalSection(
-    onLicenseClick: () -> Unit,
-    onSourceClick: () -> Unit,
-) {
-    OutlinedButton(
-        onClick = onLicenseClick,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.LG, vertical = Spacing.XS),
-    ) {
-        Text(stringResource(R.string.app_about_license))
-    }
-    OutlinedButton(
-        onClick = onSourceClick,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.LG, vertical = Spacing.XS),
-    ) {
-        Text(stringResource(R.string.app_about_source))
     }
 }
 
