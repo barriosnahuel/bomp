@@ -89,6 +89,32 @@ internal class AboutScreenAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `tap on privacy policy item emits about_privacy_policy_open`() {
+        composeTestRule.setContent { AppTheme { AboutScreen(onBack = {}) } }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_privacy_policy))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        fake.assertEmitted("about_privacy_policy_open")
+    }
+
+    @Test
+    fun `tap on data safety item emits about_data_safety_open`() {
+        composeTestRule.setContent { AppTheme { AboutScreen(onBack = {}) } }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_data_safety))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        fake.assertEmitted("about_data_safety_open")
+    }
+
+    @Test
     fun `tap on branding audio button does not emit before the SoundPool finishes loading`() {
         composeTestRule.setContent { AppTheme { AboutScreen(onBack = {}) } }
 

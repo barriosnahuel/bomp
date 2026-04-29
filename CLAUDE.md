@@ -156,6 +156,46 @@ merging; the aggregated Reports dashboards have a 24–48 h delay and do not
 confirm a single new event.
 
 
+## Error tracking (non-fatals)
+
+Non-fatal exceptions go to Firebase Crashlytics through the `Tracker` wrapper at
+`commons_android/.../error/Trackable.kt`. Two methods, very different effects:
+
+- `Tracker.track(throwable)` → calls `FirebaseCrashlytics.recordException(...)`.
+  **This is what shows up as a non-fatal in the Crashlytics dashboard** with the
+  full stack trace. Use this for any caught exception you want operations to
+  see.
+- `Tracker.log(message)` → calls `FirebaseCrashlytics.log(...)`. **Breadcrumb
+  only**: it is attached to the next crash/non-fatal recorded after it, and is
+  invisible in the dashboard until then. Useful right before a `Tracker.track(...)`
+  to attach extra context, not as a standalone report.
+
+Hard rules that affect how to write error-handling code:
+
+- **Do NOT rely on `Timber.e(throwable, message)` to surface a non-fatal.** The
+  `ErrorTrackerTree` Timber tree (planted in debug and release) forwards only
+  the formatted message via `Tracker.log(...)` — the throwable parameter is
+  silently dropped. As a maintainer you will not see those events as non-fatals
+  in the dashboard. `Timber.e` / `Timber.w` are fine for logcat-only diagnostic
+  output during development.
+- For caught exceptions, follow the established pattern (see
+  `PlayerControllerImpl.kt`): wrap the cause in a `RuntimeException` whose
+  message describes the operation, then hand it to `Tracker.track`. The wrapper
+  message becomes the searchable Crashlytics title; the original throwable is
+  preserved as `cause` with full stack trace.
+  ```kotlin
+  } catch (e: ActivityNotFoundException) {
+      Tracker.track(RuntimeException("Could not launch ACTION_VIEW for $url", e))
+      // ...recovery UI (snackbar, fallback) goes here
+  }
+  ```
+- A caught exception that is **expected and recoverable** (e.g. user dismissed
+  a chooser) does not need `Tracker.track`. Reserve it for things you want to
+  investigate.
+- In tests, you can mock `Tracker` with MockK (see `PlayerControllerTest.kt`):
+  `every { Tracker.track(any()) } answers { nothing }`.
+
+
 ## Worktree setup
 
 After creating a new worktree, always run these commands to replace the dummy `google-services.json` and copy the bundled audio files from the main worktree:

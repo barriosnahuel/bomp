@@ -7,9 +7,11 @@ package com.github.barriosnahuel.vossosunboton.ui.about
 
 import android.content.Context
 import android.os.Build
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -142,10 +144,19 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
         composeTestRule.onNodeWithText(geminiName).assertDoesNotExist()
     }
 
-    // --- Legal section ---
+    // --- Legal & Privacy section ---
 
     @Test
-    fun `source license button is displayed`() {
+    fun `legal section header is displayed`() {
+        launch()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_legal_section_title))
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `source license item is displayed`() {
         launch()
         composeTestRule
             .onNodeWithText(context.getString(R.string.app_about_license))
@@ -154,7 +165,25 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `source code button is displayed`() {
+    fun `privacy policy item is displayed`() {
+        launch()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_privacy_policy))
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `data safety item is displayed`() {
+        launch()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_data_safety))
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `source code item is displayed`() {
         launch()
         composeTestRule
             .onNodeWithText(context.getString(R.string.app_about_source))
@@ -163,7 +192,28 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `license bottom sheet opens on license button click`() {
+    fun `external items expose the opens-in-browser accessibility hint`() {
+        launch()
+        composeTestRule
+            .onAllNodesWithContentDescription(context.getString(R.string.app_about_open_in_browser))
+            .assertCountEquals(EXTERNAL_LEGAL_ITEMS)
+    }
+
+    @Test
+    fun `tap on privacy policy when the intent succeeds does not show the no-browser snackbar`() {
+        launch()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_privacy_policy))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_error_no_browser))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun `license bottom sheet opens on license item click`() {
         launch()
         composeTestRule.onNodeWithText(context.getString(R.string.app_about_license)).performScrollTo().performClick()
         composeTestRule.mainClock.advanceTimeBy(500L)
@@ -183,5 +233,9 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
             .onNodeWithContentDescription(context.getString(R.string.app_about_back))
             .performClick()
         assertTrue(called)
+    }
+
+    private companion object {
+        const val EXTERNAL_LEGAL_ITEMS = 3
     }
 }
