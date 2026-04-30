@@ -81,8 +81,6 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import com.github.barriosnahuel.vossosunboton.util.withDeviceHl
 import kotlinx.coroutines.launch
 
-private val COLLABORATORS: List<Collaborator> = emptyList()
-
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -158,10 +156,6 @@ fun AboutScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(Spacing.XL))
             CreditsSection(creditEntries = creditEntries)
-            if (COLLABORATORS.isNotEmpty()) {
-                Spacer(Modifier.height(Spacing.LG))
-                CollaboratorsSection(COLLABORATORS)
-            }
             Spacer(Modifier.height(Spacing.XL))
             LegalAndPrivacySection(
                 onLicenseClick = {
@@ -327,11 +321,15 @@ private fun CreditsSection(creditEntries: List<CreditEntry>) {
                     .padding(horizontal = Spacing.LG),
             verticalArrangement = Arrangement.spacedBy(Spacing.SM),
         ) {
-            AiAttributionCard(
+            AttributionCard(
+                name = stringResource(R.string.app_about_collaborators_first_audios_name),
+                role = stringResource(R.string.app_about_collaborators_first_audios_role),
+            )
+            AttributionCard(
                 name = stringResource(R.string.app_about_ai_gemini_name),
                 role = stringResource(R.string.app_about_ai_gemini_role),
             )
-            AiAttributionCard(
+            AttributionCard(
                 name = stringResource(R.string.app_about_ai_claude_name),
                 role = stringResource(R.string.app_about_ai_claude_role),
             )
@@ -344,7 +342,7 @@ private fun CreditsSection(creditEntries: List<CreditEntry>) {
 }
 
 @Composable
-private fun AiAttributionCard(
+private fun AttributionCard(
     name: String,
     role: String,
 ) {
@@ -400,42 +398,6 @@ private fun CreditCard(entry: CreditEntry) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { openUrl(context, url) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CollaboratorsSection(collaborators: List<Collaborator>) {
-    Text(
-        text = stringResource(R.string.app_about_collaborators_section_title),
-        style = MaterialTheme.typography.titleMedium,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.LG),
-    )
-    Spacer(Modifier.height(Spacing.SM))
-    collaborators.forEach { collaborator ->
-        Card(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.LG, vertical = Spacing.XS),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            Column(modifier = Modifier.padding(Spacing.LG)) {
-                Text(
-                    text = collaborator.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = collaborator.role,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

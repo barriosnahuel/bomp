@@ -98,6 +98,29 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `expanding credits reveals first-audios collaborators card`() {
+        launch()
+        composeTestRule.onNodeWithText(context.getString(R.string.app_about_credits)).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_collaborators_first_audios_name))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_collaborators_first_audios_role))
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `collaborators card is hidden when credits are collapsed`() {
+        launch()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_collaborators_first_audios_name))
+            .assertDoesNotExist()
+    }
+
+    @Test
     fun `expanding credits reveals library entries`() {
         launch()
         composeTestRule.onNodeWithText(context.getString(R.string.app_about_credits)).performClick()

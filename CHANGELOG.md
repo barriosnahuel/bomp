@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Sound cards now have a subtle 1dp hairline border for visual separation on dark and light backgrounds
 
 ### Added
+- Acknowledged the first-audios collaborators (Fede, Juli, Mati, Tincho) as the first card inside About's Third-party credits, replacing the previously empty Made with section
 - Privacy Policy and Data Safety links added to the About screen's new "Legal & Privacy" section, opening the published pages with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
 - Initial Google Play Store listing assets in es-AR under `store-listing/`: title, short and full description, what's new, brand mark SVG, and design briefs for icon, feature graphic, screenshots and preview video
 - Firebase Analytics instrumentation: emits events for every active user flow (add, edit, delete, play, pin, search, share, about) plus 6 canonical `screen_view` names (`my_sounds`, `explore_sounds`, `about`, `search_sound`, `add_sound`, `edit_sound`) with auto-tracking disabled, one-shot `first_*` variants on first invocation, and user properties (`current_sounds`, `current_pinned`, `lifetime_shares`, `lifetime_plays`) that unlock cohort segmentation in Firebase Console
