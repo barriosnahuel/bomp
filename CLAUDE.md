@@ -122,8 +122,6 @@ Igual que en la app:
 
 Antes del primer push de la ficha en Play, resolver:
 
-- [ ] Reemplazar `assets/audio/welcome.mp3` (placeholder silencioso 1s) por audio real
-      (≤10s, español).
 - [ ] Reemplazar el pill custom en `.l-cta-row` por el badge oficial **Pre-register on Google
       Play** (es-419 SVG) descargado del Partner Marketing Hub:
       https://partnermarketinghub.withgoogle.com/brands/google-play/visual-identity/badge-guidelines/

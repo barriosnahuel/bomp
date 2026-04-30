@@ -19,7 +19,7 @@ Esta rama (`gh-pages`) sirve el sitio público de Bomp en
 | `assets/css/legal.css` | Layout 80ch + ToC sticky + print stylesheet para las páginas legales |
 | `assets/js/theme-toggle.js` | Toggle dark/light con persistencia en `localStorage["bomp-theme"]` |
 | `assets/js/sticker-hero.js` | Audio real (`<audio>`) + progreso radial driven by `audio.currentTime` |
-| `assets/audio/welcome.mp3` | **Placeholder silencioso de 1s** — TODO: producir audio definitivo antes del release a Play Store |
+| `assets/audio/bomp.mp3` | Audio del sticker hero (≤10s, ES) |
 
 ## Stack
 
@@ -34,7 +34,6 @@ no introducir colores nuevos sin revalidar contraste.
 
 ## TODOs bloqueantes para Play Store
 
-- [ ] Reemplazar `assets/audio/welcome.mp3` por audio real (≤10s, español).
 - [ ] Confirmar email ARCO en `privacy-policy.html`.
 - [ ] Reemplazar el pill "Google Play" custom por el badge oficial cuando la app esté publicada.
 - [ ] Confirmar URL pública (`barriosnahuel.github.io/bomp/`) tras el primer deploy y rectificar `og:url`, `<link rel="canonical">` y `sitemap.xml` si difiere.
