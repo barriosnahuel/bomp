@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512">
+  <!--
+    Play Store icon 512×512 — Bomp.
+    Acid400 full-bleed as the container, Ink1000 play triangle centered.
+    Intentional drop of the organic blob: on surfaces with a system mask
+    (Play rounded square, launcher circle/squircle), the blob's asymmetry
+    fights the system container. Solution: the brand color IS the container.
+    The organic shape stays on the web (favicon, wordmark, feature graphic),
+    where there is no mask.
+    ViewBox 108 aligned with the adaptive icon foreground so the triangle
+    geometry is identical between launcher and Play Store.
+  -->
+  <rect width="108" height="108" fill="#D7FF3A"/>
+  <path d="M40,34 L40,75 L76,54 Z" fill="#0B0B0C"/>
+</svg>
