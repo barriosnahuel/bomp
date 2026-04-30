@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="192" height="192">
+  <!--
+    Bomp launcher icon — pre-Android 8 raster fallback.
+    Same composition as drawable/app_ic_launcher_foreground.xml but with the Acid background baked in.
+    Source for mipmap-{m,h,xh,xxh,xxxh}dpi/app_ic_launcher.png exports via rsvg-convert.
+    Adaptive icon viewport (108) preserved so the path data matches 1:1 with the vector drawable.
+  -->
+  <rect width="108" height="108" fill="#D7FF3A"/>
+  <path d="M40,34 L40,75 L76,54 Z" fill="#0B0B0C"/>
+</svg>
