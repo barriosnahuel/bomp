@@ -35,7 +35,8 @@
     <string name="app_about_ai_gemini_role">Helped think through ideas and decide what to build</string>
     <string name="app_about_ai_claude_name">Anthropic Claude</string>
     <string name="app_about_ai_claude_role">Turned those ideas into the app you\'re using</string>
-    <string name="app_about_collaborators_section_title">Made with</string>
+    <string name="app_about_collaborators_first_audios_name">Fede, Juli, Mati and Tincho</string>
+    <string name="app_about_collaborators_first_audios_role">For those first audios that sparked the idea that 10 years later finally shipped 😅</string>
     <string name="app_about_license">Source license</string>
     <string name="app_about_credits">Third-party credits</string>
     <string name="app_about_source">Source code</string>
