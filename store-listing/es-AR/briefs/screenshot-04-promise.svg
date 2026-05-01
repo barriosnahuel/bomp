@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2400" width="1080" height="2400">
+  <!--
+    Bomp Play Store screenshot 04 — manifesto card (es-AR).
+    Full vector (no embedded raster). Communicates the two killer differentials:
+    zero-friction onboarding ("Sin registro.") and Auto Backup persistence
+    ("Nada se pierde."). 1080×2400 (9:20). Visual eco of the feature graphic:
+    Acid blob brand mark + 2 concentric waves over Ink1000.
+  -->
+  <defs>
+    <style>
+      .h1 { font-family: Inter, Roboto, system-ui, sans-serif; font-weight: 700; font-size: 110px; fill: #FAFAF7; letter-spacing: -2px; text-anchor: middle; }
+      .h2 { font-family: Inter, Roboto, system-ui, sans-serif; font-weight: 400; font-size: 42px; fill: #FAFAF7; opacity: 0.7; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1080" height="2400" fill="#0B0B0C"/>
+
+  <!-- Headline (top ~25%): two-line dual-feature hook -->
+  <text x="540" y="450" class="h1">Sin registro.</text>
+  <text x="540" y="600" class="h1">Nada se pierde.</text>
+
+  <!-- Mid (~50%): brand mark + 2 concentric waves -->
+  <circle cx="540" cy="1230" r="305" fill="none" stroke="#D7FF3A" stroke-width="3" opacity="0.08"/>
+  <circle cx="540" cy="1230" r="240" fill="none" stroke="#D7FF3A" stroke-width="3" opacity="0.15"/>
+  <g transform="translate(370 1060) scale(10.625)">
+    <path d="M10.24 0 A21.76 9.6 0 0 1 32 9.6 A22.4 22.4 0 0 1 9.6 32 A9.6 22.4 0 0 1 0 9.6 A10.24 9.6 0 0 1 10.24 0 Z" fill="#D7FF3A"/>
+    <path d="M10 8 L10 24 L23 16 Z" fill="#0B0B0C"/>
+  </g>
+
+  <!-- Subtitle (bottom ~25%): expand on each line of the headline -->
+  <text x="540" y="2000" class="h2">Bajás, abrís, bompeás.</text>
+  <text x="540" y="2080" class="h2">Tu colección te sigue donde vayas.</text>
+</svg>

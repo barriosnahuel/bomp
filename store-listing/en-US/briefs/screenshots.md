@@ -21,8 +21,9 @@ Final canvas: **1080 × 2400** (9:20).
 | 1 | `screenshot-01-home.svg` | `Screenshot_20260428_225250.png` — Home idle (5 cards) | **Your collection of voices.** | The ones that matter — always close. |
 | 2 | `screenshot-02-search.svg` | `Screenshot_20260428_225317.png` — Search overlay with query "ris" filtering 2 idle results | **Find any voice, / in a second.** | Even when your collection gets big. |
 | 3 | `screenshot-03-playing.svg` | `Screenshot_20260428_225339.png` — Search overlay with query "ris" and "Risa de mi vieja" playing (pause + halo + Acid slider) | **Tap. Play. Done.** | No waiting. No loading screens. |
+| 4 | `screenshot-04-promise.svg` | (no capture — full vector) Manifesto card: Ink1000 + Acid brand mark centered with 2 concentric waves | **No signup. / Nothing gets lost.** | Download, open, Bomp. / Your collection follows you. |
 
-Narrative arc: `your collection → find → activate`. Zero implication of "send out" — the moment of value is **listening**, not sharing.
+Narrative arc: `your collection → find → activate → sticks around`. Zero implication of "send out" — the moment of value is **listening**, not sharing. Card #4 closes the arc with the two absolute differentials: zero-friction onboarding (no signup, email, or phone) + persistence via Auto Backup to Drive (the collection survives uninstall and device change).
 
 > Note: the embedded screenshots show the in-app sticker names exactly as captured on the emulator (Spanish, e.g. "Risa de mi vieja"). Sticker names are user-authored and stay in the user's own language — they are not localized in marketing assets. Re-capturing with an English-locale corpus is a future option if Play feedback flags it.
 
@@ -31,12 +32,14 @@ Narrative arc: `your collection → find → activate`. Zero implication of "sen
 The SVGs are already composed. To regenerate the PNG deliverables (`images/phone/0X-*.png`) run:
 
 ```bash
-for n in 01-home 02-search 03-playing; do
+for n in 01-home 02-search 03-playing 04-promise; do
   rsvg-convert -w 1080 -h 2400 \
     store-listing/en-US/briefs/screenshot-$n.svg \
     -o store-listing/en-US/images/phone/$n-en-US.png
 done
 ```
+
+Note: card #4 is full vector (no embedded PNG). Cards #1–#3 are hybrid (SVG header + real PNG base64). The command applies to all four equally — `rsvg-convert` handles each case unchanged.
 
 ### Re-capture PNGs when the UI changes
 

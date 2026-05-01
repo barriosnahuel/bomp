@@ -21,20 +21,23 @@ Canvas final: **1080 × 2400** (9:20).
 | 1 | `screenshot-01-home.svg` | `Screenshot_20260428_225250.png` — Home idle (5 cards) | **Tu colección de voces.** | Las que te importan, siempre con vos. |
 | 2 | `screenshot-02-search.svg` | `Screenshot_20260428_225317.png` — Search overlay con query "ris" filtrando 2 resultados idle | **Encontrá rápido / la voz que querés.** | Cuando tu colección crezca. |
 | 3 | `screenshot-03-playing.svg` | `Screenshot_20260428_225339.png` — Search overlay con query "ris" y "Risa de mi vieja" reproduciéndose (pause + halo + slider Acid) | **Un toque, suena.** | Sin esperas, sin pantalla cargando. |
+| 4 | `screenshot-04-promise.svg` | (sin captura — full vector) Manifesto card: Ink1000 + brand mark Acid centrado con 2 waves concéntricas | **Sin registro. / Nada se pierde.** | Bajás, abrís, bompeás. / Tu colección te sigue donde vayas. |
 
-Arco narrativo: `tu colección → encontrá → activá`. Cero implicancia de "mandar afuera" — el momento del valor es **escuchar**, no compartir.
+Arco narrativo: `tu colección → encontrá → activá → permanece`. Cero implicancia de "mandar afuera" — el momento del valor es **escuchar**, no compartir. La card #4 cierra con la promesa de los dos diferenciadores absolutos: cero fricción de entrada (sin registro/email/número) + permanencia vía Auto Backup a Drive (la colección sobrevive desinstalación y cambio de device).
 
 ### Re-render PNGs finales
 
 Los SVG ya están compuestos. Para regenerar los PNGs entregables (`images/phone/0X-*.png`) corré:
 
 ```bash
-for n in 01-home 02-search 03-playing; do
+for n in 01-home 02-search 03-playing 04-promise; do
   rsvg-convert -w 1080 -h 2400 \
     store-listing/es-AR/briefs/screenshot-$n.svg \
     -o store-listing/es-AR/images/phone/$n-es-AR.png
 done
 ```
+
+Nota: la card #4 es full vector (no embebe PNG). Las #1–#3 son híbridas (header SVG + PNG real base64). El comando aplica a todas por igual — `rsvg-convert` resuelve cada caso sin cambios.
 
 ### Re-capturar PNGs cuando cambie la UI
 
