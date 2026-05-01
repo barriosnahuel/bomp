@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Acknowledged the first-audios collaborators (Fede, Juli, Mati, Tincho) as the first card inside About's Third-party credits, replacing the previously empty Made with section
 
 ### Changed
+- Renamed Add Button flow user-facing strings to align with brand DNA: TopAppBar reads "New Bomp"/"Nuevo Bomp" when creating and "Rename Bomp"/"Renombrar Bomp" when editing (the edit screen currently only renames); name-field hint references "your new Bomp"/"tu Bomp"; share-sheet subtitle is now just "Save"/"Guardar" (was "Save button" — and "Save Bomp" stuttered under the "Bomp" app name)
 - Renamed app to **Bomp**: launcher label, About screen heading and Play Store listing now align with the canonical brand; old name `Sos Un Boton` retired
 - Replaced launcher icon: brand container is now Acid (Neo-Club signal yellow-green) with an Ink play triangle, with adaptive and themed (Material You) icon support; the organic blob brand mark remains on web surfaces (favicon, wordmark, feature graphic) where there is no system mask
 - Added a branded launch screen showing the Bomp brand mark on a theme-aware background (Paper in light mode, Ink in dark) — Android 12+ system splash plus core-splashscreen backport for API 23-30
