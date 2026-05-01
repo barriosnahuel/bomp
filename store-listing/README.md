@@ -1,83 +1,87 @@
 # Bomp — Store Listing
 
-Assets y copy para la ficha de Google Play, organizados por locale.
+Assets and copy for the Google Play listing, organized by locale.
 
-## Estructura
+## Structure
 
 ```
 store-listing/
-├── README.md                       # este archivo
+├── README.md                       # this file
 ├── brand/
-│   ├── bomp-mark.svg               # master vectorial de marca (blob orgánico) — usado en web
-│   ├── launcher-fallback.svg       # source para mipmap-*/app_ic_launcher.png (Android < 8)
+│   ├── bomp-mark.svg               # vector master of the brand mark (organic blob) — used on the web
+│   ├── launcher-fallback.svg       # source for mipmap-*/app_ic_launcher.png (Android < 8)
 │   └── fonts/
-│       └── Inter.zip               # font brand zippeada (SIL OFL, instalación en CONTRIBUTING.md)
-├── real-screenshots/               # PNGs nativos 1080×2400 capturados en Pixel emulator
-├── es-AR/                          # primer locale entregado
+│       └── Inter.zip               # zipped brand font (SIL OFL, install steps in CONTRIBUTING.md)
+├── real-screenshots/               # native 1080×2400 PNGs captured on the Pixel emulator
+├── es-AR/                          # first locale shipped
 │   ├── title.txt                   # ≤30 chars
 │   ├── short_description.txt       # ≤80 chars
 │   ├── full_description.txt        # ≤4000 chars
-│   ├── changelog-5.txt             # ≤500 chars; matchea versionCode actual
+│   ├── changelog-5.txt             # ≤500 chars; matches the current versionCode
 │   ├── briefs/
-│   │   ├── icon.md                 # spec del icono 512×512
-│   │   ├── icon-512.svg            # composición vector del icono Play Store
-│   │   ├── feature-graphic.md      # spec del feature graphic 1024×500
-│   │   ├── feature-graphic.svg     # composición vector lista para export
-│   │   ├── screenshots.md          # spec del workflow híbrido (PNG real + SVG header)
-│   │   ├── screenshot-01-home.svg  # SVG híbrido — escena Home
-│   │   ├── screenshot-02-search.svg# SVG híbrido — Search overlay
-│   │   ├── screenshot-03-playing.svg# SVG híbrido — playing
-│   │   └── preview-video.md        # guion del video opcional
-│   └── images/                     # PNGs entregables (generados con rsvg-convert; ver CONTRIBUTING.md § "Store listing")
+│   │   ├── icon.md                 # 512×512 icon spec
+│   │   ├── icon-512.svg            # vector composition of the Play Store icon
+│   │   ├── feature-graphic.md      # 1024×500 feature graphic spec
+│   │   ├── feature-graphic.svg     # vector composition ready for export
+│   │   ├── screenshots.md          # hybrid workflow spec (real PNG + SVG header)
+│   │   ├── screenshot-01-home.svg  # hybrid SVG — Home scene
+│   │   ├── screenshot-02-search.svg# hybrid SVG — Search overlay
+│   │   ├── screenshot-03-playing.svg# hybrid SVG — playing
+│   │   └── preview-video.md        # optional video script
+│   └── images/                     # deliverable PNGs (generated with rsvg-convert; see CONTRIBUTING.md § "Store listing")
 │       ├── icon-512-<locale>.png
 │       ├── feature-graphic-1024x500-<locale>.png
 │       ├── phone/                  # 01-home-<locale>.png, 02-search-<locale>.png, 03-playing-<locale>.png
-│       ├── tablet-7/               # vacío — TODO post-launch
-│       └── tablet-10/              # vacío — TODO post-launch
-├── en-US/                          # idéntico árbol que es-AR; copy y headlines en inglés
+│       ├── tablet-7/               # empty — TODO post-launch
+│       └── tablet-10/              # empty — TODO post-launch
+├── en-US/                          # same tree as es-AR; copy and headlines in English
 │   ├── title.txt
 │   ├── short_description.txt
 │   ├── full_description.txt
 │   ├── changelog-5.txt
 │   ├── briefs/                     # icon-512.svg + feature-graphic.svg + 3 screenshot-*.svg + .md briefs
-│   └── images/                     # mismos PNGs entregables que es-AR, re-renderizados desde sus SVG en inglés
-└── (futuro) es-419/, es-ES/, pt-BR/
+│   └── images/                     # same deliverable PNGs as es-AR, re-rendered from their English SVGs
+└── (future) es-419/, es-ES/, pt-BR/
 ```
 
-## Posicionamiento
+## Positioning
 
-> **El Bomp es tuyo, primero.** Bomp es una colección personal de voces que te importan. Compartir existe — es derivado — pero el audio primero te tiene que servir a vos. Antes de tocar el copy de cualquier locale, leer `../push-me-backlog/docs/brand-dna.md` §5.
+Brand-DNA positioning charter, in es-AR (the source locale — embedded as a locale example):
 
-Reglas que nacen de ese posicionamiento:
+> **El Bomp es tuyo, primero.** Bomp es una colección personal de voces que te importan. Compartir existe — es derivado — pero el audio primero te tiene que servir a vos.
 
-- **Cero "stickers de audio" en copy oficial** (ficha, ads, video). Si el usuario hace la analogía espontáneamente, está bien — no la usamos como tagline.
-- **Voseo argentino** en es-AR (`apodá`, `guardá`, `bompeá`, `tocá`). Tuteo en es-419 / es-ES.
-- **Manifesto invariante:** _"Un audio de los tuyos no es un mensaje, es un abrazo que se escucha."_ — cierre de toda full description.
-- **Glosario invariante:** Bomper / Bompear / Bompeable. Las definiciones se actualizan al brand-dna §4.
+Before touching copy in any locale, read `../push-me-backlog/docs/brand-dna.md` §5.
 
-## Cómo subir a Play Console
+Rules that follow from this positioning:
 
-1. Login en Play Console → app Bomp → Store presence → Main store listing.
-2. Por cada idioma soportado:
-   - **Title:** copiar contenido de `<locale>/title.txt`.
-   - **Short description:** copiar `<locale>/short_description.txt`.
-   - **Full description:** copiar `<locale>/full_description.txt`.
-   - **What's new:** copiar `<locale>/changelog-<versionCode>.txt`.
-3. Subir las imágenes desde `<locale>/images/`:
+- **Zero "audio stickers" in official copy** (listing, ads, video). If a user makes the analogy spontaneously, fine — we don't use it as a tagline.
+- **Argentine voseo** in es-AR (`apodá`, `guardá`, `bompeá`, `tocá`). Tuteo for es-419 / es-ES.
+- **Manifesto invariant:** _"Un audio de los tuyos no es un mensaje, es un abrazo que se escucha."_ — closes every full description.
+- **Glossary invariants:** Bomper / Bompear / Bompeable. Definitions track brand-dna §4.
+
+## How to upload to Play Console
+
+1. Log in to Play Console → Bomp app → Store presence → Main store listing.
+2. For each supported language:
+   - **Title:** copy the contents of `<locale>/title.txt`.
+   - **Short description:** copy `<locale>/short_description.txt`.
+   - **Full description:** copy `<locale>/full_description.txt`.
+   - **What's new:** copy `<locale>/changelog-<versionCode>.txt`.
+3. Upload the images from `<locale>/images/`:
    - `icon-512-<locale>.png` → "App icon".
    - `feature-graphic-1024x500-<locale>.png` → "Feature graphic".
    - `phone/*-<locale>.png` → "Phone screenshots".
    - `tablet-7/*-<locale>.png` → "7-inch tablet screenshots".
    - `tablet-10/*-<locale>.png` → "10-inch tablet screenshots".
 
-> El sufijo `<locale>` es necesario para distinguir los archivos entre idiomas en la consola de Play (que usa el filename como label visible al subir). Usar `es-AR`, `en-US`, etc. — mismo identificador que el directorio padre.
-4. Submit para review.
+> The `<locale>` suffix is required so the Play console can distinguish files across languages (it uses the filename as the visible label on upload). Use `es-AR`, `en-US`, etc. — same identifier as the parent directory.
+4. Submit for review.
 
-Tip: tener un dry-run interno antes de publicar — Play permite preview privado de la ficha.
+Tip: do an internal dry run before publishing — Play supports a private preview of the listing.
 
-## Cómo agregar un locale nuevo
+## How to add a new locale
 
-1. Clonar el árbol `es-AR/` a `<nuevo-locale>/`.
-2. Traducir cada `.txt` respetando las reglas de posicionamiento de arriba. Para Spanish ↔ otros idiomas hay un dictionary completo en `../push-me-ghpages/assets/js/i18n.js` que sirve de fuente léxica.
-3. Re-exportar los PNG (icon + feature graphic + screenshots) si el copy on-image cambia.
+1. Clone the `es-AR/` tree into `<new-locale>/`.
+2. Translate each `.txt` respecting the positioning rules above. For Spanish ↔ other languages, the full dictionary lives at `../push-me-ghpages/assets/js/i18n.js` and serves as a lexical source.
+3. Re-export the PNGs (icon + feature graphic + screenshots) if the on-image copy changes.
 4. PR.

@@ -70,6 +70,7 @@ android {
             // Comment this suffix to use a debug build at Internal App Sharing: https://play.google.com/apps/publish/internalappsharing/
             applicationIdSuffix ".debug"
             versionNameSuffix "-DEBUG ${new Date().format("YYYY-MM-dd HH:mm:ss")}"
+            buildConfigField "String", "DEBUG_ROOT_DIR_NAME", "\"${rootProject.projectDir.name}\""
         }
 
         release {
@@ -77,6 +78,7 @@ android {
             shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig = signingConfigs.release
+            buildConfigField "String", "DEBUG_ROOT_DIR_NAME", "\"\""
         }
     }
 

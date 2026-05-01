@@ -60,6 +60,14 @@ Product specs, brand language, and canonical naming live in the sibling backlog 
 
 Skip for refactors, dep bumps, build config, and platform-wiring fixes — those don't need brand context. If the sibling path isn't present (CI, alternate checkout layout), proceed with the in-repo strings as authoritative and surface the gap to the user.
 
+## Repo writing language
+
+Contributor-facing files in this repo are written in **English**: `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, ADRs under `docs/adr/`, `.github/` templates, `CLAUDE.md` itself, code comments, commit messages, PR descriptions, and handoff notes. This applies to any new file you create whose audience is contributors or maintainers.
+
+The only exception is **embedded examples of user-facing copy**: when a doc demonstrates how a localized string should read (e.g. the ❌/✓ examples under § Copy & localization, or a snippet quoted from `strings.xml`), the example stays in its target locale (typically es-AR) so the rule is illustrated faithfully. The surrounding prose explaining the example is still in English.
+
+User-facing surfaces (in-app strings, store listings, push notifs, Play Console "What's New", marketing emails) are out of scope for this rule and follow § Copy & localization — they ship in the target locale.
+
 ## Copy & localization
 
 When generating user-facing copy in any locale (in-app strings, store listings, push notifs, changelogs, emails) the output must read **native to the target locale**, not as a literal translation from another language — and must not contradict the brand DNA or the published legal policies.

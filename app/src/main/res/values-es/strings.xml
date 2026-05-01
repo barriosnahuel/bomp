@@ -35,6 +35,8 @@
     <string name="app_about_ai_gemini_role">Ayudó a pensar ideas y decidir qué construir</string>
     <string name="app_about_ai_claude_name">Anthropic Claude</string>
     <string name="app_about_ai_claude_role">Convirtió esas ideas en la app que estás usando</string>
+    <string name="app_about_collaborators_family_name">Caro ❤️ y Bob 🐶</string>
+    <string name="app_about_collaborators_family_role">Co-fundadores de mi vida — y ahora también de esta aventura nueva.</string>
     <string name="app_about_collaborators_first_audios_name">Fede, Juli, Mati y Tincho</string>
     <string name="app_about_collaborators_first_audios_role">por esos primeros audios que despertaron la idea que después de 10 años salio a producción 😅</string>
     <string name="app_about_license">Licencia de código</string>

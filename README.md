@@ -1,8 +1,8 @@
 # ▶️ Bomp
 
-Bomp es tu colección personal de las voces que te importan. Guardalas, tenelas cerca, escuchalas cuando quieras — y si tenés ganas, bompealas afuera. Proyecto open source en desarrollo activo: las contribuciones son bienvenidas.
+Bomp is your personal collection of the voices that matter. Save them, keep them close, play them whenever you want — and if you feel like it, Bomp them out into the world. Open source, in active development: contributions welcome.
 
-🌐 **[Sitio web](https://barriosnahuel.github.io/bomp/)** — Política de privacidad, data safety y más.
+🌐 **[Website](https://barriosnahuel.github.io/bomp/)** — Privacy policy, data safety, and more.
 
 [<img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="80"/>](https://play.google.com/store/apps/details?id=com.github.barriosnahuel.vossosunboton)
 
@@ -19,18 +19,18 @@ Bomp es tu colección personal de las voces que te importan. Guardalas, tenelas 
 ## Support the project
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y31YIHWK)
-[![Invitame un café en cafecito.app](https://cdn.cafecito.app/imgs/buttons/button_1.svg)](https://cafecito.app/barriosnahuel)
+[![Buy me a coffee on cafecito.app](https://cdn.cafecito.app/imgs/buttons/button_4.svg)](https://cafecito.app/barriosnahuel)
 
 ## Features 🏁
-- 🎙️ **Coleccioná las voces que te importan.** Guardá audios de WhatsApp con un toque y tenelos cerca, todos juntos.
-- 🔊 **Escuchá de nuevo cuando quieras.** Reproducí cualquier audio de tu colección al instante.
-- ⭐ **Fijá los que más te importan** arriba de tu colección, así los encontrás primero.
-- ✏️ **Personalizá tus audios:** renombrá cuando quieras.
-- 🔍 **Encontrá rápido.** Buscá entre toda tu colección al instante.
-- ☁️ **Nunca los pierdas.** Tu colección se respalda automáticamente en tu cuenta de Google: si reinstalás la app o cambiás de celular, vuelven con vos.
-- 📤 **Bompealos afuera** cuando tengas ganas — primero el audio te tiene que servir a vos; compartirlo es opcional.
-- 🌗 Modo claro y oscuro automáticos según tu sistema.
-- ♿ Diseñada con accesibilidad WCAG 2.2 AA: contraste alto, soporte de lectores de pantalla, y áreas táctiles cómodas.
+- 🎙️ **Collect the voices that matter.** Save WhatsApp voice notes with one tap and keep them all in one place.
+- 🔊 **Replay them whenever you want.** Play any voice note in your collection instantly.
+- ⭐ **Pin the ones you care about most** to the top of your collection so they're always first.
+- ✏️ **Make them yours:** rename any voice note whenever you want.
+- 🔍 **Find them fast.** Search across your whole collection in an instant.
+- ☁️ **Keep them backed up.** Your collection is automatically backed up to your Google account, so if you reinstall the app or switch phones, they come with you.
+- 📤 **Bomp them out** when you feel like it — the voice note has to mean something to you first; sharing is optional.
+- 🌗 Light and dark mode follow your system automatically.
+- ♿ Built for WCAG 2.2 AA accessibility: high contrast, screen-reader support, and comfortable touch targets.
 
 ## Contributing 🙌
 Please feel free to share any suggestion and/or make a pull request, I'd be really glad to help you applying your changes to the app. 😃
