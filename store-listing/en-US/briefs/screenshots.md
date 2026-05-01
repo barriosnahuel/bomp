@@ -6,24 +6,35 @@
 - **Tablet 10":** 1 cap. 2560 × 1600 px or equivalent. **TODO post-launch — out of scope for the first release.**
 - **Do not frame the UI inside a phone frame.**
 
-## Hybrid workflow (real PNG + SVG header)
+## Workflow: 3 hybrid (PNG + SVG header) + 2 typography full-vector
 
-3 SVGs in `briefs/screenshot-0X-*.svg`. Each one composes:
+5 SVGs in `briefs/screenshot-0X-*.svg`. Two formats:
 
-- **Marketing header strip** in vector Ink1000 (320–380 px depending on headline length; #2 uses 380 because it spans 2 lines) at the top, with headline + subtitle. The copy stays editable as text, easy to localize.
+**Hybrid (#1, #3, #4 — UI proof):**
+- **Marketing header strip** in vector Ink1000 (320–380 px depending on headline length) at the top, with headline + subtitle. The copy stays editable as text, easy to localize.
 - **Real PNG** of the app (`real-screenshots/Screenshot_*.png`, 1080×2400) **embedded as base64** inside the SVG (`<image href="data:image/png;base64,...">`). Required because `rsvg-convert` blocks external `file://` references for security.
-- The opaque header covers the captured status bar + topbar, leaving the real cards + bottom nav visible. Upside: 100% authentic UI, zero "misrepresent" risk for Play.
+- The opaque header covers the captured status bar + topbar, leaving the real cards + bottom nav visible. 100% authentic UI, zero "misrepresent" risk for Play.
 
-Final canvas: **1080 × 2400** (9:20).
+**Typography full-vector (#2, #5 — manifesto + close):**
+- No embedded PNG, all Ink1000 + Paper text + Acid accent. Designed for ASO impact (#2) and emotional close (#5).
 
-| # | SVG file | Source PNG | Headline | Subtitle |
+Final canvas: **1080 × 2400** (9:20). Slot order optimized for ASO — see § "Narrative arc and ASO" below.
+
+| # | SVG file | Type | Content | Subtitle / tagline |
 |---|---|---|---|---|
-| 1 | `screenshot-01-home.svg` | `Screenshot_20260428_225250.png` — Home idle (5 cards) | **Your collection of voices.** | The ones that matter — always close. |
-| 2 | `screenshot-02-search.svg` | `Screenshot_20260428_225317.png` — Search overlay with query "ris" filtering 2 idle results | **Find any voice, / in a second.** | Even when your collection gets big. |
-| 3 | `screenshot-03-playing.svg` | `Screenshot_20260428_225339.png` — Search overlay with query "ris" and "Risa de mi vieja" playing (pause + halo + Acid slider) | **Tap. Play. Done.** | No waiting. No loading screens. |
-| 4 | `screenshot-04-promise.svg` | (no capture — full vector) Manifesto card: Ink1000 + Acid brand mark centered with 2 concentric waves | **No signup. / Nothing gets lost.** | Download, open, Bomp. / Your collection follows you. |
+| 1 | `screenshot-01-home.svg` | Hybrid | `Screenshot_20260428_225250.png` — Home idle (5 cards) — **Your collection of voices.** | The ones that matter — always close. |
+| 2 | `screenshot-02-manifesto.svg` | Typography | 4 dense bullets: **Yours, first.** / **No signup, no email, no phone number.** / **Saved to the cloud.** / **A hug you can hear.** | Subtle Acid blob brand-anchor at the bottom. No textual header — the listing context already identifies the app. |
+| 3 | `screenshot-03-search.svg` | Hybrid | `Screenshot_20260428_225317.png` — Search overlay with query "ris" filtering 2 idle results — **Find any voice, / in a second.** | Even when your collection gets big. |
+| 4 | `screenshot-04-playing.svg` | Hybrid | `Screenshot_20260428_225339.png` — Search overlay with "Risa de mi vieja" playing (pause + halo + Acid slider) — **Tap. Play. Done.** | No waiting. No loading screens. |
+| 5 | `screenshot-05-closing.svg` | Typography | Single curatorial hero: **"For people who keep moments the way others keep photos."** | Acid blob brand-anchor at the bottom (same treatment as card 02). |
 
-Narrative arc: `your collection → find → activate → sticks around`. Zero implication of "send out" — the moment of value is **listening**, not sharing. Card #4 closes the arc with the two absolute differentials: zero-friction onboarding (no signup, email, or phone) + persistence via Auto Backup to Drive (the collection survives uninstall and device change).
+### Narrative arc and ASO
+
+`your collection → manifesto → find → activate → close`.
+
+Zero implication of "send out" — the moment of value is **listening**, not sharing.
+
+ASO: slot #2 (search-results carousel, high visibility) carries the manifesto with 4 keyword-dense bullets ("no signup", "saved to the cloud") + brand positioning ("yours, first") + poetic invocation ("a hug you can hear"). Slot #5 closes with a single curatorial hero — defines the audience ("people who keep moments the way others keep photos") with the same visual weight as the manifesto. Both typography cards (02 and 05) carry the same Acid blob anchor at the bottom for consistent brand presence.
 
 > Note: the embedded screenshots show the in-app sticker names exactly as captured on the emulator (Spanish, e.g. "Risa de mi vieja"). Sticker names are user-authored and stay in the user's own language — they are not localized in marketing assets. Re-capturing with an English-locale corpus is a future option if Play feedback flags it.
 
@@ -32,14 +43,14 @@ Narrative arc: `your collection → find → activate → sticks around`. Zero i
 The SVGs are already composed. To regenerate the PNG deliverables (`images/phone/0X-*.png`) run:
 
 ```bash
-for n in 01-home 02-search 03-playing 04-promise; do
+for n in 01-home 02-manifesto 03-search 04-playing 05-closing; do
   rsvg-convert -w 1080 -h 2400 \
     store-listing/en-US/briefs/screenshot-$n.svg \
     -o store-listing/en-US/images/phone/$n-en-US.png
 done
 ```
 
-Note: card #4 is full vector (no embedded PNG). Cards #1–#3 are hybrid (SVG header + real PNG base64). The command applies to all four equally — `rsvg-convert` handles each case unchanged.
+Note: cards #2 and #5 are typography full-vector (no embedded PNG). Cards #1, #3, #4 are hybrid (SVG header + real PNG base64). The command applies to all five equally — `rsvg-convert` handles each case unchanged.
 
 ### Re-capture PNGs when the UI changes
 
