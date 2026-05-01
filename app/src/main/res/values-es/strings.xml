@@ -45,6 +45,11 @@
     <string name="app_about_data_safety">Seguridad de datos</string>
     <string name="app_about_open_in_browser">Se abre en el navegador</string>
     <string name="app_about_error_no_browser">No se pudo abrir el navegador</string>
+    <string name="app_about_gratitude_eyebrow">¿Te alegró el día?</string>
+    <string name="app_about_gratitude_title">Invitame un café virtual.</string>
+    <string name="app_about_gratitude_body">Bomp es gratis y sin publicidad.\nSi lo disfrutaste y me querés agradecer, podés hacerlo con un café virtual. Igual, con que lo uses y lo compartas ya suma, ¡gracias!</string>
+    <string name="app_about_gratitude_cafecito_button">Invitame un cafecito</string>
+    <string name="app_about_gratitude_kofi_button">Apoyar en Ko-fi</string>
 
     <string name="app_addbutton_activity_title">Nuevo Bomp</string>
     <string name="app_addbutton_activity_title_edit">Renombrar Bomp</string>

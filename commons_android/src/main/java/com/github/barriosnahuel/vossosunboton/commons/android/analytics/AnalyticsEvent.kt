@@ -113,6 +113,12 @@ sealed class AnalyticsEvent(
     /** Branding audio (Sticker Cero) played from the About hero section. */
     object AboutBrandingAudioPlay : AnalyticsEvent(name = "about_branding_audio_play", hasFirstVariant = true)
 
+    /** External Cafecito link followed from the About gratitude frame. Emitted only after the intent dispatch succeeds. */
+    object AboutGratitudeCafecitoOpen : AnalyticsEvent(name = "about_gratitude_cafecito_open", hasFirstVariant = true)
+
+    /** External Ko-fi link followed from the About gratitude frame. Emitted only after the intent dispatch succeeds. */
+    object AboutGratitudeKofiOpen : AnalyticsEvent(name = "about_gratitude_kofi_open", hasFirstVariant = true)
+
     /**
      * Audio-count milestone crossed for the first time on this install. The call-site gates emission via
      * [FirstFlagStore]; no additional `first_*` variant is emitted (the milestone is intrinsically one-shot).
