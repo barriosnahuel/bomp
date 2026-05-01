@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Bomp brand mark: organic blob that matches `.l-wordmark__mark` on the public landing
+       (border-radius 32% 68% 70% 30% / 30% 30% 70% 70%) plus a play triangle inside.
+       Colors are hardcoded so this file works as `<link rel="icon">` and inside Inkscape
+       without depending on CSS vars. Mirror of push-me-ghpages/assets/img/favicon.svg. -->
+  <path d="M10.24 0 A21.76 9.6 0 0 1 32 9.6 A22.4 22.4 0 0 1 9.6 32 A9.6 22.4 0 0 1 0 9.6 A10.24 9.6 0 0 1 10.24 0 Z" fill="#D7FF3A"/>
+  <path d="M10 8 L10 24 L23 16 Z" fill="#0B0B0C"/>
+</svg>

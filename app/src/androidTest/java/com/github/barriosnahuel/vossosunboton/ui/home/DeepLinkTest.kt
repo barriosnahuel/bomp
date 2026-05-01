@@ -81,16 +81,22 @@ internal class DeepLinkTest : AbstractUiTest() {
     }
 
     @Test
-    fun unknownPathDeeplinkRoutesLikeExplore() {
+    fun unknownPathDeeplinkFallsBackToHome() {
         val bundled = PackagedAudios.get(context)
         assumeTrue(
-            "Need bundled sounds so the unknown-path fallback to Explore is observable.",
+            "Need bundled sounds so MY_SOUNDS (custom) is distinguishable from EXPLORE_SOUNDS (bundled).",
             bundled.isNotEmpty(),
         )
+        TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch<LandingActivity>(deeplink("/anything-unknown")).use {
             composeRule.waitForIdle()
-            composeRule.onNodeWithText(bundled.first().name).assertIsDisplayed()
+            // Per the closed deep-link allowlist in LandingActivity.handleDeeplink,
+            // any unknown path must safely fall back to MY_SOUNDS — never silently route to Explore.
+            composeRule.onNodeWithText("custom_1").assertIsDisplayed()
+            composeRule.onAllNodes(hasText(bundled.first().name)).fetchSemanticsNodes().let {
+                assert(it.isEmpty()) { "Bundled sound should not be visible since unknown paths fall back to MY_SOUNDS." }
+            }
         }
     }
 

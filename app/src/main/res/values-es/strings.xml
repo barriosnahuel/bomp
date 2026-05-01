@@ -51,10 +51,10 @@
     <string name="app_about_gratitude_cafecito_button">Invitame un cafecito</string>
     <string name="app_about_gratitude_kofi_button">Apoyar en Ko-fi</string>
 
-    <string name="app_addbutton_activity_title">Nuevo botón</string>
-    <string name="app_addbutton_activity_title_edit">Editar botón</string>
-    <string name="app_addbutton_activity_label">Guardar botón</string>
-    <string name="app_addbutton_name">Elegí un nombre para el botón</string>
+    <string name="app_addbutton_activity_title">Nuevo Bomp</string>
+    <string name="app_addbutton_activity_title_edit">Renombrar Bomp</string>
+    <string name="app_addbutton_activity_label">Guardar</string>
+    <string name="app_addbutton_name">Elegí un nombre para tu Bomp</string>
     <string name="app_addbutton_edit_name_label">Actualizar el nombre</string>
     <string name="app_addbutton_placeholder">Vos, yo, champagne… all the night</string>
     <string name="app_addbutton_save">Guardar</string>

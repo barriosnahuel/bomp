@@ -36,7 +36,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [config/](/config) contains code analyzers configuration files.
 - [gradle/wrapper/](/gradle/wrapper) contains Gradle's binary in order to be able to run this project everywhere.
 - [model/](/model) Android library module containing our business logic.
-- [store-listing/](/store-listing) contains all listing related files, like GIMP files to edit screenshots.
+- [store-listing/](/store-listing) contains the Play Store listing — copy per locale, brand mark, fonts, and SVG sources for icon and feature graphic. See the [Store listing](#store-listing-) section for the export workflow.
 
 ## Debugging tools 🐛
 We use some really useful tools like:
@@ -129,7 +129,79 @@ Place the bundled `.mp3` and `.ogg` files there. Without them the debug build st
 
 ## Store listing 📄
 
-As mentioned before, under [store-listing/](/store-listing) there are the assets for the store listing and the original GIMP files to edit those assets.
+Everything that goes into the Google Play Store listing — copy, brand mark, feature graphic, icon, screenshots — lives under [`store-listing/`](/store-listing), organized by locale. The directory layout and the upload checklist are in [`store-listing/README.md`](/store-listing/README.md).
+
+### How the assets are generated
+
+The icon and feature graphic are rendered from **SVG masters** committed in the repo, not authored in a raster editor. This makes them reproducible: same command, same output. The `*.png` files under `store-listing/<locale>/images/` are derived artifacts — regenerate from source rather than editing pixels.
+
+Pick a tool depending on what you're doing:
+
+| Tool | Fidelity | Effort | When to use |
+|---|---|---|---|
+| **`rsvg-convert`** (librsvg) | High for shapes; text falls back to system sans if the declared font is missing | `brew install librsvg` (~10 MB, no GUI) | **Default**. Reproducible CLI, great for scripts and CI. |
+| **Inkscape** | Maximum (kerning, complex text, filters) | `brew install --cask inkscape` (~250 MB, GUI + CLI) | Only when you need to tweak typography by hand before export. |
+| **`qlmanage`** | Acceptable for simple shapes; text often breaks | Already installed on macOS | Last resort if you can't install anything else. Avoid for typography-heavy assets. |
+
+### Before you export: install the brand fonts
+
+The feature graphic SVG declares `Inter, Roboto, system-ui, sans-serif`. If **Inter** isn't installed system-wide, the renderer falls back to the next match — usually Helvetica/SF Pro on macOS — and the output drifts from what you see in the browser preview.
+
+Inter is committed as a single zip at [`store-listing/brand/fonts/Inter.zip`](/store-listing/brand/fonts/Inter.zip) (SIL Open Font License 1.1; `OFL.txt` is inside the archive). We keep it zipped so the directory stays clean — we never read the TTFs from there at runtime, only install them once. On macOS:
+
+```bash
+unzip -j -o store-listing/brand/fonts/Inter.zip "*.ttf" -d ~/Library/Fonts/
+```
+
+`-j` (junk paths) flattens the nested `static/` subdirectory; `-o` overwrites silently. This installs all 56 TTFs (54 static + 2 variable) directly into your user font directory.
+
+If you add a new font dependency for any future asset, drop its zipped distribution at `store-listing/brand/fonts/<Family>.zip` (license file inside) and update this section.
+
+### Exporting the icon (512×512)
+
+The canonical wrapper SVG is `store-listing/<locale>/briefs/icon-512.svg` — full-bleed Ink1000 background with the brand mark centered at ~80%, ~10% margin so Play's rounded mask doesn't bite.
+
+```bash
+rsvg-convert -w 512 -h 512 \
+  store-listing/es-AR/briefs/icon-512.svg \
+  -o store-listing/es-AR/images/icon-512-es-AR.png
+
+open store-listing/es-AR/images/icon-512-es-AR.png
+```
+
+If you want to reevaluate the composition (e.g. a Paper-background variant), create a sibling wrapper (`icon-512-paper.svg`), generate both PNGs, compare in Preview, and collapse back to a single canonical wrapper after the decision.
+
+### Exporting the feature graphic (1024×500)
+
+```bash
+rsvg-convert -w 1024 -h 500 \
+  store-listing/es-AR/briefs/feature-graphic.svg \
+  -o store-listing/es-AR/images/feature-graphic-1024x500-es-AR.png
+
+open store-listing/es-AR/images/feature-graphic-1024x500-es-AR.png
+```
+
+Verify visually — fonts, alignment, safe zone (~15% margin).
+
+### Screenshots — captured, not exported from SVG
+
+The 4 phone + 2 tablet screenshots come from the running app, not from SVG. Workflow:
+
+```bash
+./gradlew app:installDebug
+adb shell am start -n com.github.barriosnahuel.vossosunboton/.LandingActivity
+# Navigate to the screen described in the screenshots brief, then:
+adb exec-out screencap -p > shot.png
+```
+
+Then compose the header strip (Ink1000 background + headline in Paper) on top in Inkscape or GIMP per the layout in `store-listing/<locale>/briefs/screenshots.md`. Store the final PNGs in `store-listing/<locale>/images/{phone,tablet-7,tablet-10}/`.
+
+### Verifying every export
+
+```bash
+file store-listing/<locale>/images/*.png   # confirms dimensions and color depth
+ls -lh store-listing/<locale>/images/*.png # confirms weight (Play caps icon at 1024 KB)
+```
 
 ## Analytics events 📊
 

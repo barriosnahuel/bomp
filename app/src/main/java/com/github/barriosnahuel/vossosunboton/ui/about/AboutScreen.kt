@@ -240,7 +240,7 @@ private fun HeroSection(
     Spacer(Modifier.height(Spacing.XXL))
 
     Image(
-        painter = painterResource(R.drawable.app_brand_mark),
+        painter = painterResource(R.drawable.app_brand_mark_about),
         contentDescription = null,
         modifier = Modifier.size(96.dp),
     )

@@ -60,6 +60,21 @@ Product specs, brand language, and canonical naming live in the sibling backlog 
 
 Skip for refactors, dep bumps, build config, and platform-wiring fixes — those don't need brand context. If the sibling path isn't present (CI, alternate checkout layout), proceed with the in-repo strings as authoritative and surface the gap to the user.
 
+## Copy & localization
+
+When generating user-facing copy in any locale (in-app strings, store listings, push notifs, changelogs, emails) the output must read **native to the target locale**, not as a literal translation from another language.
+
+Hard rules:
+
+- **No calque translations.** A phrase that's natural in the source can be wrong in the target. Examples we hit and fixed during the en-US listing: "save a day" (calque of "salvar un día" — correct English idiom is `save the day`); "on the other side" (calque of "del otro lado" — in English this means *afterlife*; the phone idiom is `on the other end`); "your audios" (calque of "tus audios" — `audio` is a mass noun in English, the natural plural is `voice notes` / `voice clips` / `voice memos`).
+- **Use the target locale's idioms and collocations.** Verify with a native speaker or a current idiom reference, not Google Translate. When in doubt, prefer the simpler concrete word the audience already uses every day.
+- **Punchy register, locale-aware.** US English marketing leans on contractions, short sentences, imperative verbs, and concrete sensory nouns. Spanish-AR leans on voseo and warmth. Match the register the locale expects, not a generic "neutral" tone.
+- **Vocabulary the target audience uses.** If the source describes the input as "audios", the English version should name it the way English speakers do (`voice notes`, `voice memos`). Mapping is not 1:1.
+- **ASO awareness for store-listing copy.** For Play Console copy (title, short description, full description, screenshot headlines, feature graphic taglines), integrate the high-volume queries the target market actually searches — organically, without breaching the brand-DNA bans (`soundboard`, `audio sticker`, `panel`, `viralizá`, `share with friends/followers` as a CTA). Those are positioning bans, not vocabulary bans — a category descriptor (e.g. `voice notes`) is fine because it names the input, not the brand position.
+- **Brand-DNA invariants.** The proper nouns Bomp / Bomper / Bompear / Bompeable NEVER translate. The manifesto closing ("Un audio de los tuyos no es un mensaje, es un abrazo que se escucha." / locale-equivalent that preserves meaning) is invariant across surfaces and locales.
+- **Read-aloud check before ship.** Read every paragraph aloud as a native speaker of the target locale. Stumbles, false friends, weird tense, or "wait, what?" reactions are blockers — fix before submitting to Play.
+- **Cross-surface consistency.** If a verb pattern is `Save. Name. Bomp.` in headers, the body copy must use the same verbs ("give it a name", not "give it a label"). Cross-reference all surfaces of a locale (title, short, full, screenshots, feature graphic, video script) before shipping a locale.
+
 ## Bug fixes — TDD workflow
 
 When the user reports a bug or says we are going to fix a bug, always follow Test-Driven Development:
@@ -378,6 +393,24 @@ system share sheet, deep link, etc.). The two exported activities today are
 `LandingActivity` (LAUNCHER + `push-me://open` deep link) and
 `AddButtonActivity` (system share-sheet `ACTION_SEND` with `audio/*`).
 
+## Store listing asset generation
+
+Store listing PNGs (icon, feature graphic) are rendered from SVG masters under `store-listing/`. The canonical pipeline is **`rsvg-convert`** (`brew install librsvg`) — fast, CLI, reproducible, no GUI. Use Inkscape only when you need to tweak typography by hand before export.
+
+Before exporting any asset, verify the required fonts are installed system-wide. The brand stack is **Inter** (Roboto + system-ui as fallbacks). The Inter distribution lives zipped at `store-listing/brand/fonts/Inter.zip` (committed under SIL OFL — `OFL.txt` is inside the archive). Install on macOS with:
+
+```bash
+unzip -j -o store-listing/brand/fonts/Inter.zip "*.ttf" -d ~/Library/Fonts/
+```
+
+(`-j` flattens the nested `static/` subdirectory; `-o` overwrites silently.)
+
+If a future asset needs a different font family, drop its zipped distribution at `store-listing/brand/fonts/<Family>.zip` (license file inside) and document the install step here.
+
+The full human walkthrough — tooling tradeoffs, exact export commands, screenshot capture from the running emulator — lives in `CONTRIBUTING.md` § "Store listing".
+
+When writing locale copy (title, short, full description, screenshot headlines, feature graphic tagline), see § "Copy & localization" for naturalness, idiom, and ASO rules.
+
 ## Design system
 
 The app uses the **Neo-Club** palette (ink × acid). Single source of truth: `app/src/main/java/…/ui/theme/AppTheme.kt`.
@@ -456,6 +489,7 @@ https://project-url
 - For dependency bumps, write one line summarising the overall bump (e.g. "Bumped all dependencies to latest stable"), not one line per library
 - As part of each commit, if the change is user-visible or architecturally significant, update `## [unreleased]` before committing
 - Never add a `Fixed` entry for a bug introduced in the same `[unreleased]` cycle. If end-users never experienced the regression, it has no changelog entry — git history provides the traceability
+- **User-facing first, technical under "For nerds":** within `## [unreleased]`, list user-facing changes under the standard `### Added/Changed/Fixed/Removed` headings, then put technical/contributor-only changes under a `### For nerds 🤓` subsection with `#### Added/Changed/Fixed/Removed` sub-headings (omit any that would be empty). A change is **user-facing** if a normal user would notice it: visible UI, labels, copy, behavior, permissions, performance they can feel. **Technical** means: build/CI/tooling, dependency bumps, internal refactors, test infrastructure, Play Console assets internal to the repo, README/docs, analytics instrumentation. This split applies only to `[unreleased]` and going forward — released versions stay as written
 
 ## Handoff notes
 
