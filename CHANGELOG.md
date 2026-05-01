@@ -59,7 +59,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### For nerds 🤓
 
 #### Added
-- Initial Google Play Store listing assets in es-AR and en-US under `store-listing/`: title, short and full description, what's new, brand mark SVG, and design briefs for icon, feature graphic, screenshots and preview video
+- Initial Google Play Store listing assets in es-AR and en-US under `store-listing/`: title, short and full description (with zero-friction onboarding and Auto Backup to Drive featured as headline differentials, and a stewardship-framed close that respects Data Safety policy), what's new, brand mark SVG, design briefs for icon, feature graphic, five phone screenshots ordered for ASO impact (UI hero, brand manifesto, search, playing, emotional close) and preview video
 - Firebase Analytics instrumentation: emits events for every active user flow (add, edit, delete, play, pin, search, share, about) plus 6 canonical `screen_view` names (`my_sounds`, `explore_sounds`, `about`, `search_sound`, `add_sound`, `edit_sound`) with auto-tracking disabled, one-shot `first_*` variants on first invocation, and user properties (`current_sounds`, `current_pinned`, `lifetime_shares`, `lifetime_plays`) that unlock cohort segmentation in Firebase Console
 - Jetpack Compose UI replacing all Fragments, RecyclerViews and XML layouts
 - `SoundsViewModel` with `StateFlow` for reactive UI state management

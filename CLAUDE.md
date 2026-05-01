@@ -62,7 +62,16 @@ Skip for refactors, dep bumps, build config, and platform-wiring fixes — those
 
 ## Copy & localization
 
-When generating user-facing copy in any locale (in-app strings, store listings, push notifs, changelogs, emails) the output must read **native to the target locale**, not as a literal translation from another language.
+When generating user-facing copy in any locale (in-app strings, store listings, push notifs, changelogs, emails) the output must read **native to the target locale**, not as a literal translation from another language — and must not contradict the brand DNA or the published legal policies.
+
+**Sources of truth to consult before drafting copy** (paths relative to `/Users/barrios.nahuel/Workspace/push-me/`):
+
+- `../push-me-backlog/docs/brand-dna.md` — canonical terminology, reserved terms, anti-positioning bans
+- `../push-me-backlog/CLAUDE.md` — Product Language glossary (incl. which terms are gated to non-shipped features like Pro/cloud)
+- `../push-me-ghpages/privacy-policy.html` — published Privacy Policy (rights ARCO, retention, third-party data)
+- `../push-me-ghpages/data-safety.html` — published Data Safety declaration (what's collected, shared, optional)
+
+If any of these paths is missing (CI, alternate checkout), do **not** invent the claim — flag the gap to the user and proceed with the in-repo strings as authoritative.
 
 Hard rules:
 
@@ -72,6 +81,12 @@ Hard rules:
 - **Vocabulary the target audience uses.** If the source describes the input as "audios", the English version should name it the way English speakers do (`voice notes`, `voice memos`). Mapping is not 1:1.
 - **ASO awareness for store-listing copy.** For Play Console copy (title, short description, full description, screenshot headlines, feature graphic taglines), integrate the high-volume queries the target market actually searches — organically, without breaching the brand-DNA bans (`soundboard`, `audio sticker`, `panel`, `viralizá`, `share with friends/followers` as a CTA). Those are positioning bans, not vocabulary bans — a category descriptor (e.g. `voice notes`) is fine because it names the input, not the brand position.
 - **Brand-DNA invariants.** The proper nouns Bomp / Bomper / Bompear / Bompeable NEVER translate. The manifesto closing ("Un audio de los tuyos no es un mensaje, es un abrazo que se escucha." / locale-equivalent that preserves meaning) is invariant across surfaces and locales.
+- **Brand-DNA-precision check (reserved terms).** Before using any term that appears in `brand-dna.md` or the Product Language glossary, verify it is not reserved for a non-shipped feature or a specific technical state. If it is, pick a locale-native synonym instead — even if the reserved term sounds right. Today's reserved terms: `Inmortal` / `immortal` (state descriptor for a Bompión synced to cloud via Saved Games SDK — a Pro feature **not shipped yet**); `Bompardo` and `Bompión` (Escala Richter levels 4 and 5, gated by share milestones — do not apply to a generic Bomp); `Bomptástico` (internal telemetry label only, never appears in UI).
+  - ❌ "Tus Bomps son inmortales" to describe Auto Backup → ✗ `Inmortal` is reserved for the not-yet-shipped Pro cloud-sync state, this overstates the feature.
+  - ✓ "Tus Bomps quedan respaldados en tu Google Drive" — accurate, locale-native, does not borrow reserved vocabulary.
+- **Policy-contradiction check (no overclaims).** Before writing any absolute claim — e.g. `imborrable`, `permanent`, `forever`, `never lost`, `100% private`, `always`, `nunca se pierde`, `we never see your data` — open `../push-me-ghpages/privacy-policy.html` and `../push-me-ghpages/data-safety.html` and check the claim does not contradict a published statement or strip a user right declared there. Concrete invariants today: the user can delete Bomps one-by-one or by uninstall (ARCO §05); Auto Backup is user-controllable from the OS settings (PP §02); Firebase collects pseudonymous crash logs, performance, and aggregated interactions (DS §01) — copy cannot claim "no data ever leaves the device".
+  - ❌ "Tus Bomps son imborrables" → ✗ contradicts the user's right to delete declared in Privacy Policy §05 and Data Safety §02.
+  - ✓ "Tus Bomps quedan guardados hasta que vos decidas borrarlos" — preserves the user's deletion right and matches the published policy.
 - **Read-aloud check before ship.** Read every paragraph aloud as a native speaker of the target locale. Stumbles, false friends, weird tense, or "wait, what?" reactions are blockers — fix before submitting to Play.
 - **Cross-surface consistency.** If a verb pattern is `Save. Name. Bomp.` in headers, the body copy must use the same verbs ("give it a name", not "give it a label"). Cross-reference all surfaces of a locale (title, short, full, screenshots, feature graphic, video script) before shipping a locale.
 
