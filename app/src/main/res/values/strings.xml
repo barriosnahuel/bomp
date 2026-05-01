@@ -48,6 +48,13 @@
     <string name="app_about_error_no_browser">Couldn\'t open in a browser</string>
     <string name="app_about_privacy_policy_url" translatable="false">https://barriosnahuel.github.io/bomp/privacy-policy.html</string>
     <string name="app_about_data_safety_url" translatable="false">https://barriosnahuel.github.io/bomp/data-safety.html</string>
+    <string name="app_about_gratitude_eyebrow">Brightened your day?</string>
+    <string name="app_about_gratitude_title">Buy me a virtual coffee.</string>
+    <string name="app_about_gratitude_body">Bomp is free and ad-free.\nIf you enjoyed it and want to say thanks, you can do it with a virtual coffee. Using it and sharing it already counts — thank you!</string>
+    <string name="app_about_gratitude_cafecito_button">Invitame un cafecito</string>
+    <string name="app_about_gratitude_kofi_button">Support on Ko-fi</string>
+    <string name="app_about_gratitude_cafecito_url" translatable="false">https://cafecito.app/barriosnahuel</string>
+    <string name="app_about_gratitude_kofi_url" translatable="false">https://ko-fi.com/barriosnahuel</string>
 
     <string name="app_addbutton_activity_title">New button</string>
     <string name="app_addbutton_activity_title_edit">Edit button</string>

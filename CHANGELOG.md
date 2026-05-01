@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Sound cards now have a subtle 1dp hairline border for visual separation on dark and light backgrounds
 
 ### Added
+- About now includes a heart-first gratitude frame inviting users to buy a virtual coffee via Ko-fi (all locales) and Cafecito (visible only on es-AR devices)
 - Acknowledged the first-audios collaborators (Fede, Juli, Mati, Tincho) as the first card inside About's Third-party credits, replacing the previously empty Made with section
 - Privacy Policy and Data Safety links added to the About screen's new "Legal & Privacy" section, opening the published pages with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
 - Initial Google Play Store listing assets in es-AR under `store-listing/`: title, short and full description, what's new, brand mark SVG, and design briefs for icon, feature graphic, screenshots and preview video

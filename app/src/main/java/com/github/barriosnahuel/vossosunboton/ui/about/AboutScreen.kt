@@ -92,6 +92,8 @@ fun AboutScreen(onBack: () -> Unit) {
     val sourceUrl = stringResource(R.string.app_about_source_url)
     val privacyPolicyUrl = stringResource(R.string.app_about_privacy_policy_url)
     val dataSafetyUrl = stringResource(R.string.app_about_data_safety_url)
+    val cafecitoUrl = stringResource(R.string.app_about_gratitude_cafecito_url)
+    val kofiUrl = stringResource(R.string.app_about_gratitude_kofi_url)
     val noBrowserMessage = stringResource(R.string.app_about_error_no_browser)
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -156,6 +158,27 @@ fun AboutScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(Spacing.XL))
             CreditsSection(creditEntries = creditEntries)
+            Spacer(Modifier.height(Spacing.XL))
+            GratitudeSection(
+                onCafecitoClick = {
+                    if (openUrl(context, cafecitoUrl)) {
+                        AnalyticsTrackerProvider
+                            .get(context.applicationContext)
+                            .log(AnalyticsEvent.AboutGratitudeCafecitoOpen)
+                    } else {
+                        scope.launch { snackbarHostState.showSnackbar(noBrowserMessage) }
+                    }
+                },
+                onKofiClick = {
+                    if (openUrl(context, kofiUrl)) {
+                        AnalyticsTrackerProvider
+                            .get(context.applicationContext)
+                            .log(AnalyticsEvent.AboutGratitudeKofiOpen)
+                    } else {
+                        scope.launch { snackbarHostState.showSnackbar(noBrowserMessage) }
+                    }
+                },
+            )
             Spacer(Modifier.height(Spacing.XL))
             LegalAndPrivacySection(
                 onLicenseClick = {
