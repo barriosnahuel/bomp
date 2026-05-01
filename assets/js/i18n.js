@@ -117,8 +117,8 @@
       "cta.contributeGitHub": "Contribuir en GitHub",
 
       "section.donate.num": "05 · Donar",
-      "section.donate.title": "Si te alegró el día, invitá un café.",
-      "section.donate.body": "Bomp es gratis y va a seguir siéndolo. Pero los servidores —y los cafés— se pagan. Cafecito (Argentina) o Ko-fi (internacional).",
+      "section.donate.title": "¿Te alegró el día? Invitame un café virtual.",
+      "section.donate.body": "Bomp es gratis y sin publicidad. Si lo disfrutaste y querés decirme gracias, dejame un café virtual desde acá. No hace falta — con que lo uses y lo compartas ya suma.",
       "donate.cafecito.alt": "Invitame un café en cafecito.app",
 
       "footer.brand": "Las voces que te importan, listas para vos.",
@@ -311,8 +311,8 @@
       "cta.contributeGitHub": "Contribuir en GitHub",
 
       "section.donate.num": "05 · Donar",
-      "section.donate.title": "Si te alegró el día, invita un café.",
-      "section.donate.body": "Bomp es gratis y va a seguir siéndolo. Pero los servidores —y los cafés— se pagan. Si querés, invítanos uno por Ko-fi.",
+      "section.donate.title": "¿Te alegró el día? Invítame un café virtual.",
+      "section.donate.body": "Bomp es gratis y sin publicidad. Si lo disfrutaste y quieres decirme gracias, déjame un café virtual desde aquí. No hace falta — con que lo uses y lo compartas ya suma.",
       "donate.cafecito.alt": "Invítame un café en cafecito.app",
 
       "footer.brand": "Las voces que te importan, listas para ti.",
@@ -505,8 +505,8 @@
       "cta.contributeGitHub": "Contribuir en GitHub",
 
       "section.donate.num": "05 · Donar",
-      "section.donate.title": "Si te alegró el día, invita a un café.",
-      "section.donate.body": "Bomp es gratis y va a seguir siéndolo. Pero los servidores —y los cafés— se pagan. Si te apetece, invítanos uno por Ko-fi.",
+      "section.donate.title": "¿Te alegró el día? Invítame un café virtual.",
+      "section.donate.body": "Bomp es gratis y sin publicidad. Si lo disfrutaste y quieres darme las gracias, déjame un café virtual desde aquí. No hace falta — con que lo uses y lo compartas ya suma.",
       "donate.cafecito.alt": "Invítame un café en cafecito.app",
 
       "footer.brand": "Las voces que te importan, listas para ti.",
@@ -699,8 +699,8 @@
       "cta.contributeGitHub": "Contribute on GitHub",
 
       "section.donate.num": "05 · Donate",
-      "section.donate.title": "If it brightened your day, buy us a coffee.",
-      "section.donate.body": "Bomp is free and will stay free. But servers —and coffees— cost money. If you want, buy us one on Ko-fi.",
+      "section.donate.title": "Brightened your day? Buy me a virtual coffee.",
+      "section.donate.body": "Bomp is free and ad-free. If you enjoyed it and want to say thanks, leave me a virtual coffee from here. No pressure — using it and sharing it already counts.",
       "donate.cafecito.alt": "Buy me a coffee at cafecito.app",
 
       "footer.brand": "The voices that matter to you, ready for you.",
@@ -893,8 +893,8 @@
       "cta.contributeGitHub": "Contribuir no GitHub",
 
       "section.donate.num": "05 · Doar",
-      "section.donate.title": "Se alegrou seu dia, paga um café.",
-      "section.donate.body": "Bomp é grátis e vai continuar sendo. Mas servidores —e cafés— se pagam. Se quiser, paga um pelo Ko-fi.",
+      "section.donate.title": "Alegrou seu dia? Me paga um café virtual.",
+      "section.donate.body": "Bomp é grátis e sem publicidade. Se gostou e quer me agradecer, deixa um café virtual aqui. Sem pressão — usar e compartilhar já conta.",
       "donate.cafecito.alt": "Me pague um café em cafecito.app",
 
       "footer.brand": "As vozes que importam pra você, prontas pra você.",
