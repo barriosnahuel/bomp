@@ -30,8 +30,10 @@ import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import org.hamcrest.Description
 import org.hamcrest.Matcher
 import org.hamcrest.TypeSafeMatcher
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.Locale
 
 @RunWith(AndroidJUnit4::class)
 internal class AboutScreenFlowTest : AbstractUiTest() {
@@ -175,6 +177,33 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
         }
     }
 
+    @Test
+    fun kofiButtonEmitsActionViewIntentToKofiUrl() {
+        intending(hasAction(Intent.ACTION_VIEW))
+            .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openAbout()
+            composeRule.onNodeWithText(kofiLabel()).performScrollTo().performClick()
+            composeRule.waitForIdle()
+            intended(hasData(context.getString(R.string.app_about_gratitude_kofi_url)))
+        }
+    }
+
+    @Test
+    fun cafecitoButtonEmitsActionViewIntentToCafecitoUrlWhenLocaleIsAR() {
+        assumeTrue("Cafecito button only renders on es-AR devices", Locale.getDefault().country == "AR")
+        intending(hasAction(Intent.ACTION_VIEW))
+            .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openAbout()
+            composeRule.onNodeWithText(cafecitoLabel()).performScrollTo().performClick()
+            composeRule.waitForIdle()
+            intended(hasData(context.getString(R.string.app_about_gratitude_cafecito_url)))
+        }
+    }
+
     private fun openAbout() {
         composeRule.waitForIdle()
         composeRule.onNodeWithContentDescription(context.getString(R.string.app_overflow_menu)).performClick()
@@ -200,6 +229,10 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     private fun privacyPolicyLabel() = context.getString(R.string.app_about_privacy_policy)
 
     private fun dataSafetyLabel() = context.getString(R.string.app_about_data_safety)
+
+    private fun kofiLabel() = context.getString(R.string.app_about_gratitude_kofi_button)
+
+    private fun cafecitoLabel() = context.getString(R.string.app_about_gratitude_cafecito_button)
 
     private fun matchesSupportedHl(baseUrl: String): Matcher<Uri> =
         object : TypeSafeMatcher<Uri>() {

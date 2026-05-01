@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ## \[unreleased] (v2.0.0)
 
 ### Added
+- About now includes a heart-first gratitude frame inviting users to buy a virtual coffee via Ko-fi (all locales) and Cafecito (visible only on es-AR devices)
 - Search overlay: tap the new FAB to search across all tabs at once; results show the same play/favorite/share/delete actions as the main list plus a subtle origin badge
 - Favorites: mark/unmark any custom button as favorite; a dedicated Favorites tab lists only marked buttons
 - Edit custom sounds: long-press any card to rename it (the audio stays, only the name changes); the Edit screen reuses the Add Button flow with pre-loaded name, audio preview, and "Save changes" CTA
