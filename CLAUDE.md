@@ -504,6 +504,7 @@ https://project-url
 - For dependency bumps, write one line summarising the overall bump (e.g. "Bumped all dependencies to latest stable"), not one line per library
 - As part of each commit, if the change is user-visible or architecturally significant, update `## [unreleased]` before committing
 - Never add a `Fixed` entry for a bug introduced in the same `[unreleased]` cycle. If end-users never experienced the regression, it has no changelog entry — git history provides the traceability
+- **User-facing first, technical under "For nerds":** within `## [unreleased]`, list user-facing changes under the standard `### Added/Changed/Fixed/Removed` headings, then put technical/contributor-only changes under a `### For nerds 🤓` subsection with `#### Added/Changed/Fixed/Removed` sub-headings (omit any that would be empty). A change is **user-facing** if a normal user would notice it: visible UI, labels, copy, behavior, permissions, performance they can feel. **Technical** means: build/CI/tooling, dependency bumps, internal refactors, test infrastructure, Play Console assets internal to the repo, README/docs, analytics instrumentation. This split applies only to `[unreleased]` and going forward — released versions stay as written
 
 ## Handoff notes
 

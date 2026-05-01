@@ -46,10 +46,10 @@
     <string name="app_about_open_in_browser">Se abre en el navegador</string>
     <string name="app_about_error_no_browser">No se pudo abrir el navegador</string>
 
-    <string name="app_addbutton_activity_title">Nuevo botón</string>
-    <string name="app_addbutton_activity_title_edit">Editar botón</string>
-    <string name="app_addbutton_activity_label">Guardar botón</string>
-    <string name="app_addbutton_name">Elegí un nombre para el botón</string>
+    <string name="app_addbutton_activity_title">Nuevo Bomp</string>
+    <string name="app_addbutton_activity_title_edit">Renombrar Bomp</string>
+    <string name="app_addbutton_activity_label">Guardar</string>
+    <string name="app_addbutton_name">Elegí un nombre para tu Bomp</string>
     <string name="app_addbutton_edit_name_label">Actualizar el nombre</string>
     <string name="app_addbutton_placeholder">Vos, yo, champagne… all the night</string>
     <string name="app_addbutton_save">Guardar</string>

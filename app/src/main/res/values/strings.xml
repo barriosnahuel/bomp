@@ -49,10 +49,10 @@
     <string name="app_about_privacy_policy_url" translatable="false">https://barriosnahuel.github.io/bomp/privacy-policy.html</string>
     <string name="app_about_data_safety_url" translatable="false">https://barriosnahuel.github.io/bomp/data-safety.html</string>
 
-    <string name="app_addbutton_activity_title">New button</string>
-    <string name="app_addbutton_activity_title_edit">Edit button</string>
-    <string name="app_addbutton_activity_label">Save button</string>
-    <string name="app_addbutton_name">Choose a funny name for your new button</string>
+    <string name="app_addbutton_activity_title">New Bomp</string>
+    <string name="app_addbutton_activity_title_edit">Rename Bomp</string>
+    <string name="app_addbutton_activity_label">Save</string>
+    <string name="app_addbutton_name">Choose a funny name for your new Bomp</string>
     <string name="app_addbutton_edit_name_label">Update the name</string>
     <string name="app_addbutton_placeholder">I\'m f**k!ng druuunk</string>
     <string name="app_addbutton_save">Save</string>
