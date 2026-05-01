@@ -85,12 +85,23 @@ Igual que en la app:
 - **Skip link** primer foco en cada página (`<a href="#main" class="skip-link">`).
 - **`aria-pressed`** en toggles (theme, sticker hero).
 - **`role="status"` + `aria-live="polite"`** para mensajes dinámicos (sticker hero caption).
+- **Tipografía relativa**: `font-size` siempre en `rem`/`em`, nunca en `px` (criterio 1.4.4
+  Resize Text — Android lo da gratis vía `fontScale`, web no). Aplica a CSS files y `<style>`
+  inline. Borders/hairlines en `px` está bien. Verificable mecánicamente:
+  `grep -rn "font-size:[^;]*[0-9]px" assets/css/ *.html` debe devolver 0 líneas.
 - **Cualquier cambio de paleta requiere revalidar contraste**. Lo más rápido: open
   https://webaim.org/resources/contrastchecker/ con el par afectado.
 
 ## Pre-merge checklist (correr antes de commit + push)
 
-1. Smoke local: levantar un server local desde la raíz del worktree y probar las páginas
+1. **Guard mecánico de tipografía relativa** (cero tolerancia, corre antes que cualquier
+   smoke humano):
+   ```bash
+   grep -rn "font-size:[^;]*[0-9]px" assets/css/ *.html
+   ```
+   0 líneas = pasa. Cualquier match bloquea — convertir el `px` a `rem` antes de seguir.
+   Cubre WCAG 1.4.4 Resize Text (ver sección Accesibilidad).
+2. Smoke local: levantar un server local desde la raíz del worktree y probar las páginas
    en `http://localhost:8000/`:
    ```bash
    python3 -m http.server 8000
@@ -107,15 +118,18 @@ Igual que en la app:
      `404.html` para rutas inexistentes (responde con su propia página 404 plain). El
      comportamiento "ruta inexistente → `404.html` con tu chrome" es responsabilidad de
      GitHub Pages y se valida en deploy, no localmente.
-2. Probar **light mode + dark mode + toggle manual con persistencia** (sin FOUC).
-3. **Tap del sticker hero**: audio reproduce, anillo radial se llena, `aria-pressed=true`.
-4. **DevTools → Disable JavaScript**: las 3 páginas siguen siendo navegables y los links
+3. Probar **light mode + dark mode + toggle manual con persistencia** (sin FOUC).
+4. **Tap del sticker hero**: audio reproduce, anillo radial se llena, `aria-pressed=true`.
+5. **DevTools → Disable JavaScript**: las 3 páginas siguen siendo navegables y los links
    funcionan; el toggle de tema y el sticker hero quedan inactivos pero no rompen la página.
-5. **DevTools → Rendering → `prefers-reduced-motion: reduce`**: 0 animaciones (sin breathe,
+6. **DevTools → Rendering → `prefers-reduced-motion: reduce`**: 0 animaciones (sin breathe,
    sin halo, sin caret blink).
-6. **Lighthouse** (mobile, 4G simulado): A11y ≥ 95 bloqueante; resto: Perf ≥ 90, Best Pr ≥ 95,
+7. **Zoom a 200%** (Cmd/Ctrl + + hasta el indicador del browser marque 200%, en mobile width
+   ≤ 720px): el texto se agranda proporcionalmente, ningún bloque queda truncado, no aparece
+   scroll horizontal en la página. Cubre WCAG 1.4.4 Resize Text + 1.4.10 Reflow.
+8. **Lighthouse** (mobile, 4G simulado): A11y ≥ 95 bloqueante; resto: Perf ≥ 90, Best Pr ≥ 95,
    SEO ≥ 90.
-7. **Print stylesheet** (`Cmd+P` en privacy-policy y data-safety): se imprime sin chrome
+9. **Print stylesheet** (`Cmd+P` en privacy-policy y data-safety): se imprime sin chrome
    (sin header, sin footer, sin sticky ToC).
 
 ## TODOs bloqueantes para Play Store

@@ -34,7 +34,7 @@
   align-items: center;
   gap: var(--space-md);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 1.25rem;
   letter-spacing: -0.02em;
 }
 .l-wordmark__mark {
@@ -88,7 +88,7 @@
 
 .l-eyebrow {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: var(--color-on-surface-variant);
@@ -105,7 +105,7 @@
 }
 
 .l-hero__title {
-  font-size: clamp(56px, 9vw, 120px);
+  font-size: clamp(3.5rem, 9vw, 7.5rem);
   line-height: 0.95;
   letter-spacing: -0.04em;
   font-weight: 700;
@@ -122,7 +122,7 @@
 }
 
 .l-hero__sub {
-  font-size: clamp(17px, 1.4vw, 22px);
+  font-size: clamp(1.0625rem, 1.4vw, 1.375rem);
   line-height: 1.45;
   color: var(--color-on-surface-variant);
   max-width: 38ch;
@@ -148,7 +148,7 @@
   display: grid;
   place-items: center;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -220,7 +220,7 @@
 .sticker-hero__caption {
   margin-top: var(--space-2xl);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: var(--color-on-surface-variant);
@@ -254,7 +254,7 @@
   padding: 14px 22px;
   border-radius: var(--radius-pill);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 0.9375rem;
   letter-spacing: -0.005em;
   transition: transform .15s, background .15s, border-color .15s;
   text-decoration: none;
@@ -318,20 +318,20 @@
 }
 .l-section__num {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
 }
 .l-section__title {
-  font-size: clamp(36px, 5vw, 64px);
+  font-size: clamp(2.25rem, 5vw, 4rem);
   line-height: 1.05;
   letter-spacing: -0.03em;
   font-weight: 700;
   max-width: 14ch;
 }
 .l-section__lede {
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--color-on-surface-variant);
   max-width: 36ch;
   text-wrap: pretty;
@@ -354,7 +354,7 @@
 }
 .l-step__num {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
@@ -367,13 +367,13 @@
   min-height: 140px;
 }
 .l-step__title {
-  font-size: 24px;
+  font-size: 1.5rem;
   line-height: 1.15;
   letter-spacing: -0.02em;
   font-weight: 700;
 }
 .l-step__body {
-  font-size: 15px;
+  font-size: 0.9375rem;
   color: var(--color-on-surface-variant);
   line-height: 1.5;
 }
@@ -401,7 +401,7 @@
   border: 1px solid var(--ink-1000);
   border-radius: var(--radius-pill);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   box-shadow: 3px 3px 0 var(--ink-1000);
 }
@@ -478,7 +478,7 @@
   left: 0; right: 0; bottom: -42px;
   text-align: center;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--color-on-surface-variant);
@@ -500,12 +500,12 @@
   display: flex;
   justify-content: space-between;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 0.5625rem;
   color: var(--color-on-surface-variant);
   letter-spacing: 0.1em;
 }
 .app-screen__title {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-top: 4px;
@@ -527,12 +527,12 @@
   flex-shrink: 0;
 }
 .app-screen__row span {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 .app-screen__row small {
   display: block;
-  font-size: 9px;
+  font-size: 0.5625rem;
   color: var(--color-on-surface-variant);
   margin-top: 2px;
 }
@@ -541,7 +541,7 @@
   min-width: 0;
 }
 .app-screen__row-time {
-  font-size: 9px;
+  font-size: 0.5625rem;
   color: var(--color-on-surface-variant);
   flex-shrink: 0;
   align-self: flex-end;
@@ -589,9 +589,9 @@
   box-shadow: var(--shadow-sticker);
 }
 .app-screen__card-audio-meta { display: flex; flex-direction: column; min-width: 0; }
-.app-screen__card-audio-meta strong { font-size: 13px; font-weight: 600; }
+.app-screen__card-audio-meta strong { font-size: 0.8125rem; font-weight: 600; }
 .app-screen__card-audio-meta small {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--color-on-surface-variant);
   font-family: var(--font-mono);
   letter-spacing: 0.05em;
@@ -613,7 +613,7 @@
   align-items: center;
   gap: 4px;
   padding: 6px 4px;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--color-on-surface);
 }
 .app-screen__share-chip-icon {
@@ -641,13 +641,13 @@
   color: var(--ink-1000);
   display: grid; place-items: center;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 0.8125rem;
   flex-shrink: 0;
 }
 .app-screen__chat-meta { display: flex; flex-direction: column; min-width: 0; }
-.app-screen__chat-meta strong { font-size: 13px; font-weight: 600; }
+.app-screen__chat-meta strong { font-size: 0.8125rem; font-weight: 600; }
 .app-screen__chat-meta small {
-  font-size: 9px;
+  font-size: 0.5625rem;
   color: var(--color-on-surface-variant);
   font-family: var(--font-mono);
   letter-spacing: 0.05em;
@@ -663,7 +663,7 @@
   max-width: 80%;
   padding: 8px 12px;
   border-radius: 14px;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.35;
 }
 .app-screen__bubble--in {
@@ -723,7 +723,7 @@
 .app-screen__waveform span:nth-child(13) { height: 25%; animation-delay: -1.1s; }
 .app-screen__waveform span:nth-child(14) { height: 55%; animation-delay: -0.5s; }
 .app-screen__audio-bubble small {
-  font-size: 9px;
+  font-size: 0.5625rem;
   color: var(--color-on-surface-variant);
   font-family: var(--font-mono);
   letter-spacing: 0.05em;
@@ -749,7 +749,7 @@
 }
 .l-manifesto__inner {
   max-width: 22ch;
-  font-size: clamp(36px, 5.5vw, 80px);
+  font-size: clamp(2.25rem, 5.5vw, 5rem);
   line-height: 1.05;
   letter-spacing: -0.03em;
   font-weight: 500;
@@ -768,7 +768,7 @@
 .l-manifesto__sig {
   margin-top: var(--space-3xl);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   opacity: .6;
@@ -793,20 +793,20 @@
 }
 .l-double__eyebrow {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
 }
 .l-double__title {
-  font-size: 32px;
+  font-size: 2rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
   font-weight: 700;
 }
 .l-double__body {
   color: var(--color-on-surface-variant);
-  font-size: 15px;
+  font-size: 0.9375rem;
   max-width: 36ch;
   line-height: 1.5;
 }
@@ -837,14 +837,14 @@
   align-items: start;
 }
 .l-footer__brand {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--color-on-surface-variant);
   max-width: 32ch;
   line-height: 1.55;
 }
 .l-footer h4 {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
@@ -854,7 +854,7 @@
 .l-footer ul { list-style: none; padding: 0; display: grid; gap: 8px; }
 .l-footer a {
   text-decoration: none;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 .l-footer a:hover { text-decoration: underline; }
@@ -870,7 +870,7 @@
   gap: var(--space-md);
   flex-wrap: wrap;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
@@ -884,14 +884,14 @@
 }
 .l-lang__label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
 }
 .l-lang__select {
   font: inherit;
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0;
   text-transform: none;
   padding: 6px 10px;
@@ -931,7 +931,7 @@
   margin: 0;
   text-align: left;
   max-width: 100%;
-  font-size: clamp(48px, 7.5vw, 104px);
+  font-size: clamp(3rem, 7.5vw, 6.5rem);
 }
 .landing--v2 .l-hero__sub {
   margin: 0;
@@ -962,7 +962,7 @@
   border-radius: 16px;
   padding: 10px 16px;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   box-shadow: 4px 4px 0 var(--ink-1000);
   pointer-events: none;
@@ -1000,18 +1000,18 @@
 .l-gloss__item:nth-child(2) { transform: rotate(0.5deg) translateY(-6px); }
 .l-gloss__item:nth-child(3) { transform: rotate(-0.5deg) translateY(4px); }
 .l-gloss__term {
-  font-size: 28px;
+  font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 .l-gloss__pron {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.12em;
   color: var(--color-on-surface-variant);
 }
 .l-gloss__def {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--color-on-surface-variant);
   line-height: 1.45;
   margin-top: var(--space-sm);
@@ -1055,15 +1055,15 @@
   .l-section, .l-manifesto, .l-double > * { padding: var(--space-2xl) var(--space-lg); }
   .l-footer { padding: var(--space-lg); }
 
-  .l-hero__title { font-size: clamp(40px, 11vw, 64px); line-height: 1; }
-  .l-section__title { font-size: clamp(30px, 7vw, 44px); }
-  .l-manifesto__inner { font-size: clamp(28px, 8vw, 56px); }
-  .l-double__title { font-size: 26px; }
+  .l-hero__title { font-size: clamp(2.5rem, 11vw, 4rem); line-height: 1; }
+  .l-section__title { font-size: clamp(1.875rem, 7vw, 2.75rem); }
+  .l-manifesto__inner { font-size: clamp(1.75rem, 8vw, 3.5rem); }
+  .l-double__title { font-size: 1.625rem; }
 
   .l-cta-row { gap: var(--space-sm); }
   .l-playbadge { padding: 8px 16px 8px 12px; }
-  .l-playbadge__main { font-size: 16px; }
-  .btn { padding: 12px 18px; font-size: 14px; }
+  .l-playbadge__main { font-size: 1rem; }
+  .btn { padding: 12px 18px; font-size: 0.875rem; }
 
   .landing--v2 .l-hero { grid-template-columns: 1fr; gap: var(--space-xl); }
   .landing--v2 .sticker-stage {
@@ -1073,7 +1073,7 @@
   .sticker-hero__btn { --size: clamp(180px, 56vw, 240px) !important; }
 
   /* Decoys: keep them but smaller and tighter so they don't overflow */
-  .decoy { font-size: 11px; padding: 7px 11px; box-shadow: 3px 3px 0 var(--ink-1000); }
+  .decoy { font-size: 0.6875rem; padding: 7px 11px; box-shadow: 3px 3px 0 var(--ink-1000); }
   [data-theme="dark"] .decoy { box-shadow: 3px 3px 0 var(--paper); }
   .decoy--1 { top: 4%; left: 2%; }
   .decoy--2 { top: 10%; right: 0%; }

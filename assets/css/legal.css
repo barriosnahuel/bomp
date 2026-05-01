@@ -33,7 +33,7 @@
   top: calc(var(--space-3xl) + 24px);
   align-self: start;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
@@ -43,7 +43,7 @@
   padding-left: var(--space-lg);
 }
 .legal__toc h2 {
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.18em;
   margin-bottom: var(--space-sm);
   font-weight: 600;
@@ -69,7 +69,7 @@
 }
 .legal__eyebrow {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
@@ -85,7 +85,7 @@
   background: var(--acid-400);
 }
 .legal__title {
-  font-size: clamp(40px, 6vw, 72px);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
   line-height: 1.05;
   letter-spacing: -0.03em;
   font-weight: 700;
@@ -93,7 +93,7 @@
 }
 .legal__meta {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
@@ -108,7 +108,7 @@
 }
 
 .legal__article h2 {
-  font-size: 28px;
+  font-size: 1.75rem;
   letter-spacing: -0.02em;
   font-weight: 700;
   margin-top: var(--space-3xl);
@@ -116,13 +116,13 @@
   scroll-margin-top: 80px;
 }
 .legal__article h3 {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
   margin-top: var(--space-xl);
   margin-bottom: var(--space-sm);
 }
 .legal__article p {
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.6;
   margin-bottom: var(--space-md);
   text-wrap: pretty;
@@ -130,7 +130,7 @@
 .legal__article ul, .legal__article ol {
   padding-left: var(--space-xl);
   margin-bottom: var(--space-md);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.6;
 }
 .legal__article li { margin-bottom: var(--space-sm); }
@@ -155,7 +155,7 @@
   color: var(--ink-1000);
   border-radius: var(--radius-pill);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -170,7 +170,7 @@
   width: 100%;
   border-collapse: collapse;
   margin: var(--space-xl) 0;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .legal__table th, .legal__table td {
   text-align: left;
@@ -180,7 +180,7 @@
 }
 .legal__table th {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-on-surface-variant);
@@ -198,7 +198,7 @@
   justify-content: space-between;
   align-items: center;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -225,7 +225,7 @@
     order: 2;
   }
   .legal__article { order: 1; }
-  .legal__title { font-size: clamp(32px, 7vw, 48px); }
+  .legal__title { font-size: clamp(2rem, 7vw, 3rem); }
 }
 
 /* On phones the 4-column data-safety table can't shrink below the intrinsic
@@ -259,7 +259,7 @@
     content: attr(data-label);
     display: block;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--color-on-surface-variant);

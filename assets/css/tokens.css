@@ -83,15 +83,17 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  --type-display-large:  clamp(56px, 9vw, 96px) / 1.05;
-  --type-display-medium: clamp(44px, 6.5vw, 72px) / 1.08;
-  --type-display-small:  clamp(36px, 5vw, 56px) / 1.12;
-  --type-headline-medium: 28px;
-  --type-title-large: 22px;
-  --type-title-medium: 16px;
-  --type-body-large: 16px;
-  --type-body-medium: 14px;
-  --type-label-large: 14px;
+  /* All sizes in rem so the user's browser/OS font-size setting takes effect
+     (WCAG 2.2 AA · 1.4.4 Resize Text). 1rem = 16px at default zoom. */
+  --type-display-large:  clamp(3.5rem, 9vw, 6rem) / 1.05;
+  --type-display-medium: clamp(2.75rem, 6.5vw, 4.5rem) / 1.08;
+  --type-display-small:  clamp(2.25rem, 5vw, 3.5rem) / 1.12;
+  --type-headline-medium: 1.75rem;
+  --type-title-large: 1.375rem;
+  --type-title-medium: 1rem;
+  --type-body-large: 1rem;
+  --type-body-medium: 0.875rem;
+  --type-label-large: 0.875rem;
 }
 
 /* ── DARK MODE — system preference (root only; wrappers in design canvas
