@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - About screen rebuilt as a brand manifesto with audio branding button (plays the official push-me sound), AI co-pilot attribution (Gemini and Claude), conditional collaborators section, and full-width legal buttons — WCAG AAA accessible (18 sp body text, 56 dp touch targets, 7:1+ contrast across all text roles); includes version info, license viewer (AGPLv3), third-party credits, and source code link, accessible from the top-bar overflow menu
 - Privacy Policy and Data Safety links in the About screen's "Legal & Privacy" section, opening the published pages with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
 - Acknowledged the first-audios collaborators (Fede, Juli, Mati, Tincho) as the first card inside About's Third-party credits, replacing the previously empty Made with section
+- Added a personal "Caro ❤️ y Bob 🐶" attribution at the top of About's Third-party credits
 
 ### Changed
 - Renamed Add Button flow user-facing strings to align with brand DNA: TopAppBar reads "New Bomp"/"Nuevo Bomp" when creating and "Rename Bomp"/"Renombrar Bomp" when editing (the edit screen currently only renames); name-field hint references "your new Bomp"/"tu Bomp"; share-sheet subtitle is now just "Save"/"Guardar" (was "Save button" — and "Save Bomp" stuttered under the "Bomp" app name)

@@ -345,6 +345,10 @@ private fun CreditsSection(creditEntries: List<CreditEntry>) {
             verticalArrangement = Arrangement.spacedBy(Spacing.SM),
         ) {
             AttributionCard(
+                name = stringResource(R.string.app_about_collaborators_family_name),
+                role = stringResource(R.string.app_about_collaborators_family_role),
+            )
+            AttributionCard(
                 name = stringResource(R.string.app_about_collaborators_first_audios_name),
                 role = stringResource(R.string.app_about_collaborators_first_audios_role),
             )
