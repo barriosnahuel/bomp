@@ -72,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
+import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
@@ -153,6 +154,7 @@ fun AboutScreen(onBack: () -> Unit) {
         ) {
             HeroSection(
                 versionInfo = versionInfo,
+                debugRootDirName = BuildConfig.DEBUG_ROOT_DIR_NAME,
                 soundPool = soundPool,
                 soundId = soundId,
             )
@@ -234,6 +236,7 @@ fun AboutScreen(onBack: () -> Unit) {
 @Composable
 private fun HeroSection(
     versionInfo: String,
+    debugRootDirName: String,
     soundPool: SoundPool,
     soundId: Int,
 ) {
@@ -298,6 +301,15 @@ private fun HeroSection(
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+
+    if (debugRootDirName.isNotBlank()) {
+        Spacer(Modifier.height(Spacing.XS))
+        Text(
+            text = debugRootDirName,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
