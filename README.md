@@ -1,18 +1,20 @@
-# Push Me 🔘
-An Android app made, by the moment, only for fun. Currently it's aimed to be used for development purposes so we welcome your contribution. We're in an early stage!
+# ▶️ Bomp
+
+Bomp es tu colección personal de las voces que te importan. Guardalas, tenelas cerca, escuchalas cuando quieras — y si tenés ganas, bompealas afuera. Proyecto open source en desarrollo activo: las contribuciones son bienvenidas.
+
+🌐 **[Sitio web](https://barriosnahuel.github.io/bomp/)** — Política de privacidad, data safety y más.
+
+[<img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="80"/>](https://play.google.com/store/apps/details?id=com.github.barriosnahuel.vossosunboton)
 
 ## Project status 📖
-[![version](https://img.shields.io/badge/version-1.1.0-brightgreen.svg)](https://github.com/barriosnahuel/push-me/releases)
+[![version](https://img.shields.io/badge/version-2.0.0-brightgreen.svg)](https://github.com/barriosnahuel/bomp/releases)
 [![Semver](https://img.shields.io/badge/SemVer-v2.0.0-green.svg)](http://semver.org/spec/v2.0.0.html)
 [![stable](https://img.shields.io/badge/stability-experimental-green.svg)](https://nodejs.org/api/documentation.html#documentation_stability_index)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
-[![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://source.android.com/setup/start/build-numbers)
-[![API](https://img.shields.io/badge/API-33-brightgreen.svg?style=flat)](https://source.android.com/setup/start/build-numbers)
-[![CircleCI](https://circleci.com/gh/barriosnahuel/push-me.svg?style=svg)](https://circleci.com/gh/barriosnahuel/push-me)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/50c7ef07a05e47419c084c64dd460c9a)](https://www.codacy.com/app/barrios.nahuel/push-me?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=barriosnahuel/push-me&amp;utm_campaign=Badge_Grade)
-
-Wanna know about the entire tech stack? Check it at [techstack.md](techstack.md).
+[![API](https://img.shields.io/badge/API-23%2B-brightgreen.svg?style=flat)](https://source.android.com/setup/start/build-numbers)
+[![API](https://img.shields.io/badge/API-37-brightgreen.svg?style=flat)](https://source.android.com/setup/start/build-numbers)
+[![CircleCI](https://circleci.com/gh/barriosnahuel/bomp.svg?style=svg)](https://circleci.com/gh/barriosnahuel/bomp)
 
 ## Support the project
 
@@ -20,15 +22,15 @@ Wanna know about the entire tech stack? Check it at [techstack.md](techstack.md)
 [![Invitame un café en cafecito.app](https://cdn.cafecito.app/imgs/buttons/button_1.svg)](https://cafecito.app/barriosnahuel)
 
 ## Features 🏁
-- Play packaged audios.
-- Save audios from WhatsApp.
-- Share non-packaged audios to other apps.
-
-## What's next 📅
-- Store listing.
-- UI redesign.
-- Famous packaged audios.
-- Record new audios.
+- 🎙️ **Coleccioná las voces que te importan.** Guardá audios de WhatsApp con un toque y tenelos cerca, todos juntos.
+- 🔊 **Escuchá de nuevo cuando quieras.** Reproducí cualquier audio de tu colección al instante.
+- ⭐ **Fijá los que más te importan** arriba de tu colección, así los encontrás primero.
+- ✏️ **Personalizá tus audios:** renombrá cuando quieras.
+- 🔍 **Encontrá rápido.** Buscá entre toda tu colección al instante.
+- ☁️ **Nunca los pierdas.** Tu colección se respalda automáticamente en tu cuenta de Google: si reinstalás la app o cambiás de celular, vuelven con vos.
+- 📤 **Bompealos afuera** cuando tengas ganas — primero el audio te tiene que servir a vos; compartirlo es opcional.
+- 🌗 Modo claro y oscuro automáticos según tu sistema.
+- ♿ Diseñada con accesibilidad WCAG 2.2 AA: contraste alto, soporte de lectores de pantalla, y áreas táctiles cómodas.
 
 ## Contributing 🙌
 Please feel free to share any suggestion and/or make a pull request, I'd be really glad to help you applying your changes to the app. 😃
