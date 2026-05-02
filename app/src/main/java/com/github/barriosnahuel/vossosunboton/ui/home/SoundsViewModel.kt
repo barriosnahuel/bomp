@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.app.Application
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -15,10 +16,11 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,6 +30,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -54,6 +57,8 @@ class SoundsViewModel(
     private val searchDebounceMs: Long = 200L,
 ) : AndroidViewModel(application),
     PlayerControllerListener {
+    private val repo = SoundsRepository(application, onError = Tracker::track)
+
     private val _selectedTab = MutableStateFlow(AppTab.MY_SOUNDS)
     val selectedTab: StateFlow<AppTab> = _selectedTab.asStateFlow()
 
@@ -62,6 +67,23 @@ class SoundsViewModel(
 
     private val _hasBundledSounds = MutableStateFlow(false)
     val hasBundledSounds: StateFlow<Boolean> = _hasBundledSounds.asStateFlow()
+
+    private val mutableInitialLoadComplete = MutableStateFlow(false)
+
+    /**
+     * Flips to `true` after the first [loadSounds] call returns (success OR failure).
+     * Tests in this module use it to await the async DataStore read started in `init`
+     * before mutating state via reflection (otherwise the injected value gets overwritten
+     * by the in-flight load). Not part of the production API — `internal` so the wider
+     * codebase cannot accidentally depend on it; `@VisibleForTesting(otherwise = NONE)`
+     * so Lint warns if any non-test caller appears.
+     *
+     * Avoids the conventional `_isInitialLoadComplete`/`isInitialLoadComplete` backing-field
+     * pair because ktlint's `backing-property-naming` rule requires both to be `private`,
+     * which would defeat the test-coordination purpose.
+     */
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+    internal val isInitialLoadComplete: StateFlow<Boolean> = mutableInitialLoadComplete.asStateFlow()
 
     private val allSoundsCache = MutableStateFlow<List<Sound>>(emptyList())
 
@@ -192,7 +214,7 @@ class SoundsViewModel(
         recomputeSearchResults()
         if (nowPinned) _scrollToTopEvent.trySend(Unit)
         viewModelScope.launch(ioDispatcher) {
-            SoundDao().savePin(getApplication(), sound.name, nowPinned)
+            repo.savePin(sound.name, nowPinned)
         }
         tracker.log(AnalyticsEvent.PinToggle(pinned = nowPinned))
         tracker.setUserProperty(
@@ -248,13 +270,15 @@ class SoundsViewModel(
         tracker.log(AnalyticsEvent.SoundDeleteUndone)
     }
 
-    fun confirmDelete(context: android.content.Context) {
-        val event = _deletedSoundEvent.value ?: return
+    fun confirmDelete() {
+        val event = _deletedSoundEvent.value
         _deletedSoundEvent.value = null
-
-        if (!event.sound.isBundled()) {
+        if (event == null || event.sound.isBundled()) {
+            return
+        }
+        viewModelScope.launch(ioDispatcher) {
             try {
-                SoundDao().delete(context, event.sound)
+                repo.delete(event.sound)
                 tracker.log(AnalyticsEvent.SoundDelete)
                 tracker.setUserProperty(
                     AnalyticsUserProperty.CURRENT_SOUNDS,
@@ -281,46 +305,50 @@ class SoundsViewModel(
     }
 
     private suspend fun loadSounds() {
-        val dao = SoundDao()
-        val allSounds =
-            dao
-                .find(getApplication<Application>())
-                .sortedWith(
-                    compareByDescending<Sound> { it.isPinned }
-                        .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
-                        .thenBy { it.name.lowercase() },
-                )
-        val cachedDurations = dao.findDurations(getApplication<Application>())
-        _soundDurations.update { current -> cachedDurations + current }
-        _hasBundledSounds.value = allSounds.any { it.isBundled() }
-        val playingName = _playingSound.value?.name
-        val deletedName = _deletedSoundEvent.value?.sound?.name
-        allSoundsCache.value =
-            if (playingName == null) {
-                allSounds
-            } else {
-                allSounds.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
+        try {
+            val allSounds =
+                repo.sounds
+                    .first()
+                    .sortedWith(
+                        compareByDescending<Sound> { it.isPinned }
+                            .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
+                            .thenBy { it.name.lowercase() },
+                    )
+            val cachedDurations = repo.durations.first()
+            _soundDurations.update { current -> cachedDurations + current }
+            _hasBundledSounds.value = allSounds.any { it.isBundled() }
+            val playingName = _playingSound.value?.name
+            val deletedName = _deletedSoundEvent.value?.sound?.name
+            allSoundsCache.value =
+                if (playingName == null) {
+                    allSounds
+                } else {
+                    allSounds.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
+                }
+            recomputeSearchResults()
+            _sounds.update {
+                val filtered =
+                    when (_selectedTab.value) {
+                        AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
+                        AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
+                    }.filter { it.name != deletedName }
+                if (playingName == null) {
+                    filtered
+                } else {
+                    filtered.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
+                }
             }
-        recomputeSearchResults()
-        _sounds.update {
-            val filtered =
-                when (_selectedTab.value) {
-                    AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
-                    AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
-                }.filter { it.name != deletedName }
-            if (playingName == null) {
-                filtered
-            } else {
-                filtered.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
+            val userCreatedCount = allSounds.count { !it.isBundled() }
+            tracker.setUserProperty(AnalyticsUserProperty.CURRENT_SOUNDS, userCreatedCount.toString())
+            tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PINNED, allSounds.count { it.isPinned }.toString())
+            AUDIO_MILESTONES.forEach { threshold ->
+                if (userCreatedCount >= threshold && tracker.markFiredOnce("milestone_sounds_$threshold")) {
+                    tracker.log(AnalyticsEvent.MilestoneAudios(threshold))
+                }
             }
-        }
-        val userCreatedCount = allSounds.count { !it.isBundled() }
-        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_SOUNDS, userCreatedCount.toString())
-        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PINNED, allSounds.count { it.isPinned }.toString())
-        AUDIO_MILESTONES.forEach { threshold ->
-            if (userCreatedCount >= threshold && tracker.markFiredOnce("milestone_sounds_$threshold")) {
-                tracker.log(AnalyticsEvent.MilestoneAudios(threshold))
-            }
+        } finally {
+            // Always flag completion so test waits do not hang on DataStore failures.
+            mutableInitialLoadComplete.value = true
         }
     }
 
@@ -333,7 +361,7 @@ class SoundsViewModel(
         _playbackProgress.value = PlaybackProgress(positionMs = 0, durationMs = durationMs)
         _soundDurations.update { it + (sound.name to durationMs) }
         viewModelScope.launch(ioDispatcher) {
-            SoundDao().saveDuration(getApplication(), sound.name, durationMs)
+            repo.saveDuration(sound.name, durationMs)
         }
         _sounds.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
         allSoundsCache.update { list -> list.map { if (it.name == sound.name) playingSound else it } }

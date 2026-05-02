@@ -14,7 +14,7 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -68,7 +68,8 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                             Timber.e("Input stream obtained from the specified content URI is null: %s", uri)
                         } else {
                             copy(inputStream, fileOutputStream)
-                            SoundDao().save(context, Sound(name, fileName))
+                            val repo = SoundsRepository(context)
+                            repo.save(Sound(name, fileName))
                             val durationMs =
                                 runCatching {
                                     val retriever = MediaMetadataRetriever()
@@ -80,7 +81,7 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                                     }
                                 }.getOrNull()
                             if (durationMs != null) {
-                                SoundDao().saveDuration(context, name, durationMs)
+                                repo.saveDuration(name, durationMs)
                             }
 
                             feedbackMessage = R.string.app_addbutton_feedback_saved_ok
@@ -104,7 +105,7 @@ private class AddButtonFeatureImpl : AddButtonFeature {
     ): Deferred<Unit> {
         @OptIn(DelicateCoroutinesApi::class)
         return GlobalScope.async(Dispatchers.IO) {
-            SoundDao().rename(context, sound, newName)
+            SoundsRepository(context).rename(sound.name, newName)
         }
     }
 

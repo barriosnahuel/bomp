@@ -18,6 +18,8 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Before
@@ -64,11 +66,18 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel =
-        SoundsViewModel(
-            ApplicationProvider.getApplicationContext(),
-            ioDispatcher = UnconfinedTestDispatcher(),
-        )
+    private fun givenAViewModel(): SoundsViewModel {
+        val vm =
+            SoundsViewModel(
+                ApplicationProvider.getApplicationContext(),
+                ioDispatcher = UnconfinedTestDispatcher(),
+            )
+        // Wait for init's loadSounds to populate state — DataStore IO suspends off
+        // UnconfinedTestDispatcher, so without this wait, reflection-based injection
+        // races with the in-flight load and gets overwritten.
+        runBlocking { vm.isInitialLoadComplete.first { it } }
+        return vm
+    }
 
     private fun SoundsViewModel.injectHasBundledSounds(value: Boolean) {
         SoundsViewModel::class.java
