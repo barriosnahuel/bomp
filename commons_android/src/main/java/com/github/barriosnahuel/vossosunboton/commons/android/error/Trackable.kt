@@ -30,9 +30,7 @@ interface Trackable {
  */
 object Tracker : Trackable {
     override fun track(throwable: Throwable) {
-        Timber.e("Tracking error to Firebase Crashlytics: %s", throwable.message)
-        throwable.printStackTrace()
-
+        Timber.e(throwable, "Tracking error to Firebase Crashlytics: %s", throwable.message)
         FirebaseCrashlytics.getInstance().recordException(throwable)
     }
 

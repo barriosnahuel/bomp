@@ -243,12 +243,16 @@ never reaches release builds). Both ThreadPolicy and VmPolicy use `detectAll()`
 plus an explicit `detectNonSdkApiUsage()`; **`penaltyLog()` and `penaltyDeath()`
 are intentionally not set on the builders** — both fire before `penaltyListener`
 and bypass the filter. Every detected violation flows through `reportViolation()`,
-which filters via `KNOWN_THIRD_PARTY_VIOLATIONS` and on a hit emits one Timber
-`StrictMode` log, records a Crashlytics non-fatal via `Tracker.track`, AND posts
-a throw to the main looper so the process dies. Unknown violations crash debug
-runs and the instrumented suite until a matcher is added — by design, so nothing
-slips past silently. Logcat, Crashlytics and process state stay in sync — the
-matcher list is the only way to silence any of them.
+which filters via `KNOWN_THIRD_PARTY_VIOLATIONS` and on a hit calls
+`Tracker.track(StrictModeException(violation))` AND posts a throw to the main
+looper so the process dies. The wrapper exception's message is
+`"StrictMode: <ViolationClassName>"`, so the single logcat line emitted by
+`Tracker.track` reads `Tracking error to Firebase Crashlytics: StrictMode: <…>`
+under the `Tracker` tag — searchable via `grep StrictMode` without a dedicated
+tag. Unknown violations crash debug runs and the instrumented suite until a
+matcher is added — by design, so nothing slips past silently. Logcat, Crashlytics
+and process state stay in sync — the matcher list is the only way to silence any
+of them.
 
 When a new violation surfaces, choose in this order:
 
@@ -267,7 +271,8 @@ When a new violation surfaces, choose in this order:
    classes are obfuscated and unstable (GMS Dynamite modules ship as `m7.*` etc.
    and the loader / module identifier lives in `StackTraceElement.fileName`).
 
-Filter logcat with `adb logcat -s StrictMode:E` — operator workflow lives in
+Filter logcat with `adb logcat | grep StrictMode` (or scope by tag and grep:
+`adb logcat -s Tracker:E | grep StrictMode`) — operator workflow lives in
 `CONTRIBUTING.md` § "Terminal: StrictMode violations".
 
 
