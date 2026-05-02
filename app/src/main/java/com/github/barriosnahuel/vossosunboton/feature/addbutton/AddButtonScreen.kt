@@ -43,6 +43,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -228,25 +229,34 @@ private fun AudioPreview(
     var isReady by remember { mutableStateOf(false) }
     var durationMs by remember { mutableStateOf(0) }
 
-    DisposableEffect(fileName) {
-        try {
-            val file = getFile(context, fileName)
-            player.setDataSource(file.absolutePath)
-            player.prepare()
-            durationMs = player.duration
-            player.setOnCompletionListener {
-                isPlaying = false
-                sliderPosition = 0f
+    LaunchedEffect(fileName) {
+        val prepared =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val file = getFile(context, fileName)
+                    player.setDataSource(file.absolutePath)
+                    player.prepare()
+                    player.duration
+                }
             }
-            isReady = true
-        } catch (e: IOException) {
-            Timber.w(e, "Could not load audio preview for file: %s", fileName)
-        } catch (e: IllegalStateException) {
-            Timber.w(e, "MediaPlayer in invalid state for file: %s", fileName)
-        }
-        onDispose {
-            player.release()
-        }
+        prepared
+            .onSuccess { duration ->
+                durationMs = duration
+                player.setOnCompletionListener {
+                    isPlaying = false
+                    sliderPosition = 0f
+                }
+                isReady = true
+            }.onFailure { e ->
+                when (e) {
+                    is IOException -> Timber.w(e, "Could not load audio preview for file: %s", fileName)
+                    is IllegalStateException -> Timber.w(e, "MediaPlayer in invalid state for file: %s", fileName)
+                    else -> throw e
+                }
+            }
+    }
+    DisposableEffect(Unit) {
+        onDispose { player.release() }
     }
 
     if (isReady) {
