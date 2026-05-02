@@ -89,7 +89,41 @@ To manually verify Auto Backup saves and restores custom sound metadata, use `bm
 
        adb shell bmgr restore <token> com.github.barriosnahuel.vossosunboton.debug
 
+4. **Wipe the backup for this app from the active transport** (e.g. start over from scratch on Drive):
+
+       adb shell bmgr list transports                                                # find the active (*) Drive transport
+       adb shell bmgr wipe <transport> com.github.barriosnahuel.vossosunboton.debug
+
+   Scoped to the package — other apps' Drive backups are untouched. Pair with `adb shell pm clear com.github.barriosnahuel.vossosunboton.debug` to also wipe local state, otherwise the next `backupnow` re-uploads what is still on the device.
+
 > Requires a device or emulator with Google Mobile Services. Does not work on stock AOSP emulators.
+
+### On-device data paths
+
+When debugging what the app actually persists, these are the two files/directories to inspect (paths use the `.debug` suffix from `applicationIdSuffix`; release builds drop it):
+
+| What | Path |
+| -- | -- |
+| Sound metadata (DataStore Preferences, JSON-encoded `StoredSound` list) | `/data/data/com.github.barriosnahuel.vossosunboton.debug/files/datastore/bomps.preferences_pb` |
+| Custom audio files (the actual `.mp3` saved from the share sheet) | `/storage/emulated/0/Android/data/com.github.barriosnahuel.vossosunboton.debug/files/Music/` |
+
+The DataStore file is binary Protobuf wrapping our `sounds_json` string — the JSON itself is plain text inside, so `strings` reveals the contents without needing protoc:
+
+```bash
+# List the datastore directory
+adb shell run-as com.github.barriosnahuel.vossosunboton.debug ls -la files/datastore/
+
+# Dump the JSON payload (readable)
+adb shell run-as com.github.barriosnahuel.vossosunboton.debug cat files/datastore/bomps.preferences_pb | strings
+
+# Pull a copy locally (for diffing across runs, attaching to a bug, etc.)
+adb exec-out run-as com.github.barriosnahuel.vossosunboton.debug cat files/datastore/bomps.preferences_pb > bomps.preferences_pb
+
+# List the audio files
+adb shell ls -la /storage/emulated/0/Android/data/com.github.barriosnahuel.vossosunboton.debug/files/Music/
+```
+
+The audio directory is app-private external storage — no special permission needed for `adb shell ls`, but `run-as` is required for the internal `dataDir`.
 
 ## Logcat 😿
 
