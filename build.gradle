@@ -15,6 +15,7 @@ buildscript {
 
         classpath libs.build.kotlin.gradle
         classpath libs.build.kotlin.compose
+        classpath libs.build.kotlin.serialization
 
         classpath libs.build.detekt.gradle
         classpath libs.build.ktlint.gradle

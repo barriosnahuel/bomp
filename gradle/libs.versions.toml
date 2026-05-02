@@ -25,6 +25,8 @@ firebaseBom               = "34.12.0"
 # Other
 timber                    = "5.0.1"
 coroutines                = "1.10.2"
+datastore                 = "1.1.7"
+kotlinxSerialization      = "1.7.3"
 
 # Test
 junit                     = "4.13.2"
@@ -43,6 +45,7 @@ build-firebase-crashlytics-gradle = { module = "com.google.firebase:firebase-cra
 build-firebase-perf-plugin        = { module = "com.google.firebase:perf-plugin",                     version.ref = "firebasePerfPlugin" }
 build-kotlin-gradle               = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin",           version.ref = "kotlin" }
 build-kotlin-compose              = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+build-kotlin-serialization        = { module = "org.jetbrains.kotlin:kotlin-serialization",           version.ref = "kotlin" }
 build-detekt-gradle               = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin",    version.ref = "detekt" }
 build-ktlint-gradle               = { module = "org.jlleitschuh.gradle:ktlint-gradle",                version.ref = "ktlintGradle" }
 build-spotless-gradle             = { module = "com.diffplug.spotless:spotless-plugin-gradle",         version.ref = "spotless" }
@@ -83,6 +86,12 @@ timber                            = { module = "com.jakewharton.timber:timber", 
 coroutines-android                = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 coroutines-core                   = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core",    version.ref = "coroutines" }
 coroutines-test                   = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test",    version.ref = "coroutines" }
+
+# ---------- DataStore ----------
+androidx-datastore-preferences    = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+
+# ---------- kotlinx.serialization ----------
+kotlinx-serialization-json        = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 
 # ---------- Test ----------
 junit                             = { module = "junit:junit",               version.ref = "junit" }
