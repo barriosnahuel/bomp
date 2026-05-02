@@ -65,9 +65,9 @@ class SoundsRepository(
      * `.shareIn(scope, SharingStarted.WhileSubscribed(), replay = 1)` at a process-lived scope.
      */
     val sounds: Flow<List<Sound>> =
-        storedSounds.map { stored ->
-            mergeWithBundled(stored, PackagedAudios.get(context))
-        }
+        storedSounds
+            .map { stored -> mergeWithBundled(stored, PackagedAudios.get(context)) }
+            .flowOn(Dispatchers.IO)
 
     val durations: Flow<Map<String, Int>> =
         storedSounds
