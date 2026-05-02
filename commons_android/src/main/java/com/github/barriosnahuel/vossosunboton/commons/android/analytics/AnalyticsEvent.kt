@@ -110,8 +110,37 @@ sealed class AnalyticsEvent(
     /** External Data Safety link followed from About. The user leaves the app. */
     object AboutDataSafetyOpen : AnalyticsEvent(name = "about_data_safety_open", hasFirstVariant = true)
 
-    /** Branding audio (Sticker Cero) played from the About hero section. */
+    /**
+     * Brand audio played from the About hero section. NOTE: separate surface from the home-grid
+     * Sticker Cero introduced in v2.0.0 — that one emits its own [WelcomeStickerPlay] event.
+     */
     object AboutBrandingAudioPlay : AnalyticsEvent(name = "about_branding_audio_play", hasFirstVariant = true)
+
+    /**
+     * Welcome sticker (Sticker Cero, fresh-install variant) became visible at the top of MY_SOUNDS.
+     * Gated call-site-side via `tracker.markFiredOnce("welcome_sticker_shown")` so it fires at most
+     * once per install. `hasFirstVariant = false` because the marker is already one-shot.
+     */
+    object WelcomeStickerShown : AnalyticsEvent(name = "welcome_sticker_shown", hasFirstVariant = false)
+
+    /**
+     * User tapped play on the welcome sticker. `hasFirstVariant = true` so the dashboard can tell
+     * a first listen apart from replays (only path to a replay is the Undo flow on the snackbar) —
+     * a useful signal when deciding whether to ship the deferred UPDATE flow.
+     */
+    object WelcomeStickerPlay : AnalyticsEvent(name = "welcome_sticker_play", hasFirstVariant = true)
+
+    /**
+     * Welcome audio reached natural end-of-stream. The auto-destruct + Undo snackbar follows.
+     * `hasFirstVariant = true` so a second completion (after Undo + replay) is visible.
+     */
+    object WelcomeStickerCompleted : AnalyticsEvent(name = "welcome_sticker_completed", hasFirstVariant = true)
+
+    /**
+     * User tapped Undo on the welcome auto-destruct snackbar. Suppresses the regular
+     * [SoundDeleteUndone] for this branch to avoid double-counting in dashboards.
+     */
+    object WelcomeStickerUndone : AnalyticsEvent(name = "welcome_sticker_undone", hasFirstVariant = true)
 
     /** External Cafecito link followed from the About gratitude frame. Emitted only after the intent dispatch succeeds. */
     object AboutGratitudeCafecitoOpen : AnalyticsEvent(name = "about_gratitude_cafecito_open", hasFirstVariant = true)

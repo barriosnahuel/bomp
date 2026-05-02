@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Privacy Policy and Data Safety links in the About screen's "Legal & Privacy" section, opening the published pages with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
 - Acknowledged the first-audios collaborators (Fede, Juli, Mati, Tincho) as the first card inside About's Third-party credits, replacing the previously empty Made with section
 - Added a personal "Caro ❤️ y Bob 🐶" attribution at the top of About's Third-party credits
+- Welcome card "Un saludo de Nahu" appears at the top of My Sounds on first launch — auto-removed after the audio finishes, with an Undo option to bring it back for a replay
+- My Sounds shows a heart-first empty state with concentric acid ripples and copy "Acá viven las voces que te importan" / "This is where the voices live" when the welcome has been consumed and no Bomp has been added yet
 
 ### Changed
 - Renamed Add Button flow user-facing strings to align with brand DNA: TopAppBar reads "New Bomp"/"Nuevo Bomp" when creating and "Rename Bomp"/"Renombrar Bomp" when editing (the edit screen currently only renames); name-field hint references "your new Bomp"/"tu Bomp"; share-sheet subtitle is now just "Save"/"Guardar" (was "Save button" — and "Save Bomp" stuttered under the "Bomp" app name)
@@ -70,6 +72,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - AGPLv3 copyright header on all source files, enforced by Spotless
 
 #### Changed
+- `PlayerControllerListener.onPlayerStop` now takes a `completed: Boolean` argument so callers can distinguish natural end-of-stream (`MediaPlayer.OnCompletionListener`) from user-initiated stops; required for the welcome-sticker auto-destruct path that fires only on natural completion
 - Migrated sound metadata persistence from SharedPreferences to Jetpack DataStore Preferences with a single JSON-encoded payload, exposed as a reactive `Flow<List<Sound>>` from the new `SoundsRepository`; safer concurrent writes, no main-thread IO, and corrupted-payload recovery via Crashlytics-reported fallback to an empty list
 - StrictMode debug audit: switched both ThreadPolicy and VmPolicy to `detectAll()` (forward-compat for new detectors) keeping `detectNonSdkApiUsage()` explicit; route every surviving violation through `Tracker.track` so each one prints a single line under the `Tracker` tag with `"StrictMode: <ViolationClass>"` in the message (greppable via `adb logcat | grep StrictMode`); known noise (Firebase Analytics / Crashlytics / Datatransport CCT, Compose `dispatchOnScrollChanged`, Espresso reflection, framework `SurfaceControl` finalize, framework Activity-destroy GC) is silenced in both logcat and Crashlytics with one decision; unknown violations now crash the debug process so they cannot slip past unnoticed; Firebase init disk reads wrapped at the call-site via scoped `allowThreadDiskReads` in `AnalyticsTrackerProvider`
 - Rewrote `README.md` to reflect v2.0 reality: refreshed brand to Bomp, refreshed version/API/CI badges, replaced feature list with current capabilities aligned to brand-DNA vocabulary, added Google Play badge and GitHub Pages link, removed obsolete Codacy badge and "What's next" section

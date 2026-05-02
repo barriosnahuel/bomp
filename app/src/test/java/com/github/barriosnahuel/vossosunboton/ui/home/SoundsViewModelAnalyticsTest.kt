@@ -7,11 +7,13 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.google.common.truth.Truth.assertThat
@@ -39,6 +41,12 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         runBlocking {
             SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
         }
+        ApplicationProvider
+            .getApplicationContext<android.content.Context>()
+            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.startPlayingSound(any(), any()) } answers { nothing }
@@ -258,5 +266,68 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                 delay(25L)
             }
         }
+    }
+
+    @Test
+    fun `welcome_sticker_shown is logged once on first VM init when flag is active`() {
+        givenAViewModel()
+
+        fake.assertEmitted("welcome_sticker_shown")
+    }
+
+    @Test
+    fun `welcome_sticker_shown does not re-fire on a second VM init`() {
+        givenAViewModel()
+        fake.events.clear()
+
+        givenAViewModel()
+
+        fake.assertNotEmitted("welcome_sticker_shown")
+    }
+
+    @Test
+    fun `playOrStop on welcome logs welcome_sticker_play instead of sound_play`() {
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+
+        viewModel.playOrStop(welcome)
+
+        fake.assertEmitted("welcome_sticker_play")
+        fake.assertNotEmitted("sound_play")
+    }
+
+    @Test
+    fun `onPlayerStop completed=true on welcome logs welcome_sticker_completed`() {
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+
+        viewModel.onPlayerStop(welcome, completed = true)
+
+        fake.assertEmitted("welcome_sticker_completed")
+    }
+
+    @Test
+    fun `restoreSound on welcome logs only welcome_sticker_undone`() {
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+        viewModel.onPlayerStop(welcome, completed = true)
+        fake.events.clear()
+
+        viewModel.restoreSound()
+
+        fake.assertEmitted("welcome_sticker_undone")
+        fake.assertNotEmitted("sound_delete_undone")
     }
 }

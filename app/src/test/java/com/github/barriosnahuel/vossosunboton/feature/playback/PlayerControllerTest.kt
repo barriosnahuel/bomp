@@ -109,6 +109,45 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `on natural completion the listener receives onPlayerStop with completed = true`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+        val completionSlot = io.mockk.slot<MediaPlayer.OnCompletionListener>()
+        every { mp.setOnCompletionListener(capture(completionSlot)) } answers { nothing }
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = PlayerControllerImpl(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+        completionSlot.captured.onCompletion(mp)
+
+        verify { listener.onPlayerStop(sound, completed = true) }
+    }
+
+    @Test
+    fun `on stopPlayingSound the listener receives onPlayerStop with completed = false`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = mockk<MediaPlayer>(relaxed = true)
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+        every { mp.isPlaying } returnsMany listOf(false, true)
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = PlayerControllerImpl(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+        controller.stopPlayingSound()
+
+        verify { listener.onPlayerStop(sound, completed = false) }
+    }
+
+    @Test
     fun `seekTo delegates to mediaPlayer seekTo`() {
         val mp = givenAnIdleMediaPlayer()
 

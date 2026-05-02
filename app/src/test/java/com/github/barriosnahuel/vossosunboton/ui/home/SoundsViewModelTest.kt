@@ -7,7 +7,9 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.google.common.truth.Truth.assertThat
@@ -33,6 +35,12 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         runBlocking {
             SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
         }
+        ApplicationProvider
+            .getApplicationContext<android.content.Context>()
+            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
     }
@@ -101,7 +109,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val sound = Sound("test", rawRes = 1)
         viewModel.onPlayerStart(sound, durationMs = 1000)
 
-        viewModel.onPlayerStop(sound)
+        viewModel.onPlayerStop(sound, completed = false)
 
         assertThat(viewModel.playingSound.value).isNull()
         assertThat(sound.isPlaying).isFalse()
@@ -129,7 +137,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val sound = Sound("test", null, 1, isPlaying = true)
         viewModel.injectSounds(listOf(sound))
 
-        viewModel.onPlayerStop(sound)
+        viewModel.onPlayerStop(sound, completed = false)
 
         assertThat(
             viewModel.sounds.value
@@ -399,7 +407,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val sound = Sound("test", rawRes = 1)
         viewModel.onPlayerStart(sound, durationMs = 3000)
 
-        viewModel.onPlayerStop(sound)
+        viewModel.onPlayerStop(sound, completed = false)
 
         assertThat(viewModel.playbackProgress.value).isNull()
     }
@@ -477,5 +485,137 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             )
         runBlocking { vm.isInitialLoadComplete.first { it } }
         return vm
+    }
+
+    @Test
+    fun `welcome sticker is at index 0 of MY_SOUNDS when flag is active`() {
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+
+        assertThat(
+            viewModel.sounds.value
+                .firstOrNull()
+                ?.name,
+        ).isEqualTo(welcomeTitle)
+    }
+
+    @Test
+    fun `welcome sticker is absent when flag is consumed`() {
+        ApplicationProvider
+            .getApplicationContext<android.content.Context>()
+            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("consumed", true)
+            .commit()
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+
+        assertThat(viewModel.sounds.value.none { it.name == welcomeTitle }).isTrue()
+    }
+
+    @Test
+    fun `welcome sticker is absent from EXPLORE_SOUNDS regardless of flag`() {
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+
+        viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+        // selectTab launches loadSounds asynchronously on ioDispatcher. Wait for the welcome to
+        // drop out of _sounds before asserting — isInitialLoadComplete already flipped on the first
+        // load and is no longer a useful sync signal.
+        runBlocking {
+            withTimeoutOrNull(5_000L) {
+                viewModel.sounds.first { list -> list.none { it.name == welcomeTitle } }
+            }
+        }
+
+        assertThat(viewModel.sounds.value.none { it.name == welcomeTitle }).isTrue()
+    }
+
+    @Test
+    fun `onPlayerStop with completed=true on welcome enqueues delete event and hides sticker`() {
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+
+        viewModel.onPlayerStop(welcome, completed = true)
+
+        assertThat(
+            viewModel.deletedSoundEvent.value
+                ?.sound
+                ?.name,
+        ).isEqualTo(welcomeTitle)
+        assertThat(viewModel.welcomeStickerVisible.value).isFalse()
+        assertThat(viewModel.sounds.value.none { it.name == welcomeTitle }).isTrue()
+    }
+
+    @Test
+    fun `onPlayerStop with completed=false on welcome leaves the sticker visible`() {
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+
+        viewModel.onPlayerStop(welcome, completed = false)
+
+        assertThat(viewModel.deletedSoundEvent.value).isNull()
+        assertThat(viewModel.welcomeStickerVisible.value).isTrue()
+        assertThat(viewModel.sounds.value.any { it.name == welcomeTitle }).isTrue()
+    }
+
+    @Test
+    fun `restoreSound on welcome restores visibility and clears prefs flag`() {
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+        viewModel.onPlayerStop(welcome, completed = true)
+
+        viewModel.restoreSound()
+
+        assertThat(viewModel.welcomeStickerVisible.value).isTrue()
+        assertThat(viewModel.sounds.value.any { it.name == welcomeTitle }).isTrue()
+        assertThat(
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+                .getBoolean("consumed", false),
+        ).isFalse()
+    }
+
+    @Test
+    fun `confirmDelete on welcome calls welcomeStore consume and skips repo delete`() {
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+        viewModel.onPlayerStop(welcome, completed = true)
+
+        viewModel.confirmDelete()
+
+        assertThat(
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+                .getBoolean("consumed", false),
+        ).isTrue()
+        assertThat(viewModel.deletedSoundEvent.value).isNull()
     }
 }

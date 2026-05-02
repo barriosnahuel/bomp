@@ -55,6 +55,31 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
         assertThat(includes).containsAtLeast("external" to "Music", expectedDatastoreInclude)
     }
 
+    /**
+     * Sticker Cero invariant: the welcome-sticker prefs file MUST NOT be referenced by any
+     * `<include>` rule. Backup rules use `<include>`-only semantics — only listed paths are
+     * backed up — so a restored device gets a fresh welcome on relaunch (matches the spec
+     * intent: a new device is the right "Hi, I'm Nahu" moment again).
+     */
+    @Test
+    fun `welcome-sticker prefs are not referenced by any backup include rule`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val backupIncludes = parseIncludes(context.resources.getXml(R.xml.app_backup_rules))
+        val cloudIncludes =
+            parseIncludes(
+                context.resources.getXml(R.xml.app_data_extraction_rules),
+                parentTag = "cloud-backup",
+            )
+        val transferIncludes =
+            parseIncludes(
+                context.resources.getXml(R.xml.app_data_extraction_rules),
+                parentTag = "device-transfer",
+            )
+        val allIncludes = backupIncludes + cloudIncludes + transferIncludes
+
+        assertThat(allIncludes.none { (_, path) -> path.contains("welcome-sticker") }).isTrue()
+    }
+
     private fun parseIncludes(
         parser: XmlResourceParser,
         parentTag: String? = null,
