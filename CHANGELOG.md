@@ -69,6 +69,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - AGPLv3 copyright header on all source files, enforced by Spotless
 
 #### Changed
+- Migrated sound metadata persistence from SharedPreferences to Jetpack DataStore Preferences with a single JSON-encoded payload, exposed as a reactive `Flow<List<Sound>>` from the new `SoundsRepository`; safer concurrent writes, no main-thread IO, and corrupted-payload recovery via Crashlytics-reported fallback to an empty list
 - Rewrote `README.md` to reflect v2.0 reality: refreshed brand to Bomp, refreshed version/API/CI badges, replaced feature list with current capabilities aligned to brand-DNA vocabulary, added Google Play badge and GitHub Pages link, removed obsolete Codacy badge and "What's next" section
 - Enabled Gradle configuration cache to speed up incremental builds and CI runs
 - Promoted the Add Button flow from a `:feature_addbutton` dynamic feature module into the core `:app` module (creating buttons is core, not a freemium add-on); eliminates the bundletool wrapper script and lets the local UI test suite run as plain `./gradlew app:connectedDebugAndroidTest`
