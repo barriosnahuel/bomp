@@ -162,7 +162,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     } else {
                         CanonicalScreenName.EXPLORE_SOUNDS
                     }
-                ShareFeature.instance.share(context, sound, surface)
+                coroutineScope.launch { ShareFeature.instance.share(context, sound, surface) }
             },
             onDelete = { sound -> viewModel.deleteSound(sound) },
             onPinClick = { sound -> viewModel.togglePin(sound) },
@@ -183,7 +183,11 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onClose = viewModel::hideSearch,
             onPlayClick = viewModel::playOrStop,
             onSeek = viewModel::seekTo,
-            onShareClick = { sound -> ShareFeature.instance.share(context, sound, CanonicalScreenName.SEARCH_SOUND) },
+            onShareClick = { sound ->
+                coroutineScope.launch {
+                    ShareFeature.instance.share(context, sound, CanonicalScreenName.SEARCH_SOUND)
+                }
+            },
             onPinClick = viewModel::togglePin,
             onDelete = { sound ->
                 viewModel.hideSearch()

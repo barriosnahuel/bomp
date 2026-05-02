@@ -25,6 +25,7 @@ import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.spyk
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -72,7 +73,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         every { mockedContext.startActivity(any()) } throws ActivityNotFoundException("no app handles audio share")
 
         try {
-            ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
+            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
         } catch (_: ActivityNotFoundException) {
             // expected — propagates so the caller can show an error UI
         }
@@ -157,7 +158,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         val slot = slot<Intent>()
         every { mockedContext.startActivity(capture(slot)) } answers { nothing }
 
-        ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
+        runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
 
         return slotFile.captured
     }
@@ -171,7 +172,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         val slot = slot<Intent>()
         every { mockedContext.startActivity(capture(slot)) } answers { nothing }
 
-        ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
+        runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
 
         return slot.captured
     }
