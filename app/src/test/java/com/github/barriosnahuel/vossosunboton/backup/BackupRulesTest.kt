@@ -10,21 +10,29 @@ import android.content.res.XmlResourceParser
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.xmlpull.v1.XmlPullParser
 
 internal class BackupRulesTest : AbstractRobolectricTest() {
+    /**
+     * Anti-drift assertion: the backup rules MUST point at exactly the file the DataStore
+     * writes. Without this check, renaming the DataStore name in `SoundsRepository` would
+     * silently break Auto Backup (no test would fail, no error would be logged).
+     */
+    private val expectedDatastoreInclude = "file" to SoundsRepository.BACKUP_FILE_PATH
+
     @Test
-    fun `app_backup_rules includes both audio files and metadata`() {
+    fun `app_backup_rules includes both audio files and the bomps datastore file`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val includes = parseIncludes(context.resources.getXml(R.xml.app_backup_rules))
 
-        assertThat(includes).containsAtLeast("external" to "Music", "sharedpref" to "my-prefs")
+        assertThat(includes).containsAtLeast("external" to "Music", expectedDatastoreInclude)
     }
 
     @Test
-    fun `app_data_extraction_rules cloud-backup includes both audio files and metadata`() {
+    fun `app_data_extraction_rules cloud-backup includes both audio files and the bomps datastore file`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val includes =
             parseIncludes(
@@ -32,11 +40,11 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
                 parentTag = "cloud-backup",
             )
 
-        assertThat(includes).containsAtLeast("external" to "Music", "sharedpref" to "my-prefs")
+        assertThat(includes).containsAtLeast("external" to "Music", expectedDatastoreInclude)
     }
 
     @Test
-    fun `app_data_extraction_rules device-transfer includes both audio files and metadata`() {
+    fun `app_data_extraction_rules device-transfer includes both audio files and the bomps datastore file`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val includes =
             parseIncludes(
@@ -44,7 +52,7 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
                 parentTag = "device-transfer",
             )
 
-        assertThat(includes).containsAtLeast("external" to "Music", "sharedpref" to "my-prefs")
+        assertThat(includes).containsAtLeast("external" to "Music", expectedDatastoreInclude)
     }
 
     private fun parseIncludes(

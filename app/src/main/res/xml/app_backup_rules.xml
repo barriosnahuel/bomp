@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <include domain="external" path="Music" />
-    <include domain="sharedpref" path="my-prefs" />
+    <include domain="file" path="datastore/bomps.preferences_pb" />
 </full-backup-content>
