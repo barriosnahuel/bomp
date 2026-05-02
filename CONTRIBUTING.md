@@ -142,10 +142,16 @@ You can filter logcat messages by:
 
 ### Terminal: StrictMode violations 🚨
 
-The debug build's `StrictModeConfigurator` silences known third-party noise and only logs surviving violations. To see what hit the dashboard during a session or test run:
+The debug build's `StrictModeConfigurator` silences known third-party noise and routes every surviving violation through `Tracker.track`, so the logcat line uses the `Tracker` tag and the message starts with `StrictMode: <ViolationClass>`. The cleanest filter is to grep for the prefix:
 
 ```bash
-adb logcat -d -s StrictMode:E
+adb logcat -d | grep StrictMode
+```
+
+If you also want to scope by tag (cuts unrelated `Tracker.track` non-fatals from MediaPlayer, etc.), combine:
+
+```bash
+adb logcat -d -s Tracker:E | grep StrictMode
 ```
 
 Empty output means every detected violation matched a `KnownThirdPartyViolation` entry — none reached Crashlytics either. Anything that does show up either has a top frame in our package (`com.github.barriosnahuel.vossosunboton.*`) and needs fixing, or comes from a new SDK / framework version that should be added to the matcher list. The decision tree is in `CLAUDE.md` § "StrictMode debug audit".

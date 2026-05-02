@@ -70,7 +70,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 #### Changed
 - Migrated sound metadata persistence from SharedPreferences to Jetpack DataStore Preferences with a single JSON-encoded payload, exposed as a reactive `Flow<List<Sound>>` from the new `SoundsRepository`; safer concurrent writes, no main-thread IO, and corrupted-payload recovery via Crashlytics-reported fallback to an empty list
-- StrictMode debug audit: switched both ThreadPolicy and VmPolicy to `detectAll()` (forward-compat for new detectors) keeping `detectNonSdkApiUsage()` explicit; replaced `penaltyLog()` with a single `Timber.tag("StrictMode").e(...)` call inside the `penaltyListener` gated by a `KNOWN_THIRD_PARTY_VIOLATIONS` matcher list, so known noise (Firebase Analytics / Crashlytics / Datatransport CCT, Compose `dispatchOnScrollChanged`, Espresso reflection, framework `SurfaceControl` finalize, framework Activity-destroy GC) is silenced in both logcat and Crashlytics with one decision; unknown violations now crash the debug process so they cannot slip past unnoticed; Firebase init disk reads wrapped at the call-site via scoped `allowThreadDiskReads` in `AnalyticsTrackerProvider`
+- StrictMode debug audit: switched both ThreadPolicy and VmPolicy to `detectAll()` (forward-compat for new detectors) keeping `detectNonSdkApiUsage()` explicit; route every surviving violation through `Tracker.track` so each one prints a single line under the `Tracker` tag with `"StrictMode: <ViolationClass>"` in the message (greppable via `adb logcat | grep StrictMode`); known noise (Firebase Analytics / Crashlytics / Datatransport CCT, Compose `dispatchOnScrollChanged`, Espresso reflection, framework `SurfaceControl` finalize, framework Activity-destroy GC) is silenced in both logcat and Crashlytics with one decision; unknown violations now crash the debug process so they cannot slip past unnoticed; Firebase init disk reads wrapped at the call-site via scoped `allowThreadDiskReads` in `AnalyticsTrackerProvider`
 - Rewrote `README.md` to reflect v2.0 reality: refreshed brand to Bomp, refreshed version/API/CI badges, replaced feature list with current capabilities aligned to brand-DNA vocabulary, added Google Play badge and GitHub Pages link, removed obsolete Codacy badge and "What's next" section
 - Enabled Gradle configuration cache to speed up incremental builds and CI runs
 - Promoted the Add Button flow from a `:feature_addbutton` dynamic feature module into the core `:app` module (creating buttons is core, not a freemium add-on); eliminates the bundletool wrapper script and lets the local UI test suite run as plain `./gradlew app:connectedDebugAndroidTest`
@@ -84,6 +84,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - KTLint migrated to JLLeitschuh plugin with KTLint 1.5.0
 - Resolved all Kotlin compiler and Gradle DSL deprecation warnings for a clean build log
 - Bundled audio files removed from version control; bottom navigation bar hidden in release builds (Explore tab only appears in debug when audio files are manually placed)
+
+#### Fixed
+- `ShareFeature.share` now runs file-system access (`getFile` + first-time `copy` of bundled raw resources) on `Dispatchers.IO`, eliminating a long-standing main-thread disk write that could cause jank the first time a bundled sound was shared
 
 #### Removed
 - Removed `techstack.md` and its companion `techstack.yml` (StackShare.io config that broke after the repo rename to `bomp` and was no longer maintained — last meaningful update predated the v2.0 Compose rewrite)

@@ -10,7 +10,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.StrictMode
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Trackable
-import timber.log.Timber
 import java.util.concurrent.Executors
 
 internal object StrictModeConfigurator {
@@ -60,9 +59,12 @@ private fun setupVirtualMachinePolicy(trackable: Trackable) {
 /**
  * Single decision point for both ThreadPolicy and VmPolicy violations:
  *  - filtered third-party noise → silent (not in logcat, not in Crashlytics)
- *  - everything else → uniform `Timber.tag("StrictMode").e(...)` line in logcat (DebugTree),
- *    breadcrumb in Crashlytics (ErrorTrackerTree), a non-fatal via `Tracker.track`, AND a process kill so the
- *    dev cannot miss it during local runs.
+ *  - everything else → a single non-fatal via `Tracker.track` (one logcat line under the `Tracker` tag with
+ *    "Tracking error to Firebase Crashlytics: StrictMode: <ViolationClass>" and the stacktrace inline,
+ *    plus the Crashlytics dashboard entry), AND a process kill so the dev cannot miss it during local runs.
+ *
+ * The "StrictMode" identifier travels in the wrapper exception's message (see [StrictModeException]) so
+ * `adb logcat | grep StrictMode` finds violations without needing a dedicated logcat tag.
  *
  * `penaltyLog()` and `penaltyDeath()` are intentionally NOT set on the builders. `penaltyDeath()` would fire
  * before `penaltyListener` and bypass our filter, killing the process on every Compose scroll / Espresso
@@ -79,7 +81,6 @@ private fun reportViolation(
     violation: Throwable,
 ) {
     if (!shouldReportToCrashlytics(violation)) return
-    Timber.tag(LOG_TAG).e(violation, "policy violation: %s", violation.javaClass.simpleName)
     trackable.track(StrictModeException(violation))
     Handler(Looper.getMainLooper()).post { throw StrictModeException(violation) }
 }
@@ -125,8 +126,6 @@ private data class KnownThirdPartyViolation(
         return true
     }
 }
-
-private const val LOG_TAG = "StrictMode"
 
 private val KNOWN_THIRD_PARTY_VIOLATIONS =
     listOf(
@@ -197,6 +196,12 @@ private val KNOWN_THIRD_PARTY_VIOLATIONS =
         ),
     )
 
+/**
+ * Wraps a raw `android.os.strictmode.Violation` so the message starts with `"StrictMode: <ViolationClass>"`.
+ * That prefix becomes the searchable identifier in logcat (`adb logcat | grep StrictMode`) and in Crashlytics,
+ * since the wrapper `Tracker.track` logs `throwable.message`. The original violation is preserved as `cause`,
+ * so the full stacktrace remains intact for debugging.
+ */
 private class StrictModeException(
     violation: Throwable,
-) : RuntimeException(violation)
+) : RuntimeException("StrictMode: ${violation.javaClass.simpleName}", violation)
