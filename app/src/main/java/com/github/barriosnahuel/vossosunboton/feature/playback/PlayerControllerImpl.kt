@@ -37,7 +37,7 @@ internal class PlayerControllerImpl(
         if (mediaPlayer.isPlaying) {
             // User clicked on a new button while still listening an audio, then we should turn that running button off.
             mediaPlayer.stop()
-            listener?.onPlayerStop(currentSound!!)
+            listener?.onPlayerStop(currentSound!!, completed = false)
         }
 
         handler.removeCallbacks(progressRunnable)
@@ -55,7 +55,7 @@ internal class PlayerControllerImpl(
             val durationMs = mediaPlayer.duration
             mediaPlayer.setOnCompletionListener {
                 handler.removeCallbacks(progressRunnable)
-                listener?.onPlayerStop(sound)
+                listener?.onPlayerStop(sound, completed = true)
             }
 
             listener?.onPlayerStart(sound, durationMs)
@@ -89,7 +89,7 @@ internal class PlayerControllerImpl(
         if (mediaPlayer.isPlaying) {
             mediaPlayer.stop()
             handler.removeCallbacks(progressRunnable)
-            listener?.onPlayerStop(currentSound!!)
+            listener?.onPlayerStop(currentSound!!, completed = false)
         }
     }
 

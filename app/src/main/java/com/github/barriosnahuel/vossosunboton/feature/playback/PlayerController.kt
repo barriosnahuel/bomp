@@ -32,8 +32,15 @@ internal interface PlayerControllerListener {
     /**
      * Perform any action you want after player has stopped.
      * @param sound The sound that was playing before.
+     * @param completed `true` when the audio reached natural end-of-stream
+     *   (`MediaPlayer.OnCompletionListener`); `false` when stopped by the user (or pre-empted by a
+     *   new `startPlayingSound` call). The Sticker Cero auto-destruct branch in `SoundsViewModel`
+     *   relies on this to distinguish a finished welcome message from a user-initiated pause.
      */
-    fun onPlayerStop(sound: Sound)
+    fun onPlayerStop(
+        sound: Sound,
+        completed: Boolean,
+    )
 
     /**
      * Perform any action you want right after the given sound started to play.

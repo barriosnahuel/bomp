@@ -12,6 +12,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,10 +56,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
+import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeStickerName
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.about.AboutScreen
@@ -147,29 +150,33 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             }
         },
     ) { innerPadding ->
-        SoundsList(
-            sounds = sounds,
-            playbackProgress = playbackProgress,
-            soundDurations = soundDurations,
-            listState = listState,
-            modifier = Modifier.padding(innerPadding),
-            onPlayClick = { sound -> viewModel.playOrStop(sound) },
-            onSeek = { positionMs -> viewModel.seekTo(positionMs) },
-            onShareClick = { sound ->
-                val surface =
-                    if (selectedTab == AppTab.MY_SOUNDS) {
-                        CanonicalScreenName.MY_SOUNDS
-                    } else {
-                        CanonicalScreenName.EXPLORE_SOUNDS
-                    }
-                coroutineScope.launch { ShareFeature.instance.share(context, sound, surface) }
-            },
-            onDelete = { sound -> viewModel.deleteSound(sound) },
-            onPinClick = { sound -> viewModel.togglePin(sound) },
-            onEdit = { sound ->
-                context.startActivity(LandingActivity.editIntent(context, sound))
-            },
-        )
+        if (sounds.isEmpty() && selectedTab == AppTab.MY_SOUNDS) {
+            MySoundsEmptyState(modifier = Modifier.padding(innerPadding))
+        } else {
+            SoundsList(
+                sounds = sounds,
+                playbackProgress = playbackProgress,
+                soundDurations = soundDurations,
+                listState = listState,
+                modifier = Modifier.padding(innerPadding),
+                onPlayClick = { sound -> viewModel.playOrStop(sound) },
+                onSeek = { positionMs -> viewModel.seekTo(positionMs) },
+                onShareClick = { sound ->
+                    val surface =
+                        if (selectedTab == AppTab.MY_SOUNDS) {
+                            CanonicalScreenName.MY_SOUNDS
+                        } else {
+                            CanonicalScreenName.EXPLORE_SOUNDS
+                        }
+                    coroutineScope.launch { ShareFeature.instance.share(context, sound, surface) }
+                },
+                onDelete = { sound -> viewModel.deleteSound(sound) },
+                onPinClick = { sound -> viewModel.togglePin(sound) },
+                onEdit = { sound ->
+                    context.startActivity(LandingActivity.editIntent(context, sound))
+                },
+            )
+        }
     }
 
     if (isSearchVisible) {
@@ -205,6 +212,7 @@ private fun SnackbarEffects(
     val deletedEvent by viewModel.deletedSoundEvent.collectAsState()
     val context = LocalContext.current
     val audioDeletedMessage = stringResource(R.string.app_feedback_audio_deleted)
+    val welcomeDismissedMessage = stringResource(R.string.app_welcome_sticker_feedback_dismissed)
     val undoLabel = stringResource(R.string.app_undo)
     val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
     val buttonSavedTemplate = stringResource(R.string.app_feedback_button_saved)
@@ -238,10 +246,16 @@ private fun SnackbarEffects(
     }
 
     LaunchedEffect(deletedEvent) {
-        if (deletedEvent == null) return@LaunchedEffect
+        val event = deletedEvent ?: return@LaunchedEffect
+        val message =
+            if (isWelcomeStickerName(event.sound.name, context)) {
+                welcomeDismissedMessage
+            } else {
+                audioDeletedMessage
+            }
         val result =
             snackbarHostState.showSnackbar(
-                message = audioDeletedMessage,
+                message = message,
                 actionLabel = undoLabel,
                 duration = SnackbarDuration.Long,
             )
@@ -319,6 +333,7 @@ private fun AppBottomBar(
 }
 
 private const val DELETE_ANIMATION_DURATION_MS = 300
+private val WELCOME_BORDER_WIDTH = 1.5.dp
 
 @Composable
 private fun SoundsList(
@@ -336,6 +351,8 @@ private fun SoundsList(
 ) {
     val dismissingItems = remember { mutableStateSetOf<String>() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val remainingFormat = stringResource(R.string.app_welcome_sticker_remaining_format)
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -344,6 +361,7 @@ private fun SoundsList(
         ) {
             itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
                 val isDeleting = sound.name in dismissingItems
+                val isWelcome = isWelcomeStickerName(sound.name, context)
                 AnimatedVisibility(
                     visible = !isDeleting,
                     modifier =
@@ -359,10 +377,30 @@ private fun SoundsList(
                             animationSpec = tween(durationMillis = DELETE_ANIMATION_DURATION_MS),
                         ) + fadeOut(animationSpec = tween(durationMillis = DELETE_ANIMATION_DURATION_MS)),
                 ) {
+                    val resolvedDurationMs = soundDurations[sound.name]
+                    val welcomeBorder =
+                        if (isWelcome) {
+                            BorderStroke(WELCOME_BORDER_WIDTH, MaterialTheme.colorScheme.primaryContainer)
+                        } else {
+                            null
+                        }
+                    val welcomeTrailingLabel =
+                        if (isWelcome) {
+                            val remainingMs =
+                                when {
+                                    sound.isPlaying && playbackProgress != null ->
+                                        (playbackProgress.durationMs - playbackProgress.positionMs).coerceAtLeast(0)
+                                    resolvedDurationMs != null -> resolvedDurationMs
+                                    else -> null
+                                }
+                            remainingMs?.let { String.format(remainingFormat, formatDuration(it)) }
+                        } else {
+                            null
+                        }
                     SoundItem(
                         sound = sound,
                         playbackProgress = if (sound.isPlaying) playbackProgress else null,
-                        durationMs = soundDurations[sound.name],
+                        durationMs = resolvedDurationMs,
                         onPlayClick = { onPlayClick(sound) },
                         onSeek = onSeek,
                         onShareClick = { onShareClick(sound) },
@@ -381,6 +419,10 @@ private fun SoundsList(
                             } else {
                                 null
                             },
+                        originLabel = if (isWelcome) stringResource(R.string.app_welcome_sticker_origin) else null,
+                        isWelcomeVariant = isWelcome,
+                        borderOverride = welcomeBorder,
+                        trailingLabel = welcomeTrailingLabel,
                     )
                 }
             }

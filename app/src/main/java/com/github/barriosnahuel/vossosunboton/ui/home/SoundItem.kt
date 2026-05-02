@@ -80,7 +80,31 @@ fun SoundItem(
     onPinClick: () -> Unit,
     onEditClick: (() -> Unit)? = null,
     originLabel: String? = null,
+    isWelcomeVariant: Boolean = false,
+    borderOverride: BorderStroke? = null,
+    trailingLabel: String? = null,
 ) {
+    if (isWelcomeVariant) {
+        // System anchor: no swipe, no pin/edit/delete affordances. Share stays visible — sharing
+        // the welcome message is treated as positive word-of-mouth signal. Background reuses the
+        // standard `surfaceVariant` so the AA contrast checks for the regular card apply; the
+        // tonal differentiator is a thin Acid hairline border passed via [borderOverride].
+        SoundCard(
+            sound = sound,
+            playbackProgress = playbackProgress,
+            durationMs = durationMs,
+            onPlayClick = onPlayClick,
+            onSeek = onSeek,
+            onShareClick = onShareClick,
+            onPinClick = null,
+            onEditClick = null,
+            onDelete = null,
+            originLabel = originLabel,
+            borderOverride = borderOverride,
+            trailingLabel = trailingLabel,
+        )
+        return
+    }
     if (sound.isBundled()) {
         val view = LocalView.current
         val dismissState =
@@ -255,6 +279,8 @@ private fun SoundCard(
     onDelete: (() -> Unit)?,
     onLongClick: (() -> Unit)? = null,
     originLabel: String? = null,
+    borderOverride: BorderStroke? = null,
+    trailingLabel: String? = null,
 ) {
     var sliderPosition by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
@@ -282,7 +308,7 @@ private fun SoundCard(
                             onLongClick
                         },
                 ),
-        border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant),
+        border = borderOverride ?: BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -360,30 +386,48 @@ private fun SoundCard(
                         modifier = Modifier.fillMaxWidth(),
                     )
 
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        val displayMs =
-                            when {
-                                sound.isPlaying && playbackProgress != null ->
-                                    playbackProgress.positionMs
-                                durationMs != null -> durationMs
-                                else -> null
-                            }
-                        if (displayMs != null) {
-                            Text(
-                                text = formatDuration(displayMs),
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                        val dateAdded = sound.dateAdded
-                        if (dateAdded != null) {
-                            Text(
-                                text = formatRelativeDate(dateAdded),
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
-                    }
+                    SoundCardMetaRow(
+                        sound = sound,
+                        playbackProgress = playbackProgress,
+                        durationMs = durationMs,
+                        trailingLabel = trailingLabel,
+                    )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SoundCardMetaRow(
+    sound: Sound,
+    playbackProgress: PlaybackProgress?,
+    durationMs: Int?,
+    trailingLabel: String?,
+) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        val displayMs =
+            when {
+                sound.isPlaying && playbackProgress != null -> playbackProgress.positionMs
+                durationMs != null -> durationMs
+                else -> null
+            }
+        if (displayMs != null) {
+            Text(
+                text = formatDuration(displayMs),
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        if (trailingLabel != null) {
+            Text(text = trailingLabel, style = MaterialTheme.typography.labelSmall)
+        } else {
+            val dateAdded = sound.dateAdded
+            if (dateAdded != null) {
+                Text(
+                    text = formatRelativeDate(dateAdded),
+                    style = MaterialTheme.typography.labelSmall,
+                )
             }
         }
     }

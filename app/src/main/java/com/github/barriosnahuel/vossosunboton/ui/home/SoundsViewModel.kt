@@ -19,6 +19,9 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Canonica
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
+import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
+import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeStickerName
+import com.github.barriosnahuel.vossosunboton.feature.welcome.welcomeSticker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -55,9 +58,13 @@ class SoundsViewModel(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val searchDebounceMs: Long = 200L,
+    private val welcomeStore: WelcomeStickerStore = WelcomeStickerStore(application),
 ) : AndroidViewModel(application),
     PlayerControllerListener {
     private val repo = SoundsRepository(application, onError = Tracker::track)
+
+    private val _welcomeStickerVisible = MutableStateFlow(welcomeStore.isActive())
+    val welcomeStickerVisible: StateFlow<Boolean> = _welcomeStickerVisible.asStateFlow()
 
     private val _selectedTab = MutableStateFlow(AppTab.MY_SOUNDS)
     val selectedTab: StateFlow<AppTab> = _selectedTab.asStateFlow()
@@ -128,6 +135,9 @@ class SoundsViewModel(
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
         viewModelScope.launch(ioDispatcher) { loadSounds() }
+        if (_welcomeStickerVisible.value && tracker.markFiredOnce("welcome_sticker_shown")) {
+            tracker.log(AnalyticsEvent.WelcomeStickerShown)
+        }
     }
 
     private val tracker get() = AnalyticsTrackerProvider.get(getApplication())
@@ -228,9 +238,13 @@ class SoundsViewModel(
             PlayerControllerFactory.instance.stopPlayingSound()
         } else {
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
-            tracker.log(AnalyticsEvent.SoundPlay(surface = currentSurface))
-            val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_PLAYS)
-            tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_PLAYS, newCount.toString())
+            if (isWelcomeStickerName(sound.name, getApplication())) {
+                tracker.log(AnalyticsEvent.WelcomeStickerPlay)
+            } else {
+                tracker.log(AnalyticsEvent.SoundPlay(surface = currentSurface))
+                val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_PLAYS)
+                tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_PLAYS, newCount.toString())
+            }
         }
     }
 
@@ -257,28 +271,43 @@ class SoundsViewModel(
 
     fun restoreSound() {
         val event = _deletedSoundEvent.value ?: return
+        val isWelcome = isWelcomeStickerName(event.sound.name, getApplication())
         val currentSounds = _sounds.value.toMutableList()
         val insertPosition = event.position.coerceAtMost(currentSounds.size)
         currentSounds.add(insertPosition, event.sound)
         _sounds.value = currentSounds
-        allSoundsCache.update { list ->
-            val allInsertPosition = insertPosition.coerceAtMost(list.size)
-            list.toMutableList().also { it.add(allInsertPosition, event.sound) }
+        if (!isWelcome) {
+            allSoundsCache.update { list ->
+                val allInsertPosition = insertPosition.coerceAtMost(list.size)
+                list.toMutableList().also { it.add(allInsertPosition, event.sound) }
+            }
+            recomputeSearchResults()
         }
-        recomputeSearchResults()
         _deletedSoundEvent.value = null
-        tracker.log(AnalyticsEvent.SoundDeleteUndone)
+        if (isWelcome) {
+            welcomeStore.restore()
+            _welcomeStickerVisible.value = true
+            tracker.log(AnalyticsEvent.WelcomeStickerUndone)
+        } else {
+            tracker.log(AnalyticsEvent.SoundDeleteUndone)
+        }
     }
 
     fun confirmDelete() {
         val event = _deletedSoundEvent.value
         _deletedSoundEvent.value = null
-        if (event == null || event.sound.isBundled()) {
-            return
+        when {
+            event == null -> Unit
+            isWelcomeStickerName(event.sound.name, getApplication()) -> welcomeStore.consume()
+            event.sound.isBundled() -> Unit
+            else -> deletePersistedSoundAsync(event.sound)
         }
+    }
+
+    private fun deletePersistedSoundAsync(sound: Sound) {
         viewModelScope.launch(ioDispatcher) {
             try {
-                repo.delete(event.sound)
+                repo.delete(sound)
                 tracker.log(AnalyticsEvent.SoundDelete)
                 tracker.setUserProperty(
                     AnalyticsUserProperty.CURRENT_SOUNDS,
@@ -332,10 +361,17 @@ class SoundsViewModel(
                         AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
                     }.filter { it.name != deletedName }
+                val withWelcome =
+                    if (_selectedTab.value == AppTab.MY_SOUNDS && _welcomeStickerVisible.value) {
+                        val welcome = welcomeSticker(getApplication())
+                        if (welcome.name == deletedName) filtered else listOf(welcome) + filtered
+                    } else {
+                        filtered
+                    }
                 if (playingName == null) {
-                    filtered
+                    withWelcome
                 } else {
-                    filtered.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
+                    withWelcome.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
                 }
             }
             val userCreatedCount = allSounds.count { !it.isBundled() }
@@ -368,13 +404,24 @@ class SoundsViewModel(
         recomputeSearchResults()
     }
 
-    override fun onPlayerStop(sound: Sound) {
+    override fun onPlayerStop(
+        sound: Sound,
+        completed: Boolean,
+    ) {
         val stoppedSound = sound.copy(isPlaying = false)
         _playingSound.value = null
         _playbackProgress.value = null
         _sounds.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
         allSoundsCache.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
         recomputeSearchResults()
+
+        if (completed && isWelcomeStickerName(sound.name, getApplication())) {
+            val position = _sounds.value.indexOfFirst { it.name == sound.name }.coerceAtLeast(0)
+            _sounds.update { list -> list.filter { it.name != sound.name } }
+            _welcomeStickerVisible.value = false
+            _deletedSoundEvent.value = DeletedSoundEvent(stoppedSound, position)
+            tracker.log(AnalyticsEvent.WelcomeStickerCompleted)
+        }
     }
 
     override fun onProgressUpdate(positionMs: Int) {
