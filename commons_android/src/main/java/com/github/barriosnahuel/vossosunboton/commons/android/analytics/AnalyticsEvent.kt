@@ -142,6 +142,13 @@ sealed class AnalyticsEvent(
      */
     object WelcomeStickerUndone : AnalyticsEvent(name = "welcome_sticker_undone", hasFirstVariant = true)
 
+    /**
+     * Welcome sticker manually dismissed — swipe-left or long-press → Delete. Distinct from
+     * [WelcomeStickerCompleted] (audio reached natural end) so dashboards can compare engagement
+     * (listened all the way) vs impatience (dismissed early).
+     */
+    object WelcomeStickerDismissed : AnalyticsEvent(name = "welcome_sticker_dismissed", hasFirstVariant = true)
+
     /** External Cafecito link followed from the About gratitude frame. Emitted only after the intent dispatch succeeds. */
     object AboutGratitudeCafecitoOpen : AnalyticsEvent(name = "about_gratitude_cafecito_open", hasFirstVariant = true)
 

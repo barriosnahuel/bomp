@@ -85,24 +85,57 @@ fun SoundItem(
     trailingLabel: String? = null,
 ) {
     if (isWelcomeVariant) {
-        // System anchor: no swipe, no pin/edit/delete affordances. Share stays visible — sharing
-        // the welcome message is treated as positive word-of-mouth signal. Background reuses the
-        // standard `surfaceVariant` so the AA contrast checks for the regular card apply; the
-        // tonal differentiator is a thin Acid hairline border passed via [borderOverride].
-        SoundCard(
-            sound = sound,
-            playbackProgress = playbackProgress,
-            durationMs = durationMs,
-            onPlayClick = onPlayClick,
-            onSeek = onSeek,
-            onShareClick = onShareClick,
-            onPinClick = null,
-            onEditClick = null,
-            onDelete = null,
-            originLabel = originLabel,
-            borderOverride = borderOverride,
-            trailingLabel = trailingLabel,
-        )
+        // System anchor: pin and edit are not available, but Delete IS — exposed via swipe-left
+        // and via the long-press dropdown so the Bomper is not forced to listen end-to-end. Share
+        // stays visible too (sharing the welcome message is positive word-of-mouth). Background
+        // reuses `surfaceVariant` so the AA contrast checks for the regular card apply; the tonal
+        // differentiator is the thin Acid hairline border passed via [borderOverride].
+        val view = LocalView.current
+        val dismissState =
+            remember {
+                SwipeToDismissBoxState(
+                    initialValue = SwipeToDismissBoxValue.Settled,
+                    positionalThreshold = { totalDistance -> totalDistance * 0.35f },
+                )
+            }
+        val currentOnDelete by rememberUpdatedState(onDelete)
+        LaunchedEffect(Unit) {
+            snapshotFlow { dismissState.settledValue }
+                .collect { settled ->
+                    when (settled) {
+                        SwipeToDismissBoxValue.StartToEnd -> {
+                            // Pin attempt — not applicable to a system anchor. Reject haptic
+                            // mirrors the bundled-sound delete-attempt treatment.
+                            performRejectHaptic(view)
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                        }
+                        SwipeToDismissBoxValue.EndToStart -> {
+                            performConfirmHaptic(view)
+                            currentOnDelete()
+                        }
+                        SwipeToDismissBoxValue.Settled -> Unit
+                    }
+                }
+        }
+        SwipeToDismissBox(
+            state = dismissState,
+            backgroundContent = { SwipeActionBackground(dismissState, canPin = false, canDelete = true) },
+        ) {
+            SoundCard(
+                sound = sound,
+                playbackProgress = playbackProgress,
+                durationMs = durationMs,
+                onPlayClick = onPlayClick,
+                onSeek = onSeek,
+                onShareClick = onShareClick,
+                onPinClick = null,
+                onEditClick = null,
+                onDelete = onDelete,
+                originLabel = originLabel,
+                borderOverride = borderOverride,
+                trailingLabel = trailingLabel,
+            )
+        }
         return
     }
     if (sound.isBundled()) {
@@ -235,11 +268,13 @@ private fun performRejectHaptic(view: View) {
 @Composable
 private fun SwipeActionBackground(
     dismissState: SwipeToDismissBoxState,
+    canPin: Boolean = true,
     canDelete: Boolean = true,
 ) {
     if (dismissState.dismissDirection == SwipeToDismissBoxValue.Settled) return
     val isPinAction = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
-    if (!isPinAction && !canDelete) return
+    val actionAvailable = if (isPinAction) canPin else canDelete
+    if (!actionAvailable) return
     val backgroundColor =
         if (isPinAction) {
             MaterialTheme.colorScheme.primaryContainer
@@ -292,6 +327,7 @@ private fun SoundCard(
         }
     }
 
+    val hasMenuItems = onEditClick != null || onDelete != null
     Card(
         modifier =
             Modifier
@@ -302,7 +338,7 @@ private fun SoundCard(
                     indication = null,
                     onClick = {},
                     onLongClick =
-                        if (onEditClick != null) {
+                        if (hasMenuItems) {
                             { showMenu = true }
                         } else {
                             onLongClick
@@ -477,20 +513,22 @@ private fun SoundCardHeader(
                 contentDescription = stringResource(R.string.app_share_chooser_title),
             )
         }
-        if (onEditClick != null) {
+        if (onEditClick != null || onDeleteClick != null) {
             Box {
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = onMenuDismiss,
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.app_edit)) },
-                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                        onClick = {
-                            onMenuDismiss()
-                            onEditClick()
-                        },
-                    )
+                    if (onEditClick != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.app_edit)) },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                            onClick = {
+                                onMenuDismiss()
+                                onEditClick()
+                            },
+                        )
+                    }
                     if (onDeleteClick != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.app_delete)) },

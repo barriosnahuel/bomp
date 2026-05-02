@@ -15,7 +15,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
@@ -270,5 +272,34 @@ internal class SoundItemTest : AbstractRobolectricTest() {
         }
 
         composeTestRule.onNodeWithContentDescription("Pin to top").assertExists()
+    }
+
+    // Regression net for the dropdown decoupling: when both Edit and Delete are wired (custom
+    // sound), long-press must show BOTH items. The welcome variant only wires Delete and the
+    // matching test in WelcomeStickerScreenTest covers that single-item case.
+    @Test
+    fun `custom-sound long-press opens dropdown with both Edit and Delete`() {
+        val sound = Sound("custom sound", file = "custom.mp3")
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SoundItem(
+                    sound = sound,
+                    playbackProgress = null,
+                    onPlayClick = {},
+                    onSeek = {},
+                    onShareClick = {},
+                    onDelete = {},
+                    onPinClick = {},
+                    onEditClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("custom sound").performTouchInput { longClick() }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Rename").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Delete").assertIsDisplayed()
     }
 }

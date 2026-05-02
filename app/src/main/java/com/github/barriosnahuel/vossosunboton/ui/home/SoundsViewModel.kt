@@ -257,6 +257,7 @@ class SoundsViewModel(
         val currentSounds = _sounds.value.toMutableList()
         val currentSound = currentSounds.find { it.name == sound.name } ?: return
         val position = currentSounds.indexOf(currentSound)
+        val isWelcome = isWelcomeStickerName(sound.name, getApplication())
 
         if (_playingSound.value?.name == sound.name) {
             PlayerControllerFactory.instance.stopPlayingSound()
@@ -264,19 +265,33 @@ class SoundsViewModel(
 
         currentSounds.removeAt(position)
         _sounds.value = currentSounds
-        allSoundsCache.update { list -> list.filter { it.name != sound.name } }
-        recomputeSearchResults()
+        if (!isWelcome) {
+            // Welcome sticker is never in `allSoundsCache` (kept out of search) — skip the update.
+            allSoundsCache.update { list -> list.filter { it.name != sound.name } }
+            recomputeSearchResults()
+        }
         _deletedSoundEvent.value = DeletedSoundEvent(currentSound.copy(isPlaying = false), position)
+        if (isWelcome) {
+            _welcomeStickerVisible.value = false
+            tracker.log(AnalyticsEvent.WelcomeStickerDismissed)
+        }
     }
 
     fun restoreSound() {
         val event = _deletedSoundEvent.value ?: return
         val isWelcome = isWelcomeStickerName(event.sound.name, getApplication())
         val currentSounds = _sounds.value.toMutableList()
-        val insertPosition = event.position.coerceAtMost(currentSounds.size)
-        currentSounds.add(insertPosition, event.sound)
+        if (isWelcome) {
+            // Demote to the end of MY_SOUNDS — the prime row 0 spot belongs to the user once
+            // they've shown they want this sticker back rather than letting it consume.
+            currentSounds.add(event.sound)
+        } else {
+            val insertPosition = event.position.coerceAtMost(currentSounds.size)
+            currentSounds.add(insertPosition, event.sound)
+        }
         _sounds.value = currentSounds
         if (!isWelcome) {
+            val insertPosition = event.position.coerceAtMost(_sounds.value.size)
             allSoundsCache.update { list ->
                 val allInsertPosition = insertPosition.coerceAtMost(list.size)
                 list.toMutableList().also { it.add(allInsertPosition, event.sound) }
@@ -301,6 +316,25 @@ class SoundsViewModel(
             isWelcomeStickerName(event.sound.name, getApplication()) -> welcomeStore.consume()
             event.sound.isBundled() -> Unit
             else -> deletePersistedSoundAsync(event.sound)
+        }
+    }
+
+    /**
+     * Resolves where the welcome sticker belongs in the visible MY_SOUNDS list. Returns [filtered]
+     * unchanged for non-MY_SOUNDS tabs, when the sticker is consumed, or while the snackbar window
+     * is hiding it. Otherwise prepends on a fresh install or appends once the user has undone the
+     * dismissal at least once (the demoted state).
+     */
+    private fun positionWelcomeIn(
+        filtered: List<Sound>,
+        deletedName: String?,
+    ): List<Sound> {
+        if (_selectedTab.value != AppTab.MY_SOUNDS || !_welcomeStickerVisible.value) return filtered
+        val welcome = welcomeSticker(getApplication())
+        return when {
+            welcome.name == deletedName -> filtered
+            welcomeStore.wasRestored() -> filtered + welcome
+            else -> listOf(welcome) + filtered
         }
     }
 
@@ -361,13 +395,7 @@ class SoundsViewModel(
                         AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
                     }.filter { it.name != deletedName }
-                val withWelcome =
-                    if (_selectedTab.value == AppTab.MY_SOUNDS && _welcomeStickerVisible.value) {
-                        val welcome = welcomeSticker(getApplication())
-                        if (welcome.name == deletedName) filtered else listOf(welcome) + filtered
-                    } else {
-                        filtered
-                    }
+                val withWelcome = positionWelcomeIn(filtered, deletedName)
                 if (playingName == null) {
                     withWelcome
                 } else {
