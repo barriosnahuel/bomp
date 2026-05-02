@@ -236,6 +236,39 @@ Hard rules that affect how to write error-handling code:
   `every { Tracker.track(any()) } answers { nothing }`.
 
 
+## StrictMode debug audit
+
+Single source of truth: `app/src/debug/.../StrictModeConfigurator.kt` (debug-only,
+never reaches release builds). Both ThreadPolicy and VmPolicy use `detectAll()`
+plus an explicit `detectNonSdkApiUsage()`; **`penaltyLog()` and `penaltyDeath()`
+are intentionally not set on the builders** — both fire before `penaltyListener`
+and bypass the filter. Every detected violation flows through `reportViolation()`,
+which filters via `KNOWN_THIRD_PARTY_VIOLATIONS` and on a hit emits one Timber
+`StrictMode` log, records a Crashlytics non-fatal via `Tracker.track`, AND posts
+a throw to the main looper so the process dies. Unknown violations crash debug
+runs and the instrumented suite until a matcher is added — by design, so nothing
+slips past silently. Logcat, Crashlytics and process state stay in sync — the
+matcher list is the only way to silence any of them.
+
+When a new violation surfaces, choose in this order:
+
+1. **Top app-code frame is ours** (`com.github.barriosnahuel.vossosunboton.*`):
+   fix the production code. Don't filter.
+2. **Scopable to a known-OK call-site we own** (e.g. an SDK init that
+   legitimately reads disk on first call): wrap with
+   `StrictMode.allowThreadDiskReads()` + `try/finally` at that call-site.
+   Canonical example: `AnalyticsTrackerProvider.createTracker`. Don't add a
+   matcher.
+3. **Third-party class running its own code** (Compose, Espresso, GMS,
+   framework finalizers): add a `KnownThirdPartyViolation` to the list with a
+   comment naming the library + (when public) the upstream issue. Use
+   `methodNameContains` only when the class prefix would over-match — the
+   framework's own `android.os.StrictMode` is one such case.
+
+Filter logcat with `adb logcat -s StrictMode:E` — operator workflow lives in
+`CONTRIBUTING.md` § "Terminal: StrictMode violations".
+
+
 ## Worktree setup
 
 After creating a new worktree, always run these commands to replace the dummy `google-services.json` and copy the bundled audio files from the main worktree:

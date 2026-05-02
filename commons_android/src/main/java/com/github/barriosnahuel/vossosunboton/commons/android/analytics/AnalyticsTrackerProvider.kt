@@ -7,6 +7,7 @@ package com.github.barriosnahuel.vossosunboton.commons.android.analytics
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.StrictMode
 import androidx.annotation.VisibleForTesting
 import com.google.firebase.analytics.FirebaseAnalytics
 
@@ -19,18 +20,36 @@ object AnalyticsTrackerProvider {
     private var cached: AnalyticsTracker? = null
 
     /**
-     * Return the production tracker, creating it on first call. Thread-safe and idempotent. The INTERNET /
-     * ACCESS_NETWORK_STATE / WAKE_LOCK permissions Firebase needs are declared by the consuming app — this library
-     * cannot opt itself in, hence the suppression.
+     * Return the production tracker, creating it on first call. Thread-safe and idempotent.
      */
-    @SuppressLint("MissingPermission")
     fun get(context: Context): AnalyticsTracker =
         cached ?: synchronized(this) {
-            cached ?: FirebaseAnalyticsTracker(
-                firebase = FirebaseAnalytics.getInstance(context.applicationContext),
-                store = SharedPrefsAnalyticsStore(context.applicationContext),
-            ).also { cached = it }
+            cached ?: createTracker(context).also { cached = it }
         }
+
+    // Firebase init is lazy: the first call to FirebaseAnalytics.getInstance(...) triggers GMS Dynamite module
+    // loading + Cronet net stack init + Chimera ContentProvider query, all of which legitimately read from disk.
+    // We can't envelope those reads inside the SDK, so we scope them at our call-site instead of suppressing
+    // detectDiskReads()/detectCustomSlowCalls() globally. SharedPreferences first-load is also wrapped because
+    // getSharedPreferences() reads the prefs file on first access. See StrictModeConfigurator for runtime-only
+    // violations (NonSdkApi reflection, framework finalizers) that can't be scoped this way.
+    //
+    // The @SuppressLint silences a cross-module MissingPermission check: FirebaseAnalytics.getInstance requires
+    // INTERNET / ACCESS_NETWORK_STATE / WAKE_LOCK, declared by the consuming :app module's manifest — Lint can't
+    // see them from this :commons_android library.
+    @SuppressLint("MissingPermission")
+    private fun createTracker(context: Context): AnalyticsTracker {
+        val app = context.applicationContext
+        val previousPolicy = StrictMode.allowThreadDiskReads()
+        return try {
+            FirebaseAnalyticsTracker(
+                firebase = FirebaseAnalytics.getInstance(app),
+                store = SharedPrefsAnalyticsStore(app),
+            )
+        } finally {
+            StrictMode.setThreadPolicy(previousPolicy)
+        }
+    }
 
     /**
      * Replace the cached tracker for tests. Call from `@Before`; reset to `null` from `@After` if isolation is needed.
