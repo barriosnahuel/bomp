@@ -95,23 +95,36 @@ private fun reportViolation(
 private fun shouldReportToCrashlytics(violation: Throwable): Boolean {
     val frames = violation.stackTrace
     return KNOWN_THIRD_PARTY_VIOLATIONS.none { matcher ->
-        frames.any { frame ->
-            frame.className.startsWith(matcher.classNamePrefix) &&
-                (matcher.methodNameContains == null || matcher.methodNameContains in frame.methodName)
-        }
+        frames.any { frame -> matcher.matches(frame) }
     }
 }
 
 /**
- * Match a stack frame by class-name prefix and (optionally) method name. The method-name filter exists for cases
- * where a class-name prefix would over-match — e.g. `android.os.StrictMode` appears in the stack of every
- * violation (the framework itself reports them), so filtering by class alone would silence the entire policy.
+ * Match a stack frame by class-name prefix, method name, or file name (any combination — at least one is
+ * required). Multiple fields AND together. `methodNameContains` covers cases where a class prefix would
+ * over-match (e.g. `android.os.StrictMode` itself, which appears in every violation). `fileNameContains`
+ * covers GMS Dynamite-loaded modules whose class names are obfuscated (`m7.*`) but whose loader/module
+ * identifier is encoded in the `StackTraceElement.fileName` field.
  */
 private data class KnownThirdPartyViolation(
-    val classNamePrefix: String,
     val library: String,
+    val classNamePrefix: String? = null,
     val methodNameContains: String? = null,
-)
+    val fileNameContains: String? = null,
+) {
+    init {
+        require(classNamePrefix != null || methodNameContains != null || fileNameContains != null) {
+            "$library matcher must set at least one of classNamePrefix, methodNameContains, fileNameContains"
+        }
+    }
+
+    fun matches(frame: StackTraceElement): Boolean {
+        if (classNamePrefix != null && !frame.className.startsWith(classNamePrefix)) return false
+        if (methodNameContains != null && methodNameContains !in frame.methodName) return false
+        if (fileNameContains != null && fileNameContains !in (frame.fileName ?: "")) return false
+        return true
+    }
+}
 
 private const val LOG_TAG = "StrictMode"
 
@@ -119,10 +132,22 @@ private val KNOWN_THIRD_PARTY_VIOLATIONS =
     listOf(
         // Firebase Analytics (play-services-measurement) reflects Ldalvik/system/VMStack;->getStackClass2()
         // during init via the auto-registered Firebase ContentProvider. NonSdkApi greylist hit, no public AOSP /
-        // Firebase tracker found as of 2026-05.
+        // Firebase tracker found as of 2026-05. This matcher covers the embedded fallback path used when
+        // Play Services serves the SDK from the app's own classes (typical on AOSP emulators / stripped GMS).
         KnownThirdPartyViolation(
+            library = "Firebase Analytics (embedded)",
             classNamePrefix = "com.google.android.gms.internal.measurement",
-            library = "Firebase Analytics",
+        ),
+        // Same logical SDK as above, delivered via GMS Dynamite on real devices with Play Services. The
+        // dynamic module ships obfuscated class names (m7.apj, m7.api, ...) so a classNamePrefix match would
+        // either be unsafe (`m7.` is too generic) or break on every Play Services revision. The Dynamite
+        // module identifier is encoded in StackTraceElement.fileName as the literal
+        // "com.google.android.gms.dynamite_measurementdynamite@<hash>@<version> (<build>)" — we anchor on
+        // the unique module-id prefix up to the first `@` to ignore version/build drift while still rejecting
+        // any future homonym package (e.g. an app-defined `dynamite_measurement`).
+        KnownThirdPartyViolation(
+            library = "Firebase Analytics (GMS Dynamite)",
+            fileNameContains = "com.google.android.gms.dynamite_measurementdynamite@",
         ),
         // Firebase Datatransport (CCT) opens untagged HTTP connections via OkHttp to upload Analytics events.
         // Not actionable from app code. Before switching to detectAll() the original configurator deliberately

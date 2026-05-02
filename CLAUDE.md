@@ -262,8 +262,10 @@ When a new violation surfaces, choose in this order:
 3. **Third-party class running its own code** (Compose, Espresso, GMS,
    framework finalizers): add a `KnownThirdPartyViolation` to the list with a
    comment naming the library + (when public) the upstream issue. Use
-   `methodNameContains` only when the class prefix would over-match — the
-   framework's own `android.os.StrictMode` is one such case.
+   `methodNameContains` when the class prefix would over-match (the framework's
+   own `android.os.StrictMode` is one such case), or `fileNameContains` when the
+   classes are obfuscated and unstable (GMS Dynamite modules ship as `m7.*` etc.
+   and the loader / module identifier lives in `StackTraceElement.fileName`).
 
 Filter logcat with `adb logcat -s StrictMode:E` — operator workflow lives in
 `CONTRIBUTING.md` § "Terminal: StrictMode violations".
