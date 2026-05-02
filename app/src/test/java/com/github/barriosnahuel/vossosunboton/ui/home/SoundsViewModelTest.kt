@@ -618,4 +618,91 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         ).isTrue()
         assertThat(viewModel.deletedSoundEvent.value).isNull()
     }
+
+    @Test
+    fun `deleteSound on welcome flips visibility and emits delete event`() {
+        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+
+        viewModel.deleteSound(welcome)
+
+        assertThat(viewModel.welcomeStickerVisible.value).isFalse()
+        assertThat(
+            viewModel.deletedSoundEvent.value
+                ?.sound
+                ?.name,
+        ).isEqualTo(welcomeTitle)
+        assertThat(viewModel.sounds.value.none { it.name == welcomeTitle }).isTrue()
+    }
+
+    @Test
+    fun `restoreSound on welcome inserts at the END not at original position 0`() {
+        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(Sound("custom", "custom.mp3"))
+        }
+        val viewModel = givenAViewModel()
+        val welcomeTitle = context.getString(R.string.app_welcome_sticker_title)
+        // Pre-condition: welcome at row 0, custom at row 1.
+        assertThat(
+            viewModel.sounds.value
+                .first()
+                .name,
+        ).isEqualTo(welcomeTitle)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+        viewModel.deleteSound(welcome)
+
+        viewModel.restoreSound()
+
+        // Post-condition: welcome demoted to the END, custom now at row 0.
+        assertThat(
+            viewModel.sounds.value
+                .last()
+                .name,
+        ).isEqualTo(welcomeTitle)
+        assertThat(
+            viewModel.sounds.value
+                .first()
+                .name,
+        ).isEqualTo("custom")
+    }
+
+    @Test
+    fun `loadSounds appends welcome at the end when wasRestored is true`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        // Seed prefs as if a previous Undo happened: consumed=false, was_restored=true.
+        context
+            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("consumed", false)
+            .putBoolean("was_restored", true)
+            .commit()
+        runBlocking {
+            val repo = SoundsRepository(context as android.app.Application)
+            repo.save(Sound("custom-a", "custom-a.mp3"))
+            repo.save(Sound("custom-b", "custom-b.mp3"))
+        }
+
+        val viewModel = givenAViewModel()
+        val welcomeTitle = context.getString(R.string.app_welcome_sticker_title)
+
+        // Welcome must be at the end, after the user's two custom sounds.
+        assertThat(
+            viewModel.sounds.value
+                .last()
+                .name,
+        ).isEqualTo(welcomeTitle)
+        assertThat(
+            viewModel.sounds.value
+                .first()
+                .name,
+        ).isNotEqualTo(welcomeTitle)
+    }
 }

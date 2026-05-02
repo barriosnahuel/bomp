@@ -61,4 +61,36 @@ internal class WelcomeStickerStoreTest : AbstractRobolectricTest() {
 
         assertThat(store.isActive()).isFalse()
     }
+
+    @Test
+    fun `wasRestored defaults to false`() {
+        val store = WelcomeStickerStore(context)
+
+        assertThat(store.wasRestored()).isFalse()
+    }
+
+    @Test
+    fun `restore sets both consumed=false AND wasRestored=true`() {
+        val store = WelcomeStickerStore(context)
+        store.consume()
+
+        store.restore()
+
+        assertThat(store.isActive()).isTrue()
+        assertThat(store.wasRestored()).isTrue()
+    }
+
+    @Test
+    fun `wasRestored is sticky once set`() {
+        val store = WelcomeStickerStore(context)
+        store.consume()
+        store.restore()
+
+        // A subsequent consume must NOT clear wasRestored — the demotion is permanent until
+        // the user manually dismisses again, which marks consumed = true and the flag becomes
+        // moot.
+        store.consume()
+
+        assertThat(store.wasRestored()).isTrue()
+    }
 }

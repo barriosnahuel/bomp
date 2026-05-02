@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Share sheet filename for bundled sounds now shows the button name instead of an internal prefix
 - Custom button audio files are now named after the user-provided sound name (non-alphanumeric chars replaced by underscores) instead of the generic `Button-custom-` prefix
 - Snackbar after deleting a custom sound now reads "Audio deleted"/"Audio borrado" (was "Button deleted"/"Botón borrado") so the copy matches how users describe what they removed
+- Welcome card can be dismissed by swiping left, or long-pressing to open the actions menu and tapping Delete — no need to listen all the way through. Tapping Undo within 5s brings it back, but it now lives at the bottom of My Sounds instead of pinning to the top
 
 ### Fixed
 - The app now opens the Home tab on launch instead of the Search tab
@@ -73,6 +74,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 #### Changed
 - `PlayerControllerListener.onPlayerStop` now takes a `completed: Boolean` argument so callers can distinguish natural end-of-stream (`MediaPlayer.OnCompletionListener`) from user-initiated stops; required for the welcome-sticker auto-destruct path that fires only on natural completion
+- `WelcomeStickerStore.wasRestored` flag persists "user has undone at least once" so the next render demotes the welcome from row 0 to the end of My Sounds; sticky once set
 - Migrated sound metadata persistence from SharedPreferences to Jetpack DataStore Preferences with a single JSON-encoded payload, exposed as a reactive `Flow<List<Sound>>` from the new `SoundsRepository`; safer concurrent writes, no main-thread IO, and corrupted-payload recovery via Crashlytics-reported fallback to an empty list
 - StrictMode debug audit: switched both ThreadPolicy and VmPolicy to `detectAll()` (forward-compat for new detectors) keeping `detectNonSdkApiUsage()` explicit; route every surviving violation through `Tracker.track` so each one prints a single line under the `Tracker` tag with `"StrictMode: <ViolationClass>"` in the message (greppable via `adb logcat | grep StrictMode`); known noise (Firebase Analytics / Crashlytics / Datatransport CCT, Compose `dispatchOnScrollChanged`, Espresso reflection, framework `SurfaceControl` finalize, framework Activity-destroy GC) is silenced in both logcat and Crashlytics with one decision; unknown violations now crash the debug process so they cannot slip past unnoticed; Firebase init disk reads wrapped at the call-site via scoped `allowThreadDiskReads` in `AnalyticsTrackerProvider`
 - Rewrote `README.md` to reflect v2.0 reality: refreshed brand to Bomp, refreshed version/API/CI badges, replaced feature list with current capabilities aligned to brand-DNA vocabulary, added Google Play badge and GitHub Pages link, removed obsolete Codacy badge and "What's next" section

@@ -330,4 +330,31 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         fake.assertEmitted("welcome_sticker_undone")
         fake.assertNotEmitted("sound_delete_undone")
     }
+
+    @Test
+    fun `deleteSound on welcome logs welcome_sticker_dismissed`() {
+        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+
+        viewModel.deleteSound(welcome)
+
+        fake.assertEmitted("welcome_sticker_dismissed")
+    }
+
+    @Test
+    fun `deleteSound on a custom sound does NOT log welcome_sticker_dismissed`() {
+        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        val viewModel = givenAViewModel()
+        val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
+        viewModel.injectSounds(listOf(sound))
+
+        viewModel.deleteSound(sound)
+
+        fake.assertNotEmitted("welcome_sticker_dismissed")
+    }
 }

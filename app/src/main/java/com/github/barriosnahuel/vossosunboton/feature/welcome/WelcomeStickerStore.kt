@@ -57,16 +57,41 @@ class WelcomeStickerStore(
         }
     }
 
+    /**
+     * `true` after the user has tapped Undo on the dismiss snackbar at least once. Used by
+     * `SoundsViewModel.loadSounds()` to demote the welcome from row 0 to the end of MY_SOUNDS:
+     * the prime spot belongs to the user once they've shown they want this sticker back rather
+     * than letting it consume.
+     */
+    fun wasRestored(): Boolean {
+        val previous = StrictMode.allowThreadDiskReads()
+        return try {
+            prefs.getBoolean(KEY_WAS_RESTORED, false)
+        } finally {
+            StrictMode.setThreadPolicy(previous)
+        }
+    }
+
     fun consume() {
         prefs.edit().putBoolean(KEY_CONSUMED, true).apply()
     }
 
+    /**
+     * Re-enables the welcome AND records the restore so the next render demotes it to the bottom
+     * of MY_SOUNDS. Both effects are coupled: an Undo by definition means "user was restored at
+     * least once", and from that moment on the welcome is no longer eligible for row 0.
+     */
     fun restore() {
-        prefs.edit().putBoolean(KEY_CONSUMED, false).apply()
+        prefs
+            .edit()
+            .putBoolean(KEY_CONSUMED, false)
+            .putBoolean(KEY_WAS_RESTORED, true)
+            .apply()
     }
 
     companion object {
         const val PREFS_NAME = "welcome-sticker"
         private const val KEY_CONSUMED = "consumed"
+        private const val KEY_WAS_RESTORED = "was_restored"
     }
 }
