@@ -5,12 +5,11 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
-import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
@@ -19,6 +18,7 @@ import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
@@ -30,12 +30,9 @@ import org.junit.Test
 internal class SoundsViewModelTest : AbstractRobolectricTest() {
     @Before
     fun setUp() {
-        ApplicationProvider
-            .getApplicationContext<android.app.Application>()
-            .getSharedPreferences("my-prefs", Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
+        }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
     }
@@ -467,14 +464,18 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         file: String = "custom.mp3",
     ): SoundsViewModel {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        SoundDao().save(context, Sound(name, file))
+        runBlocking { SoundsRepository(context).save(Sound(name, file)) }
         return givenAViewModel()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel =
-        SoundsViewModel(
-            ApplicationProvider.getApplicationContext(),
-            ioDispatcher = UnconfinedTestDispatcher(),
-        )
+    private fun givenAViewModel(): SoundsViewModel {
+        val vm =
+            SoundsViewModel(
+                ApplicationProvider.getApplicationContext(),
+                ioDispatcher = UnconfinedTestDispatcher(),
+            )
+        runBlocking { vm.isInitialLoadComplete.first { it } }
+        return vm
+    }
 }

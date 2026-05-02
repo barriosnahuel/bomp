@@ -61,11 +61,12 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
-import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -101,7 +102,7 @@ fun AddButtonScreen(
                     val feedbackId =
                         feature.saveNewButtonAsync(context, trimmedName, m.uri.toString()).await()
                     if (feedbackId == R.string.app_addbutton_feedback_saved_ok) {
-                        val totalSounds = withContext(Dispatchers.IO) { SoundDao().find(context).size }
+                        val totalSounds = SoundsRepository(context).sounds.first().size
                         tracker.log(
                             AnalyticsEvent.SoundAdd(
                                 source = AddButtonActivity.SOURCE_SHARE,

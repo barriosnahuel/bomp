@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
-import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
@@ -14,14 +13,18 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Canonica
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -33,12 +36,9 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     fun setUp() {
         fake = FakeAnalyticsTracker()
         AnalyticsTrackerProvider.setForTest(fake)
-        ApplicationProvider
-            .getApplicationContext<android.app.Application>()
-            .getSharedPreferences("my-prefs", Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
+        }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.startPlayingSound(any(), any()) } answers { nothing }
@@ -120,27 +120,28 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `confirmDelete emits sound_delete after the dao commit`() {
-        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+    fun `confirmDelete emits sound_delete after the repo commit`() {
         val viewModel = givenAViewModel()
         val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
         viewModel.deleteSound(sound)
 
-        viewModel.confirmDelete(context)
+        viewModel.confirmDelete()
+        // confirmDelete launches a coroutine on viewModelScope+ioDispatcher; the analytics
+        // event is logged after `repo.delete` returns. Poll the fake until it is recorded.
+        runBlocking { awaitAnalyticsEvent(fake, "sound_delete") }
 
         fake.assertEmitted("sound_delete")
     }
 
     @Test
     fun `confirmDelete on a bundled sound does not emit sound_delete`() {
-        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val viewModel = givenAViewModel()
         val bundled = Sound("bundled", rawRes = 1)
         viewModel.injectSounds(listOf(bundled))
         viewModel.deleteSound(bundled)
 
-        viewModel.confirmDelete(context)
+        viewModel.confirmDelete()
 
         fake.assertNotEmitted("sound_delete")
     }
@@ -172,8 +173,10 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `loadSounds emits milestone_sounds_3 when crossing the threshold for the first time`() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val dao = SoundDao()
-        repeat(3) { idx -> dao.save(context, Sound("custom-$idx", "custom-$idx.mp3")) }
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repeat(3) { idx -> repo.save(Sound("custom-$idx", "custom-$idx.mp3")) }
+        }
 
         givenAViewModel()
 
@@ -183,8 +186,10 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `loadSounds does not re-emit milestone_sounds_3 once already fired`() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val dao = SoundDao()
-        repeat(3) { idx -> dao.save(context, Sound("custom-$idx", "custom-$idx.mp3")) }
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repeat(3) { idx -> repo.save(Sound("custom-$idx", "custom-$idx.mp3")) }
+        }
         givenAViewModel()
         // Clear only the recorded events, NOT the fired flags — simulates the same install loading the VM again.
         fake.events.clear()
@@ -228,10 +233,30 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(searchDebounceMs: Long = 200L): SoundsViewModel =
-        SoundsViewModel(
-            ApplicationProvider.getApplicationContext(),
-            ioDispatcher = UnconfinedTestDispatcher(),
-            searchDebounceMs = searchDebounceMs,
-        )
+    private fun givenAViewModel(searchDebounceMs: Long = 200L): SoundsViewModel {
+        val vm =
+            SoundsViewModel(
+                ApplicationProvider.getApplicationContext(),
+                ioDispatcher = UnconfinedTestDispatcher(),
+                searchDebounceMs = searchDebounceMs,
+            )
+        runBlocking { vm.isInitialLoadComplete.first { it } }
+        return vm
+    }
+
+    /**
+     * Polls [fake] every 25 ms until [eventName] appears, with a 5-second cap so a regression
+     * never hangs the test runner. `FakeAnalyticsTracker` has no built-in suspend API and
+     * adding one just for this case felt heavier than this five-line helper.
+     */
+    private suspend fun awaitAnalyticsEvent(
+        fake: FakeAnalyticsTracker,
+        eventName: String,
+    ) {
+        withTimeout(5_000L) {
+            while (fake.events.none { it.name == eventName }) {
+                delay(25L)
+            }
+        }
+    }
 }

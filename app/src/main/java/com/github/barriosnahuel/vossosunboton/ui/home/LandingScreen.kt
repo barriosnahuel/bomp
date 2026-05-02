@@ -243,7 +243,7 @@ private fun SnackbarEffects(
             )
         when (result) {
             SnackbarResult.ActionPerformed -> viewModel.restoreSound()
-            SnackbarResult.Dismissed -> viewModel.confirmDelete(context)
+            SnackbarResult.Dismissed -> viewModel.confirmDelete()
         }
     }
 }

@@ -9,32 +9,28 @@ import android.content.Context
 import android.os.Environment
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundDao
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
+import kotlinx.coroutines.runBlocking
 
 /**
  * Helpers to seed and tear down sound data for instrumented UI tests.
  *
  * Custom sounds are written to `getExternalFilesDir(Music)/<file>` (matching what
  * [com.github.barriosnahuel.vossosunboton.commons.file.getFile] resolves to) and registered
- * via [SoundDao]. The audio payload comes from `androidTest/assets/test_sound.mp3` —
+ * via [SoundsRepository]. The audio payload comes from `androidTest/assets/test_sound.mp3` —
  * a ~200ms silent clip so playback tests run fast and predictably.
  */
 internal object TestData {
     private const val TEST_ASSET = "test_sound.mp3"
-    private const val PREFS_FILE = "my-prefs"
 
-    private val dao = SoundDao()
+    private fun repo(context: Context) = SoundsRepository(context)
 
     /**
-     * Wipes all SharedPreferences used by the app and deletes every file in the Music
-     * external dir. Safe to call between tests — leaves no state behind.
+     * Wipes the sounds DataStore and deletes every file in the Music external dir.
+     * Safe to call between tests — leaves no state behind.
      */
     fun clearAll(context: Context) {
-        context
-            .getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
+        runBlocking { repo(context).clearForTest() }
 
         context
             .getExternalFilesDir(Environment.DIRECTORY_MUSIC)
@@ -51,12 +47,13 @@ internal object TestData {
         count: Int = 1,
     ): List<Sound> {
         require(count > 0) { "count must be positive" }
+        val r = repo(context)
         return (1..count).map { index ->
             val name = "custom_$index"
             val fileName = "$name.mp3"
             copyAssetToMusicDir(context, fileName)
             val sound = Sound(name, fileName)
-            dao.save(context, sound)
+            runBlocking { r.save(sound) }
             sound
         }
     }
@@ -68,7 +65,7 @@ internal object TestData {
         context: Context,
         soundName: String,
     ) {
-        dao.savePin(context, soundName, true)
+        runBlocking { repo(context).savePin(soundName, true) }
     }
 
     private fun copyAssetToMusicDir(
