@@ -81,6 +81,8 @@ When generating user-facing copy in any locale (in-app strings, store listings, 
 
 If any of these paths is missing (CI, alternate checkout), do **not** invent the claim — flag the gap to the user and proceed with the in-repo strings as authoritative.
 
+**Default locale for in-app strings.** `app/src/main/res/values/strings.xml` is the **English** master; Spanish-AR copy lives in `values-es/strings.xml`.
+
 Hard rules:
 
 - **No calque translations.** A phrase that's natural in the source can be wrong in the target. Examples we hit and fixed during the en-US listing: "save a day" (calque of "salvar un día" — correct English idiom is `save the day`); "on the other side" (calque of "del otro lado" — in English this means *afterlife*; the phone idiom is `on the other end`); "your audios" (calque of "tus audios" — `audio` is a mass noun in English, the natural plural is `voice notes` / `voice clips` / `voice memos`).
