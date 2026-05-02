@@ -52,7 +52,6 @@ private class AddButtonFeatureImpl : AddButtonFeature {
     ): Deferred<Int> {
         val sanitizedName = name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
         val fileName = "$sanitizedName-${System.currentTimeMillis()}.mp3"
-        val targetFile = getFile(context, fileName)
 
         @OptIn(DelicateCoroutinesApi::class)
         return GlobalScope.async(Dispatchers.IO) {
@@ -61,6 +60,9 @@ private class AddButtonFeatureImpl : AddButtonFeature {
             if (validateAudioUri(context, parsed) != ValidationResult.Ok) {
                 return@async feedbackMessage
             }
+            // getFile() resolves context.getExternalFilesDir(...), which performs disk I/O —
+            // keep it inside the IO dispatcher so StrictMode does not flag it on the main thread.
+            val targetFile = getFile(context, fileName)
             try {
                 FileOutputStream(targetFile).use { fileOutputStream ->
                     context.contentResolver.openInputStream(parsed).use { inputStream ->
