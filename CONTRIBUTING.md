@@ -140,6 +140,16 @@ You can filter logcat messages by:
 
 > adb logcat -s FirebasePerformance
 
+### Terminal: StrictMode violations 🚨
+
+The debug build's `StrictModeConfigurator` silences known third-party noise and only logs surviving violations. To see what hit the dashboard during a session or test run:
+
+```bash
+adb logcat -d -s StrictMode:E
+```
+
+Empty output means every detected violation matched a `KnownThirdPartyViolation` entry — none reached Crashlytics either. Anything that does show up either has a top frame in our package (`com.github.barriosnahuel.vossosunboton.*`) and needs fixing, or comes from a new SDK / framework version that should be added to the matcher list. The decision tree is in `CLAUDE.md` § "StrictMode debug audit".
+
 ## Resources 🎨
 - **Color palette:** Neo-Club (ink × acid), a custom palette designed for Bomp. Single source of truth is [`app/src/main/java/com/github/barriosnahuel/vossosunboton/ui/theme/AppTheme.kt`](app/src/main/java/com/github/barriosnahuel/vossosunboton/ui/theme/AppTheme.kt) — see `CLAUDE.md` § "Design system" for the role mapping and contrast guarantees.
 - **Launcher icon:** rendered from the SVG masters under [`store-listing/brand/`](store-listing/brand/) (`launcher-fallback.svg` for Android < 8; the adaptive vector at [`app/src/main/res/mipmap-anydpi-v26/app_ic_launcher.xml`](app/src/main/res/mipmap-anydpi-v26/app_ic_launcher.xml) for Android 8+). Export pipeline (`rsvg-convert`) is documented in `CLAUDE.md` § "Store listing asset generation".
