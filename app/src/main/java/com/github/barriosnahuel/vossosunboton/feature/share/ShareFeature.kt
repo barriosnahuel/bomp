@@ -17,6 +17,8 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.FileOutputStream
 
@@ -25,7 +27,7 @@ internal interface ShareFeature {
      * @param surface canonical screen_name from `CanonicalScreenName` describing where the share originated.
      * @throws IllegalStateException when any required parameter is `null`
      */
-    fun share(
+    suspend fun share(
         context: Context,
         sound: Sound,
         surface: String,
@@ -43,14 +45,17 @@ private class ShareFeatureImpl : ShareFeature {
      * For more info check
      * [developer.android.com/training/secure-file-sharing/setup-sharing](https://developer.android.com/training/secure-file-sharing/setup-sharing)
      */
-    override fun share(
+    override suspend fun share(
         context: Context,
         sound: Sound,
         surface: String,
     ) {
         Timber.d("Trying to share button: %s", sound.name)
 
-        val buttonFileContentUri = getContentUriForSound(sound, context)
+        // Resolving the file path and (for bundled sounds, first share only) copying raw resources to disk
+        // both touch the file system. Run that part on IO; startActivity + analytics stay on the caller's
+        // Main dispatcher because Android's chooser expects the launching call on the UI thread.
+        val buttonFileContentUri = withContext(Dispatchers.IO) { getContentUriForSound(sound, context) }
         val shareIntent = Intent()
         shareIntent.action = Intent.ACTION_SEND
         shareIntent.type = "audio/*"
