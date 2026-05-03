@@ -15,10 +15,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import timber.log.Timber
 
 /**
  * Persists the visibility of the home-grid welcome sticker (Sticker Cero, fresh-install variant).
@@ -29,6 +29,12 @@ import timber.log.Timber
  *   on this install.
  * - `was_restored`: sticky `true` after the user taps Undo at least once. The next render demotes
  *   the welcome from row 0 to the END of MY_SOUNDS so the prime spot belongs to the user.
+ *
+ * Both reads are race-protected by an in-memory cache populated lazily on first read and updated
+ * synchronously by [consume] / [restore]. Without the cache, an Undo immediately followed by a tab
+ * switch could re-prepend the welcome at row 0 because the next [wasRestored] would observe stale
+ * disk state (the async `store.edit` may not have committed yet). Same shape as the analytics
+ * stores in `commons_android`.
  *
  * Lives in its own DataStore Preferences file (`datastore/welcome-sticker.preferences_pb`) on
  * purpose:
@@ -45,6 +51,10 @@ class WelcomeStickerStore(
 ) {
     private val store: DataStore<Preferences> = context.applicationContext.welcomeStickerStore
 
+    @Volatile private var consumedCache: Boolean? = null
+
+    @Volatile private var wasRestoredCache: Boolean? = null
+
     /**
      * `true` until the user has consumed the welcome sticker. Returns `false` when the bundled
      * resource is missing — matches the spec's "no storage for `resource_update` → silently skip"
@@ -52,7 +62,7 @@ class WelcomeStickerStore(
      */
     suspend fun isActive(): Boolean {
         if (R.raw.app_welcome_sticker == 0) return false
-        return !readFlag(KEY_CONSUMED)
+        return !readConsumed()
     }
 
     /**
@@ -61,9 +71,12 @@ class WelcomeStickerStore(
      * the prime spot belongs to the user once they've shown they want this sticker back rather
      * than letting it consume.
      */
-    suspend fun wasRestored(): Boolean = readFlag(KEY_WAS_RESTORED)
+    suspend fun wasRestored(): Boolean = readWasRestored()
 
     suspend fun consume() {
+        // Update the in-memory cache before dispatching the disk write so a follow-up read
+        // observes the new value immediately, regardless of when the `store.edit` commits.
+        consumedCache = true
         withContext(Dispatchers.IO) {
             store.edit { it[KEY_CONSUMED] = true }
         }
@@ -75,6 +88,8 @@ class WelcomeStickerStore(
      * welcome is no longer eligible for row 0.
      */
     suspend fun restore() {
+        consumedCache = false
+        wasRestoredCache = true
         withContext(Dispatchers.IO) {
             store.edit {
                 it[KEY_CONSUMED] = false
@@ -89,9 +104,25 @@ class WelcomeStickerStore(
      */
     @VisibleForTesting(otherwise = VisibleForTesting.NONE)
     suspend fun clearForTest() {
+        consumedCache = null
+        wasRestoredCache = null
         withContext(Dispatchers.IO) {
             store.edit { it.clear() }
         }
+    }
+
+    private suspend fun readConsumed(): Boolean {
+        consumedCache?.let { return it }
+        val value = readFlag(KEY_CONSUMED)
+        consumedCache = value
+        return value
+    }
+
+    private suspend fun readWasRestored(): Boolean {
+        wasRestoredCache?.let { return it }
+        val value = readFlag(KEY_WAS_RESTORED)
+        wasRestoredCache = value
+        return value
     }
 
     private suspend fun readFlag(key: Preferences.Key<Boolean>): Boolean =
@@ -110,7 +141,10 @@ private val Context.welcomeStickerStore: DataStore<Preferences> by preferencesDa
     name = WelcomeStickerStore.DATASTORE_NAME,
     corruptionHandler =
         ReplaceFileCorruptionHandler { exception ->
-            Timber.e(exception, "Welcome sticker DataStore corruption recovered with empty prefs")
+            // Surface as a non-fatal so we can detect silent state loss in the field. `Timber.e`
+            // alone goes through `ErrorTrackerTree` which drops the throwable — Crashlytics never
+            // sees it. Wrap to give the dashboard entry a searchable title.
+            Tracker.track(RuntimeException("Welcome sticker DataStore corruption recovered", exception))
             emptyPreferences()
         },
 )
