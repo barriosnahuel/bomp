@@ -61,7 +61,7 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
-import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeStickerName
+import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeSticker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.about.AboutScreen
@@ -210,7 +210,6 @@ private fun SnackbarEffects(
     snackbarHostState: SnackbarHostState,
 ) {
     val deletedEvent by viewModel.deletedSoundEvent.collectAsState()
-    val context = LocalContext.current
     val audioDeletedMessage = stringResource(R.string.app_feedback_audio_deleted)
     val welcomeDismissedMessage = stringResource(R.string.app_welcome_sticker_feedback_dismissed)
     val undoLabel = stringResource(R.string.app_undo)
@@ -248,7 +247,7 @@ private fun SnackbarEffects(
     LaunchedEffect(deletedEvent) {
         val event = deletedEvent ?: return@LaunchedEffect
         val message =
-            if (isWelcomeStickerName(event.sound.name, context)) {
+            if (isWelcomeSticker(event.sound)) {
                 welcomeDismissedMessage
             } else {
                 audioDeletedMessage
@@ -351,7 +350,6 @@ private fun SoundsList(
 ) {
     val dismissingItems = remember { mutableStateSetOf<String>() }
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
     val remainingFormat = stringResource(R.string.app_welcome_sticker_remaining_format)
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -361,7 +359,7 @@ private fun SoundsList(
         ) {
             itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
                 val isDeleting = sound.name in dismissingItems
-                val isWelcome = isWelcomeStickerName(sound.name, context)
+                val isWelcome = isWelcomeSticker(sound)
                 AnimatedVisibility(
                     visible = !isDeleting,
                     modifier =
