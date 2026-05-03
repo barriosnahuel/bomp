@@ -83,7 +83,10 @@ internal fun MySoundsEmptyState(modifier: Modifier = Modifier) {
             text = stringResource(R.string.app_my_sounds_empty_body),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            // `onSurfaceVariant` is the M3 role for secondary body text and is validated by
+            // `AppThemeContrastTest` to meet WCAG AA. An alpha-modified `onSurface` would push
+            // light-mode contrast below 4.5:1 for normal-size text — outside the audit's reach.
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
         )
     }
