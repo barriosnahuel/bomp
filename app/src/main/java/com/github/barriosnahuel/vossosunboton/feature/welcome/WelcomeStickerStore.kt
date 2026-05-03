@@ -6,55 +6,53 @@
 package com.github.barriosnahuel.vossosunboton.feature.welcome
 
 import android.content.Context
-import android.content.SharedPreferences
-import android.os.StrictMode
+import androidx.annotation.VisibleForTesting
+import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.preferencesDataStore
 import com.github.barriosnahuel.vossosunboton.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 /**
- * Persists whether the home-grid welcome sticker (Sticker Cero, fresh-install variant) is still
- * eligible to appear. Single boolean per install, default `false` (sticker active until consumed).
+ * Persists the visibility of the home-grid welcome sticker (Sticker Cero, fresh-install variant).
  *
- * Lives in its own SharedPreferences file (`welcome-sticker.xml`) on purpose:
- * - The audio metadata DataStore (`bomps.preferences_pb`) holds user-created Bomps and IS backed up.
- *   The welcome flag must NOT be backed up — a restored device should replay the welcome.
- * - The analytics-flags prefs (`analytics-flags.xml`) is for first-event gating; mixing in product
- *   state would muddy that contract.
+ * Two booleans:
+ * - `consumed`: flips to `true` when the user lets the dismiss snackbar time out (or, after a
+ *   restored welcome, when they manually dismiss again). Once `true`, the welcome never reappears
+ *   on this install.
+ * - `was_restored`: sticky `true` after the user taps Undo at least once. The next render demotes
+ *   the welcome from row 0 to the END of MY_SOUNDS so the prime spot belongs to the user.
  *
- * Backup rules in `app_backup_rules.xml` and `app_data_extraction_rules.xml` use `<include>` only,
- * so this file is excluded by default. `BackupRulesTest` enforces the contract with a negative
- * assertion.
+ * Lives in its own DataStore Preferences file (`datastore/welcome-sticker.preferences_pb`) on
+ * purpose:
+ * - The audio metadata DataStore (`bomps.preferences_pb`) holds user-created Bomps and is also
+ *   backed up but the data shape is different (JSON-encoded list).
+ * - The analytics flags / counters live in their own DataStores with different backup postures.
  *
- * Writes use `apply()` (async) to keep the main thread off disk and pass the StrictMode audit.
+ * Backup posture: included in `app_backup_rules.xml` and `app_data_extraction_rules.xml` — the
+ * user's "I dismissed this" gesture is meaningful state that should survive a restore.
+ * `BackupRulesTest` enforces the include rules.
  */
 class WelcomeStickerStore(
     context: Context,
 ) {
-    // SharedPreferences.getSharedPreferences() reads the prefs file on first access; wrap the
-    // initial load in allowThreadDiskReads to keep StrictMode quiet — same pattern as
-    // AnalyticsTrackerProvider.createTracker.
-    private val prefs: SharedPreferences =
-        run {
-            val previous = StrictMode.allowThreadDiskReads()
-            try {
-                context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            } finally {
-                StrictMode.setThreadPolicy(previous)
-            }
-        }
+    private val store: DataStore<Preferences> = context.applicationContext.welcomeStickerStore
 
     /**
-     * `true` until the user has consumed the welcome sticker (audio finished + snackbar timed out
-     * without an Undo). Returns `false` when the bundled resource is missing — matches the spec's
-     * "no storage for `resource_update` → silently skip" stance.
+     * `true` until the user has consumed the welcome sticker. Returns `false` when the bundled
+     * resource is missing — matches the spec's "no storage for `resource_update` → silently skip"
+     * stance.
      */
-    fun isActive(): Boolean {
+    suspend fun isActive(): Boolean {
         if (R.raw.app_welcome_sticker == 0) return false
-        val previous = StrictMode.allowThreadDiskReads()
-        return try {
-            !prefs.getBoolean(KEY_CONSUMED, false)
-        } finally {
-            StrictMode.setThreadPolicy(previous)
-        }
+        return !readFlag(KEY_CONSUMED)
     }
 
     /**
@@ -63,35 +61,56 @@ class WelcomeStickerStore(
      * the prime spot belongs to the user once they've shown they want this sticker back rather
      * than letting it consume.
      */
-    fun wasRestored(): Boolean {
-        val previous = StrictMode.allowThreadDiskReads()
-        return try {
-            prefs.getBoolean(KEY_WAS_RESTORED, false)
-        } finally {
-            StrictMode.setThreadPolicy(previous)
+    suspend fun wasRestored(): Boolean = readFlag(KEY_WAS_RESTORED)
+
+    suspend fun consume() {
+        withContext(Dispatchers.IO) {
+            store.edit { it[KEY_CONSUMED] = true }
         }
     }
 
-    fun consume() {
-        prefs.edit().putBoolean(KEY_CONSUMED, true).apply()
+    /**
+     * Re-enables the welcome AND records the restore atomically. The two effects are coupled: an
+     * Undo by definition means "user was restored at least once", and from that moment on the
+     * welcome is no longer eligible for row 0.
+     */
+    suspend fun restore() {
+        withContext(Dispatchers.IO) {
+            store.edit {
+                it[KEY_CONSUMED] = false
+                it[KEY_WAS_RESTORED] = true
+            }
+        }
     }
 
     /**
-     * Re-enables the welcome AND records the restore so the next render demotes it to the bottom
-     * of MY_SOUNDS. Both effects are coupled: an Undo by definition means "user was restored at
-     * least once", and from that moment on the welcome is no longer eligible for row 0.
+     * Test-only escape hatch to reset state. Same `@VisibleForTesting(otherwise = NONE)`
+     * protection as `SoundsRepository.clearForTest`.
      */
-    fun restore() {
-        prefs
-            .edit()
-            .putBoolean(KEY_CONSUMED, false)
-            .putBoolean(KEY_WAS_RESTORED, true)
-            .apply()
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+    suspend fun clearForTest() {
+        withContext(Dispatchers.IO) {
+            store.edit { it.clear() }
+        }
     }
 
+    private suspend fun readFlag(key: Preferences.Key<Boolean>): Boolean =
+        withContext(Dispatchers.IO) {
+            store.data.first()[key] ?: false
+        }
+
     companion object {
-        const val PREFS_NAME = "welcome-sticker"
-        private const val KEY_CONSUMED = "consumed"
-        private const val KEY_WAS_RESTORED = "was_restored"
+        const val DATASTORE_NAME = "welcome-sticker"
+        private val KEY_CONSUMED = booleanPreferencesKey("consumed")
+        private val KEY_WAS_RESTORED = booleanPreferencesKey("was_restored")
     }
 }
+
+private val Context.welcomeStickerStore: DataStore<Preferences> by preferencesDataStore(
+    name = WelcomeStickerStore.DATASTORE_NAME,
+    corruptionHandler =
+        ReplaceFileCorruptionHandler { exception ->
+            Timber.e(exception, "Welcome sticker DataStore corruption recovered with empty prefs")
+            emptyPreferences()
+        },
+)
