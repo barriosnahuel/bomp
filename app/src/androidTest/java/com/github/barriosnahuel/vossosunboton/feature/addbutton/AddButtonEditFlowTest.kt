@@ -11,6 +11,7 @@ import android.content.Intent
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -45,6 +46,11 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
             // Both the OutlinedTextField and the AudioPreview header render the sound name,
             // so a plain hasText() matcher returns 2 nodes. Scope to the editable input.
             nameField().assertIsDisplayed()
+            // AudioPreview gates its Card render on `isReady`, which is flipped from a
+            // LaunchedEffect after `withContext(Dispatchers.IO) { player.prepare() }` finishes.
+            // `waitForIdle()` returns when Compose is idle but does NOT await the IO dispatcher,
+            // so poll until the Preview audio button actually appears before asserting.
+            awaitPreviewButton()
             composeRule
                 .onNodeWithContentDescription(context.getString(R.string.app_addbutton_preview_audio))
                 .assertHasClickAction()
@@ -96,6 +102,8 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use {
             composeRule.waitForIdle()
+            // See `editModeRendersPreviewCardAndExistingName` for the why behind this poll.
+            awaitPreviewButton()
             composeRule
                 .onNodeWithContentDescription(context.getString(R.string.app_addbutton_preview_audio))
                 .assertHasClickAction()
@@ -105,6 +113,13 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     private fun editIntent(sound: Sound): Intent = LandingActivity.editIntent(context, sound)
 
     private fun nameField() = composeRule.onNode(hasSetTextAction())
+
+    private fun awaitPreviewButton() {
+        val previewLabel = context.getString(R.string.app_addbutton_preview_audio)
+        composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+            composeRule.onAllNodesWithContentDescription(previewLabel).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
 
     companion object {
         private const val WAIT_TIMEOUT_MS = 5_000L
