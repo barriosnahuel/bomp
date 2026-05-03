@@ -310,8 +310,8 @@ class SoundsViewModel(
         }
         _deletedSoundEvent.value = null
         if (isWelcome) {
-            // Update in-memory state synchronously so the UI flips immediately; persist
-            // asynchronously on IO. Same fire-and-forget pattern as SharedPrefs.apply().
+            // Update in-memory state synchronously so the UI flips immediately; persist the
+            // restore fire-and-forget on IO so the snackbar interaction stays responsive.
             _welcomeStickerVisible.value = true
             viewModelScope.launch(ioDispatcher) { welcomeStore.restore() }
             tracker.log(AnalyticsEvent.WelcomeStickerUndone)

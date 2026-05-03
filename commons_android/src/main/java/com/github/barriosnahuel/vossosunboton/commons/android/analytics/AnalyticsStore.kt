@@ -6,9 +6,10 @@
 package com.github.barriosnahuel.vossosunboton.commons.android.analytics
 
 /**
- * Combined persistence contract for the analytics wrapper. Production uses a single [SharedPrefsAnalyticsStore]
- * backing both first-flag bookkeeping and lifetime counters. Tests can implement [AnalyticsStore] directly to control
- * either side.
+ * Combined persistence contract for the analytics wrapper. Production wires a [DefaultAnalyticsStore]
+ * composing [DataStoreFirstFlagStore] (for first-flag bookkeeping) and [DataStoreCounterStore]
+ * (for lifetime counters) — they live in separate DataStore files so each can have its own backup
+ * posture. Tests can implement [AnalyticsStore] directly to control either side.
  */
 internal interface AnalyticsStore :
     FirstFlagStore,
