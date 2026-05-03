@@ -8,6 +8,7 @@ package com.github.barriosnahuel.vossosunboton
 import android.content.Context
 import android.os.Environment
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.runBlocking
@@ -26,7 +27,12 @@ internal object TestData {
     private fun repo(context: Context) = SoundsRepository(context)
 
     /**
-     * Wipes the sounds DataStore and deletes every file in the Music external dir.
+     * Wipes the sounds DataStore and deletes every file in the Music external dir. Also marks the
+     * welcome sticker as already-consumed so it doesn't appear at row 0 of MY_SOUNDS during tests
+     * that aren't specifically exercising the welcome flow — existing instrumented tests assume
+     * "exactly one share/play button" semantics. The welcome sticker has its own dedicated
+     * Robolectric coverage in `WelcomeStickerScreenTest` and `SoundsViewModelTest`.
+     *
      * Safe to call between tests — leaves no state behind.
      */
     fun clearAll(context: Context) {
@@ -36,6 +42,13 @@ internal object TestData {
             .getExternalFilesDir(Environment.DIRECTORY_MUSIC)
             ?.listFiles()
             ?.forEach { it.delete() }
+
+        context
+            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .putBoolean("consumed", true)
+            .commit()
     }
 
     /**
