@@ -50,6 +50,16 @@ Push Me is an Android soundboard app with 4 Gradle modules:
 
 Dependency direction: `app` → `model`, `commons_android`, `commons_file`. No dynamic features today — the Add Button flow used to live in a `:feature_addbutton` module but was promoted into `:app` since creating buttons is core to the product. Reintroduce dynamic features when freemium-style on-demand delivery is needed.
 
+## Persistence
+
+Use **Jetpack DataStore Preferences** for any new persistent key-value storage. The pattern lives in `model/.../SoundsRepository.kt` (top-level `Context.bompsStore` delegate via `preferencesDataStore(...)` + a `ReplaceFileCorruptionHandler`). Mirror it for new stores. `WelcomeStickerStore`, `DataStoreFirstFlagStore`, and `DataStoreCounterStore` are reference implementations.
+
+`SharedPreferences` is **forbidden** in this project. The grep `getSharedPreferences|EncryptedSharedPreferences` must return zero hits in `src/main` across all modules. Reviewers should reject any new SharedPrefs in PRs.
+
+When you need to keep a synchronous read API on top of DataStore (e.g. the analytics tracker, where call sites fire events right before a navigate-away to a chooser/browser and the launch could be lost), use the in-memory-cache + async-write-back pattern from `commons_android/.../DataStoreFirstFlagStore.kt` and `DataStoreCounterStore.kt`. Mirrors Firebase Analytics' own sync-API + internal-buffer design — preserves event durability when the OS suspends our process. The cache prime happens once via `runBlocking(IO)` inside the store constructor and lives inside the `StrictMode.allowThreadDiskReads` block in `AnalyticsTrackerProvider.createTracker`. `MainApplication.onCreate` warm-up dispatches the prime onto a background coroutine so it rarely blocks main in practice.
+
+For test data shape: every store ships a `@VisibleForTesting(otherwise = NONE) suspend fun clearForTest()` so test setUp can reset state without poking at the file system.
+
 ## Product & brand context (when relevant)
 
 Product specs, brand language, and canonical naming live in the sibling backlog repo at `../push-me-backlog/`. Consult it when working on user-facing strings, micro-copy, feature/level naming, gamification, or social-layer behavior — these docs are the source of truth for the in-app vocabulary:
