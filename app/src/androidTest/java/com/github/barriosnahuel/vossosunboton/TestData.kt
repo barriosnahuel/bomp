@@ -36,19 +36,18 @@ internal object TestData {
      * Safe to call between tests — leaves no state behind.
      */
     fun clearAll(context: Context) {
-        runBlocking { repo(context).clearForTest() }
+        runBlocking {
+            repo(context).clearForTest()
+            // Hide welcome by default in instrumented tests; opt-in via [enableWelcomeSticker].
+            val welcome = WelcomeStickerStore(context)
+            welcome.clearForTest()
+            welcome.consume()
+        }
 
         context
             .getExternalFilesDir(Environment.DIRECTORY_MUSIC)
             ?.listFiles()
             ?.forEach { it.delete() }
-
-        context
-            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .putBoolean("consumed", true)
-            .commit()
     }
 
     /**
@@ -88,11 +87,7 @@ internal object TestData {
      * is needed.
      */
     fun enableWelcomeSticker(context: Context) {
-        context
-            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
+        runBlocking { WelcomeStickerStore(context).clearForTest() }
     }
 
     private fun copyAssetToMusicDir(

@@ -63,7 +63,10 @@ class SoundsViewModel(
     PlayerControllerListener {
     private val repo = SoundsRepository(application, onError = Tracker::track)
 
-    private val _welcomeStickerVisible = MutableStateFlow(welcomeStore.isActive())
+    // Default `false` — flipped to `true` asynchronously by the IO coroutine in `init` after
+    // reading the suspend `welcomeStore.isActive()`. Sub-frame in practice; same accepted
+    // limitation as `_sounds = emptyList()` during cold-start.
+    private val _welcomeStickerVisible = MutableStateFlow(false)
     val welcomeStickerVisible: StateFlow<Boolean> = _welcomeStickerVisible.asStateFlow()
 
     private val _selectedTab = MutableStateFlow(AppTab.MY_SOUNDS)
@@ -134,9 +137,16 @@ class SoundsViewModel(
 
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
-        viewModelScope.launch(ioDispatcher) { loadSounds() }
-        if (_welcomeStickerVisible.value && tracker.markFiredOnce("welcome_sticker_shown")) {
-            tracker.log(AnalyticsEvent.WelcomeStickerShown)
+        // Single coroutine: read welcome-sticker visibility BEFORE loadSounds so the prepend
+        // logic sees the right state on the first paint. selectTab cannot fire before VM init
+        // returns, so loadSounds() always observes a stable `_welcomeStickerVisible` snapshot.
+        viewModelScope.launch(ioDispatcher) {
+            val active = welcomeStore.isActive()
+            _welcomeStickerVisible.value = active
+            if (active && tracker.markFiredOnce("welcome_sticker_shown")) {
+                tracker.log(AnalyticsEvent.WelcomeStickerShown)
+            }
+            loadSounds()
         }
     }
 
@@ -300,8 +310,10 @@ class SoundsViewModel(
         }
         _deletedSoundEvent.value = null
         if (isWelcome) {
-            welcomeStore.restore()
+            // Update in-memory state synchronously so the UI flips immediately; persist
+            // asynchronously on IO. Same fire-and-forget pattern as SharedPrefs.apply().
             _welcomeStickerVisible.value = true
+            viewModelScope.launch(ioDispatcher) { welcomeStore.restore() }
             tracker.log(AnalyticsEvent.WelcomeStickerUndone)
         } else {
             tracker.log(AnalyticsEvent.SoundDeleteUndone)
@@ -313,7 +325,8 @@ class SoundsViewModel(
         _deletedSoundEvent.value = null
         when {
             event == null -> Unit
-            isWelcomeStickerName(event.sound.name, getApplication()) -> welcomeStore.consume()
+            isWelcomeStickerName(event.sound.name, getApplication()) ->
+                viewModelScope.launch(ioDispatcher) { welcomeStore.consume() }
             event.sound.isBundled() -> Unit
             else -> deletePersistedSoundAsync(event.sound)
         }
@@ -324,16 +337,21 @@ class SoundsViewModel(
      * unchanged for non-MY_SOUNDS tabs, when the sticker is consumed, or while the snackbar window
      * is hiding it. Otherwise prepends on a fresh install or appends once the user has undone the
      * dismissal at least once (the demoted state).
+     *
+     * `wasRestored` is passed in as a snapshotted boolean (read once at the top of `loadSounds`)
+     * so this stays a pure function — easier to test, and avoids issuing extra DataStore reads
+     * inside the `_sounds.update` lambda.
      */
     private fun positionWelcomeIn(
         filtered: List<Sound>,
         deletedName: String?,
+        wasRestored: Boolean,
     ): List<Sound> {
         if (_selectedTab.value != AppTab.MY_SOUNDS || !_welcomeStickerVisible.value) return filtered
         val welcome = welcomeSticker(getApplication())
         return when {
             welcome.name == deletedName -> filtered
-            welcomeStore.wasRestored() -> filtered + welcome
+            wasRestored -> filtered + welcome
             else -> listOf(welcome) + filtered
         }
     }
@@ -378,6 +396,8 @@ class SoundsViewModel(
                             .thenBy { it.name.lowercase() },
                     )
             val cachedDurations = repo.durations.first()
+            // Read once per loadSounds — pure function over a snapshotted boolean, easier to test.
+            val welcomeWasRestored = welcomeStore.wasRestored()
             _soundDurations.update { current -> cachedDurations + current }
             _hasBundledSounds.value = allSounds.any { it.isBundled() }
             val playingName = _playingSound.value?.name
@@ -395,7 +415,7 @@ class SoundsViewModel(
                         AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
                     }.filter { it.name != deletedName }
-                val withWelcome = positionWelcomeIn(filtered, deletedName)
+                val withWelcome = positionWelcomeIn(filtered, deletedName, welcomeWasRestored)
                 if (playingName == null) {
                     withWelcome
                 } else {

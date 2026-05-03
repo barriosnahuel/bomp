@@ -34,13 +34,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     fun setUp() {
         runBlocking {
             SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
+            WelcomeStickerStore(ApplicationProvider.getApplicationContext()).clearForTest()
         }
-        ApplicationProvider
-            .getApplicationContext<android.content.Context>()
-            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
     }
@@ -504,12 +499,9 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
     @Test
     fun `welcome sticker is absent when flag is consumed`() {
-        ApplicationProvider
-            .getApplicationContext<android.content.Context>()
-            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean("consumed", true)
-            .commit()
+        runBlocking {
+            WelcomeStickerStore(ApplicationProvider.getApplicationContext()).consume()
+        }
         val viewModel = givenAViewModel()
         val welcomeTitle =
             ApplicationProvider
@@ -590,12 +582,18 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         assertThat(viewModel.welcomeStickerVisible.value).isTrue()
         assertThat(viewModel.sounds.value.any { it.name == welcomeTitle }).isTrue()
-        assertThat(
-            ApplicationProvider
-                .getApplicationContext<android.content.Context>()
-                .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
-                .getBoolean("consumed", false),
-        ).isFalse()
+        // The disk write happens via viewModelScope.launch(ioDispatcher) → withContext(IO) →
+        // store.edit. UnconfinedTestDispatcher runs the outer launch in line, but the
+        // withContext(IO) switches to real IO threads — poll until the disk reflects the restore.
+        val store = WelcomeStickerStore(ApplicationProvider.getApplicationContext())
+        runBlocking {
+            withTimeoutOrNull(5_000L) {
+                while (!store.isActive()) {
+                    kotlinx.coroutines.delay(25L)
+                }
+            }
+            assertThat(store.isActive()).isTrue()
+        }
     }
 
     @Test
@@ -610,12 +608,16 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         viewModel.confirmDelete()
 
-        assertThat(
-            ApplicationProvider
-                .getApplicationContext<android.content.Context>()
-                .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
-                .getBoolean("consumed", false),
-        ).isTrue()
+        // See the restoreSound test above for the polling rationale.
+        val store = WelcomeStickerStore(ApplicationProvider.getApplicationContext())
+        runBlocking {
+            withTimeoutOrNull(5_000L) {
+                while (store.isActive()) {
+                    kotlinx.coroutines.delay(25L)
+                }
+            }
+            assertThat(store.isActive()).isFalse()
+        }
         assertThat(viewModel.deletedSoundEvent.value).isNull()
     }
 
@@ -677,14 +679,12 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     @Test
     fun `loadSounds appends welcome at the end when wasRestored is true`() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        // Seed prefs as if a previous Undo happened: consumed=false, was_restored=true.
-        context
-            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean("consumed", false)
-            .putBoolean("was_restored", true)
-            .commit()
         runBlocking {
+            // Seed store as if a previous Undo happened: restore() flips consumed=false AND
+            // was_restored=true atomically.
+            val store = WelcomeStickerStore(context)
+            store.consume()
+            store.restore()
             val repo = SoundsRepository(context as android.app.Application)
             repo.save(Sound("custom-a", "custom-a.mp3"))
             repo.save(Sound("custom-b", "custom-b.mp3"))

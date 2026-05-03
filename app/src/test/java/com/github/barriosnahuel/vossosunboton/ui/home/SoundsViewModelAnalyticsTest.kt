@@ -40,13 +40,8 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         AnalyticsTrackerProvider.setForTest(fake)
         runBlocking {
             SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
+            WelcomeStickerStore(ApplicationProvider.getApplicationContext()).clearForTest()
         }
-        ApplicationProvider
-            .getApplicationContext<android.content.Context>()
-            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.startPlayingSound(any(), any()) } answers { nothing }
@@ -262,7 +257,9 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         eventName: String,
     ) {
         withTimeout(5_000L) {
-            while (fake.events.none { it.name == eventName }) {
+            // Snapshot via `toList()` so we don't iterate a list that another coroutine (e.g. the
+            // VM's init coroutine emitting WelcomeStickerShown from IO) may be appending to.
+            while (fake.events.toList().none { it.name == eventName }) {
                 delay(25L)
             }
         }

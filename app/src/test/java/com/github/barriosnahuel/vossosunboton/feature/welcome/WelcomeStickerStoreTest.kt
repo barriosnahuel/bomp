@@ -9,88 +9,90 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
 
 internal class WelcomeStickerStoreTest : AbstractRobolectricTest() {
     private lateinit var context: Context
+    private lateinit var store: WelcomeStickerStore
 
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        // Each test starts with a clean prefs file so the default state is observable.
-        context
-            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
+        store = WelcomeStickerStore(context)
+        // DataStore is a process-singleton via the top-level delegate; reset between tests so
+        // the default state is observable. Mirrors `SoundsRepository.clearForTest()` usage.
+        runBlocking { store.clearForTest() }
     }
 
     @Test
     fun `default state is active`() {
-        val store = WelcomeStickerStore(context)
-
-        assertThat(store.isActive()).isTrue()
+        runBlocking {
+            assertThat(store.isActive()).isTrue()
+        }
     }
 
     @Test
     fun `consume disables`() {
-        val store = WelcomeStickerStore(context)
+        runBlocking {
+            store.consume()
 
-        store.consume()
-
-        assertThat(store.isActive()).isFalse()
+            assertThat(store.isActive()).isFalse()
+        }
     }
 
     @Test
     fun `restore re-enables after consume`() {
-        val store = WelcomeStickerStore(context)
-        store.consume()
+        runBlocking {
+            store.consume()
 
-        store.restore()
+            store.restore()
 
-        assertThat(store.isActive()).isTrue()
+            assertThat(store.isActive()).isTrue()
+        }
     }
 
     @Test
     fun `consume is idempotent`() {
-        val store = WelcomeStickerStore(context)
+        runBlocking {
+            store.consume()
+            store.consume()
 
-        store.consume()
-        store.consume()
-
-        assertThat(store.isActive()).isFalse()
+            assertThat(store.isActive()).isFalse()
+        }
     }
 
     @Test
     fun `wasRestored defaults to false`() {
-        val store = WelcomeStickerStore(context)
-
-        assertThat(store.wasRestored()).isFalse()
+        runBlocking {
+            assertThat(store.wasRestored()).isFalse()
+        }
     }
 
     @Test
-    fun `restore sets both consumed=false AND wasRestored=true`() {
-        val store = WelcomeStickerStore(context)
-        store.consume()
+    fun `restore sets both consumed=false AND wasRestored=true atomically`() {
+        runBlocking {
+            store.consume()
 
-        store.restore()
+            store.restore()
 
-        assertThat(store.isActive()).isTrue()
-        assertThat(store.wasRestored()).isTrue()
+            assertThat(store.isActive()).isTrue()
+            assertThat(store.wasRestored()).isTrue()
+        }
     }
 
     @Test
     fun `wasRestored is sticky once set`() {
-        val store = WelcomeStickerStore(context)
-        store.consume()
-        store.restore()
+        runBlocking {
+            store.consume()
+            store.restore()
+            // A subsequent consume must NOT clear wasRestored — the demotion is permanent until
+            // the user manually dismisses again, which marks consumed = true and the flag becomes
+            // moot.
+            store.consume()
 
-        // A subsequent consume must NOT clear wasRestored — the demotion is permanent until
-        // the user manually dismisses again, which marks consumed = true and the flag becomes
-        // moot.
-        store.consume()
-
-        assertThat(store.wasRestored()).isTrue()
+            assertThat(store.wasRestored()).isTrue()
+        }
     }
 }

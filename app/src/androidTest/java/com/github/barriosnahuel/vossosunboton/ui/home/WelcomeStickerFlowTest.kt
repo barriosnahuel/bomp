@@ -71,8 +71,16 @@ internal class WelcomeStickerFlowTest : AbstractUiTest() {
 
             // The welcome must reappear BELOW the user's custom sound — row 0 belongs to the
             // user once they've shown they want this sticker back rather than letting it consume.
-            val welcomeTop = composeRule.onNodeWithText(title).fetchSemanticsNode().boundsInRoot.top
-            val customTop = composeRule.onNodeWithText("custom_1").fetchSemanticsNode().boundsInRoot.top
+            val welcomeTop =
+                composeRule
+                    .onNodeWithText(title)
+                    .fetchSemanticsNode()
+                    .boundsInRoot.top
+            val customTop =
+                composeRule
+                    .onNodeWithText("custom_1")
+                    .fetchSemanticsNode()
+                    .boundsInRoot.top
             assertThat(welcomeTop).isGreaterThan(customTop)
         }
     }
