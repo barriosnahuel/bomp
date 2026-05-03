@@ -14,13 +14,13 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -89,7 +89,10 @@ private val Context.analyticsCountersStore: DataStore<Preferences> by preference
     name = DataStoreCounterStore.DATASTORE_NAME,
     corruptionHandler =
         ReplaceFileCorruptionHandler { exception ->
-            Timber.e(exception, "Analytics counters DataStore corruption recovered with empty prefs")
+            // Surface as a non-fatal so we can detect silent state loss in the field. `Timber.e`
+            // alone goes through `ErrorTrackerTree` which drops the throwable — Crashlytics never
+            // sees it. Wrap to give the dashboard entry a searchable title.
+            Tracker.track(RuntimeException("Analytics counters DataStore corruption recovered", exception))
             emptyPreferences()
         },
 )
