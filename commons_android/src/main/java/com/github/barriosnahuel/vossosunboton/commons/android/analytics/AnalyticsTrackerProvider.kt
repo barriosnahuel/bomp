@@ -30,9 +30,10 @@ object AnalyticsTrackerProvider {
     // Firebase init is lazy: the first call to FirebaseAnalytics.getInstance(...) triggers GMS Dynamite module
     // loading + Cronet net stack init + Chimera ContentProvider query, all of which legitimately read from disk.
     // We can't envelope those reads inside the SDK, so we scope them at our call-site instead of suppressing
-    // detectDiskReads()/detectCustomSlowCalls() globally. SharedPreferences first-load is also wrapped because
-    // getSharedPreferences() reads the prefs file on first access. See StrictModeConfigurator for runtime-only
-    // violations (NonSdkApi reflection, framework finalizers) that can't be scoped this way.
+    // detectDiskReads()/detectCustomSlowCalls() globally. The two analytics DataStore primes also live here:
+    // each store's constructor does `runBlocking(IO) { store.data.first() }` once to populate its in-memory
+    // cache. The MainApplication.onCreate warm-up dispatches this whole `createTracker` call onto a background
+    // coroutine so the prime rarely blocks main in practice; the wrap stays as a correctness backstop.
     //
     // The @SuppressLint silences a cross-module MissingPermission check: FirebaseAnalytics.getInstance requires
     // INTERNET / ACCESS_NETWORK_STATE / WAKE_LOCK, declared by the consuming :app module's manifest — Lint can't
@@ -44,7 +45,7 @@ object AnalyticsTrackerProvider {
         return try {
             FirebaseAnalyticsTracker(
                 firebase = FirebaseAnalytics.getInstance(app),
-                store = SharedPrefsAnalyticsStore(app),
+                store = DefaultAnalyticsStore(DataStoreFirstFlagStore(app), DataStoreCounterStore(app)),
             )
         } finally {
             StrictMode.setThreadPolicy(previousPolicy)

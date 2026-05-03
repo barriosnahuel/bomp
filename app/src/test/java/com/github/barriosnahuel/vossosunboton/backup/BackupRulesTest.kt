@@ -66,6 +66,51 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val expectedInclude = "file" to "datastore/welcome-sticker.preferences_pb"
 
+        assertIncludedEverywhere(context, expectedInclude)
+    }
+
+    /**
+     * Lifetime user-property counters (`lifetime_plays`, `lifetime_shares`) MUST be backed up.
+     * Without backup, a restored device starts at 0 and the next `setUserProperty` overwrites
+     * the prior cumulative value in the Firebase user-property dashboard — corruption.
+     */
+    @Test
+    fun `analytics counters prefs are referenced by every backup include rule`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val expectedInclude = "file" to "datastore/analytics-counters.preferences_pb"
+
+        assertIncludedEverywhere(context, expectedInclude)
+    }
+
+    /**
+     * `first_*` event flags MUST NOT be backed up. Firebase's user-identity model is per-install
+     * (`first_open` is emitted per-install, not per-user). Backing up the flags would suppress
+     * the `first_*` series on the restored device — desyncs from Firebase's lifecycle. Each
+     * install should emit its own first-events series.
+     */
+    @Test
+    fun `analytics flags prefs are NOT referenced by any backup include rule`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val backupIncludes = parseIncludes(context.resources.getXml(R.xml.app_backup_rules))
+        val cloudIncludes =
+            parseIncludes(
+                context.resources.getXml(R.xml.app_data_extraction_rules),
+                parentTag = "cloud-backup",
+            )
+        val transferIncludes =
+            parseIncludes(
+                context.resources.getXml(R.xml.app_data_extraction_rules),
+                parentTag = "device-transfer",
+            )
+        val allIncludes = backupIncludes + cloudIncludes + transferIncludes
+
+        assertThat(allIncludes.none { (_, path) -> path.contains("analytics-flags") }).isTrue()
+    }
+
+    private fun assertIncludedEverywhere(
+        context: Context,
+        include: Pair<String, String>,
+    ) {
         val backupIncludes = parseIncludes(context.resources.getXml(R.xml.app_backup_rules))
         val cloudIncludes =
             parseIncludes(
@@ -78,9 +123,9 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
                 parentTag = "device-transfer",
             )
 
-        assertThat(backupIncludes).contains(expectedInclude)
-        assertThat(cloudIncludes).contains(expectedInclude)
-        assertThat(transferIncludes).contains(expectedInclude)
+        assertThat(backupIncludes).contains(include)
+        assertThat(cloudIncludes).contains(include)
+        assertThat(transferIncludes).contains(include)
     }
 
     private fun parseIncludes(
