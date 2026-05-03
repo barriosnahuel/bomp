@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Deeplink `push-me://open/explore` now falls back to Home when no bundled sounds are available, avoiding a blank Explore tab
 - Share sheet filename for bundled sounds now shows the button name instead of an internal prefix
 - Custom button audio files are now named after the user-provided sound name (non-alphanumeric chars replaced by underscores) instead of the generic `Button-custom-` prefix
+- Snackbar after deleting a custom sound now reads "Audio deleted"/"Audio borrado" (was "Button deleted"/"Botón borrado") so the copy matches how users describe what they removed
 
 ### Fixed
 - The app now opens the Home tab on launch instead of the Search tab
