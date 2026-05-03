@@ -42,11 +42,10 @@ import java.util.concurrent.ConcurrentHashMap
  *   rarely blocks main in practice.
  * - Reads (`isFirstTime`) are pure in-memory `getOrDefault` — sync, lock-free.
  * - Writes update the [ConcurrentHashMap] atomically (`putIfAbsent`) and dispatch the disk write
- *   on a process-lived [scope]. Same fire-and-forget pattern as `SharedPreferences.Editor.apply()`.
+ *   fire-and-forget on a process-lived [scope].
  *
  * Trade-off: a process kill between an in-memory write and the DataStore commit would lose the
- * `markFired` and re-emit the `first_*` variant on next launch. Same window the SharedPreferences
- * `apply()` had. Acceptable for telemetry.
+ * `markFired` and re-emit the `first_*` variant on next launch. Acceptable for telemetry.
  */
 class DataStoreFirstFlagStore(
     context: Context,
