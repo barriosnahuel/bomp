@@ -81,6 +81,20 @@ internal object TestData {
         runBlocking { repo(context).savePin(soundName, true) }
     }
 
+    /**
+     * Opt-in for instrumented tests that exercise the welcome flow. Clears the
+     * `consumed = true` default applied by [clearAll] so the welcome sticker appears at row 0
+     * of MY_SOUNDS again. Call AFTER [clearAll] in `@Before`, or whenever a fresh-install state
+     * is needed.
+     */
+    fun enableWelcomeSticker(context: Context) {
+        context
+            .getSharedPreferences(WelcomeStickerStore.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+    }
+
     private fun copyAssetToMusicDir(
         context: Context,
         destFileName: String,
