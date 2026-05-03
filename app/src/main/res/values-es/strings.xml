@@ -3,7 +3,7 @@
 
     <string name="app_share_chooser_title">Compartir vía</string>
     <string name="app_undo">Deshacer!</string>
-    <string name="app_feedback_button_deleted">Botón borrado</string>
+    <string name="app_feedback_audio_deleted">Audio borrado</string>
     <string name="app_feedback_button_saved">¡%1$s es tuyo!</string>
     <string name="app_feedback_generic_error_contact_support">Uh! Por favor contactá con soporte</string>
     <string name="app_navigation_menu_item_my_sounds">Mis audios</string>

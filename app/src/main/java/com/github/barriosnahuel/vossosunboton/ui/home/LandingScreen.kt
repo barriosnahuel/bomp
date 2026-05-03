@@ -204,7 +204,7 @@ private fun SnackbarEffects(
 ) {
     val deletedEvent by viewModel.deletedSoundEvent.collectAsState()
     val context = LocalContext.current
-    val buttonDeletedMessage = stringResource(R.string.app_feedback_button_deleted)
+    val audioDeletedMessage = stringResource(R.string.app_feedback_audio_deleted)
     val undoLabel = stringResource(R.string.app_undo)
     val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
     val buttonSavedTemplate = stringResource(R.string.app_feedback_button_saved)
@@ -241,7 +241,7 @@ private fun SnackbarEffects(
         if (deletedEvent == null) return@LaunchedEffect
         val result =
             snackbarHostState.showSnackbar(
-                message = buttonDeletedMessage,
+                message = audioDeletedMessage,
                 actionLabel = undoLabel,
                 duration = SnackbarDuration.Long,
             )
