@@ -13,7 +13,10 @@ import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStor
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.google.common.truth.Truth.assertThat
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
@@ -472,11 +475,13 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel {
+    private fun givenAViewModel(welcomeStore: WelcomeStickerStore? = null): SoundsViewModel {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val vm =
             SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
+                context,
                 ioDispatcher = UnconfinedTestDispatcher(),
+                welcomeStore = welcomeStore ?: WelcomeStickerStore(context),
             )
         runBlocking { vm.isInitialLoadComplete.first { it } }
         return vm
@@ -569,8 +574,11 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `restoreSound on welcome restores visibility and clears prefs flag`() {
-        val viewModel = givenAViewModel()
+    fun `restoreSound on welcome restores visibility and asks the store to restore`() {
+        val welcomeStore = mockk<WelcomeStickerStore>(relaxed = true)
+        coEvery { welcomeStore.isActive() } returns true
+        coEvery { welcomeStore.wasRestored() } returns false
+        val viewModel = givenAViewModel(welcomeStore = welcomeStore)
         val welcomeTitle =
             ApplicationProvider
                 .getApplicationContext<android.content.Context>()
@@ -582,23 +590,18 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         assertThat(viewModel.welcomeStickerVisible.value).isTrue()
         assertThat(viewModel.sounds.value.any { it.name == welcomeTitle }).isTrue()
-        // The disk write happens via viewModelScope.launch(ioDispatcher) → withContext(IO) →
-        // store.edit. UnconfinedTestDispatcher runs the outer launch in line, but the
-        // withContext(IO) switches to real IO threads — poll until the disk reflects the restore.
-        val store = WelcomeStickerStore(ApplicationProvider.getApplicationContext())
-        runBlocking {
-            withTimeoutOrNull(5_000L) {
-                while (!store.isActive()) {
-                    kotlinx.coroutines.delay(25L)
-                }
-            }
-            assertThat(store.isActive()).isTrue()
-        }
+        // Behavior assertion only — disk persistence is covered by `WelcomeStickerStoreTest`.
+        // The previous version polled a fresh store instance, which raced with the IO write and
+        // could permanently cache a stale read.
+        coVerify { welcomeStore.restore() }
     }
 
     @Test
     fun `confirmDelete on welcome calls welcomeStore consume and skips repo delete`() {
-        val viewModel = givenAViewModel()
+        val welcomeStore = mockk<WelcomeStickerStore>(relaxed = true)
+        coEvery { welcomeStore.isActive() } returns true
+        coEvery { welcomeStore.wasRestored() } returns false
+        val viewModel = givenAViewModel(welcomeStore = welcomeStore)
         val welcomeTitle =
             ApplicationProvider
                 .getApplicationContext<android.content.Context>()
@@ -608,16 +611,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         viewModel.confirmDelete()
 
-        // See the restoreSound test above for the polling rationale.
-        val store = WelcomeStickerStore(ApplicationProvider.getApplicationContext())
-        runBlocking {
-            withTimeoutOrNull(5_000L) {
-                while (store.isActive()) {
-                    kotlinx.coroutines.delay(25L)
-                }
-            }
-            assertThat(store.isActive()).isFalse()
-        }
+        // See the restoreSound test above for the rationale on verifying behavior over disk.
+        coVerify { welcomeStore.consume() }
         assertThat(viewModel.deletedSoundEvent.value).isNull()
     }
 
