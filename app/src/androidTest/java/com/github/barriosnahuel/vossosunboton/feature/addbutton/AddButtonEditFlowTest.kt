@@ -18,11 +18,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
-import androidx.test.espresso.intent.Intents.intended
+import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.ComponentNameMatchers.hasClassName
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent
-import androidx.test.espresso.intent.matcher.IntentMatchers.hasExtra
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -76,6 +75,8 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     fun saveWithValidNameNavigatesBackToLandingWithRenamedExtra() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
         val newName = "renamed_custom"
+        // Stub the LandingActivity launch so the framework does not actually start it (ActivityScenario only owns
+        // AddButtonActivity, and resolving LandingActivity here would race against AddButtonActivity finishing).
         intending(hasComponent(hasClassName(LandingActivity::class.java.name)))
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
 
@@ -84,14 +85,17 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
             nameField().performTextClearance()
             nameField().performTextInput(newName)
             composeRule.onNodeWithText(context.getString(R.string.app_addbutton_save_changes)).performClick()
+            // Inspect Intents.getIntents() directly instead of Intents.intended(): when a resumed activity exists,
+            // intended() routes the matcher through Espresso.onView(isRoot()).check(...), which triggers the
+            // class-wide ATF run from AbstractUiTest. The view tree is mid-transition (AddButtonActivity finishing,
+            // LandingActivity launch stubbed), so the Espresso check throws AssertionError, runCatching swallows
+            // it, and the wait times out — even though the intent was already in the recorded list.
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                // Hamcrest 1.3 (transitive in the test APK) lacks the 2-arg `allOf` Kotlin
-                // compiles to. Stick to one matcher per intended() call.
-                runCatching {
-                    intended(hasComponent(hasClassName(LandingActivity::class.java.name)))
-                    intended(hasExtra(LandingActivity.EXTRA_BUTTON_RENAMED, true))
-                    intended(hasExtra(LandingActivity.EXTRA_BUTTON_NAME, newName))
-                }.isSuccess
+                Intents.getIntents().any { intent ->
+                    intent.component?.className == LandingActivity::class.java.name &&
+                        intent.getBooleanExtra(LandingActivity.EXTRA_BUTTON_RENAMED, false) &&
+                        intent.getStringExtra(LandingActivity.EXTRA_BUTTON_NAME) == newName
+                }
             }
         }
     }

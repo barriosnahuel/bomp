@@ -98,6 +98,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 #### Fixed
 - `ShareFeature.share` now runs file-system access (`getFile` + first-time `copy` of bundled raw resources) on `Dispatchers.IO`, eliminating a long-standing main-thread disk write that could cause jank the first time a bundled sound was shared
+- `AddButtonEditFlowTest.saveWithValidNameNavigatesBackToLandingWithRenamedExtra` no longer flakes (~25–50% rate). `Intents.intended()` routes through `Espresso.onView(isRoot()).check(...)` when a resumed activity exists, which trips the class-wide ATF run from `AbstractUiTest` against a mid-transition view tree. Switched to inspecting `Intents.getIntents()` directly and matching with plain Kotlin — keeps the recorded-intent assertion without touching the view hierarchy
 
 #### Removed
 - Removed `techstack.md` and its companion `techstack.yml` (StackShare.io config that broke after the repo rename to `bomp` and was no longer maintained — last meaningful update predated the v2.0 Compose rewrite)
