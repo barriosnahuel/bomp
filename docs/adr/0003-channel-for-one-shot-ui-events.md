@@ -71,6 +71,12 @@ buffering).
   ViewModel KDoc — "loss-tolerant" or "must-arrive" — so the next person to
   audit knows which way to flip if a delivery bug surfaces.
 
+## Invariants
+
+Enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`):
+
+- The token `MutableSharedFlow` must NOT appear in any production sourceset (`app/src/main`, `commons_android/src/main`, `commons_file/src/main`, `model/src/main`). The check is intentionally permissive — even a kdoc mention triggers it, on the grounds that you should be reading this ADR before introducing the term. If `SharedFlow`-based events are genuinely warranted (replay semantics, ongoing-stream broadcast), supersede this ADR.
+
 ## Cross-references
 
 - `CLAUDE.md` § *Project-specific overrides* → "One-shot UI events: `Channel<T>`".

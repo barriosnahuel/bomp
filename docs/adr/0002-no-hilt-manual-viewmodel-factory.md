@@ -75,6 +75,12 @@ Hilt, Koin, or any other DI framework without superseding this ADR.
   with non-trivial graph depth. At that point, a successor ADR captures the
   migration plan.
 
+## Invariants
+
+Enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`):
+
+- No `import dagger.hilt.*`, `import org.koin.*`, or `import javax.inject.*` in any production sourceset (`app/src/main`, `commons_android/src/main`, `commons_file/src/main`, `model/src/main`). If a DI framework is genuinely needed, supersede this ADR.
+
 ## Cross-references
 
 - `CLAUDE.md` § *Project-specific overrides* → "DI: manual factories, no Hilt".
