@@ -36,8 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew spotlessApply
 ```
 
-## Tooling & Environment
-- **Android CLI**: Available via `adb` (Android Debug Bridge), `fastboot`, and `emulator`.
+The Android command-line tools — `adb` (Android Debug Bridge), `fastboot`, and `emulator` — are on `PATH` and available directly when needed (booting the test AVD, sideloading, capturing screenshots, etc.).
 
 ## Module Architecture
 
@@ -52,11 +51,13 @@ Dependency direction: `app` → `model`, `commons_android`, `commons_file`. No d
 
 ## Persistence
 
+This section captures the long-form rationale; the one-line summary lives in § *Project-specific overrides* → Persistence.
+
 Use **Jetpack DataStore Preferences** for any new persistent key-value storage. The pattern lives in `model/.../SoundsRepository.kt` (top-level `Context.bompsStore` delegate via `preferencesDataStore(...)` + a `ReplaceFileCorruptionHandler`). Mirror it for new stores. `WelcomeStickerStore`, `DataStoreFirstFlagStore`, and `DataStoreCounterStore` are reference implementations.
 
 `SharedPreferences` is **forbidden** in this project. The grep `getSharedPreferences|EncryptedSharedPreferences` must return zero hits in `src/main` across all modules. Reviewers should reject any new SharedPrefs in PRs.
 
-When you need to keep a synchronous read API on top of DataStore (e.g. the analytics tracker, where call sites fire events right before a navigate-away to a chooser/browser and the launch could be lost), use the in-memory-cache + async-write-back pattern from `commons_android/.../DataStoreFirstFlagStore.kt` and `DataStoreCounterStore.kt`. Mirrors Firebase Analytics' own sync-API + internal-buffer design — preserves event durability when the OS suspends our process. The cache prime happens once via `runBlocking(IO)` inside the store constructor and lives inside the `StrictMode.allowThreadDiskReads` block in `AnalyticsTrackerProvider.createTracker`. `MainApplication.onCreate` warm-up dispatches the prime onto a background coroutine so it rarely blocks main in practice.
+When you need to keep a synchronous read API on top of DataStore (e.g. the analytics tracker, where call sites fire events right before a navigate-away to a chooser/browser and the launch could be lost), use the in-memory-cache + async-write-back pattern from `commons_android/.../DataStoreFirstFlagStore.kt` and `DataStoreCounterStore.kt`. Mirrors Firebase Analytics' own sync-API + internal-buffer design — preserves event durability when the OS suspends our process. The cache prime happens once via `runBlocking(IO)` inside the store constructor and lives inside the `StrictMode.allowThreadDiskReads` block in `AnalyticsTrackerProvider.createTracker`. `MainApplication.onCreate` warm-up dispatches the prime onto a background coroutine so it rarely blocks main in practice. This is the documented exception to the no-`runBlocking`-in-production rule declared in § *Project-specific overrides* → Threading; do not generalize this pattern beyond the analytics-tracker cache prime.
 
 For test data shape: every store ships a `@VisibleForTesting(otherwise = NONE) suspend fun clearForTest()` so test setUp can reset state without poking at the file system.
 
@@ -329,9 +330,7 @@ Every `.kt` source file must start with the AGPLv3 copyright block (enforced by 
 
 If `./gradlew check` fails with a Spotless violation, run `./gradlew spotlessApply` to auto-fix all files.
 
-## About screen
-
-**Do not remove or hide the About screen.** It is the "Appropriate Legal Notices" mechanism required by AGPLv3 §0. Its entry point is the TopAppBar overflow menu in `LandingScreen.kt`.
+**Do not remove or hide the About screen.** It is the "Appropriate Legal Notices" mechanism required by AGPLv3 §0 (paired with the copyright headers above). Its entry point is the TopAppBar overflow menu in `LandingScreen.kt`.
 
 ## Sources of truth for Android / Kotlin / Compose decisions
 
@@ -501,12 +500,14 @@ destinations require an explicit branch in the `when`; the `else` stays
 
 ### Backup hygiene
 
-Before adding any new SharedPreferences key or file path that could contain
-sensitive data (auth tokens, account identifiers, private user content), add
-explicit `<exclude>` entries to both `app/src/main/res/xml/app_backup_rules.xml`
-and `app/src/main/res/xml/app_data_extraction_rules.xml`. Today nothing
-sensitive is stored, so the rules are intentionally permissive (`<include>` of
-`my-prefs` and the `Music` external dir). When that changes, the exclusion
+Before adding any new DataStore preference file or persistent file path that
+could contain sensitive data (auth tokens, account identifiers, private user
+content), add explicit `<exclude>` entries to both
+`app/src/main/res/xml/app_backup_rules.xml` and
+`app/src/main/res/xml/app_data_extraction_rules.xml`. Today nothing sensitive
+is stored, so the rules are intentionally permissive — they `<include>` the
+`Music` external directory and the three DataStore preference files (`bomps`,
+`welcome-sticker`, `analytics-counters`). When that changes, the exclusion
 ships in the same commit as the new key.
 
 ### Exported components default to false
@@ -617,10 +618,8 @@ https://project-url
 - Never add a `Fixed` entry for a bug introduced in the same `[unreleased]` cycle. If end-users never experienced the regression, it has no changelog entry — git history provides the traceability
 - **User-facing first, technical under "For nerds":** within `## [unreleased]`, list user-facing changes under the standard `### Added/Changed/Fixed/Removed` headings, then put technical/contributor-only changes under a `### For nerds 🤓` subsection with `#### Added/Changed/Fixed/Removed` sub-headings (omit any that would be empty). A change is **user-facing** if a normal user would notice it: visible UI, labels, copy, behavior, permissions, performance they can feel. **Technical** means: build/CI/tooling, dependency bumps, internal refactors, test infrastructure, Play Console assets internal to the repo, README/docs, analytics instrumentation. This split applies only to `[unreleased]` and going forward — released versions stay as written
 
-## Handoff notes
+## Handoff notes & issue tracking
+
+GitHub Issues are open for external feature requests and bug reports. Out-of-scope work identified during development is noted in the PR description, not opened as a tracking issue.
 
 `handoff/` contains session handoff documents with decisions taken, key file paths, and pending work. Ignored by git. Only read these files when the user explicitly references them to continue a previous topic.
-
-## Issue tracking
-
-GitHub Issues are open for external feature requests and bug reports. Out-of-scope work identified during development is noted in the PR description; session context goes in handoff notes.
