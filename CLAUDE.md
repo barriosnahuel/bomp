@@ -94,7 +94,7 @@ Decisions this repo took that diverge from — or narrow — the generic Android
 - **Networking, image loading, Room:** none in the dependency graph today. New deps for any of these need an ADR before the feature PR.
 - **Analytics, error tracking, StrictMode, security, design system, accessibility:** see the dedicated sections below — those rules are stricter than any generic Android guidance and override it.
 
-**Each substantive override should be backed by an ADR.** This section is the index; the long-form rationale lives in `docs/adr/*.md`. Absence of an ADR for a substantive override is debt, not permission to flip silently.
+**Each substantive override should be backed by an ADR.** This section is the index; the long-form rationale lives in `docs/adr/*.md`. Absence of an ADR for a substantive override is debt, not permission to flip silently. ADRs that have grep-able invariants declare them in an `## Invariants` section enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`) — if the script fails, the message names the ADR you broke.
 
 **Re-validate on dependency changes.** Bumps to `gradle/libs.versions.toml`, the Gradle wrapper, or any `build.gradle(.kts)` (especially Compose BOM, AGP, Kotlin, coroutines, lifecycle, DataStore, or new deps) — re-read this section and § *Sources of truth* in the same PR; update if the upstream pattern changed. Same after any upgrade skill (`agp-9-upgrade`, `navigation-3`, `play-billing-library-version-upgrade`, `migrate-xml-views-to-jetpack-compose`).
 

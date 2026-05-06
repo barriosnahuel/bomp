@@ -88,6 +88,12 @@ Use the in-memory cache + async write-back pattern, with these specifics:
   a fake tracker (`FakeAnalyticsTracker`); the production cache-prime path
   does not run in unit tests.
 
+## Invariants
+
+Enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`):
+
+- `runBlocking(...)` / `runBlocking { ... }` must only appear in the three allowlisted files: `commons_android/.../analytics/DataStoreFirstFlagStore.kt`, `commons_android/.../analytics/DataStoreCounterStore.kt`, `commons_android/.../analytics/AnalyticsTrackerProvider.kt`. Any other file that introduces `runBlocking` fails the check. Renaming or moving an allowlisted file requires updating the allowlist in the script (and updating this ADR accordingly).
+
 ## Cross-references
 
 - `CLAUDE.md` § *Persistence* (rule SSOT) and § *Project-specific overrides*
