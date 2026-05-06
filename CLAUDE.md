@@ -333,6 +333,57 @@ If `./gradlew check` fails with a Spotless violation, run `./gradlew spotlessApp
 
 **Do not remove or hide the About screen.** It is the "Appropriate Legal Notices" mechanism required by AGPLv3 §0. Its entry point is the TopAppBar overflow menu in `LandingScreen.kt`.
 
+## Sources of truth for Android / Kotlin / Compose decisions
+
+Do not invent or recall best practices from training data alone — the platform moves and so does the recommended pattern. When making a non-trivial decision in any of the areas below, **consult the authoritative source first** (WebFetch the page, or invoke the linked skill) and **cite it** in the response. If you can't reach the source, say so and mark the recommendation as a heuristic.
+
+| Area | Authoritative source |
+|---|---|
+| Jetpack Compose: state, recomposition, side-effects, performance, lifecycle-aware APIs | https://developer.android.com/develop/ui/compose |
+| Navigation in Compose | Linked skill `navigation-3` (covers Navigation 3 install/migration, deep links, multi-backstack, Hilt/ViewModel integration) |
+| XML view → Compose migration | Linked skill `migrate-xml-views-to-jetpack-compose` |
+| Edge-to-edge / system bars / insets | Linked skill `edge-to-edge` |
+| Coroutines, Flow, StateFlow, structured concurrency, dispatchers, testing with `runTest` | https://kotlinlang.org/docs/coroutines-guide.html and https://developer.android.com/kotlin/coroutines |
+| Lifecycle: `repeatOnLifecycle`, `collectAsStateWithLifecycle`, lifecycle-aware components | https://developer.android.com/topic/libraries/architecture/lifecycle |
+| App architecture (UI layer / domain / data, unidirectional data flow, ViewModel + UI state, UI events) | https://developer.android.com/topic/architecture and https://developer.android.com/topic/architecture/ui-layer/events |
+| DataStore (Preferences/Proto), migration from SharedPreferences | https://developer.android.com/topic/libraries/architecture/datastore |
+| Background work, WorkManager, foreground services, exact alarms | https://developer.android.com/develop/background-work |
+| Permissions / runtime permissions / scoped storage | https://developer.android.com/training/permissions |
+| Accessibility in Compose (semantics, traversal order, click labels, custom actions, large text) | https://developer.android.com/develop/ui/compose/accessibility — pairs with the project's WCAG 2.2 AA functional requirement (see § Accessibility) |
+| AGP 9 migration | Linked skill `agp-9-upgrade` |
+| R8 keep rules audit | Linked skill `r8-analyzer` |
+| Play Billing | Linked skill `play-billing-library-version-upgrade` |
+| Kotlin idioms, conventions, KEEP proposals | https://kotlinlang.org/docs/coding-conventions.html and KEEP at https://github.com/Kotlin/KEEP |
+| Project-specific architectural decisions | `docs/adr/*.md` — read the relevant ADR before changing the area it governs |
+
+**When to actually consult vs. answer from memory:**
+- **Do consult** when: I'm brainstorming an alternative (see § Working style in user-level CLAUDE.md), the area is version-sensitive (Compose / AGP / Material 3 evolved recently), the change touches lifecycle / threading / security / accessibility, or you'd otherwise be guessing.
+- **Skip consult** for trivial mechanical edits, copy/string changes inside the locale rules, or when the answer is purely about a project convention already documented in this file.
+- **Cite or doubt:** every recommendation grounded in one of these sources should name the source (URL or skill name). If you're not consulting, say so explicitly so I know the answer is heuristic.
+
+## Project-specific overrides (read before changing platform-touching code)
+
+These are decisions this repo took that diverge from — or narrow — the generic Android recommendation. They override the public docs *for this codebase*. If a generic best-practice answer conflicts with one of these, the override wins (or, if you think the override is wrong, raise it as a discussion before changing it; don't silently flip).
+
+- **DI: manual factories, no Hilt — deliberate small-app trade-off.** ViewModels are constructed via `viewModelFactory { initializer { ... } }` (see `SoundsViewModel.kt`). Google's official recommendation for production apps is Hilt; we chose manual factories because at the current scale (one ViewModel, four modules, no scoped repositories beyond `DataStore`-backed stores) the build/test tax of Hilt (KSP, `HiltAndroidRule`, `HiltTestApplication`, module mocking) outweighs its benefits. **Revisit when:** ViewModel/repository/scoped-dependency count grows to the point where boilerplate factories become friction, or when a feature requires `@AssistedInject`-style construction. Until then, do not introduce Hilt, Koin, or any DI framework without an ADR under `docs/adr/`.
+- **One-shot UI events: `Channel<T>` + `receiveAsFlow()` — accepted today, with caveats.** Pattern visible in `SoundsViewModel` (`_buttonSavedEvent: Channel<String>`). Note that the current Compose-team guidance leans toward **event-as-state** (event field inside `UiState` + `onEventConsumed()` callback) — see https://developer.android.com/topic/architecture/ui-layer/events. The `Channel` pattern can drop events if the app is backgrounded between emit and collect. Reuse the existing `Channel` pattern for consistency for now; **revisit** if we hit a real "lost event in background" report or when a new flow is sensitive enough that delivery guarantees matter (then migrate that flow to event-as-state).
+- **Async / state model:** `viewModelScope` + `StateFlow` for screen state. Don't add a `SharedFlow` "for events" — pick `Channel` (existing convention) or migrate to event-as-state if the case warrants the upgrade per the bullet above.
+- **Threading:** dispatchers are *constructor-injected* into ViewModels (default `Dispatchers.IO`). No `runBlocking` in production code, except the documented analytics-cache-prime exception captured in § *Persistence*. No raw `Thread { ... }` or `AsyncTask`. No work on the main thread for I/O.
+- **Persistence:** see § *Persistence* — DataStore Preferences is the chosen mechanism, `SharedPreferences` is forbidden, the sync-API pattern via in-memory cache + async write-back is the documented solution for call-sites that need synchronous reads.
+- **Networking, image loading, Room:** none of these are in the dependency graph today. If a feature requires one, raise it before adding — the addition itself is a design decision that needs an ADR, not a side-effect of a feature PR.
+- **Analytics, error tracking, StrictMode, security boundaries, design system, accessibility:** see the dedicated sections in this file. Those rules are stricter than any generic Android guidance and override it.
+
+**Each substantive override should be backed by an ADR.** This section is the **index / one-liner summary**; the long-form rationale (context, options considered, decision, consequences) lives in `docs/adr/*.md`. The pattern already exists with `0001-local-ui-test-suite.md`. New overrides added here that are non-trivial decisions — *"no Hilt — manual `viewModelFactory`"*, *"`Channel<T>` for one-shot UI events instead of event-as-state"* — should ship with (or be followed by) a matching ADR that captures the trade-offs. CLAUDE.md tells you *what* the override is; the ADR tells you *why* and *what we considered*. Treat the absence of an ADR for a substantive override as a debt to be paid, not as a green light to flip the decision silently.
+
+**Re-validate on dependency changes.** When a PR updates `gradle/libs.versions.toml`, `gradle/wrapper/gradle-wrapper.properties`, or any `build.gradle(.kts)` with library/plugin version bumps — especially Compose BOM, AGP, Kotlin, coroutines, lifecycle, DataStore, or anything that introduces a *new* dependency — re-read both this section and § *Sources of truth* in the same PR. If the upstream recommended pattern changed in the new version (e.g. Compose introduces a new lifecycle-aware API, AGP deprecates a config, a new lib enters the graph that contradicts an override), update these sections in the same PR as the bump. Dependabot bumps count — don't merge them blind. Same applies after running any of the upgrade skills (`agp-9-upgrade`, `navigation-3`, `play-billing-library-version-upgrade`, `migrate-xml-views-to-jetpack-compose`): the migration's exit criteria includes re-reading these sections.
+
+### Known migration debt
+
+Things the current codebase does that are *not* the recommended pattern. New code should use the recommended form; existing call-sites migrate when touched.
+
+- **`collectAsState()` → `collectAsStateWithLifecycle()`.** The lifecycle-aware variant stops collection in `STOPPED` state, which avoids wasted work and stale `StateFlow` references when the screen is off. New Composables collecting a ViewModel-owned `StateFlow` must use `collectAsStateWithLifecycle()`; existing call-sites migrate when their file is touched for another reason.
+- **String resources: every user-facing string via `stringResource(R.string.app_*)`.** Not technically an override (this is plain best practice for i18n + a11y + maintainability) but flagged here because it's worth catching in review. No hardcoded literals in Composables. `contentDescription` for non-decorative `Icon`/`Image` is mandatory and must come from a string resource (see § *Accessibility*); decorative assets use `contentDescription = null` explicitly.
+
 ## Pre-PR checklist
 
 Before opening a PR for any feature or bug fix, verify:
