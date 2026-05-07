@@ -129,3 +129,9 @@ for genuinely on-demand functionality.
   complement without disturbing this setup.
 - Performance testing (frame timing, jank) — not in scope.
 - Full TalkBack-scripted runs — explicitly rejected in Option C above.
+
+## Invariants
+
+Enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`):
+
+- `connected(Debug)?AndroidTest` must NOT appear in `.circleci/config.yml`. The instrumented suite is intentionally local-only; if you wire it into CI, supersede this ADR or revert.
