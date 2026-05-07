@@ -263,6 +263,22 @@ HTML report: `app/build/reports/androidTests/connected/debug/index.html`. Raw XM
 - After any change to a Composable, ViewModel, intent flow, navigation, deep link, or persistence layer.
 - Not required for: CHANGELOG, copy strings, README, comments, off-device tooling config.
 
+### Synchronization (avoid bare `waitForIdle()` for state-dependent nodes)
+
+`composeRule.waitForIdle()` waits only for Compose recompositions to settle — it does **not** wait for the `DataStore-read → StateFlow-emit → render` chain to finish seeding the screen. An immediate `performClick`/`assertIsDisplayed` after `waitForIdle()` resolves against whatever semantics tree exists *now*, which is the canonical instrumented-test race in this repo (PR #1111 fixed two cases of this exact shape).
+
+For any node whose existence depends on ViewModel/DataStore-emitted state, use the `awaitNode*` extensions on `ComposeTestRule` defined in `app/src/androidTest/.../ComposeTestExtensions.kt`:
+
+```kotlin
+composeRule.awaitNodeWithContentDescription(pinLabel()).performClick()
+composeRule.awaitNodeWithText(homeTabLabel()).assertIsDisplayed()
+composeRule.awaitNode(hasSetTextAction()).performTextInput(name)
+```
+
+These extensions fuse `waitUntil { onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }` with the lookup and return a `SemanticsNodeInteraction`, so the call site is shorter than the unsafe form — the right thing is the easy thing.
+
+`waitForIdle()` (or an inline `waitUntil { onAllNodes(...).isNotEmpty() }`) is still the correct call in four cases: (a) after a deterministic UI action (`performClick`, `pressBack`) where you just need recomposition to flush before the next assertion, (b) before negative assertions like `onAllNodes(...).assertCountEquals(0)` (the helper waits for *presence*; absence needs the inverse predicate, which is rare enough not to factor), (c) before `onAllNodes(...).onFirst()` chains (the helper does not yet cover the "first of N" shape — keep the inline `waitUntil` in those spots), (d) when the matcher would resolve to *more than one* node in the tree (e.g. a search query the user typed also appears in a result card and in the underlying screen behind the overlay) — the helper's terminal `onNodeWithText`/`onNodeWithContentDescription`/`onNode` throws on multi-match, so use `waitUntil { onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }` and assert presence directly.
+
 ## Pre-PR checklist
 
 Before opening a PR for any feature or bug fix, verify:
