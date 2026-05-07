@@ -11,7 +11,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -22,6 +21,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
 import org.junit.Assume.assumeTrue
@@ -44,14 +45,9 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     @Test
     fun bottomBarIsVisibleWhenBundledSoundsExist() {
         ActivityScenario.launch(LandingActivity::class.java).use {
-            // The bottom bar renders only after the bundled-sounds StateFlow emits a non-empty list;
-            // waitForIdle() can return before that emission lands, so poll for the tab label first.
             // Find by label text — the icon's contentDescription only lives in the unmerged
             // tree, while the label (a Text composable) bubbles up through merge.
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule.onAllNodes(hasText(homeTabLabel())).fetchSemanticsNodes().isNotEmpty()
-            }
-            composeRule.onNodeWithText(homeTabLabel()).assertIsDisplayed()
+            composeRule.awaitNodeWithText(homeTabLabel()).assertIsDisplayed()
             composeRule.onNodeWithText(exploreTabLabel()).assertIsDisplayed()
         }
     }
@@ -62,10 +58,8 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
         val firstBundledName = bundled.first().name
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(exploreTabLabel()).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(firstBundledName).assertIsDisplayed()
+            composeRule.awaitNodeWithText(exploreTabLabel()).performClick()
+            composeRule.awaitNodeWithText(firstBundledName).assertIsDisplayed()
             // The seeded "custom_1" lives only on Home; switching to Explore hides it.
             composeRule.onAllNodes(hasText("custom_1")).assertCountEquals(0)
         }
@@ -76,10 +70,8 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
         val firstBundledName = bundled.first().name
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(exploreTabLabel()).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(firstBundledName).performTouchInput { swipeLeft() }
+            composeRule.awaitNodeWithText(exploreTabLabel()).performClick()
+            composeRule.awaitNodeWithText(firstBundledName).performTouchInput { swipeLeft() }
             composeRule.waitForIdle()
             // Card stays at the same position with the pin icon (not unpin) — swipe-left
             // only fires a reject haptic for bundled sounds.
@@ -96,16 +88,9 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
         val targetName = bundled.first().name
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(exploreTabLabel()).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(targetName).performTouchInput { swipeRight() }
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule
-                    .onAllNodesWithContentDescription(unpinLabel())
-                    .fetchSemanticsNodes()
-                    .isNotEmpty()
-            }
+            composeRule.awaitNodeWithText(exploreTabLabel()).performClick()
+            composeRule.awaitNodeWithText(targetName).performTouchInput { swipeRight() }
+            composeRule.awaitNodeWithContentDescription(unpinLabel()).assertIsDisplayed()
         }
     }
 
@@ -114,21 +99,25 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
         val targetName = bundled.first().name
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(exploreTabLabel()).performClick()
-            composeRule.waitForIdle()
+            composeRule.awaitNodeWithText(exploreTabLabel()).performClick()
+            // Wait for the bundled cards to seed before grabbing the first pin icon.
+            // `onAllNodes(...).onFirst()` is the "first of N" shape that the helper does not cover;
+            // the wait + lookup stays inline.
+            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeRule.onAllNodesWithContentDescription(pinLabel()).fetchSemanticsNodes().isNotEmpty()
+            }
             composeRule.onAllNodesWithContentDescription(pinLabel()).onFirst().performClick()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(unpinLabel()).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(unpinLabel()).assertIsDisplayed()
         }
     }
 
     @Test
     fun exploreTabExposesA11yContentDescriptions() {
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(exploreTabLabel()).performClick()
-            composeRule.waitForIdle()
+            composeRule.awaitNodeWithText(exploreTabLabel()).performClick()
+            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeRule.onAllNodesWithContentDescription(playLabel()).fetchSemanticsNodes().isNotEmpty()
+            }
             composeRule.onAllNodesWithContentDescription(playLabel()).onFirst().assertHasClickAction()
             composeRule.onAllNodesWithContentDescription(shareLabel()).onFirst().assertHasClickAction()
             composeRule.onAllNodesWithContentDescription(pinLabel()).onFirst().assertHasClickAction()

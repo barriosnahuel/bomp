@@ -11,7 +11,6 @@ import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
@@ -20,6 +19,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
+import com.github.barriosnahuel.vossosunboton.WAIT_TIMEOUT_MS
+import com.github.barriosnahuel.vossosunboton.awaitNode
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -30,11 +33,9 @@ internal class SearchOverlayTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).performClick()
-            composeRule.waitForIdle()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
             // The overlay's TopAppBar back arrow uses "Close search" as content description.
-            composeRule.onNodeWithContentDescription(closeSearchLabel()).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(closeSearchLabel()).assertIsDisplayed()
         }
     }
 
@@ -43,15 +44,13 @@ internal class SearchOverlayTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 3)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNode(hasSetTextAction()).performTextInput("custom_2")
-            // The SearchOverlay surfaces "custom_2" once the 200ms debounce fires.
-            // Filter logic itself is covered by SoundsViewModelSearchTest — here we only
-            // verify the matching result becomes visible (the underlying LandingScreen
-            // remains in the semantic tree behind the overlay so we can't assert custom_1
-            // is *absent*).
+            composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
+            composeRule.awaitNode(hasSetTextAction()).performTextInput("custom_2")
+            // The SearchOverlay surfaces "custom_2" once the 200ms debounce fires. After typing,
+            // "custom_2" lives in three places at once: the editable input itself, the overlay
+            // result card, and the underlying LandingScreen card still in the semantics tree
+            // behind the overlay — so awaitNodeWithText (single-node + assertIsDisplayed) can't
+            // be used here. Wait for *presence* with onAllNodes instead.
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
                 composeRule.onAllNodes(hasText("custom_2")).fetchSemanticsNodes().isNotEmpty()
             }
@@ -63,16 +62,9 @@ internal class SearchOverlayTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNode(hasSetTextAction()).performTextInput("zzz_no_match")
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule
-                    .onAllNodes(hasText(context.getString(R.string.app_search_empty_headline)))
-                    .fetchSemanticsNodes()
-                    .isNotEmpty()
-            }
+            composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
+            composeRule.awaitNode(hasSetTextAction()).performTextInput("zzz_no_match")
+            composeRule.awaitNodeWithText(context.getString(R.string.app_search_empty_headline)).assertIsDisplayed()
         }
     }
 
@@ -81,16 +73,12 @@ internal class SearchOverlayTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNode(hasSetTextAction()).performTextInput("custom")
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(clearSearchLabel()).performClick()
-            composeRule.waitForIdle()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
+            composeRule.awaitNode(hasSetTextAction()).performTextInput("custom")
+            composeRule.awaitNodeWithContentDescription(clearSearchLabel()).performClick()
             // Initial hint is back (overlay still open) and the back arrow remains visible.
             composeRule
-                .onNodeWithText(context.getString(R.string.app_search_initial_hint))
+                .awaitNodeWithText(context.getString(R.string.app_search_initial_hint))
                 .assertIsDisplayed()
             composeRule.onNodeWithContentDescription(closeSearchLabel()).assertIsDisplayed()
         }
@@ -101,10 +89,8 @@ internal class SearchOverlayTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(closeSearchLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(closeSearchLabel()).performClick()
             composeRule.waitForIdle()
             composeRule.onNodeWithContentDescription(closeSearchLabel()).assertIsNotDisplayed()
             // FAB returns to view → we are back on Landing.
@@ -117,12 +103,11 @@ internal class SearchOverlayTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).performClick()
-            composeRule.waitForIdle()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
+            // Wait for overlay to be on screen before pressing back, otherwise pressBack closes the Activity instead.
+            composeRule.awaitNodeWithContentDescription(closeSearchLabel()).assertIsDisplayed()
             Espresso.pressBack()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).assertIsDisplayed()
         }
     }
 
@@ -131,13 +116,10 @@ internal class SearchOverlayTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(closeSearchLabel()).assertHasClickAction()
-            composeRule.onNode(hasSetTextAction()).performTextInput("c")
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(clearSearchLabel()).assertHasClickAction()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(closeSearchLabel()).assertHasClickAction()
+            composeRule.awaitNode(hasSetTextAction()).performTextInput("c")
+            composeRule.awaitNodeWithContentDescription(clearSearchLabel()).assertHasClickAction()
         }
     }
 
@@ -146,8 +128,4 @@ internal class SearchOverlayTest : AbstractUiTest() {
     private fun closeSearchLabel() = context.getString(R.string.app_search_close)
 
     private fun clearSearchLabel() = context.getString(R.string.app_search_clear)
-
-    companion object {
-        private const val WAIT_TIMEOUT_MS = 5_000L
-    }
 }
