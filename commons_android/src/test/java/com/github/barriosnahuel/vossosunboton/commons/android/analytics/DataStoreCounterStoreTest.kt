@@ -9,9 +9,16 @@ import android.content.Context
 import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,12 +30,19 @@ import org.robolectric.annotation.Config
 internal class DataStoreCounterStoreTest {
     private lateinit var context: Context
     private lateinit var store: DataStoreCounterStore
+    private lateinit var writebackScope: CoroutineScope
 
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        store = DataStoreCounterStore(context)
+        writebackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        store = DataStoreCounterStore(context, writebackScope)
         runBlocking { store.clearForTest() }
+    }
+
+    @After
+    fun tearDown() {
+        writebackScope.cancel()
     }
 
     @Test
@@ -83,8 +97,7 @@ internal class DataStoreCounterStoreTest {
                     launch { store.increment("converge") }
                 }
             }
-            // Give the launched disk writes a moment to drain through Dispatchers.IO.
-            Thread.sleep(WRITE_BACK_GRACE_MS)
+            drainWritebacks()
 
             val freshStore = DataStoreCounterStore(context)
             assertThat(store.get("converge")).isEqualTo(100L)
@@ -95,7 +108,7 @@ internal class DataStoreCounterStoreTest {
     fun `state survives instantiating a new store backed by the same DataStore file`() =
         runBlocking {
             repeat(7) { store.increment("persist") }
-            Thread.sleep(WRITE_BACK_GRACE_MS)
+            drainWritebacks()
 
             val freshStore = DataStoreCounterStore(context)
 
@@ -106,7 +119,7 @@ internal class DataStoreCounterStoreTest {
     fun `clearForTest wipes both in-memory cache and disk state`() =
         runBlocking {
             store.increment("foo")
-            Thread.sleep(WRITE_BACK_GRACE_MS)
+            drainWritebacks()
 
             store.clearForTest()
 
@@ -115,7 +128,14 @@ internal class DataStoreCounterStoreTest {
             assertThat(freshStore.get("foo")).isEqualTo(0L)
         }
 
-    companion object {
-        private const val WRITE_BACK_GRACE_MS = 250L
+    /**
+     * Joins every fire-and-forget `scope.launch { store.edit { ... } }` registered by [DataStoreCounterStore.increment]
+     * (and friends). Replaces a `Thread.sleep` grace period so the assertions that read disk state run after every
+     * pending write has actually committed — the previous fixed-time wait raced under the bumped DataStore 1.2.x.
+     */
+    private suspend fun drainWritebacks() {
+        writebackScope.coroutineContext.job.children
+            .toList()
+            .joinAll()
     }
 }
