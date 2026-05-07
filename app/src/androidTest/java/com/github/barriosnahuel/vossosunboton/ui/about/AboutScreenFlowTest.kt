@@ -26,6 +26,8 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.hasData
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import org.hamcrest.Description
 import org.hamcrest.Matcher
@@ -41,8 +43,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     fun overflowMenuOpensAboutScreen() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
-            composeRule.onNodeWithContentDescription(backLabel()).assertIsDisplayed()
-            composeRule.onNodeWithText(licenseLabel()).assertIsDisplayed()
+            composeRule.awaitNodeWithText(licenseLabel()).assertIsDisplayed()
         }
     }
 
@@ -51,9 +52,8 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule.onNodeWithContentDescription(backLabel()).performClick()
-            composeRule.waitForIdle()
             // Search FAB on Landing is back in view.
-            composeRule.onNodeWithContentDescription(context.getString(R.string.app_search)).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(context.getString(R.string.app_search)).assertIsDisplayed()
         }
     }
 
@@ -62,8 +62,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             Espresso.pressBack()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(context.getString(R.string.app_search)).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(context.getString(R.string.app_search)).assertIsDisplayed()
         }
     }
 
@@ -72,10 +71,9 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule
-                .onNodeWithContentDescription(playBrandingAudioLabel())
+                .awaitNodeWithContentDescription(playBrandingAudioLabel())
                 .assertHasClickAction()
                 .performClick()
-            composeRule.waitForIdle()
             // SoundPool playback is fire-and-forget; nothing to assert in the UI tree, but
             // performing the click verifies the handler does not throw.
         }
@@ -89,9 +87,8 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
             composeRule.onAllNodes(hasText(geminiName())).fetchSemanticsNodes().let {
                 assert(it.isEmpty()) { "Gemini card visible before expanding Credits." }
             }
-            composeRule.onNodeWithText(creditsLabel()).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(geminiName()).assertIsDisplayed()
+            composeRule.awaitNodeWithText(creditsLabel()).performClick()
+            composeRule.awaitNodeWithText(geminiName()).assertIsDisplayed()
             composeRule.onNodeWithText(claudeName()).assertIsDisplayed()
         }
     }
@@ -100,9 +97,10 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     fun licenseButtonOpensModalBottomSheetWithAgplExcerpt() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
-            composeRule.onNodeWithText(licenseLabel()).performClick()
+            composeRule.awaitNodeWithText(licenseLabel()).performClick()
+            // The license file (raw/app_license) starts with the AGPL header. Substring matching
+            // does not fit the awaitNodeWithText helper (which is exact-match), so this stays inline.
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                // The license file (raw/app_license) starts with the AGPL header.
                 composeRule
                     .onAllNodes(hasText("GNU AFFERO GENERAL PUBLIC LICENSE", substring = true))
                     .fetchSemanticsNodes()
@@ -118,7 +116,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
-            composeRule.onNodeWithText(sourceLabel()).performScrollTo().performClick()
+            composeRule.awaitNodeWithText(sourceLabel()).performScrollTo().performClick()
             composeRule.waitForIdle()
             // The data URL is unique to this button's ACTION_VIEW; matching the URL alone
             // is sufficient and avoids the hamcrest 1.3 `allOf(2-arg)` API gap.
@@ -133,7 +131,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
-            composeRule.onNodeWithText(privacyPolicyLabel()).performScrollTo().performClick()
+            composeRule.awaitNodeWithText(privacyPolicyLabel()).performScrollTo().performClick()
             composeRule.waitForIdle()
             intended(hasData(matchesSupportedHl(context.getString(R.string.app_about_privacy_policy_url))))
         }
@@ -146,7 +144,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
-            composeRule.onNodeWithText(dataSafetyLabel()).performScrollTo().performClick()
+            composeRule.awaitNodeWithText(dataSafetyLabel()).performScrollTo().performClick()
             composeRule.waitForIdle()
             intended(hasData(matchesSupportedHl(context.getString(R.string.app_about_data_safety_url))))
         }
@@ -156,7 +154,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     fun externalLegalItemsExposeOpensInBrowserHint() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
-            composeRule.onNodeWithText(privacyPolicyLabel()).performScrollTo()
+            composeRule.awaitNodeWithText(privacyPolicyLabel()).performScrollTo()
             composeRule
                 .onAllNodesWithContentDescription(context.getString(R.string.app_about_open_in_browser))
                 .fetchSemanticsNodes()
@@ -173,7 +171,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule.onNodeWithContentDescription(backLabel()).assertHasClickAction()
-            composeRule.onNodeWithContentDescription(playBrandingAudioLabel()).assertHasClickAction()
+            composeRule.awaitNodeWithContentDescription(playBrandingAudioLabel()).assertHasClickAction()
         }
     }
 
@@ -184,7 +182,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
-            composeRule.onNodeWithText(kofiLabel()).performScrollTo().performClick()
+            composeRule.awaitNodeWithText(kofiLabel()).performScrollTo().performClick()
             composeRule.waitForIdle()
             intended(hasData(context.getString(R.string.app_about_gratitude_kofi_url)))
         }
@@ -198,18 +196,16 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
-            composeRule.onNodeWithText(cafecitoLabel()).performScrollTo().performClick()
+            composeRule.awaitNodeWithText(cafecitoLabel()).performScrollTo().performClick()
             composeRule.waitForIdle()
             intended(hasData(context.getString(R.string.app_about_gratitude_cafecito_url)))
         }
     }
 
     private fun openAbout() {
-        composeRule.waitForIdle()
-        composeRule.onNodeWithContentDescription(context.getString(R.string.app_overflow_menu)).performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithText(context.getString(R.string.app_about)).performClick()
-        composeRule.waitForIdle()
+        composeRule.awaitNodeWithContentDescription(context.getString(R.string.app_overflow_menu)).performClick()
+        composeRule.awaitNodeWithText(context.getString(R.string.app_about)).performClick()
+        composeRule.awaitNodeWithContentDescription(backLabel()).assertIsDisplayed()
     }
 
     private fun backLabel() = context.getString(R.string.app_about_back)

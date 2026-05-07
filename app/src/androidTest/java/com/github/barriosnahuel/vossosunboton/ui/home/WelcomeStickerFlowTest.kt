@@ -6,7 +6,6 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -18,6 +17,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,8 +44,7 @@ internal class WelcomeStickerFlowTest : AbstractUiTest() {
         val origin = context.getString(R.string.app_welcome_sticker_origin)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(title).assertIsDisplayed()
+            composeRule.awaitNodeWithText(title).assertIsDisplayed()
             composeRule.onNodeWithText(origin).assertIsDisplayed()
         }
     }
@@ -59,15 +58,10 @@ internal class WelcomeStickerFlowTest : AbstractUiTest() {
         val dismissedMessage = context.getString(R.string.app_welcome_sticker_feedback_dismissed)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(title).performTouchInput { swipeLeft() }
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule.onAllNodes(hasText(dismissedMessage)).fetchSemanticsNodes().isNotEmpty()
-            }
+            composeRule.awaitNodeWithText(title).performTouchInput { swipeLeft() }
+            composeRule.awaitNodeWithText(dismissedMessage).assertIsDisplayed()
             composeRule.onNodeWithText(undoLabel).performClick()
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
-            }
+            composeRule.awaitNodeWithText(title).assertIsDisplayed()
 
             // The welcome must reappear BELOW the user's custom sound — row 0 belongs to the
             // user once they've shown they want this sticker back rather than letting it consume.
@@ -94,25 +88,13 @@ internal class WelcomeStickerFlowTest : AbstractUiTest() {
         val dismissedMessage = context.getString(R.string.app_welcome_sticker_feedback_dismissed)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(title).performTouchInput { longClick() }
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule.onAllNodesWithText(deleteLabel).fetchSemanticsNodes().isNotEmpty()
-            }
-
-            composeRule.onNodeWithText(deleteLabel).assertIsDisplayed()
+            composeRule.awaitNodeWithText(title).performTouchInput { longClick() }
+            composeRule.awaitNodeWithText(deleteLabel).assertIsDisplayed()
             // Edit must NOT appear — the welcome is a system anchor, not an editable user sound.
             assertThat(composeRule.onAllNodesWithText(editLabel).fetchSemanticsNodes()).isEmpty()
 
             composeRule.onNodeWithText(deleteLabel).performClick()
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule.onAllNodes(hasText(dismissedMessage)).fetchSemanticsNodes().isNotEmpty()
-            }
-            composeRule.onNodeWithText(dismissedMessage).assertIsDisplayed()
+            composeRule.awaitNodeWithText(dismissedMessage).assertIsDisplayed()
         }
-    }
-
-    companion object {
-        private const val WAIT_TIMEOUT_MS = 5_000L
     }
 }

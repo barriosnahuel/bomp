@@ -12,9 +12,6 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.longClick
-import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
@@ -29,6 +26,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -39,9 +38,8 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 2)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText("custom_1").assertIsDisplayed()
-            composeRule.onNodeWithText("custom_2").assertIsDisplayed()
+            composeRule.awaitNodeWithText("custom_1").assertIsDisplayed()
+            composeRule.awaitNodeWithText("custom_2").assertIsDisplayed()
         }
     }
 
@@ -50,15 +48,8 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(playLabel()).performClick()
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule
-                    .onAllNodesWithContentDescription(pauseLabel())
-                    .fetchSemanticsNodes()
-                    .isNotEmpty()
-            }
-            composeRule.onNodeWithContentDescription(pauseLabel()).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(playLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(pauseLabel()).assertIsDisplayed()
         }
     }
 
@@ -69,8 +60,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(shareLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(shareLabel()).performClick()
             composeRule.waitForIdle()
 
             intended(hasAction(Intent.ACTION_CHOOSER))
@@ -84,10 +74,8 @@ internal class HomeTabFlowTest : AbstractUiTest() {
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(sound.name).performTouchInput { longClick() }
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(renameLabel()).performClick()
+            composeRule.awaitNodeWithText(sound.name).performTouchInput { longClick() }
+            composeRule.awaitNodeWithText(renameLabel()).performClick()
             composeRule.waitForIdle()
 
             // Hamcrest 1.3 (transitively pinned in the test APK) lacks the 2-arg `allOf`
@@ -102,15 +90,10 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(sound.name).performTouchInput { swipeLeft() }
+            composeRule.awaitNodeWithText(sound.name).performTouchInput { swipeLeft() }
             val undoLabel = context.getString(R.string.app_undo)
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule.onAllNodes(hasText(undoLabel)).fetchSemanticsNodes().isNotEmpty()
-            }
-            composeRule.onNodeWithText(undoLabel).performClick()
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(sound.name).assertIsDisplayed()
+            composeRule.awaitNodeWithText(undoLabel).performClick()
+            composeRule.awaitNodeWithText(sound.name).assertIsDisplayed()
         }
     }
 
@@ -119,8 +102,7 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText(sound.name).performTouchInput { swipeLeft() }
+            composeRule.awaitNodeWithText(sound.name).performTouchInput { swipeLeft() }
             // Snackbar (long timeout) → confirmDelete → card vanishes from the list.
             composeRule.waitUntil(timeoutMillis = SNACKBAR_LONG_TIMEOUT_MS) {
                 composeRule.onAllNodes(hasText(sound.name)).fetchSemanticsNodes().isEmpty()
@@ -133,22 +115,8 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            // waitForIdle() alone races against the DataStore-read → StateFlow-emit → LazyColumn-render chain;
-            // poll for the pin IconButton's semantics node before clicking, mirroring tapPlaySwapsPlayIconToPause.
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule
-                    .onAllNodesWithContentDescription(pinLabel())
-                    .fetchSemanticsNodes()
-                    .isNotEmpty()
-            }
-            composeRule.onNodeWithContentDescription(pinLabel()).performClick()
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule
-                    .onAllNodesWithContentDescription(unpinLabel())
-                    .fetchSemanticsNodes()
-                    .isNotEmpty()
-            }
-            composeRule.onNodeWithContentDescription(unpinLabel()).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(pinLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(unpinLabel()).assertIsDisplayed()
         }
     }
 
@@ -157,14 +125,8 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 2)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithText("custom_2").performTouchInput { swipeRight() }
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                composeRule
-                    .onAllNodesWithContentDescription(unpinLabel())
-                    .fetchSemanticsNodes()
-                    .isNotEmpty()
-            }
+            composeRule.awaitNodeWithText("custom_2").performTouchInput { swipeRight() }
+            composeRule.awaitNodeWithContentDescription(unpinLabel()).assertIsDisplayed()
         }
     }
 
@@ -173,12 +135,11 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).assertHasClickAction()
-            composeRule.onNodeWithContentDescription(overflowLabel()).assertHasClickAction()
-            composeRule.onNodeWithContentDescription(playLabel()).assertHasClickAction()
-            composeRule.onNodeWithContentDescription(shareLabel()).assertHasClickAction()
-            composeRule.onNodeWithContentDescription(pinLabel()).assertHasClickAction()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).assertHasClickAction()
+            composeRule.awaitNodeWithContentDescription(overflowLabel()).assertHasClickAction()
+            composeRule.awaitNodeWithContentDescription(playLabel()).assertHasClickAction()
+            composeRule.awaitNodeWithContentDescription(shareLabel()).assertHasClickAction()
+            composeRule.awaitNodeWithContentDescription(pinLabel()).assertHasClickAction()
         }
     }
 
@@ -199,7 +160,6 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     private fun overflowLabel() = context.getString(R.string.app_overflow_menu)
 
     companion object {
-        private const val WAIT_TIMEOUT_MS = 5_000L
         private const val SNACKBAR_LONG_TIMEOUT_MS = 15_000L
         private const val ADD_BUTTON_ACTIVITY =
             "com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity"

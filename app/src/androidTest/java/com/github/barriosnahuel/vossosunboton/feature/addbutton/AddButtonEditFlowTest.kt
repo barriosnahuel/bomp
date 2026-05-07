@@ -11,8 +11,6 @@ import android.content.Intent
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
@@ -26,6 +24,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
+import com.github.barriosnahuel.vossosunboton.WAIT_TIMEOUT_MS
+import com.github.barriosnahuel.vossosunboton.awaitNode
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import org.junit.Test
@@ -41,17 +43,14 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use {
-            composeRule.waitForIdle()
             // Both the OutlinedTextField and the AudioPreview header render the sound name,
             // so a plain hasText() matcher returns 2 nodes. Scope to the editable input.
-            nameField().assertIsDisplayed()
+            composeRule.awaitNode(hasSetTextAction()).assertIsDisplayed()
             // AudioPreview gates its Card render on `isReady`, which is flipped from a
-            // LaunchedEffect after `withContext(Dispatchers.IO) { player.prepare() }` finishes.
-            // `waitForIdle()` returns when Compose is idle but does NOT await the IO dispatcher,
-            // so poll until the Preview audio button actually appears before asserting.
-            awaitPreviewButton()
+            // LaunchedEffect after `withContext(Dispatchers.IO) { player.prepare() }` finishes —
+            // an IO round-trip that `waitForIdle()` does not await.
             composeRule
-                .onNodeWithContentDescription(context.getString(R.string.app_addbutton_preview_audio))
+                .awaitNodeWithContentDescription(context.getString(R.string.app_addbutton_preview_audio))
                 .assertHasClickAction()
         }
     }
@@ -61,12 +60,10 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use {
-            composeRule.waitForIdle()
-            nameField().performTextClearance()
+            composeRule.awaitNode(hasSetTextAction()).performTextClearance()
             composeRule.onNodeWithText(context.getString(R.string.app_addbutton_save_changes)).performClick()
-            composeRule.waitForIdle()
             composeRule
-                .onNodeWithText(context.getString(R.string.app_addbutton_name_is_required_error))
+                .awaitNodeWithText(context.getString(R.string.app_addbutton_name_is_required_error))
                 .assertIsDisplayed()
         }
     }
@@ -81,8 +78,7 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
 
         ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use {
-            composeRule.waitForIdle()
-            nameField().performTextClearance()
+            composeRule.awaitNode(hasSetTextAction()).performTextClearance()
             nameField().performTextInput(newName)
             composeRule.onNodeWithText(context.getString(R.string.app_addbutton_save_changes)).performClick()
             // Inspect Intents.getIntents() directly instead of Intents.intended(): when a resumed activity exists,
@@ -105,11 +101,8 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
         ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use {
-            composeRule.waitForIdle()
-            // See `editModeRendersPreviewCardAndExistingName` for the why behind this poll.
-            awaitPreviewButton()
             composeRule
-                .onNodeWithContentDescription(context.getString(R.string.app_addbutton_preview_audio))
+                .awaitNodeWithContentDescription(context.getString(R.string.app_addbutton_preview_audio))
                 .assertHasClickAction()
         }
     }
@@ -117,15 +110,4 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     private fun editIntent(sound: Sound): Intent = LandingActivity.editIntent(context, sound)
 
     private fun nameField() = composeRule.onNode(hasSetTextAction())
-
-    private fun awaitPreviewButton() {
-        val previewLabel = context.getString(R.string.app_addbutton_preview_audio)
-        composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-            composeRule.onAllNodesWithContentDescription(previewLabel).fetchSemanticsNodes().isNotEmpty()
-        }
-    }
-
-    companion object {
-        private const val WAIT_TIMEOUT_MS = 5_000L
-    }
 }
