@@ -44,9 +44,13 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
     @Test
     fun bottomBarIsVisibleWhenBundledSoundsExist() {
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
+            // The bottom bar renders only after the bundled-sounds StateFlow emits a non-empty list;
+            // waitForIdle() can return before that emission lands, so poll for the tab label first.
             // Find by label text — the icon's contentDescription only lives in the unmerged
             // tree, while the label (a Text composable) bubbles up through merge.
+            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeRule.onAllNodes(hasText(homeTabLabel())).fetchSemanticsNodes().isNotEmpty()
+            }
             composeRule.onNodeWithText(homeTabLabel()).assertIsDisplayed()
             composeRule.onNodeWithText(exploreTabLabel()).assertIsDisplayed()
         }

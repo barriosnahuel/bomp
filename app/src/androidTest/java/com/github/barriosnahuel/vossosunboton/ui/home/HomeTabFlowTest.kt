@@ -133,9 +133,21 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
-            composeRule.waitForIdle()
+            // waitForIdle() alone races against the DataStore-read → StateFlow-emit → LazyColumn-render chain;
+            // poll for the pin IconButton's semantics node before clicking, mirroring tapPlaySwapsPlayIconToPause.
+            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeRule
+                    .onAllNodesWithContentDescription(pinLabel())
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
             composeRule.onNodeWithContentDescription(pinLabel()).performClick()
-            composeRule.waitForIdle()
+            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeRule
+                    .onAllNodesWithContentDescription(unpinLabel())
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
             composeRule.onNodeWithContentDescription(unpinLabel()).assertIsDisplayed()
         }
     }
