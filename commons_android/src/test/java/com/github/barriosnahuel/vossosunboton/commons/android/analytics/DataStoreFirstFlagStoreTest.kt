@@ -9,9 +9,16 @@ import android.content.Context
 import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,12 +30,19 @@ import org.robolectric.annotation.Config
 internal class DataStoreFirstFlagStoreTest {
     private lateinit var context: Context
     private lateinit var store: DataStoreFirstFlagStore
+    private lateinit var writebackScope: CoroutineScope
 
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        store = DataStoreFirstFlagStore(context)
+        writebackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        store = DataStoreFirstFlagStore(context, writebackScope)
         runBlocking { store.clearForTest() }
+    }
+
+    @After
+    fun tearDown() {
+        writebackScope.cancel()
     }
 
     @Test
@@ -74,9 +88,7 @@ internal class DataStoreFirstFlagStoreTest {
     fun `state survives instantiating a new store backed by the same DataStore file`() =
         runBlocking {
             store.markFired("persist-me")
-            // Give the fire-and-forget disk write a moment to commit before instantiating the
-            // second store (which primes its cache from disk).
-            Thread.sleep(WRITE_BACK_GRACE_MS)
+            drainWritebacks()
 
             val freshStore = DataStoreFirstFlagStore(context)
 
@@ -87,7 +99,7 @@ internal class DataStoreFirstFlagStoreTest {
     fun `clearForTest wipes both in-memory cache and disk state`() =
         runBlocking {
             store.markFired("foo")
-            Thread.sleep(WRITE_BACK_GRACE_MS)
+            drainWritebacks()
 
             store.clearForTest()
 
@@ -96,10 +108,14 @@ internal class DataStoreFirstFlagStoreTest {
             assertThat(freshStore.isFirstTime("foo")).isTrue()
         }
 
-    companion object {
-        // Async write-back via SupervisorJob + Dispatchers.IO; tiny disk write completes within
-        // tens of ms even under Robolectric. 250 ms is generous enough to be reliable without
-        // padding total test time noticeably.
-        private const val WRITE_BACK_GRACE_MS = 250L
+    /**
+     * Joins every fire-and-forget `scope.launch { store.edit { ... } }` registered by
+     * [DataStoreFirstFlagStore.markFired] / [DataStoreFirstFlagStore.consumeFirstTime]. Replaces a fixed-time
+     * `Thread.sleep` so disk-state assertions run after every pending write has actually committed.
+     */
+    private suspend fun drainWritebacks() {
+        writebackScope.coroutineContext.job.children
+            .toList()
+            .joinAll()
     }
 }
