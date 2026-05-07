@@ -19,7 +19,11 @@ import kotlinx.coroutines.runBlocking
  * Custom sounds are written to `getExternalFilesDir(Music)/<file>` (matching what
  * [com.github.barriosnahuel.vossosunboton.commons.file.getFile] resolves to) and registered
  * via [SoundsRepository]. The audio payload comes from `androidTest/assets/test_sound.mp3` —
- * a ~200ms silent clip so playback tests run fast and predictably.
+ * a 5s silent clip. The duration matters: shorter clips finish so fast that the
+ * `isPlaying = true → false` window can close before Compose commits the playing-state
+ * frame on a starved main thread (post-install codec spin-up + jank), turning
+ * `tapPlaySwapsPlayIconToPause` into a flake. 5s gives the test a comfortable margin
+ * over any realistic prepare()/recompose latency.
  */
 internal object TestData {
     private const val TEST_ASSET = "test_sound.mp3"
