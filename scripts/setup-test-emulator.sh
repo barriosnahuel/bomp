@@ -8,7 +8,7 @@
 #
 set -euo pipefail
 
-AVD_NAME="push_me_test"
+AVD_NAME="Android_14_API_34"
 API_LEVEL="34"
 
 ARCH="$(uname -m)"
