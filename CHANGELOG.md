@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### Changed
 - Shortened the welcome-dismissal snackbar from 10 s to 4 s so the feedback no longer lingers; user-deleted sounds keep the longer Undo window
 
+### For nerds 🤓
+
+#### Fixed
+- Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
+
 ## \[v2.0.0] - 2026-05-07
 
 ### Added
