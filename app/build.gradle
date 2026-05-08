@@ -79,6 +79,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig = signingConfigs.release
             buildConfigField "String", "DEBUG_ROOT_DIR_NAME", "\"\""
+            ndk {
+                debugSymbolLevel 'FULL'
+            }
         }
     }
 
