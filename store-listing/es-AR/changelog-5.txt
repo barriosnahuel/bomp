@@ -1,11 +1,13 @@
 Bienvenido a Bomp.
 
-Tu colección personal de voces. Las que te importan, siempre con vos: la risa de tu vieja, la frase del jefe, el audio del amigo que te hace reír sin falta.
+Tu colección personal de voces — las que te importan, siempre contigo: la risa de mamá, ese chiste interno de siempre, el audio del amigo que te hace reír sin falta.
 
-▸ Guardá el audio (de WhatsApp, Telegram o donde sea).
-▸ Apodalo a tu manera — el apodo que solo vos entendés.
-▸ Bompealo cuando lo necesites: primero para vos, después para mandar si querés.
+▸ Guarda el audio (WhatsApp, Telegram, donde sea).
+▸ Ponle el nombre que solo tú entiendes.
+▸ Bompéalo cuando quieras: primero para ti, después para mandar.
 
-Privado de verdad: tus audios viven en tu teléfono. Cero servidor, cero análisis.
+Búsqueda, favoritos y respaldo en tu Google Drive.
 
-Software libre, código abierto, AGPL-3.0.
+Sin registro, sin email, sin número de teléfono. Tu colección, tuya.
+
+Libre y abierto, AGPL-3.0.

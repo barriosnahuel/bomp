@@ -1,11 +1,13 @@
 Welcome to Bomp.
 
-Your personal collection of voices. The ones that matter, always close: your mom's laugh, the boss's catchphrase, the voice note from a friend that always makes you smile.
+Your personal collection of voices — the ones that matter, always close: your mom's laugh, that inside joke you all share, the voice note from a friend that never fails to crack you up.
 
-▸ Save the voice note (from WhatsApp, Telegram, or wherever).
-▸ Name it your way — the name only you'd get.
-▸ Bomp it when you need it: you first, share later if you want.
+▸ Save the voice note (WhatsApp, Telegram, anywhere).
+▸ Give it the name only you'd get.
+▸ Bomp it whenever: you first, share later if you want.
 
-Truly private: your voice notes live on your phone. No servers, no analysis.
+Search, favorites, and backup to your Google Drive.
 
-Free, open source, AGPL-3.0.
+No signup, no email, no phone number. Your collection, yours.
+
+Free and open source, AGPL-3.0.
