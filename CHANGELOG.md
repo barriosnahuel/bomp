@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
 
 
+### Changed
+- Shortened the welcome-dismissal snackbar from 10 s to 4 s so the feedback no longer lingers; user-deleted sounds keep the longer Undo window
+
 ### For nerds 🤓
 
 #### Fixed
