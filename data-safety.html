@@ -104,7 +104,7 @@
           <tbody>
             <tr>
               <td data-i18n-html="ds.row1.col1"><strong>Otros archivos de audio</strong><br><small>Los audios que vos importás
-                desde WhatsApp, Telegram o WeChat.</small></td>
+                desde otras apps usando el sistema de "Compartir" de Android.</small></td>
               <td data-i18n="ds.row1.col2" data-label="¿Por qué se recolecta?" data-i18n-attr="data-label:ds.table.col2">Funcionalidad de la app: son los audios que vos elegís Bompear. Se almacenan
                 solo en tu teléfono.</td>
               <td data-i18n="ds.row1.col3" data-label="¿Se comparte?" data-i18n-attr="data-label:ds.table.col3">No.</td>
@@ -115,23 +115,23 @@
             <tr>
               <td data-i18n-html="ds.row2.col1"><strong>Logs de fallos</strong><br><small>Stack traces y estado del dispositivo
                 cuando la app crashea.</small></td>
-              <td data-i18n="ds.row2.col2" data-label="¿Por qué se recolecta?" data-i18n-attr="data-label:ds.table.col2">Diagnóstico de fallos vía Firebase Crashlytics. Nos permite arreglar bugs.</td>
-              <td data-i18n="ds.row2.col3" data-label="¿Se comparte?" data-i18n-attr="data-label:ds.table.col3">No (solo recolectado). Procesado por Google Firebase como sub-procesador.</td>
+              <td data-i18n="ds.row2.col2" data-label="¿Por qué se recolecta?" data-i18n-attr="data-label:ds.table.col2">Diagnóstico de fallos. Nos permite arreglar bugs.</td>
+              <td data-i18n="ds.row2.col3" data-label="¿Se comparte?" data-i18n-attr="data-label:ds.table.col3">No (solo recolectado). Procesado por Google como sub-procesador.</td>
               <td data-i18n="ds.row2.col4" data-label="¿Es opcional?" data-i18n-attr="data-label:ds.table.col4">No — los logs pseudónimos se envían cuando hay un crash.</td>
             </tr>
             <tr>
               <td data-i18n-html="ds.row3.col1"><strong>Diagnósticos de rendimiento</strong><br><small>Métricas pseudónimas de
                 uso de memoria, tiempo de arranque, latencias.</small></td>
-              <td data-i18n="ds.row3.col2" data-label="¿Por qué se recolecta?" data-i18n-attr="data-label:ds.table.col2">Detección de regresiones de rendimiento vía Firebase Performance Monitoring.</td>
-              <td data-i18n="ds.row3.col3" data-label="¿Se comparte?" data-i18n-attr="data-label:ds.table.col3">No (solo recolectado). Procesado por Google Firebase como sub-procesador.</td>
+              <td data-i18n="ds.row3.col2" data-label="¿Por qué se recolecta?" data-i18n-attr="data-label:ds.table.col2">Detección de regresiones de rendimiento.</td>
+              <td data-i18n="ds.row3.col3" data-label="¿Se comparte?" data-i18n-attr="data-label:ds.table.col3">No (solo recolectado). Procesado por Google como sub-procesador.</td>
               <td data-i18n="ds.row3.col4" data-label="¿Es opcional?" data-i18n-attr="data-label:ds.table.col4">No.</td>
             </tr>
             <tr>
               <td data-i18n-html="ds.row4.col1"><strong>Interacciones con la app</strong><br><small>Eventos agregados (cantidad
                 de Bomps, sesiones).</small></td>
-              <td data-i18n="ds.row4.col2" data-label="¿Por qué se recolecta?" data-i18n-attr="data-label:ds.table.col2">Entender patrones de uso para priorizar mejoras vía Firebase Analytics.
+              <td data-i18n="ds.row4.col2" data-label="¿Por qué se recolecta?" data-i18n-attr="data-label:ds.table.col2">Entender patrones de uso para priorizar mejoras.
                 Sin asociar a ningún usuario identificado.</td>
-              <td data-i18n="ds.row4.col3" data-label="¿Se comparte?" data-i18n-attr="data-label:ds.table.col3">No (solo recolectado). Procesado por Google Firebase como sub-procesador.</td>
+              <td data-i18n="ds.row4.col3" data-label="¿Se comparte?" data-i18n-attr="data-label:ds.table.col3">No (solo recolectado). Procesado por Google como sub-procesador.</td>
               <td data-i18n="ds.row4.col4" data-label="¿Es opcional?" data-i18n-attr="data-label:ds.table.col4">No.</td>
             </tr>
           </tbody>
@@ -142,11 +142,11 @@
           <a href="https://developer.android.com/identity/data/autobackup">Auto Backup de
           Android</a>: si lo tenés activo en tu teléfono, Google respalda los datos de la
           app (incluidos los audios importados) en <em>tu propio</em> Google Drive, en una
-          zona privada accesible solo por la app, hasta 25 MB. Esto no aparece en la tabla
-          porque el formulario de Data Safety de Play declara solo lo que la app comparte
-          con el desarrollador o con terceros: el backup va a tu cuenta de Google y es
-          gestionado por Google, no por Bomp. Podés desactivarlo desde Configuración del
-          sistema → Sistema → Backup.
+          zona privada accesible solo por la app y según los límites de la plataforma. Esto
+          no aparece en la tabla porque el formulario de Data Safety de Play declara solo lo
+          que la app comparte con el desarrollador o con terceros: el backup va a tu cuenta
+          de Google y es gestionado por Google, no por Bomp. Podés desactivarlo desde
+          Configuración del sistema → Sistema → Backup.
         </p>
 
         <h2 id="cuentas" tabindex="-1" data-i18n="ds.toc.s02">02 · Cuentas y eliminación</h2>
@@ -162,22 +162,23 @@
           <li data-i18n="ds.s02.li1">Borrar audios uno a uno desde la lista de Bomp.</li>
           <li data-i18n="ds.s02.li2">Borrar todos los audios: desinstalá la app desde el sistema. Android limpia
             el almacenamiento asignado a Bomp.</li>
-          <li data-i18n-html="ds.s02.li3">Para los datos pseudónimos en Firebase: ver
+          <li data-i18n-html="ds.s02.li3">Para los datos pseudónimos en sistemas de Google: ver
             <a href="privacy-policy.html#arco">Privacy Policy → Derechos ARCO</a>.</li>
         </ul>
         <p data-i18n-html="ds.s02.body3">
           <strong>Sobre el flujo de borrado en Play.</strong> En la ficha de Bomp en Play
           declaramos que la app no provee un flujo de auto-servicio de eliminación de datos.
           La razón: los datos en tu teléfono se borran al desinstalar, y los datos pseudónimos
-          en Firebase no están asociados a una cuenta que se pueda "cerrar"; el procedimiento
-          manual está en <a href="privacy-policy.html#arco">Privacy Policy → Derechos ARCO</a>.
+          en sistemas de Google no están asociados a una cuenta que se pueda "cerrar"; el
+          procedimiento manual está en
+          <a href="privacy-policy.html#arco">Privacy Policy → Derechos ARCO</a>.
         </p>
 
         <h2 id="cifrado" tabindex="-1" data-i18n="ds.toc.s03">03 · Cifrado en tránsito</h2>
         <p data-i18n="ds.s03.body">
-          Toda la comunicación entre Bomp y los servidores de Google Firebase utiliza HTTPS
-          (TLS 1.2 o superior). Las llamadas a Google Play Services siguen el estándar de
-          cifrado del SDK oficial.
+          Toda la comunicación entre Bomp y los servidores de Google utiliza HTTPS (TLS 1.2
+          o superior). Las llamadas a Google Play Services siguen el estándar de cifrado del
+          SDK oficial.
         </p>
 
         <div class="legal__back">
