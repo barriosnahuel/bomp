@@ -234,7 +234,7 @@ Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a
 ### Setup (one-time)
 
 ```bash
-# Creates the AVD `push_me_test` (idempotent, ~5 min the first time including system image download)
+# Creates the AVD `Android_14_API_34` (idempotent, ~5 min the first time including system image download)
 ./scripts/setup-test-emulator.sh
 ```
 
@@ -242,7 +242,7 @@ Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a
 
 ```bash
 # 1. Boot the emulator (background)
-emulator -avd push_me_test -no-snapshot-save -no-boot-anim &
+emulator -avd Android_14_API_34 -no-snapshot-save -no-boot-anim &
 adb wait-for-device shell 'while [[ $(getprop sys.boot_completed) != 1 ]]; do sleep 1; done'
 
 # 2. Run all instrumented tests (UTP installs + runs natively)
@@ -265,9 +265,7 @@ HTML report: `app/build/reports/androidTests/connected/debug/index.html`. Raw XM
 
 ### Synchronization (avoid bare `waitForIdle()` for state-dependent nodes)
 
-`composeRule.waitForIdle()` waits only for Compose recompositions to settle — it does **not** wait for the `DataStore-read → StateFlow-emit → render` chain to finish seeding the screen. An immediate `performClick`/`assertIsDisplayed` after `waitForIdle()` resolves against whatever semantics tree exists *now*, which is the canonical instrumented-test race in this repo (PR #1111 fixed two cases of this exact shape).
-
-For any node whose existence depends on ViewModel/DataStore-emitted state, use the `awaitNode*` extensions on `ComposeTestRule` defined in `app/src/androidTest/.../ComposeTestExtensions.kt`:
+`waitForIdle()` only flushes Compose recompositions — not the `DataStore → StateFlow → render` chain (canonical race in this repo, PR #1111). For nodes whose existence depends on ViewModel/DataStore state, use the `awaitNode*` helpers in `app/src/androidTest/.../ComposeTestExtensions.kt` (rationale in KDoc):
 
 ```kotlin
 composeRule.awaitNodeWithContentDescription(pinLabel()).performClick()
@@ -275,9 +273,7 @@ composeRule.awaitNodeWithText(homeTabLabel()).assertIsDisplayed()
 composeRule.awaitNode(hasSetTextAction()).performTextInput(name)
 ```
 
-These extensions fuse `waitUntil { onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }` with the lookup and return a `SemanticsNodeInteraction`, so the call site is shorter than the unsafe form — the right thing is the easy thing.
-
-`waitForIdle()` (or an inline `waitUntil { onAllNodes(...).isNotEmpty() }`) is still the correct call in four cases: (a) after a deterministic UI action (`performClick`, `pressBack`) where you just need recomposition to flush before the next assertion, (b) before negative assertions like `onAllNodes(...).assertCountEquals(0)` (the helper waits for *presence*; absence needs the inverse predicate, which is rare enough not to factor), (c) before `onAllNodes(...).onFirst()` chains (the helper does not yet cover the "first of N" shape — keep the inline `waitUntil` in those spots), (d) when the matcher would resolve to *more than one* node in the tree (e.g. a search query the user typed also appears in a result card and in the underlying screen behind the overlay) — the helper's terminal `onNodeWithText`/`onNodeWithContentDescription`/`onNode` throws on multi-match, so use `waitUntil { onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }` and assert presence directly.
+Bare `waitForIdle()` / `waitUntil { onAllNodes(...).isNotEmpty() }` is still correct after deterministic actions (`performClick`, `pressBack`); before negative assertions like `assertCountEquals(0)`; before `.onFirst()` chains; and when the matcher would multi-match — the helpers' terminal `onNode*` throws on multi-match.
 
 ## Pre-PR checklist
 
