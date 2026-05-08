@@ -256,7 +256,7 @@ private fun SnackbarEffects(
             snackbarHostState.showSnackbar(
                 message = message,
                 actionLabel = undoLabel,
-                duration = SnackbarDuration.Long,
+                duration = deletionSnackbarDuration(event.sound),
             )
         when (result) {
             SnackbarResult.ActionPerformed -> viewModel.restoreSound()
@@ -427,3 +427,8 @@ private fun SoundsList(
         }
     }
 }
+
+// Welcome dismissal is a low-stakes "got it, move on" interaction — Short keeps it from lingering.
+// User-deleted sounds are destructive and need Long so Undo stays reachable.
+internal fun deletionSnackbarDuration(sound: Sound): SnackbarDuration =
+    if (isWelcomeSticker(sound)) SnackbarDuration.Short else SnackbarDuration.Long

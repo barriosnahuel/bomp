@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased] (v2.1.0)
 
+### Changed
+- Shortened the welcome-dismissal snackbar from 10 s to 4 s so the feedback no longer lingers; user-deleted sounds keep the longer Undo window
+
 ## \[v2.0.0] - 2026-05-07
 
 ### Added
