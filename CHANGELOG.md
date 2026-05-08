@@ -46,17 +46,13 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Snackbar after deleting a custom sound now reads "Audio deleted"/"Audio borrado" (was "Button deleted"/"Botón borrado") so the copy matches how users describe what they removed
 - Welcome card can be dismissed by swiping left, or long-pressing to open the actions menu and tapping Delete — no need to listen all the way through. Tapping Undo within 5s brings it back, but it now lives at the bottom of My Sounds instead of pinning to the top
 - Restoring the app via Auto Backup or device-transfer now preserves your dismissal of the welcome card and your lifetime usage counters (number of plays, number of shares) so a restored device picks up where the previous one left off. First-time-event flags still reset per-install to align with Firebase's per-install lifecycle
+- Saving a button via the share intent now confirms with a "Saved!" Snackbar and navigates to the Home tab, instead of silently returning to the previous app
 
 ### Fixed
-- The app now opens the Home tab on launch instead of the Search tab
-- After saving a button via the share intent, the app navigates to the Home tab and shows a "Saved!" confirmation Snackbar instead of silently returning to the previous app
-- The Add Button screen no longer appears in the recent apps tray after saving
 - Custom sound stops playing immediately when deleted instead of continuing until the track ends
 - Bundled sounds no longer offer a swipe-to-delete gesture; the action is simply not available
-- Validate inbound audio URIs by scheme, MIME type, and size before importing
-- Restrict deep link routing to a known path allowlist with a safe fallback to My Sounds
-- Crash when switching tabs mid-playback fixed by ViewModel-owned player state
-- Scrolling-induced ghost playing state fixed by migrating to Compose state-driven rendering
+- Crash when switching tabs while a sound is playing
+- Ghost-playing state when scrolling the list
 
 ### Removed
 - About screen pronunciation block (`/sohs oon boh-TOHN/`) removed alongside the rename to Bomp
@@ -95,13 +91,10 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - KTLint migrated to JLLeitschuh plugin with KTLint 1.5.0
 - Resolved all Kotlin compiler and Gradle DSL deprecation warnings for a clean build log
 - Bundled audio files removed from version control; bottom navigation bar hidden in release builds (Explore tab only appears in debug when audio files are manually placed)
+- Inbound audio URIs from share intents are now validated by scheme, MIME type, and size before importing
 
 #### Fixed
 - `ShareFeature.share` now runs file-system access (`getFile` + first-time `copy` of bundled raw resources) on `Dispatchers.IO`, eliminating a long-standing main-thread disk write that could cause jank the first time a bundled sound was shared
-- `AddButtonEditFlowTest.saveWithValidNameNavigatesBackToLandingWithRenamedExtra` no longer flakes (~25–50% rate). `Intents.intended()` routes through `Espresso.onView(isRoot()).check(...)` when a resumed activity exists, which trips the class-wide ATF run from `AbstractUiTest` against a mid-transition view tree. Switched to inspecting `Intents.getIntents()` directly and matching with plain Kotlin — keeps the recorded-intent assertion without touching the view hierarchy
-- `DataStoreCounterStoreTest` and `DataStoreFirstFlagStoreTest` no longer rely on a fixed 250 ms `Thread.sleep` to wait for fire-and-forget DataStore writes. The wait started losing the race after the androidx.datastore-preferences 1.1.7 → 1.2.1 bump (Counter test failed on Robolectric SDK 23/33). Inject the writeback scope and join its child jobs deterministically before asserting disk state
-- `HomeTabFlowTest.tapPlaySwapsPlayIconToPause` no longer flakes after a fresh install. The test asset was a ~200 ms silent MP3, which let the `isPlaying = true → false` window close before Compose committed the playing-state frame on a starved main thread (post-install codec spin-up + jank). Regenerated as a 5 s silent MP3 (same encoding) so the playing window comfortably outlasts any realistic `prepare()`/recompose latency
-- `HomeTabFlowTest.pinIconButtonMarksSoundAsPinned` and `ExploreTabFlowTest.bottomBarIsVisibleWhenBundledSoundsExist` no longer flake (~1-in-3 across consecutive full suite runs). `waitForIdle()` alone returns before the DataStore-read → `StateFlow`-emit → Compose-render chain finishes seeding the LazyColumn row / bottom-nav bar, so the immediate `performClick`/`assertIsDisplayed` could resolve against a still-empty semantics tree. Replaced with a `waitUntil { onAllNodes(...).fetchSemanticsNodes().isNotEmpty() }` gate before the action, matching the pattern already used by neighbouring tests (`tapPlaySwapsPlayIconToPause`, `swipeRightPinsACustomSound`)
 
 #### Removed
 - Removed `techstack.md` and its companion `techstack.yml` (StackShare.io config that broke after the repo rename to `bomp` and was no longer maintained — last meaningful update predated the v2.0 Compose rewrite)
