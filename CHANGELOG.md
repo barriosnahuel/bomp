@@ -3,7 +3,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
 
-## \[unreleased] (v2.1.0)
+## \[unreleased] (v2.0.1)
+
+### Fixed
+- Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
+
 
 ### For nerds 🤓
 
