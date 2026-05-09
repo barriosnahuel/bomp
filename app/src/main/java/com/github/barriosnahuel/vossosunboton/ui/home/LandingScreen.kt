@@ -213,11 +213,14 @@ private suspend fun shareWithFeedback(
 ) {
     val errorRes = ShareFeature.instance.share(context, sound, surface)
     if (errorRes != null) {
-        // Long (~7s) instead of Short (~4s): error copy includes a call-to-action ("Free up some space",
-        // "Try installing one") that needs reading time, and our error strings are 70+ chars in es-AR.
+        // Indefinite + dismiss action so the snackbar stays until the user dismisses it. WCAG 2.2 AA
+        // ground: TalkBack reads ~10–12 chars/sec so es-AR copy of 100+ chars (e.g. copy_failed) would
+        // not finish reading before SnackbarDuration.Long (10 s) auto-dismissed. Letting the user
+        // close it on their own pace is the only way to guarantee they receive the full message.
         snackbarHostState.showSnackbar(
             message = context.getString(errorRes),
-            duration = SnackbarDuration.Long,
+            actionLabel = context.getString(R.string.app_snackbar_action_dismiss),
+            duration = SnackbarDuration.Indefinite,
         )
     }
 }
