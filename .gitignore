@@ -10,6 +10,7 @@ model/src/debug/res/raw/*.ogg
 
 ### Gradle files
 .gradle/
+.kotlin/
 build/
 gradle/gradle-daemon-jvm.properties
 

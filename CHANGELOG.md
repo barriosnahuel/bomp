@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased] (v2.0.1)
 
+### Added
+- Terms of Service link in the About screen's "Legal & Privacy" section, opening the published page with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
+
 ### Fixed
 - Sharing a Bomp whose audio path can't be resolved by the FileProvider no longer crashes the app; the failure is reported to the user with a Snackbar and tracked as a non-fatal so it can be investigated
 - Sharing a Bomp no longer crashes the app when no installed app handles audio sharing, when external storage can't be written, or when the Sound has corrupt data — each case shows a tailored Snackbar and is tracked as a non-fatal
@@ -17,6 +20,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Shortened the welcome-dismissal snackbar from 10 s to 4 s so the feedback no longer lingers; user-deleted sounds keep the longer Undo window
 
 ### For nerds 🤓
+
+#### Changed
+- About screen's external Legal & Privacy links now open extensionless URLs (`/privacy-policy`, `/data-safety`, `/terms-of-service`) — GitHub Pages serves the same content under both forms, so this is a cosmetic cleanup with no destination or behavior change
 
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon

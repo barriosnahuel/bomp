@@ -115,6 +115,19 @@ internal class AboutScreenAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `tap on terms of service item emits about_terms_of_service_open`() {
+        composeTestRule.setContent { AppTheme { AboutScreen(onBack = {}) } }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_about_terms_of_service))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        fake.assertEmitted("about_terms_of_service_open")
+    }
+
+    @Test
     fun `tap on branding audio button does not emit before the SoundPool finishes loading`() {
         composeTestRule.setContent { AppTheme { AboutScreen(onBack = {}) } }
 
