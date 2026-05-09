@@ -162,15 +162,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                 modifier = Modifier.padding(innerPadding),
                 onPlayClick = { sound -> viewModel.playOrStop(sound) },
                 onSeek = { positionMs -> viewModel.seekTo(positionMs) },
-                onShareClick = { sound ->
-                    val surface =
-                        if (selectedTab == AppTab.MY_SOUNDS) {
-                            CanonicalScreenName.MY_SOUNDS
-                        } else {
-                            CanonicalScreenName.EXPLORE_SOUNDS
-                        }
-                    coroutineScope.launch { shareWithFeedback(context, sound, surface, snackbarHostState) }
-                },
+                onShareClick = { sound -> viewModel.share(sound) },
                 onDelete = { sound -> viewModel.deleteSound(sound) },
                 onPinClick = { sound -> viewModel.togglePin(sound) },
                 onEdit = { sound ->
@@ -191,11 +183,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onClose = viewModel::hideSearch,
             onPlayClick = viewModel::playOrStop,
             onSeek = viewModel::seekTo,
-            onShareClick = { sound ->
-                coroutineScope.launch {
-                    shareWithFeedback(context, sound, CanonicalScreenName.SEARCH_SOUND, snackbarHostState)
-                }
-            },
+            onShareClick = { sound -> viewModel.share(sound) },
             onPinClick = viewModel::togglePin,
             onDelete = { sound ->
                 viewModel.hideSearch()
@@ -205,24 +193,21 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     }
 }
 
-private suspend fun shareWithFeedback(
-    context: Context,
-    sound: Sound,
-    surface: String,
+// Indefinite + dismiss action so the snackbar stays until the user dismisses it. WCAG 2.2 AA
+// ground: TalkBack reads ~10–12 chars/sec so es-AR copy of 100+ chars (e.g. copy_failed) would
+// not finish reading before SnackbarDuration.Long (10 s) auto-dismissed. Letting the user
+// close it on their own pace is the only way to guarantee they receive the full message.
+private suspend fun showShareErrorSnackbar(
     snackbarHostState: SnackbarHostState,
+    context: Context,
+    errorRes: Int,
+    actionLabel: String,
 ) {
-    val errorRes = ShareFeature.instance.share(context, sound, surface)
-    if (errorRes != null) {
-        // Indefinite + dismiss action so the snackbar stays until the user dismisses it. WCAG 2.2 AA
-        // ground: TalkBack reads ~10–12 chars/sec so es-AR copy of 100+ chars (e.g. copy_failed) would
-        // not finish reading before SnackbarDuration.Long (10 s) auto-dismissed. Letting the user
-        // close it on their own pace is the only way to guarantee they receive the full message.
-        snackbarHostState.showSnackbar(
-            message = context.getString(errorRes),
-            actionLabel = context.getString(R.string.app_snackbar_action_dismiss),
-            duration = SnackbarDuration.Indefinite,
-        )
-    }
+    snackbarHostState.showSnackbar(
+        message = context.getString(errorRes),
+        actionLabel = actionLabel,
+        duration = SnackbarDuration.Indefinite,
+    )
 }
 
 @Composable
@@ -237,6 +222,8 @@ private fun SnackbarEffects(
     val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
     val buttonSavedTemplate = stringResource(R.string.app_feedback_button_saved)
     val buttonRenamedTemplate = stringResource(R.string.app_feedback_button_renamed)
+    val shareDismissLabel = stringResource(R.string.app_snackbar_action_dismiss)
+    val activityContext = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.playbackErrorEvent.collect {
@@ -244,6 +231,24 @@ private fun SnackbarEffects(
                 message = playbackErrorMessage,
                 duration = SnackbarDuration.Short,
             )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        // Activity-side half of the share split: the VM produced an Intent on IO; here we wrap it in a
+        // chooser and call startActivity from the UI thread. If startActivity throws, launchChooser
+        // returns the same @StringRes contract used by shareErrorEvent — surface it the same way.
+        viewModel.shareIntentEvent.collect { event ->
+            val errorRes = ShareFeature.instance.launchChooser(activityContext, event.intent, event.surface)
+            if (errorRes != null) {
+                showShareErrorSnackbar(snackbarHostState, activityContext, errorRes, shareDismissLabel)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.shareErrorEvent.collect { errorRes ->
+            showShareErrorSnackbar(snackbarHostState, activityContext, errorRes, shareDismissLabel)
         }
     }
 

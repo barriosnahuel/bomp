@@ -52,49 +52,48 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         unmockkAll()
     }
 
+    // ─── prepareShareIntent: file resolution + intent build ───
+
     @Test
-    fun `share emits Share with the surface passed in by the caller`() {
-        val sound = givenASoundWithUri()
+    fun `prepareShareIntent returns Success carrying the surface passed in by the caller`() {
+        val outcome = whenPreparing(givenASoundWithUri(), CanonicalScreenName.EXPLORE_SOUNDS)
 
-        whenSharingThe(sound)
-
-        val event = fake.assertEmitted("share")
-        assertThat(event.params["surface"]).isEqualTo(CanonicalScreenName.MY_SOUNDS)
+        assertThat((outcome as ShareIntentOutcome.Success).surface).isEqualTo(CanonicalScreenName.EXPLORE_SOUNDS)
     }
 
     @Test
-    fun `share increments lifetime_shares user property monotonically across calls`() {
-        whenSharingThe(givenASoundWithUri())
-        whenSharingThe(givenASoundWithUri())
+    fun `prepareShareIntent returns Success with ACTION_SEND audio intent for sound with uri`() {
+        val outcome = whenPreparing(givenASoundWithUri())
 
-        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isEqualTo("2")
+        val intent = (outcome as ShareIntentOutcome.Success).intent
+        assertThat(intent.action).isEqualTo(Intent.ACTION_SEND)
+        assertThat(intent.type).isEqualTo("audio/*")
+        assertThat(intent.extras?.containsKey(Intent.EXTRA_STREAM)).isTrue()
     }
 
     @Test
-    fun `share when chooser cannot start returns no-app feedback and tracks non-fatal`() {
-        val sound = givenASoundWithUri()
-        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
-        mockkStatic(FileProvider::class)
-        every { FileProvider.getUriForFile(mockedContext, any(), any()) } returns Uri.EMPTY
-        every { mockedContext.startActivity(any()) } throws ActivityNotFoundException("no app handles audio share")
+    fun `prepareShareIntent returns Success for sound with rawRes resource`() {
+        val outcome = whenPreparing(givenASoundWithResourceId())
 
-        mockkObject(Tracker)
-        val tracked = slot<Throwable>()
-        every { Tracker.track(capture(tracked)) } answers { nothing }
-
-        val feedback =
-            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
-
-        assertThat(feedback).isEqualTo(R.string.app_share_feedback_no_app_for_audio)
-        verify(exactly = 1) { Tracker.track(any()) }
-        assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
-        assertThat(tracked.captured.cause).isInstanceOf(ActivityNotFoundException::class.java)
-        fake.assertNotEmitted("share")
-        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
+        assertThat(outcome).isInstanceOf(ShareIntentOutcome.Success::class.java)
     }
 
     @Test
-    fun `share when FileProvider rejects the file returns unshareable feedback and tracks a non-fatal`() {
+    fun `prepareShareIntent generates content Uri under Music directory`() {
+        val capturedFile = whenPreparingCapturingTheFilePath(givenASoundWithUri())
+
+        assertThat(capturedFile.absolutePath.split("/").contains(Environment.DIRECTORY_MUSIC)).isTrue()
+    }
+
+    @Test
+    fun `prepareShareIntent uses soundName dot mp3 as the bundled temp filename`() {
+        val capturedFile = whenPreparingCapturingTheFilePath(givenASoundWithResourceId())
+
+        assertThat(capturedFile.name).isEqualTo("$dummyButtonName.mp3")
+    }
+
+    @Test
+    fun `prepareShareIntent returns Failure unshareable when FileProvider rejects the file`() {
         val sound = givenASoundWithUri()
         val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
 
@@ -107,21 +106,18 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         every { Tracker.track(capture(tracked)) } answers { nothing }
         every { mockedContext.startActivity(any()) } answers { nothing }
 
-        val feedback =
-            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+        val outcome =
+            runBlocking { ShareFeature.instance.prepareShareIntent(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
 
-        assertThat(feedback).isEqualTo(R.string.app_share_feedback_unshareable)
+        assertThat((outcome as ShareIntentOutcome.Failure).feedback).isEqualTo(R.string.app_share_feedback_unshareable)
         verify(exactly = 1) { Tracker.track(any()) }
         assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
         assertThat(tracked.captured.cause).isInstanceOf(IllegalArgumentException::class.java)
-
-        fake.assertNotEmitted("share")
-        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
         verify(exactly = 0) { mockedContext.startActivity(any()) }
     }
 
     @Test
-    fun `share when sound has neither file nor rawRes returns broken-data feedback and tracks non-fatal`() {
+    fun `prepareShareIntent returns Failure broken_data when sound has neither file nor rawRes`() {
         val sound = givenASoundWithNullUri()
         val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
 
@@ -130,19 +126,17 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         every { Tracker.track(capture(tracked)) } answers { nothing }
         every { mockedContext.startActivity(any()) } answers { nothing }
 
-        val feedback =
-            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+        val outcome =
+            runBlocking { ShareFeature.instance.prepareShareIntent(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
 
-        assertThat(feedback).isEqualTo(R.string.app_share_feedback_broken_data)
+        assertThat((outcome as ShareIntentOutcome.Failure).feedback).isEqualTo(R.string.app_share_feedback_broken_data)
         verify(exactly = 1) { Tracker.track(any()) }
         assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
-        fake.assertNotEmitted("share")
-        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
         verify(exactly = 0) { mockedContext.startActivity(any()) }
     }
 
     @Test
-    fun `share when bundled copy throws IOException returns copy-failed feedback and tracks non-fatal`() {
+    fun `prepareShareIntent returns Failure copy_failed when bundled copy throws IOException`() {
         val sound = givenASoundWithResourceId()
         val realContext = ApplicationProvider.getApplicationContext<Context>()
         val mockedContext = spyk<Context>(realContext)
@@ -166,80 +160,87 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         every { Tracker.track(capture(tracked)) } answers { nothing }
         every { mockedContext.startActivity(any()) } answers { nothing }
 
-        val feedback =
-            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+        val outcome =
+            runBlocking { ShareFeature.instance.prepareShareIntent(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
 
-        assertThat(feedback).isEqualTo(R.string.app_share_feedback_copy_failed)
+        assertThat((outcome as ShareIntentOutcome.Failure).feedback).isEqualTo(R.string.app_share_feedback_copy_failed)
         verify(exactly = 1) { Tracker.track(any()) }
         assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
         assertThat(tracked.captured.cause).isInstanceOf(IOException::class.java)
-        fake.assertNotEmitted("share")
-        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
         verify(exactly = 0) { mockedContext.startActivity(any()) }
     }
 
-    @Test
-    fun `share when chooser launches successfully returns null`() {
-        val sound = givenASoundWithUri()
-        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
-        mockkStatic(FileProvider::class)
-        every { FileProvider.getUriForFile(mockedContext, any(), any()) } returns Uri.EMPTY
-        every { mockedContext.startActivity(any()) } answers { nothing }
+    // ─── launchChooser: startActivity + analytics ───
 
-        val feedback =
-            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+    @Test
+    fun `launchChooser emits Share with the surface passed in by the caller`() {
+        val (context, intent) = givenAReadyToLaunchPair()
+
+        ShareFeature.instance.launchChooser(context, intent, CanonicalScreenName.MY_SOUNDS)
+
+        val event = fake.assertEmitted("share")
+        assertThat(event.params["surface"]).isEqualTo(CanonicalScreenName.MY_SOUNDS)
+    }
+
+    @Test
+    fun `launchChooser increments lifetime_shares user property monotonically across calls`() {
+        val (context, intent) = givenAReadyToLaunchPair()
+
+        ShareFeature.instance.launchChooser(context, intent, CanonicalScreenName.MY_SOUNDS)
+        ShareFeature.instance.launchChooser(context, intent, CanonicalScreenName.MY_SOUNDS)
+
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isEqualTo("2")
+    }
+
+    @Test
+    fun `launchChooser returns null when chooser launches successfully`() {
+        val (context, intent) = givenAReadyToLaunchPair()
+
+        val feedback = ShareFeature.instance.launchChooser(context, intent, CanonicalScreenName.MY_SOUNDS)
 
         assertThat(feedback).isNull()
     }
 
     @Test
-    fun `share when sound URI is valid show disambiguation window`() {
-        val sound = givenASoundWithUri()
+    fun `launchChooser wraps the share intent in ACTION_CHOOSER before startActivity`() {
+        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
+        val baseIntent =
+            Intent().apply {
+                action = Intent.ACTION_SEND
+                type = "audio/*"
+                putExtra(Intent.EXTRA_STREAM, Uri.EMPTY)
+            }
+        val captured = slot<Intent>()
+        every { mockedContext.startActivity(capture(captured)) } answers { nothing }
 
-        val generatedIntent = whenSharingThe(sound)
+        ShareFeature.instance.launchChooser(mockedContext, baseIntent, CanonicalScreenName.MY_SOUNDS)
 
-        thenOSShowDisambiguationWindow(generatedIntent)
+        assertThat(captured.captured.action).isEqualTo(Intent.ACTION_CHOOSER)
+        assertThat(captured.captured.extras?.containsKey(Intent.EXTRA_INTENT)).isTrue()
+        thenWeSendAnAudio(captured.captured)
     }
 
     @Test
-    fun `share when sound raw resource ID is valid show disambiguation window`() {
-        val sound = givenASoundWithResourceId()
+    fun `launchChooser returns no_app_for_audio when activity not found and tracks non-fatal without analytics`() {
+        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
+        val baseIntent = Intent().apply { action = Intent.ACTION_SEND }
+        every { mockedContext.startActivity(any()) } throws ActivityNotFoundException("no app handles audio share")
 
-        val generatedIntent = whenSharingThe(sound)
+        mockkObject(Tracker)
+        val tracked = slot<Throwable>()
+        every { Tracker.track(capture(tracked)) } answers { nothing }
 
-        thenOSShowDisambiguationWindow(generatedIntent)
+        val feedback = ShareFeature.instance.launchChooser(mockedContext, baseIntent, CanonicalScreenName.MY_SOUNDS)
+
+        assertThat(feedback).isEqualTo(R.string.app_share_feedback_no_app_for_audio)
+        verify(exactly = 1) { Tracker.track(any()) }
+        assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
+        assertThat(tracked.captured.cause).isInstanceOf(ActivityNotFoundException::class.java)
+        fake.assertNotEmitted("share")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
     }
 
-    @Test
-    fun `share when sound URI is valid sends the audio file`() {
-        val sound = givenASoundWithUri()
-
-        val generatedIntent = whenSharingThe(sound)
-
-        thenWeSendAnAudio(generatedIntent)
-    }
-
-    @Test
-    fun `share should generate a content Uri under Music directory as described in app_file_provider_paths resource`() {
-        val sound = givenASoundWithUri()
-
-        val capturedFile = whenSharingTheSoundCapturingThePath(sound)
-
-        thenWeCheckSoundPathIsAtMusicDirectory(capturedFile)
-    }
-
-    @Test
-    fun `share packaged sound temp filename is soundName dot mp3 without any prefix`() {
-        val sound = givenASoundWithResourceId()
-
-        val capturedFile = whenSharingTheSoundCapturingThePath(sound)
-
-        assertThat(capturedFile.name).isEqualTo("$dummyButtonName.mp3")
-    }
-
-    private fun thenWeCheckSoundPathIsAtMusicDirectory(capturedFile: File) {
-        assertThat(capturedFile.absolutePath.split("/").contains(Environment.DIRECTORY_MUSIC)).isTrue()
-    }
+    // ─── helpers ───
 
     private fun givenASoundWithUri() = Sound(dummyButtonName, "a/dummy/sound/uri")
 
@@ -247,38 +248,37 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
 
     private fun givenASoundWithNullUri() = Sound(dummyButtonName)
 
-    private fun whenSharingTheSoundCapturingThePath(sound: Sound): File {
+    private fun whenPreparing(
+        sound: Sound,
+        surface: String = CanonicalScreenName.MY_SOUNDS,
+    ): ShareIntentOutcome {
         val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
+        mockkStatic(FileProvider::class)
+        every { FileProvider.getUriForFile(mockedContext, any(), any()) } returns Uri.EMPTY
+        return runBlocking { ShareFeature.instance.prepareShareIntent(mockedContext, sound, surface) }
+    }
 
+    private fun whenPreparingCapturingTheFilePath(sound: Sound): File {
+        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
         val slotFile = slot<File>()
         mockkStatic(FileProvider::class)
         every { FileProvider.getUriForFile(mockedContext, any(), capture(slotFile)) } returns Uri.EMPTY
-
-        val slot = slot<Intent>()
-        every { mockedContext.startActivity(capture(slot)) } answers { nothing }
-
-        runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
-
+        runBlocking {
+            ShareFeature.instance.prepareShareIntent(mockedContext, sound, CanonicalScreenName.MY_SOUNDS)
+        }
         return slotFile.captured
     }
 
-    private fun whenSharingThe(sound: Sound): Intent {
+    private fun givenAReadyToLaunchPair(): Pair<Context, Intent> {
         val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
-
-        mockkStatic(FileProvider::class)
-        every { FileProvider.getUriForFile(mockedContext, any(), any()) } returns Uri.EMPTY
-
-        val slot = slot<Intent>()
-        every { mockedContext.startActivity(capture(slot)) } answers { nothing }
-
-        runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
-
-        return slot.captured
-    }
-
-    private fun thenOSShowDisambiguationWindow(intent: Intent) {
-        assertThat(intent.action).isEqualTo(Intent.ACTION_CHOOSER)
-        assertThat(intent.extras?.containsKey(Intent.EXTRA_INTENT)).isTrue()
+        every { mockedContext.startActivity(any()) } answers { nothing }
+        val intent =
+            Intent().apply {
+                action = Intent.ACTION_SEND
+                type = "audio/*"
+                putExtra(Intent.EXTRA_STREAM, Uri.EMPTY)
+            }
+        return mockedContext to intent
     }
 
     private fun thenWeSendAnAudio(intent: Intent) {

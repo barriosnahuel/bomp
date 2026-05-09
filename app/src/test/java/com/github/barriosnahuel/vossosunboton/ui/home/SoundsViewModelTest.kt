@@ -5,10 +5,14 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
+import com.github.barriosnahuel.vossosunboton.feature.share.ShareIntentOutcome
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
@@ -475,13 +479,17 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(welcomeStore: WelcomeStickerStore? = null): SoundsViewModel {
+    private fun givenAViewModel(
+        welcomeStore: WelcomeStickerStore? = null,
+        shareFeature: ShareFeature? = null,
+    ): SoundsViewModel {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val vm =
             SoundsViewModel(
                 context,
                 ioDispatcher = UnconfinedTestDispatcher(),
                 welcomeStore = welcomeStore ?: WelcomeStickerStore(context),
+                shareFeature = shareFeature ?: ShareFeature.instance,
             )
         runBlocking { vm.isInitialLoadComplete.first { it } }
         return vm
@@ -700,4 +708,86 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
                 .name,
         ).isNotEqualTo(welcomeTitle)
     }
+
+    @Test
+    fun `share emits to shareIntentEvent on Success outcome`() =
+        runTest {
+            val intent = mockk<Intent>(relaxed = true)
+            val shareFeature =
+                mockk<ShareFeature> {
+                    coEvery { prepareShareIntent(any(), any(), any()) } returns
+                        ShareIntentOutcome.Success(intent, CanonicalScreenName.MY_SOUNDS)
+                }
+            val viewModel = givenAViewModel(shareFeature = shareFeature)
+
+            viewModel.share(Sound("s", file = "s.mp3"))
+
+            val event = withTimeoutOrNull(1000) { viewModel.shareIntentEvent.first() }
+            assertThat(event?.intent).isEqualTo(intent)
+            assertThat(event?.surface).isEqualTo(CanonicalScreenName.MY_SOUNDS)
+        }
+
+    @Test
+    fun `share emits to shareErrorEvent with feedback res on Failure outcome`() =
+        runTest {
+            val shareFeature =
+                mockk<ShareFeature> {
+                    coEvery { prepareShareIntent(any(), any(), any()) } returns
+                        ShareIntentOutcome.Failure(R.string.app_share_feedback_unshareable)
+                }
+            val viewModel = givenAViewModel(shareFeature = shareFeature)
+
+            viewModel.share(Sound("s", file = "s.mp3"))
+
+            val emitted = withTimeoutOrNull(1000) { viewModel.shareErrorEvent.first() }
+            assertThat(emitted).isEqualTo(R.string.app_share_feedback_unshareable)
+        }
+
+    @Test
+    fun `share passes MY_SOUNDS surface when MY_SOUNDS tab selected and search hidden`() =
+        runTest {
+            val shareFeature = mockShareFeatureReturning(CanonicalScreenName.MY_SOUNDS)
+            val viewModel = givenAViewModel(shareFeature = shareFeature)
+            val sound = Sound("s", file = "s.mp3")
+            viewModel.selectTab(AppTab.MY_SOUNDS)
+
+            viewModel.share(sound)
+            withTimeoutOrNull(1000) { viewModel.shareIntentEvent.first() }
+
+            coVerify { shareFeature.prepareShareIntent(any(), sound, CanonicalScreenName.MY_SOUNDS) }
+        }
+
+    @Test
+    fun `share passes EXPLORE_SOUNDS surface when EXPLORE_SOUNDS tab selected`() =
+        runTest {
+            val shareFeature = mockShareFeatureReturning(CanonicalScreenName.EXPLORE_SOUNDS)
+            val viewModel = givenAViewModel(shareFeature = shareFeature)
+            val sound = Sound("s", file = "s.mp3")
+            viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+
+            viewModel.share(sound)
+            withTimeoutOrNull(1000) { viewModel.shareIntentEvent.first() }
+
+            coVerify { shareFeature.prepareShareIntent(any(), sound, CanonicalScreenName.EXPLORE_SOUNDS) }
+        }
+
+    @Test
+    fun `share passes SEARCH_SOUND surface when search overlay is visible`() =
+        runTest {
+            val shareFeature = mockShareFeatureReturning(CanonicalScreenName.SEARCH_SOUND)
+            val viewModel = givenAViewModel(shareFeature = shareFeature)
+            val sound = Sound("s", file = "s.mp3")
+            viewModel.showSearch()
+
+            viewModel.share(sound)
+            withTimeoutOrNull(1000) { viewModel.shareIntentEvent.first() }
+
+            coVerify { shareFeature.prepareShareIntent(any(), sound, CanonicalScreenName.SEARCH_SOUND) }
+        }
+
+    private fun mockShareFeatureReturning(surface: String): ShareFeature =
+        mockk {
+            coEvery { prepareShareIntent(any(), any(), any()) } returns
+                ShareIntentOutcome.Success(mockk(relaxed = true), surface)
+        }
 }

@@ -19,6 +19,8 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Canonica
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
+import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
+import com.github.barriosnahuel.vossosunboton.feature.share.ShareIntentOutcome
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeSticker
 import com.github.barriosnahuel.vossosunboton.feature.welcome.welcomeSticker
@@ -59,6 +61,7 @@ class SoundsViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val searchDebounceMs: Long = 200L,
     private val welcomeStore: WelcomeStickerStore = WelcomeStickerStore(application),
+    private val shareFeature: ShareFeature = ShareFeature.instance,
 ) : AndroidViewModel(application),
     PlayerControllerListener {
     private val repo = SoundsRepository(application, onError = Tracker::track)
@@ -134,6 +137,14 @@ class SoundsViewModel(
 
     private val _playbackErrorEvent = Channel<Unit>(Channel.BUFFERED)
     val playbackErrorEvent: Flow<Unit> = _playbackErrorEvent.receiveAsFlow()
+
+    // CONFLATED (vs the BUFFERED siblings above): a tap-spamming user does not need every share-error
+    // queued — only the latest matters, and stacking duplicate snackbars would just hide the message.
+    private val _shareIntentEvent = Channel<ShareIntentOutcome.Success>(Channel.CONFLATED)
+    val shareIntentEvent: Flow<ShareIntentOutcome.Success> = _shareIntentEvent.receiveAsFlow()
+
+    private val _shareErrorEvent = Channel<Int>(Channel.CONFLATED)
+    val shareErrorEvent: Flow<Int> = _shareErrorEvent.receiveAsFlow()
 
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
@@ -274,6 +285,17 @@ class SoundsViewModel(
     fun seekTo(positionMs: Int) {
         PlayerControllerFactory.instance.seekTo(positionMs)
         _playbackProgress.update { it?.copy(positionMs = positionMs) }
+    }
+
+    fun share(sound: Sound) {
+        viewModelScope.launch {
+            // applicationContext (via getApplication()) is enough: file resolution + FileProvider
+            // are activity-agnostic. Activity context only re-enters at launchChooser, on the UI side.
+            when (val outcome = shareFeature.prepareShareIntent(getApplication(), sound, currentSurface)) {
+                is ShareIntentOutcome.Success -> _shareIntentEvent.send(outcome)
+                is ShareIntentOutcome.Failure -> _shareErrorEvent.send(outcome.feedback)
+            }
+        }
     }
 
     fun deleteSound(sound: Sound) {

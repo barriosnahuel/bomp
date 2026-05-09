@@ -27,16 +27,53 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
-internal interface ShareFeature {
+/**
+ * Outcome of [ShareFeature.prepareShareIntent]. [Success] carries a ready-to-launch chooser intent
+ * and the originating surface so [ShareFeature.launchChooser] can log the analytics event with the
+ * matching `screen_name`. [Failure] carries an `@StringRes` feedback id for the caller to surface,
+ * paired with a non-fatal already tracked via `Tracker.track`.
+ */
+sealed class ShareIntentOutcome {
+    data class Success(
+        val intent: Intent,
+        val surface: String,
+    ) : ShareIntentOutcome()
+
+    data class Failure(
+        @get:StringRes
+        @param:StringRes
+        val feedback: Int,
+    ) : ShareIntentOutcome()
+}
+
+interface ShareFeature {
     /**
+     * Resolves the audio file for [sound] on the IO dispatcher, wraps it in a FileProvider URI, and
+     * builds the `ACTION_SEND` intent. Returns either a ready-to-launch [ShareIntentOutcome.Success]
+     * or a [ShareIntentOutcome.Failure] with an `@StringRes` feedback id (each failure is also recorded
+     * as non-fatal).
+     *
+     * Receives [applicationContext] — file resolution and FileProvider don't need an Activity context.
      * @param surface canonical screen_name from `CanonicalScreenName` describing where the share originated.
-     * @return `null` when the chooser launched, otherwise an `@StringRes` id with a user-facing
-     *         feedback message that the caller is expected to surface (Snackbar/Toast). Every
-     *         non-null return is paired with a non-fatal recorded via `Tracker.track`.
      */
-    suspend fun share(
-        context: Context,
+    suspend fun prepareShareIntent(
+        applicationContext: Context,
         sound: Sound,
+        surface: String,
+    ): ShareIntentOutcome
+
+    /**
+     * Wraps [intent] in a chooser and dispatches via `startActivity`, then logs the analytics event
+     * for [surface] only if the chooser launched. Returns `null` on success or
+     * `R.string.app_share_feedback_no_app_for_audio` if no activity can handle the intent (also tracked
+     * as non-fatal).
+     *
+     * Must be invoked from a UI-thread caller with an [activityContext] — Android's chooser expects
+     * the launching call on the Activity's Looper.
+     */
+    fun launchChooser(
+        activityContext: Context,
+        intent: Intent,
         surface: String,
     ): Int?
 
@@ -52,59 +89,61 @@ private class ShareFeatureImpl : ShareFeature {
      * For more info check
      * [developer.android.com/training/secure-file-sharing/setup-sharing](https://developer.android.com/training/secure-file-sharing/setup-sharing)
      */
-    override suspend fun share(
-        context: Context,
+    override suspend fun prepareShareIntent(
+        applicationContext: Context,
         sound: Sound,
         surface: String,
-    ): Int? {
-        Timber.d("Trying to share button: %s", sound.name)
+    ): ShareIntentOutcome {
+        Timber.d("Preparing share intent for button: %s", sound.name)
 
-        // Resolving the file path and (for bundled sounds, first share only) copying raw resources to disk
-        // both touch the file system. Run that part on IO; startActivity + analytics stay on the caller's
-        // Main dispatcher because Android's chooser expects the launching call on the UI thread.
-        val resolution = withContext(Dispatchers.IO) { resolveContentUri(context, sound) }
+        val resolution = withContext(Dispatchers.IO) { resolveContentUri(applicationContext, sound) }
         return when (resolution) {
-            is ShareOutcome.Failure -> resolution.feedback
-            is ShareOutcome.Success -> launchChooserAndTrack(context, sound, resolution.value, surface)
+            is ShareOutcome.Failure -> ShareIntentOutcome.Failure(resolution.feedback)
+            is ShareOutcome.Success -> {
+                Timber.d(
+                    "Share intent ready for: %s; contentUri=%s; URI=%s; rawResId=%s; surface=%s",
+                    sound.name,
+                    resolution.value,
+                    sound.file,
+                    sound.rawRes,
+                    surface,
+                )
+                ShareIntentOutcome.Success(buildShareIntent(resolution.value), surface)
+            }
         }
     }
 
-    private fun launchChooserAndTrack(
-        context: Context,
-        sound: Sound,
-        contentUri: Uri,
+    override fun launchChooser(
+        activityContext: Context,
+        intent: Intent,
         surface: String,
     ): Int? {
-        val shareIntent = Intent()
-        shareIntent.action = Intent.ACTION_SEND
-        shareIntent.type = "audio/*"
-        shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri)
-        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-        Timber.d(
-            "Starting disambiguation window for: %s: contentUri=%s; URI=%s; rawResId=%s;",
-            sound.name,
-            contentUri,
-            sound.file,
-            sound.rawRes,
-        )
-
         // Track AFTER the chooser actually launches: if `startActivity` throws (ActivityNotFoundException, OS reject)
         // we want `lifetime_shares` to stay accurate. If the chooser shows but the user cancels there is no reliable
         // callback, so "chooser displayed" remains the canonical share signal — matches Firebase's recommended event.
         try {
-            context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.app_share_chooser_title)))
+            activityContext.startActivity(
+                Intent.createChooser(intent, activityContext.getString(R.string.app_share_chooser_title)),
+            )
         } catch (e: ActivityNotFoundException) {
             Tracker.track(RuntimeException("No activity available to handle audio share intent", e))
             return R.string.app_share_feedback_no_app_for_audio
         }
 
-        val tracker = AnalyticsTrackerProvider.get(context.applicationContext)
+        val tracker = AnalyticsTrackerProvider.get(activityContext.applicationContext)
         tracker.log(AnalyticsEvent.Share(surface = surface))
         val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_SHARES)
         tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_SHARES, newCount.toString())
         return null
     }
+
+    private fun buildShareIntent(contentUri: Uri): Intent =
+        Intent().apply {
+            action = Intent.ACTION_SEND
+            type = "audio/*"
+            putExtra(Intent.EXTRA_STREAM, contentUri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
 
     private fun resolveContentUri(
         context: Context,
@@ -170,7 +209,8 @@ private class ShareFeatureImpl : ShareFeature {
     /**
      * Two-step resolution result: either a value of [T] (file path, then content URI) or an
      * `@StringRes` feedback id paired with a non-fatal already tracked. `Failure : ShareOutcome<Nothing>`
-     * so it can flow through `ShareOutcome<File> → ShareOutcome<Uri>` without re-wrapping.
+     * so it can flow through `ShareOutcome<File> → ShareOutcome<Uri>` without re-wrapping. Private to
+     * the impl — the public boundary is [ShareIntentOutcome].
      */
     private sealed class ShareOutcome<out T> {
         data class Success<out T>(
