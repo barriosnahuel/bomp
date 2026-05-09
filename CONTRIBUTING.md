@@ -18,13 +18,13 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Bundled audio files](#bundled-audio-files-)
 - [Store listing](#store-listing-)
 - [Analytics events](#analytics-events-)
+- [BigQuery export](#bigquery-export-)
 
 ## Local setup ⚙
 
 1. Clone/Fork this repo.
-2. Replace the `app/google-services.json` file with the one from Firebase console. You *won't* be able to commit changes on this file.
-3. Check how to prevent modifications at #Firebase config file
-4. Run:
+2. The repo commits scrubbed dummy `google-services.json` files at `app/src/debug/google-services.json` and `app/src/release/google-services.json` so the build works out of the box. To run the app against the maintainer's Firebase projects (`bomp-debug` for the `.debug` build, `bomp-prod` for release) or your own fork, replace those two files with the real ones downloaded from Firebase Console, then follow [Firebase config file](#firebase-config-file-) to keep your real keys out of git.
+3. Run:
     > ./gradlew check
 
     It must return **`BUILD SUCCESS`**.
@@ -65,13 +65,30 @@ As described at [Gradle docs#Adding wrapper](https://docs.gradle.org/current/use
 
 ## Firebase config file ⚙️
 
-To prevent future modifications on `app/google-services.json` I run:
+The repo commits **scrubbed dummies** at `app/src/debug/google-services.json` and `app/src/release/google-services.json` (real `project_id` / `project_number` / `package_name`, fake `mobilesdk_app_id` and `api_key`) so CI can compile and GitGuardian doesn't flag real Firebase API keys. Two Firebase projects back the build types: `bomp-prod` (release) and `bomp-debug` (debug). The Google Services Gradle plugin auto-resolves the per-variant JSON by `package_name`.
 
-    >  git update-index --skip-worktree app/google-services.json
+To run local builds against the real Firebase projects, swap the dummies for the files downloaded from Firebase Console, then mark them skip-worktree so accidental edits don't reach the index:
 
-    To revert this just:
+    > cp /path/to/real/google-services-release.json app/src/release/google-services.json
+    > cp /path/to/real/google-services-debug.json   app/src/debug/google-services.json
+    > git update-index --skip-worktree app/src/release/google-services.json
+    > git update-index --skip-worktree app/src/debug/google-services.json
 
-    > git update-index --no-skip-worktree app/google-services.json
+To **edit the committed dummy itself** (rare — only when adding fields the plugin needs, or when scrubbing differently). Naively running `--no-skip-worktree` then `git add` would stage the real file from the working tree and leak `AIza…` keys, so use this safe sequence per file:
+
+    > # 1. Stash the real file outside the worktree
+    > mv app/src/release/google-services.json /tmp/google-services-release-real.json
+    > # 2. Drop skip-worktree and restore the dummy from HEAD
+    > git update-index --no-skip-worktree app/src/release/google-services.json
+    > git checkout HEAD -- app/src/release/google-services.json
+    > # 3. Edit the dummy and stage it
+    > $EDITOR app/src/release/google-services.json
+    > git add app/src/release/google-services.json
+    > # 4. Restore the real file and re-arm skip-worktree
+    > mv /tmp/google-services-release-real.json app/src/release/google-services.json
+    > git update-index --skip-worktree app/src/release/google-services.json
+
+Repeat for `app/src/debug/google-services.json`. Before committing, verify with `git diff --cached app/src/release/google-services.json` (and the debug one) — if you see an `AIza…` key or a non-dummy `mobilesdk_app_id`, abort and restart the sequence.
 
 ## Backup & restore testing 💾
 
@@ -329,6 +346,52 @@ adb shell setprop log.tag.FA VERBOSE
 adb shell setprop log.tag.FA-SVC VERBOSE
 adb logcat -s FA FA-SVC
 ```
+
+## BigQuery export 🗄️
+
+`bomp-prod` exports Crashlytics, Analytics, and Performance to BigQuery (`us` multi-region, daily, no streaming) so we can query accumulated history with SQL — useful for post-mortem on crashes that no longer fit the 90-day Crashlytics retention, or for pivot tables across events that GA4 Explorer makes painful.
+
+**Scope: release only.** `bomp-debug` does not export. Debug builds intentionally crash on StrictMode violations (see `CLAUDE.md` § *StrictMode debug audit*); exporting that noise to BQ would pollute queries and waste daily-export quota.
+
+### Tooling install (one-time, macOS)
+
+```bash
+brew install --cask google-cloud-sdk
+```
+
+Then authenticate. The login opens a browser — run it via the `!` prefix in Claude Code so the output lands in the conversation:
+
+    > ! gcloud auth login
+    > gcloud config set project bomp-prod
+    > bq ls --project_id=bomp-prod
+
+### Expected datasets
+
+After enabling the BQ export, the first daily run lands ~24 h later. `bq ls --project_id=bomp-prod` should then list:
+
+| Dataset | Tables |
+|---|---|
+| `firebase_crashlytics` | `com_github_barriosnahuel_vossosunboton_ANDROID` (one row per non-fatal/fatal; `event_timestamp`, `issue_id`, stack trace, sessions when enabled) |
+| `analytics_<GA4_PROPERTY_ID>` | `events_YYYYMMDD` (one row per event, params nested) — property ID is numeric, distinct from project ID, visible only after the first dataset materializes |
+| `firebase_performance` | exact tables to confirm post-export |
+
+### Sanity-check query
+
+```sql
+SELECT COUNT(*) AS issue_count
+FROM `bomp-prod.firebase_crashlytics.com_github_barriosnahuel_vossosunboton_ANDROID`
+WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+```
+
+Returns `0` early on if no crashes — that's a feature, not a bug.
+
+### When to use BQ instead of the Console
+
+- The Crashlytics dashboard caps per-issue stack traces at the most recent N occurrences. BQ retains all of them.
+- Cross-cutting questions (e.g. "of users who hit `StrictModeViolation`, how many later opened the share flow?") need a SQL JOIN across the Crashlytics + Analytics datasets — only possible because both datasets live in the same `us` region (cross-region JOINs incur egress).
+- Performance regressions across releases — easier to diff trace medians via `WITH` clauses than to flip between Console screens.
+
+The Console is still right for: real-time DebugView, alert configuration, single-issue triage. BQ is for *retrospectives* across N events / users / days.
 
 ## License 📄
 
