@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 #### Changed
 - Migrated Firebase to per-build-type projects (bomp-prod for release, bomp-debug for debug); added BigQuery export documentation
 - About screen's external Legal & Privacy links now open extensionless URLs (`/privacy-policy`, `/data-safety`, `/terms-of-service`) — GitHub Pages serves the same content under both forms, so this is a cosmetic cleanup with no destination or behavior change
+- Routed the audio share flow through `SoundsViewModel` with Channel-based one-shot events, aligning ADR 0002 (constructor injection) and ADR 0003 (Channel for one-shot events); `ShareFeature` is split into `prepareShareIntent` (VM-side I/O) and `launchChooser` (UI-side)
 
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
