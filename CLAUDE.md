@@ -117,17 +117,23 @@ For tests: every store ships a `@VisibleForTesting(otherwise = NONE) suspend fun
 
 ## Worktree setup
 
-After creating a new worktree, replace the dummy `google-services.json` and copy the bundled audio files from the main worktree:
+The repo commits **scrubbed dummy** `google-services.json` files at `app/src/{debug,release}/google-services.json` (real `project_id` / `project_number` / `package_name`, fake `mobilesdk_app_id` and `api_key`) so CI can compile and GitGuardian doesn't flag real Firebase API keys. Real values live only in the working tree of each worktree, swapped in over the dummies and hidden from git via `git update-index --skip-worktree`.
+
+After creating a new worktree, copy the real configs and audio files from the primary worktree, then mark the configs skip-worktree so any future re-download from Firebase Console doesn't accidentally land in the index:
 
 ```bash
-cp "$(git rev-parse --git-common-dir)/../app/google-services.json" app/google-services.json
-git update-index --skip-worktree app/google-services.json
+cp "$(git rev-parse --git-common-dir)/../app/src/release/google-services.json" app/src/release/google-services.json
+cp "$(git rev-parse --git-common-dir)/../app/src/debug/google-services.json"   app/src/debug/google-services.json
+git update-index --skip-worktree app/src/release/google-services.json
+git update-index --skip-worktree app/src/debug/google-services.json
+mkdir -p model/src/debug/res/raw
 cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.mp3 model/src/debug/res/raw/ 2>/dev/null || true
 cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.ogg model/src/debug/res/raw/ 2>/dev/null || true
 ```
 - Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` and `secure.properties` (with `key.alias`, `key.password`, `store.password`) in the project root — not committed.
 - Debug builds use the included debug keystore and work without the above.
 - Bundled audio files (`model/src/debug/res/raw/*.mp3` and `*.ogg`) are not committed; without them debug builds compile and run but the Explore tab is empty.
+- Two Firebase projects back the build types: `bomp-prod` for release (`com.github.barriosnahuel.vossosunboton`) and `bomp-debug` for debug (`com.github.barriosnahuel.vossosunboton.debug`). The Google Services Gradle plugin auto-resolves the per-variant JSON by `package_name`. See `CONTRIBUTING.md` § *Firebase config file* for swap workflow when pointing local builds at a different project.
 
 ## Android resources naming
 
@@ -161,6 +167,8 @@ If `./gradlew check` fails with a Spotless violation, run `./gradlew spotlessApp
 **Do not remove or hide the About screen.** It's the "Appropriate Legal Notices" mechanism required by AGPLv3 §0 (paired with the headers above). Entry point: TopAppBar overflow menu in `LandingScreen.kt`.
 
 ## Bug fixes — TDD workflow
+
+For **production bugs reported by users** (not local-repro), check Firebase Crashlytics and BigQuery first to scope frequency, affected versions, OS distribution, and recurring stack frames before reproducing locally — see `CONTRIBUTING.md` § *BigQuery export*. Then proceed with the TDD steps below.
 
 When the user reports a bug or says we are going to fix one, follow TDD:
 
@@ -340,6 +348,8 @@ Hard rules:
   ```
 - Expected and recoverable exceptions (e.g. user dismissed a chooser) don't need `Tracker.track`. Reserve it for things you want to investigate.
 - In tests, mock `Tracker` with MockK (see `PlayerControllerTest.kt`): `every { Tracker.track(any()) } answers { nothing }`.
+
+For SQL post-mortem on accumulated crash history, see `CONTRIBUTING.md` § *BigQuery export*. Releases-only — `bomp-prod` exports Crashlytics, Analytics, and Performance to BigQuery (`us` multi-region, daily); `bomp-debug` does not export.
 
 ## StrictMode debug audit
 

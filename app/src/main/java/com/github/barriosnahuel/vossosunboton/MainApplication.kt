@@ -28,7 +28,7 @@ internal class MainApplication : CustomBuildTypeApplication() {
 
     override fun onCreate() {
         super.onCreate()
-        Timber.d("Creating %s application...", BuildConfig.BUILD_TYPE)
+        Timber.d("Starting %s application", BuildConfig.BUILD_TYPE)
 
         // Warm up the analytics tracker on a background coroutine so the first UI call site
         // (`LandingScreen`'s `LaunchedEffect { tracker.logScreen(...) }`) doesn't block on the
