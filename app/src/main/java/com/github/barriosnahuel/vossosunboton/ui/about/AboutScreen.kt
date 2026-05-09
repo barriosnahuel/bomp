@@ -469,6 +469,7 @@ private fun openUrl(
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         true
     } catch (e: ActivityNotFoundException) {
-        Tracker.track(RuntimeException("Could not launch ACTION_VIEW for $url", e))
+        Tracker.log("about.url=$url")
+        Tracker.track(RuntimeException("Could not launch ACTION_VIEW", e))
         false
     }
