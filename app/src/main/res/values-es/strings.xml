@@ -5,7 +5,7 @@
     <string name="app_share_feedback_unshareable">No se pudo compartir este Bomp. Nahu ya se enteró y lo va a investigar.</string>
     <string name="app_share_feedback_no_app_for_audio">No tenés una app para compartir audios. Probá instalando una.</string>
     <string name="app_share_feedback_copy_failed">No pude preparar este Bomp para compartir. Liberá espacio y probá de nuevo — Nahu ya se enteró y lo va a investigar.</string>
-    <string name="app_share_feedback_broken_data">Los datos de este Bomp están rotos. Nahu ya se enteró y lo va a investigar.</string>
+    <string name="app_share_feedback_broken_data">Los datos de este Bomp están rotos. Borralo y volvé a agregarlo — Nahu ya se enteró y lo va a investigar.</string>
     <string name="app_undo">Deshacer!</string>
     <string name="app_feedback_audio_deleted">Audio borrado</string>
     <string name="app_feedback_button_saved">¡%1$s es tuyo!</string>
