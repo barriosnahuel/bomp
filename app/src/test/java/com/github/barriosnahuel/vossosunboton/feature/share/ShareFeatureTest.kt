@@ -144,9 +144,17 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
     @Test
     fun `share when bundled copy throws IOException returns copy-failed feedback and tracks non-fatal`() {
         val sound = givenASoundWithResourceId()
-        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
+        val realContext = ApplicationProvider.getApplicationContext<Context>()
+        val mockedContext = spyk<Context>(realContext)
 
-        // Force the bundled-resource branch to take the copy path even if the file already exists on disk.
+        // Robolectric's external dir survives across tests in the same JVM run; if a sibling test (e.g. the one
+        // that captures the path) already copied "$dummyButtonName.mp3" to it, the bundled branch short-circuits
+        // on `fileForSharing.exists()` and never reaches our `copy(...)` mock. Delete the leftover so the copy
+        // path is exercised deterministically regardless of test execution order.
+        com.github.barriosnahuel.vossosunboton.commons.file
+            .getFile(realContext, "$dummyButtonName.mp3")
+            .delete()
+
         mockkStatic("com.github.barriosnahuel.vossosunboton.commons.file.FileUtils")
         every {
             com.github.barriosnahuel.vossosunboton.commons.file
