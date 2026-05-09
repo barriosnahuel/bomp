@@ -22,10 +22,12 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### For nerds 🤓
 
 #### Changed
+- Migrated Firebase to per-build-type projects (bomp-prod for release, bomp-debug for debug); added BigQuery export documentation
 - About screen's external Legal & Privacy links now open extensionless URLs (`/privacy-policy`, `/data-safety`, `/terms-of-service`) — GitHub Pages serves the same content under both forms, so this is a cosmetic cleanup with no destination or behavior change
 
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
+- Stopped a duplicate startup log breadcrumb fired from both CustomBuildTypeApplication and MainApplication; renamed the surviving log to "Starting <build-type> application"
 
 ## \[v2.0.0] - 2026-05-07
 
