@@ -109,6 +109,29 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `on startPlayingSound when start succeeds emits onPlayerStart only after start`() {
+        // Locks in the no-flicker invariant from the inverse case: the listener must NOT be told
+        // "playing" until start() has actually returned, so a future revert that fires onPlayerStart
+        // before start() (the historical order) doesn't sneak past the failure-path test.
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = PlayerControllerImpl(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+
+        verifyOrder {
+            mp.start()
+            listener.onPlayerStart(sound, any())
+        }
+    }
+
+    @Test
     fun `on startPlayingSound when start throws IllegalStateException should call onPlayerError and track non-fatal`() {
         val context = mockk<Context>(relaxed = true)
         val sound = Sound("test", rawRes = 1)
