@@ -70,8 +70,9 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                 FileOutputStream(targetFile).use { fileOutputStream ->
                     context.contentResolver.openInputStream(parsed).use { inputStream ->
                         if (inputStream == null) {
+                            Tracker.log("addbutton.uri=$uri")
                             Tracker.track(
-                                RuntimeException("Inbound URI returned null inputStream after validation: $uri"),
+                                RuntimeException("Inbound URI returned null inputStream after validation"),
                             )
                             return@async R.string.app_addbutton_feedback_uri_unreadable
                         } else {
@@ -88,8 +89,9 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                                         retriever.release()
                                     }
                                 }.onFailure {
+                                    Tracker.log("addbutton.fileName=$fileName")
                                     Tracker.track(
-                                        RuntimeException("Failed to extract duration metadata for $fileName", it),
+                                        RuntimeException("Failed to extract duration metadata", it),
                                     )
                                 }.getOrNull()
                             if (durationMs != null) {
@@ -101,9 +103,11 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                     }
                 }
             } catch (e: FileNotFoundException) {
-                Tracker.track(RuntimeException("Can't create new button's path: $fileName", e))
+                Tracker.log("addbutton.fileName=$fileName")
+                Tracker.track(RuntimeException("Can't create new audio's path", e))
             } catch (e: IOException) {
-                Tracker.track(RuntimeException("Can't copy original audio: $fileName", e))
+                Tracker.log("addbutton.fileName=$fileName")
+                Tracker.track(RuntimeException("Can't copy original audio", e))
             }
 
             feedbackMessage

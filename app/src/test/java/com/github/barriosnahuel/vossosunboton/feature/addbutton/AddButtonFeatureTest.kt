@@ -156,6 +156,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
 
         mockkObject(Tracker)
         every { Tracker.track(any()) } answers { nothing }
+        every { Tracker.log(any()) } answers { nothing }
 
         val result =
             runBlocking {
@@ -164,6 +165,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
 
         assertThat(result).isEqualTo(R.string.app_addbutton_feedback_uri_unreadable)
         verify(exactly = 1) { Tracker.track(any()) }
+        verify(atLeast = 1) { Tracker.log(any()) }
     }
 
     @Test
@@ -191,6 +193,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
 
         mockkObject(Tracker)
         every { Tracker.track(any()) } answers { nothing }
+        every { Tracker.log(any()) } answers { nothing }
 
         val result =
             runBlocking {
@@ -199,6 +202,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
 
         assertThat(result).isEqualTo(R.string.app_addbutton_feedback_save_failed)
         verify(exactly = 1) { Tracker.track(any()) }
+        verify(atLeast = 1) { Tracker.log(any()) }
     }
 
     @Test
@@ -208,6 +212,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
 
         mockkObject(Tracker)
         every { Tracker.track(any()) } answers { nothing }
+        every { Tracker.log(any()) } answers { nothing }
         mockkConstructor(MediaMetadataRetriever::class)
         every { anyConstructed<MediaMetadataRetriever>().setDataSource(any<String>()) } throws
             RuntimeException("Retriever blew up")
@@ -220,6 +225,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
 
         assertThat(result).isEqualTo(R.string.app_addbutton_feedback_saved_ok)
         verify(exactly = 1) { Tracker.track(any()) }
+        verify(atLeast = 1) { Tracker.log(any()) }
     }
 
     /**
