@@ -139,7 +139,9 @@ Antes del primer push de la ficha en Play, resolver:
 - [ ] Reemplazar el pill custom en `.l-cta-row` por el badge oficial **Pre-register on Google
       Play** (es-419 SVG) descargado del Partner Marketing Hub:
       https://partnermarketinghub.withgoogle.com/brands/google-play/visual-identity/badge-guidelines/
-- [ ] Confirmar email ARCO definitivo en `privacy-policy.html` (hoy: `arco@bomp.app` placeholder).
+- [x] Email de contacto definitivo: `barrios.nahuel+bomp@gmail.com` (usado en `pp.s05.li7`,
+      `tos.s12.body`, `tos.meta.operator` × 5 locales + fallbacks estáticos en
+      `privacy-policy.html` y `terms-of-service.html`).
 - [ ] Confirmar URL pública (`barriosnahuel.github.io/bomp/`) tras el primer deploy y rectificar
       `og:url`, `<link rel="canonical">` y `sitemap.xml` si difiere.
 
