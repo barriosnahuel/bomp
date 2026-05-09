@@ -72,6 +72,7 @@
     <string name="app_addbutton_missing_parameter_error">Falta indicar el audio</string>
     <string name="app_addbutton_feedback_saved_ok">Guardado</string>
     <string name="app_addbutton_feedback_uri_unreadable">No pude leer el audio que elegiste. Nahu ya se enteró y lo va a investigar.</string>
+    <string name="app_addbutton_feedback_save_failed">No pude guardar este Bomp. Liberá un poco de espacio y probá de nuevo — Nahu ya se enteró.</string>
 
     <!-- Mis audios — empty state (welcome consumido, sin Bomps propios todavía) -->
     <string name="app_my_sounds_empty_headline">Acá viven las voces que te importan.</string>

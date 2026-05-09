@@ -38,6 +38,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -87,6 +90,8 @@ fun AddButtonScreen(
     var nameError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val dismissLabel = stringResource(R.string.app_snackbar_action_dismiss)
 
     fun save() {
         if (name.isBlank()) {
@@ -113,6 +118,17 @@ fun AddButtonScreen(
                                 currentSounds = totalSounds,
                             ),
                         )
+                    } else {
+                        // Indefinite + dismiss action so the user can read the failure on their own pace
+                        // (matches LandingScreen.shareWithFeedback rationale: TalkBack reads ~10–12 chars/sec
+                        // and es-AR copy can exceed what SnackbarDuration.Long flushes). Skipping onSaved
+                        // keeps the user on the form with the typed name preserved so they can retry.
+                        snackbarHostState.showSnackbar(
+                            message = context.getString(feedbackId),
+                            actionLabel = dismissLabel,
+                            duration = SnackbarDuration.Indefinite,
+                        )
+                        return@launch
                     }
                 }
                 is AddButtonMode.Edit -> {
@@ -133,6 +149,7 @@ fun AddButtonScreen(
 
     Scaffold(
         topBar = { AddButtonTopBar(mode = mode, onNavigateUp = onNavigateUp) },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(
             modifier =
