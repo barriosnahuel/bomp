@@ -339,15 +339,18 @@ Non-fatal exceptions go to Firebase Crashlytics through the `Tracker` wrapper at
 Hard rules:
 
 - **Do NOT rely on `Timber.e(throwable, message)` to surface a non-fatal.** The `ErrorTrackerTree` (planted in debug and release) forwards only the formatted message via `Tracker.log(...)` — the throwable parameter is silently dropped. `Timber.e` / `Timber.w` are fine for logcat-only diagnostics during dev.
-- For caught exceptions, follow the established pattern (see `PlayerControllerImpl.kt`): wrap the cause in a `RuntimeException` whose message describes the operation, then hand it to `Tracker.track`. The wrapper message becomes the Crashlytics title; the original throwable is preserved as `cause`.
+- **Wrapper message MUST be static.** Crashlytics shows the latest event's message as the issue title in the dashboard, so dynamic interpolation (`"... for $name"`) makes titles flicker between events and breaks BigQuery searches by message. Attach per-event context as a Crashlytics breadcrumb via `Tracker.log("module.field=value")` emitted **immediately before** `Tracker.track(...)`. Module = feature/package directory (`share`, `addbutton`, `playback`, `about`, etc.). Multiple breadcrumbs allowed — emit one `Tracker.log` per key.
+- **Don't use "button" to describe a Sound/Bomp in error or log messages.** It's the legacy term; user-facing copy uses the brand name "Bomp" but internal messages use the neutral "audio" so the brand doesn't leak into ops/BigQuery. The Material Compose `Button` component name is fine — this rule applies to domain references, not framework identifiers or code-level package/class names like `addbutton/`/`AddButtonFeature` (those are out-of-scope churn).
+- For caught exceptions, follow the established pattern (see `PlayerControllerImpl.kt`): wrap the cause in a `RuntimeException` whose **static** message describes the operation, then hand it to `Tracker.track`. The wrapper message becomes the Crashlytics title; the original throwable is preserved as `cause`.
   ```kotlin
   } catch (e: ActivityNotFoundException) {
-      Tracker.track(RuntimeException("Could not launch ACTION_VIEW for $url", e))
+      Tracker.log("about.url=$url")
+      Tracker.track(RuntimeException("Could not launch ACTION_VIEW", e))
       // ...recovery UI (snackbar, fallback) goes here
   }
   ```
 - Expected and recoverable exceptions (e.g. user dismissed a chooser) don't need `Tracker.track`. Reserve it for things you want to investigate.
-- In tests, mock `Tracker` with MockK (see `PlayerControllerTest.kt`): `every { Tracker.track(any()) } answers { nothing }`.
+- In tests, mock `Tracker` with MockK (see `PlayerControllerTest.kt`): `every { Tracker.track(any()) } answers { nothing }` and `every { Tracker.log(any()) } answers { nothing }` for sites that emit breadcrumbs. Lock in the contract with `verify(atLeast = 1) { Tracker.log(any()) }` next to the existing `Tracker.track` assertion — no need to assert exact breadcrumb text (overspecification).
 
 For SQL post-mortem on accumulated crash history, see `CONTRIBUTING.md` § *BigQuery export*. Releases-only — `bomp-prod` exports Crashlytics, Analytics, and Performance to BigQuery (`us` multi-region, daily); `bomp-debug` does not export.
 
