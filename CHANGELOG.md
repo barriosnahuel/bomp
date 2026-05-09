@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
+- Failures while extracting duration metadata for a newly imported audio are now tracked as non-fatals (Crashlytics) for visibility; the save still succeeds
 
 ## \[v2.0.0] - 2026-05-07
 

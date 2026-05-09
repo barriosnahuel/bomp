@@ -87,6 +87,10 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                                     } finally {
                                         retriever.release()
                                     }
+                                }.onFailure {
+                                    Tracker.track(
+                                        RuntimeException("Failed to extract duration metadata for $fileName", it),
+                                    )
                                 }.getOrNull()
                             if (durationMs != null) {
                                 repo.saveDuration(name, durationMs)
