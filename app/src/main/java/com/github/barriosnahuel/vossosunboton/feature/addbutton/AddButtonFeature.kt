@@ -11,6 +11,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -57,8 +58,10 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         return GlobalScope.async(Dispatchers.IO) {
             var feedbackMessage = R.string.app_feedback_generic_error_contact_support
             val parsed = Uri.parse(uri)
-            if (validateAudioUri(context, parsed) != ValidationResult.Ok) {
-                return@async feedbackMessage
+            when (validateAudioUri(context, parsed)) {
+                ValidationResult.Ok -> Unit
+                ValidationResult.Rejected -> return@async feedbackMessage
+                ValidationResult.Unreadable -> return@async R.string.app_addbutton_feedback_uri_unreadable
             }
             // getFile() resolves context.getExternalFilesDir(...), which performs disk I/O —
             // keep it inside the IO dispatcher so StrictMode does not flag it on the main thread.
@@ -116,7 +119,14 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         uri: Uri,
     ): ValidationResult {
         val resolver = context.contentResolver
-        val mime = resolver.getType(uri)
+        val mimeResult = runCatching { resolver.getType(uri) }
+        if (mimeResult.isFailure) {
+            Tracker.track(
+                RuntimeException("ContentResolver.getType failed for inbound URI", mimeResult.exceptionOrNull()),
+            )
+            return ValidationResult.Unreadable
+        }
+        val mime = mimeResult.getOrNull()
         val size = resolveSize(resolver, uri)
         val rejection =
             when {
@@ -154,6 +164,8 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         data object Ok : ValidationResult()
 
         data object Rejected : ValidationResult()
+
+        data object Unreadable : ValidationResult()
     }
 
     private companion object {
