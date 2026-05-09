@@ -31,6 +31,7 @@ internal fun LegalAndPrivacySection(
     onLicenseClick: () -> Unit,
     onPrivacyPolicyClick: () -> Unit,
     onDataSafetyClick: () -> Unit,
+    onTermsOfServiceClick: () -> Unit,
     onSourceClick: () -> Unit,
 ) {
     Column(
@@ -67,6 +68,12 @@ internal fun LegalAndPrivacySection(
                     label = stringResource(R.string.app_about_data_safety),
                     isExternal = true,
                     onClick = onDataSafetyClick,
+                )
+                LegalListItem(
+                    icon = AppIcons.Handshake,
+                    label = stringResource(R.string.app_about_terms_of_service),
+                    isExternal = true,
+                    onClick = onTermsOfServiceClick,
                 )
                 LegalListItem(
                     icon = AppIcons.Code,

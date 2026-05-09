@@ -110,6 +110,9 @@ sealed class AnalyticsEvent(
     /** External Data Safety link followed from About. The user leaves the app. */
     object AboutDataSafetyOpen : AnalyticsEvent(name = "about_data_safety_open", hasFirstVariant = true)
 
+    /** External Terms of Service link followed from About. The user leaves the app. */
+    object AboutTermsOfServiceOpen : AnalyticsEvent(name = "about_terms_of_service_open", hasFirstVariant = true)
+
     /**
      * Brand audio played from the About hero section. NOTE: separate surface from the home-grid
      * Sticker Cero introduced in v2.0.0 — that one emits its own [WelcomeStickerPlay] event.

@@ -93,6 +93,7 @@ fun AboutScreen(onBack: () -> Unit) {
     val sourceUrl = stringResource(R.string.app_about_source_url)
     val privacyPolicyUrl = stringResource(R.string.app_about_privacy_policy_url)
     val dataSafetyUrl = stringResource(R.string.app_about_data_safety_url)
+    val termsOfServiceUrl = stringResource(R.string.app_about_terms_of_service_url)
     val cafecitoUrl = stringResource(R.string.app_about_gratitude_cafecito_url)
     val kofiUrl = stringResource(R.string.app_about_gratitude_kofi_url)
     val noBrowserMessage = stringResource(R.string.app_about_error_no_browser)
@@ -197,6 +198,13 @@ fun AboutScreen(onBack: () -> Unit) {
                 onDataSafetyClick = {
                     if (openUrl(context, dataSafetyUrl.withDeviceHl())) {
                         AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutDataSafetyOpen)
+                    } else {
+                        scope.launch { snackbarHostState.showSnackbar(noBrowserMessage) }
+                    }
+                },
+                onTermsOfServiceClick = {
+                    if (openUrl(context, termsOfServiceUrl.withDeviceHl())) {
+                        AnalyticsTrackerProvider.get(context.applicationContext).log(AnalyticsEvent.AboutTermsOfServiceOpen)
                     } else {
                         scope.launch { snackbarHostState.showSnackbar(noBrowserMessage) }
                     }

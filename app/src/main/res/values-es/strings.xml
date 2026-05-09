@@ -46,6 +46,7 @@
     <string name="app_about_legal_section_title">Legal y privacidad</string>
     <string name="app_about_privacy_policy">Política de privacidad</string>
     <string name="app_about_data_safety">Seguridad de datos</string>
+    <string name="app_about_terms_of_service">Términos del servicio</string>
     <string name="app_about_open_in_browser">Se abre en el navegador</string>
     <string name="app_about_error_no_browser">No se pudo abrir el navegador</string>
     <string name="app_about_gratitude_eyebrow">¿Te alegró el día?</string>
