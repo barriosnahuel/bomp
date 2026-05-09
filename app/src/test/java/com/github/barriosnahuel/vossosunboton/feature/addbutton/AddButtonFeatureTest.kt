@@ -118,7 +118,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
             }
 
         assertThat(result).isEqualTo(R.string.app_addbutton_feedback_uri_unreadable)
-        verify(atLeast = 1) { Tracker.track(any()) }
+        verify(exactly = 1) { Tracker.track(any()) }
     }
 
     /**
