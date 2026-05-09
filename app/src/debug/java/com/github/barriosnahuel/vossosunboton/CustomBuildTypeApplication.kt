@@ -16,8 +16,6 @@ internal abstract class CustomBuildTypeApplication : Application() {
 
         super.onCreate()
 
-        Timber.d("Creating DEBUG application...")
-
         DebugTools.configure(this)
     }
 }

@@ -14,7 +14,5 @@ internal abstract class CustomBuildTypeApplication : Application() {
         Timber.plant(ErrorTrackerTree())
 
         super.onCreate()
-
-        Timber.d("Creating RELEASE application...")
     }
 }

@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
+- Stopped a duplicate startup log breadcrumb fired from both CustomBuildTypeApplication and MainApplication; renamed the surviving log to "Starting <build-type> application"
 
 ## \[v2.0.0] - 2026-05-07
 
