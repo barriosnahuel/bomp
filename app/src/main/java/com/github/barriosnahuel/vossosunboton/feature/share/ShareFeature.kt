@@ -178,7 +178,9 @@ private class ShareFeatureImpl : ShareFeature {
         ) : ShareOutcome<T>()
 
         data class Failure(
-            @param:StringRes val feedback: Int,
+            @get:StringRes
+            @param:StringRes
+            val feedback: Int,
         ) : ShareOutcome<Nothing>()
     }
 }
