@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ## \[unreleased] (v2.0.1)
 
 ### Fixed
+- Sharing a Bomp whose audio path can't be resolved by the FileProvider no longer crashes the app; the failure is reported to the user with a Toast and tracked as a non-fatal so it can be investigated
 - Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
 
 

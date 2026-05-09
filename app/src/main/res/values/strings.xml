@@ -2,6 +2,7 @@
     <string name="app_name">Bomp</string>
 
     <string name="app_share_chooser_title">Share vía</string>
+    <string name="app_share_feedback_unshareable">Couldn\'t share this Bomp. Nahu\'s already on it.</string>
     <string name="app_undo">Undo!</string>
     <string name="app_feedback_audio_deleted">Audio deleted</string>
     <string name="app_feedback_button_saved">%1$s is now yours!</string>

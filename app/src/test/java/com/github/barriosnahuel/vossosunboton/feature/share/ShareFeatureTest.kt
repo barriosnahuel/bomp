@@ -19,12 +19,16 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.spyk
+import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -44,6 +48,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
     @After
     fun tearDownAnalytics() {
         AnalyticsTrackerProvider.setForTest(null)
+        unmockkAll()
     }
 
     @Test
@@ -80,6 +85,31 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
 
         fake.assertNotEmitted("share")
         assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
+    }
+
+    @Test
+    fun `share when FileProvider rejects the file does not crash and tracks a non-fatal`() {
+        val sound = givenASoundWithUri()
+        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
+
+        mockkStatic(FileProvider::class)
+        every { FileProvider.getUriForFile(mockedContext, any(), any()) } throws
+            IllegalArgumentException("Failed to find configured root that contains /data/local/tmp/external/x.mp3")
+
+        mockkObject(Tracker)
+        val tracked = slot<Throwable>()
+        every { Tracker.track(capture(tracked)) } answers { nothing }
+        every { mockedContext.startActivity(any()) } answers { nothing }
+
+        runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+
+        verify(exactly = 1) { Tracker.track(any()) }
+        assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
+        assertThat(tracked.captured.cause).isInstanceOf(IllegalArgumentException::class.java)
+
+        fake.assertNotEmitted("share")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
+        verify(exactly = 0) { mockedContext.startActivity(any()) }
     }
 
     @Test
