@@ -35,7 +35,7 @@ internal class PlayerControllerImpl(
         sound: Sound,
     ) {
         if (mediaPlayer.isPlaying) {
-            // User clicked on a new button while still listening an audio, then we should turn that running button off.
+            // User clicked on a new audio while still listening another, then we should turn that running audio off.
             mediaPlayer.stop()
             listener?.onPlayerStop(currentSound!!, completed = false)
         }
@@ -91,14 +91,14 @@ internal class PlayerControllerImpl(
             try {
                 MediaPlayerHelper.setupSoundSource(context, mediaPlayer, sound.rawRes)
             } catch (e: IOException) {
-                Tracker.track(java.lang.RuntimeException("User custom button is not playable", e))
+                Tracker.track(java.lang.RuntimeException("User custom audio is not playable", e))
                 false
             }
         } else {
             try {
                 MediaPlayerHelper.setupSoundSource(context, mediaPlayer, sound.file!!)
             } catch (e: IOException) {
-                Tracker.track(java.lang.RuntimeException("Bundled button is not playable", e))
+                Tracker.track(java.lang.RuntimeException("Bundled audio is not playable", e))
                 false
             }
         }
