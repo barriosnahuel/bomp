@@ -8,12 +8,14 @@ package com.github.barriosnahuel.vossosunboton.feature.share
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -56,6 +58,12 @@ private class ShareFeatureImpl : ShareFeature {
         // both touch the file system. Run that part on IO; startActivity + analytics stay on the caller's
         // Main dispatcher because Android's chooser expects the launching call on the UI thread.
         val buttonFileContentUri = withContext(Dispatchers.IO) { getContentUriForSound(sound, context) }
+        if (buttonFileContentUri == null) {
+            // FileProvider rejected the Sound's path (e.g. legacy persisted absolute path outside the configured root).
+            // Surface a non-blocking message to the user; the failure is already tracked as a non-fatal in getContentUriForSound.
+            Toast.makeText(context, R.string.app_share_feedback_unshareable, Toast.LENGTH_LONG).show()
+            return
+        }
         val shareIntent = Intent()
         shareIntent.action = Intent.ACTION_SEND
         shareIntent.type = "audio/*"
@@ -108,7 +116,8 @@ private class ShareFeatureImpl : ShareFeature {
         return try {
             FileProvider.getUriForFile(context, authority, fileForSharing)
         } catch (e: IllegalArgumentException) {
-            throw IllegalStateException("Button content uri couldn't be created.", e)
+            Tracker.track(RuntimeException("Couldn't create FileProvider URI for sound: ${sound.file}", e))
+            null
         }
     }
 }
