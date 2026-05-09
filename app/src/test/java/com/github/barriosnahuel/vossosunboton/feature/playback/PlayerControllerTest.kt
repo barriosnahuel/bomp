@@ -127,6 +127,8 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
 
         verify { listener.onPlayerError(sound) }
         verify(exactly = 1) { Tracker.track(any()) }
+        // Guards the "no flicker" invariant: when start() fails, the UI must never see "playing".
+        verify(exactly = 0) { listener.onPlayerStart(any(), any()) }
     }
 
     @Test

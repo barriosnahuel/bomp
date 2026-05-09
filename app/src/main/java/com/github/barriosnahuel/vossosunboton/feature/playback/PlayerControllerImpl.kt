@@ -58,7 +58,6 @@ internal class PlayerControllerImpl(
                 listener?.onPlayerStop(sound, completed = true)
             }
 
-            listener?.onPlayerStart(sound, durationMs)
             currentSound = sound
             try {
                 mediaPlayer.start()
@@ -67,6 +66,10 @@ internal class PlayerControllerImpl(
                 listener?.onPlayerError(sound)
                 return
             }
+            // onPlayerStart fires AFTER start() succeeds so the UI never flips to "playing" when start
+            // is going to throw. Both happen on Main, so the listener still updates before the first
+            // progressRunnable post lands.
+            listener?.onPlayerStart(sound, durationMs)
             handler.post(progressRunnable)
         }
     }
