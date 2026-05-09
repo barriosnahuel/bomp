@@ -62,7 +62,7 @@ private class ShareFeatureImpl : ShareFeature {
         // Resolving the file path and (for bundled sounds, first share only) copying raw resources to disk
         // both touch the file system. Run that part on IO; startActivity + analytics stay on the caller's
         // Main dispatcher because Android's chooser expects the launching call on the UI thread.
-        val resolution = withContext(Dispatchers.IO) { resolveContentUri(sound, context) }
+        val resolution = withContext(Dispatchers.IO) { resolveContentUri(context, sound) }
         return when (resolution) {
             is ShareOutcome.Failure -> resolution.feedback
             is ShareOutcome.Success -> launchChooserAndTrack(context, sound, resolution.value, surface)
@@ -107,18 +107,18 @@ private class ShareFeatureImpl : ShareFeature {
     }
 
     private fun resolveContentUri(
-        sound: Sound,
         context: Context,
+        sound: Sound,
     ): ShareOutcome<Uri> =
-        when (val fileResolution = resolveFileForSharing(sound, context)) {
+        when (val fileResolution = resolveFileForSharing(context, sound)) {
             is ShareOutcome.Failure -> fileResolution
-            is ShareOutcome.Success -> wrapInFileProviderUri(context, fileResolution.value, sound)
+            is ShareOutcome.Success -> wrapInFileProviderUri(context, sound, fileResolution.value)
         }
 
     private fun wrapInFileProviderUri(
         context: Context,
-        file: File,
         sound: Sound,
+        file: File,
     ): ShareOutcome<Uri> =
         try {
             ShareOutcome.Success(FileProvider.getUriForFile(context, authority, file))
@@ -128,8 +128,8 @@ private class ShareFeatureImpl : ShareFeature {
         }
 
     private fun resolveFileForSharing(
-        sound: Sound,
         context: Context,
+        sound: Sound,
     ): ShareOutcome<File> =
         when {
             sound.file != null -> ShareOutcome.Success(getFile(context, sound.file!!))
@@ -137,12 +137,12 @@ private class ShareFeatureImpl : ShareFeature {
                 Tracker.track(RuntimeException("Sound has neither file URI nor raw resource ID: ${sound.name}"))
                 ShareOutcome.Failure(R.string.app_share_feedback_broken_data)
             }
-            else -> resolveBundledFileForSharing(sound, context)
+            else -> resolveBundledFileForSharing(context, sound)
         }
 
     private fun resolveBundledFileForSharing(
-        sound: Sound,
         context: Context,
+        sound: Sound,
     ): ShareOutcome<File> {
         val fileForSharing = getFile(context, sound.name + ".mp3")
         return if (fileForSharing.exists()) {
@@ -150,13 +150,13 @@ private class ShareFeatureImpl : ShareFeature {
             ShareOutcome.Success(fileForSharing)
         } else {
             Timber.d("Packaged audio is gonna be copied to share directory: %s", fileForSharing)
-            copyBundledAudioForSharing(sound, context, fileForSharing)
+            copyBundledAudioForSharing(context, sound, fileForSharing)
         }
     }
 
     private fun copyBundledAudioForSharing(
-        sound: Sound,
         context: Context,
+        sound: Sound,
         fileForSharing: File,
     ): ShareOutcome<File> =
         try {
