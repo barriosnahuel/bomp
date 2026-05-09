@@ -213,9 +213,11 @@ private suspend fun shareWithFeedback(
 ) {
     val errorRes = ShareFeature.instance.share(context, sound, surface)
     if (errorRes != null) {
+        // Long (~7s) instead of Short (~4s): error copy includes a call-to-action ("Free up some space",
+        // "Try installing one") that needs reading time, and our error strings are 70+ chars in es-AR.
         snackbarHostState.showSnackbar(
             message = context.getString(errorRes),
-            duration = SnackbarDuration.Short,
+            duration = SnackbarDuration.Long,
         )
     }
 }
