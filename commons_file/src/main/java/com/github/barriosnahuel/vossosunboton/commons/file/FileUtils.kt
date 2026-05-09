@@ -31,8 +31,8 @@ fun getFile(
 ): File = File(context.getExternalFilesDir(Environment.DIRECTORY_MUSIC), fileName)
 
 /**
- * @param inputStream The input stream to copy.
- * @param fileOutputStream The output stream to use.
+ * @param inputStream The input stream to copy. Closed before this function returns, regardless of success.
+ * @param fileOutputStream The output stream to use. Closed before this function returns, regardless of success.
  * @throws IOException either calling [InputStream.read] or [FileOutputStream.write], or even when closing those streams.
  */
 @Throws(IOException::class)
@@ -40,10 +40,13 @@ fun copy(
     @NonNull inputStream: InputStream,
     @NonNull fileOutputStream: FileOutputStream,
 ) {
-    inputStream.copyTo(fileOutputStream, INPUT_STREAM_READ_BUFFER_SIZE)
-
-    inputStream.close()
-    fileOutputStream.close()
+    // .use { } guarantees both streams close even if copyTo throws — without it, IOException propagates with
+    // the descriptors leaked (caller can't reach a finally because the streams were created by the caller).
+    inputStream.use { input ->
+        fileOutputStream.use { output ->
+            input.copyTo(output, INPUT_STREAM_READ_BUFFER_SIZE)
+        }
+    }
 }
 
 /**

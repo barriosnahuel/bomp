@@ -5,7 +5,14 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased] (v2.0.1)
 
+### Added
+- Terms of Service link in the About screen's "Legal & Privacy" section, opening the published page with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
+
 ### Fixed
+- Sharing a Bomp whose audio path can't be resolved by the FileProvider no longer crashes the app; the failure is reported to the user with a Snackbar and tracked as a non-fatal so it can be investigated
+- Sharing a Bomp no longer crashes the app when no installed app handles audio sharing, when external storage can't be written, or when the Sound has corrupt data — each case shows a tailored Snackbar and is tracked as a non-fatal
+- Tapping play on a Bomp no longer crashes the app if MediaPlayer rejects the start call; the playback error Snackbar is shown instead and a non-fatal is tracked
+- Saving a new Bomp from a revoked or unreadable inbound URI now shows a tailored "couldn't read the audio" Snackbar instead of failing silently; the underlying ContentResolver failure is tracked as a non-fatal
 - Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
 
 
@@ -16,6 +23,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 #### Changed
 - Migrated Firebase to per-build-type projects (bomp-prod for release, bomp-debug for debug); added BigQuery export documentation
+- About screen's external Legal & Privacy links now open extensionless URLs (`/privacy-policy`, `/data-safety`, `/terms-of-service`) — GitHub Pages serves the same content under both forms, so this is a cosmetic cleanup with no destination or behavior change
 
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon

@@ -12,17 +12,27 @@ import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.spyk
+import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Test
 import org.robolectric.Shadows.shadowOf
 import java.io.ByteArrayInputStream
 
 internal class AddButtonFeatureTest : AbstractRobolectricTest() {
     private val realContext: Context = ApplicationProvider.getApplicationContext()
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
 
     @Test
     fun `saveNewButtonAsync saves a valid audio URI and returns saved_ok`() {
@@ -77,6 +87,22 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `saveNewButtonAsync does not call ContentResolver getType when scheme is rejected`() {
+        // Locks in the scheme-first ordering: a future refactor that re-runs getType before checking
+        // the scheme would mis-route the failure into the Unreadable bucket and waste a resolver call.
+        val uri = Uri.parse("http://example.com/foo.mp3")
+        val resolver = spyk(realContext.contentResolver)
+        val context = spyk(realContext)
+        every { context.contentResolver } returns resolver
+
+        runBlocking {
+            AddButtonFeature.instance.saveNewButtonAsync(context, "http", uri.toString()).await()
+        }
+
+        verify(exactly = 0) { resolver.getType(uri) }
+    }
+
+    @Test
     fun `saveNewButtonAsync rejects URIs whose MIME type is unknown`() {
         val uri = Uri.parse("content://test/no-mime")
         val context = contextWith(uri, mime = null, sizeBytes = 1024L)
@@ -87,6 +113,28 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
             }
 
         assertThat(result).isEqualTo(R.string.app_feedback_generic_error_contact_support)
+    }
+
+    @Test
+    fun `saveNewButtonAsync returns uri-unreadable feedback when ContentResolver getType throws SecurityException`() {
+        val uri = Uri.parse("content://test/revoked-grant")
+        val baseResolver = realContext.contentResolver
+        shadowOf(baseResolver).registerInputStream(uri, ByteArrayInputStream(ByteArray(0)))
+        val resolver = spyk(baseResolver)
+        every { resolver.getType(uri) } throws SecurityException("URI permission revoked")
+        val context = spyk(realContext)
+        every { context.contentResolver } returns resolver
+
+        mockkObject(Tracker)
+        every { Tracker.track(any()) } answers { nothing }
+
+        val result =
+            runBlocking {
+                AddButtonFeature.instance.saveNewButtonAsync(context, "revoked", uri.toString()).await()
+            }
+
+        assertThat(result).isEqualTo(R.string.app_addbutton_feedback_uri_unreadable)
+        verify(exactly = 1) { Tracker.track(any()) }
     }
 
     /**

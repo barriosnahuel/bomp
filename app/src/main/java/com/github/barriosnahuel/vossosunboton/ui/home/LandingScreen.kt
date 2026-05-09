@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -168,7 +169,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                         } else {
                             CanonicalScreenName.EXPLORE_SOUNDS
                         }
-                    coroutineScope.launch { ShareFeature.instance.share(context, sound, surface) }
+                    coroutineScope.launch { shareWithFeedback(context, sound, surface, snackbarHostState) }
                 },
                 onDelete = { sound -> viewModel.deleteSound(sound) },
                 onPinClick = { sound -> viewModel.togglePin(sound) },
@@ -192,7 +193,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onSeek = viewModel::seekTo,
             onShareClick = { sound ->
                 coroutineScope.launch {
-                    ShareFeature.instance.share(context, sound, CanonicalScreenName.SEARCH_SOUND)
+                    shareWithFeedback(context, sound, CanonicalScreenName.SEARCH_SOUND, snackbarHostState)
                 }
             },
             onPinClick = viewModel::togglePin,
@@ -200,6 +201,26 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                 viewModel.hideSearch()
                 viewModel.deleteSound(sound)
             },
+        )
+    }
+}
+
+private suspend fun shareWithFeedback(
+    context: Context,
+    sound: Sound,
+    surface: String,
+    snackbarHostState: SnackbarHostState,
+) {
+    val errorRes = ShareFeature.instance.share(context, sound, surface)
+    if (errorRes != null) {
+        // Indefinite + dismiss action so the snackbar stays until the user dismisses it. WCAG 2.2 AA
+        // ground: TalkBack reads ~10–12 chars/sec so es-AR copy of 100+ chars (e.g. copy_failed) would
+        // not finish reading before SnackbarDuration.Long (10 s) auto-dismissed. Letting the user
+        // close it on their own pace is the only way to guarantee they receive the full message.
+        snackbarHostState.showSnackbar(
+            message = context.getString(errorRes),
+            actionLabel = context.getString(R.string.app_snackbar_action_dismiss),
+            duration = SnackbarDuration.Indefinite,
         )
     }
 }

@@ -11,6 +11,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -57,8 +58,10 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         return GlobalScope.async(Dispatchers.IO) {
             var feedbackMessage = R.string.app_feedback_generic_error_contact_support
             val parsed = Uri.parse(uri)
-            if (validateAudioUri(context, parsed) != ValidationResult.Ok) {
-                return@async feedbackMessage
+            when (validateAudioUri(context, parsed)) {
+                ValidationResult.Ok -> Unit
+                ValidationResult.Rejected -> return@async feedbackMessage
+                ValidationResult.Unreadable -> return@async R.string.app_addbutton_feedback_uri_unreadable
             }
             // getFile() resolves context.getExternalFilesDir(...), which performs disk I/O —
             // keep it inside the IO dispatcher so StrictMode does not flag it on the main thread.
@@ -115,12 +118,31 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         context: Context,
         uri: Uri,
     ): ValidationResult {
+        // Scheme check first: a rejected scheme (e.g. http://) shouldn't trigger ContentResolver work
+        // that may itself blow up on the unsupported URI and confuse the Unreadable vs Rejected metric.
+        if (uri.scheme !in ALLOWED_SCHEMES) {
+            Timber.w("Rejected inbound URI: scheme=%s", uri.scheme)
+            return ValidationResult.Rejected
+        }
+        return validateContentUri(context, uri)
+    }
+
+    private fun validateContentUri(
+        context: Context,
+        uri: Uri,
+    ): ValidationResult {
         val resolver = context.contentResolver
-        val mime = resolver.getType(uri)
+        val mimeResult = runCatching { resolver.getType(uri) }
+        if (mimeResult.isFailure) {
+            Tracker.track(
+                RuntimeException("ContentResolver.getType failed for inbound URI", mimeResult.exceptionOrNull()),
+            )
+            return ValidationResult.Unreadable
+        }
+        val mime = mimeResult.getOrNull()
         val size = resolveSize(resolver, uri)
         val rejection =
             when {
-                uri.scheme !in ALLOWED_SCHEMES -> "scheme=${uri.scheme}"
                 mime == null || !mime.startsWith(AUDIO_MIME_PREFIX) -> "mime=$mime"
                 size == null || size > MAX_AUDIO_BYTES -> "size=$size"
                 else -> null
@@ -154,6 +176,8 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         data object Ok : ValidationResult()
 
         data object Rejected : ValidationResult()
+
+        data object Unreadable : ValidationResult()
     }
 
     private companion object {

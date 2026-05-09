@@ -58,9 +58,18 @@ internal class PlayerControllerImpl(
                 listener?.onPlayerStop(sound, completed = true)
             }
 
-            listener?.onPlayerStart(sound, durationMs)
             currentSound = sound
-            mediaPlayer.start()
+            try {
+                mediaPlayer.start()
+            } catch (e: IllegalStateException) {
+                Tracker.track(RuntimeException("Media player can't be started for playback.", e))
+                listener?.onPlayerError(sound)
+                return
+            }
+            // onPlayerStart fires AFTER start() succeeds so the UI never flips to "playing" when start
+            // is going to throw. Both happen on Main, so the listener still updates before the first
+            // progressRunnable post lands.
+            listener?.onPlayerStart(sound, durationMs)
             handler.post(progressRunnable)
         }
     }

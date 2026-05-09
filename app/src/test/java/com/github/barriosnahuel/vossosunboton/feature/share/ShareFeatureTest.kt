@@ -19,17 +19,22 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.spyk
+import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import java.io.IOException
 
 internal class ShareFeatureTest : AbstractRobolectricTest() {
     private val dummyButtonName = "my button name"
@@ -44,6 +49,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
     @After
     fun tearDownAnalytics() {
         AnalyticsTrackerProvider.setForTest(null)
+        unmockkAll()
     }
 
     @Test
@@ -65,32 +71,125 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `share does not increment lifetime_shares when the chooser activity cannot be started`() {
+    fun `share when chooser cannot start returns no-app feedback and tracks non-fatal`() {
         val sound = givenASoundWithUri()
         val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
         mockkStatic(FileProvider::class)
         every { FileProvider.getUriForFile(mockedContext, any(), any()) } returns Uri.EMPTY
         every { mockedContext.startActivity(any()) } throws ActivityNotFoundException("no app handles audio share")
 
-        try {
-            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
-        } catch (_: ActivityNotFoundException) {
-            // expected — propagates so the caller can show an error UI
-        }
+        mockkObject(Tracker)
+        val tracked = slot<Throwable>()
+        every { Tracker.track(capture(tracked)) } answers { nothing }
 
+        val feedback =
+            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+
+        assertThat(feedback).isEqualTo(R.string.app_share_feedback_no_app_for_audio)
+        verify(exactly = 1) { Tracker.track(any()) }
+        assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
+        assertThat(tracked.captured.cause).isInstanceOf(ActivityNotFoundException::class.java)
         fake.assertNotEmitted("share")
         assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
     }
 
     @Test
-    fun `share when sound Uri and resource are null must throw an exception`() {
-        val sound = givenASoundWithNullUri()
+    fun `share when FileProvider rejects the file returns unshareable feedback and tracks a non-fatal`() {
+        val sound = givenASoundWithUri()
+        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
 
-        try {
-            whenSharingThe(sound)
-        } catch (e: IllegalStateException) {
-            thenWeThrowAnIllegalStateException(e)
-        }
+        mockkStatic(FileProvider::class)
+        every { FileProvider.getUriForFile(mockedContext, any(), any()) } throws
+            IllegalArgumentException("Failed to find configured root that contains /data/local/tmp/external/x.mp3")
+
+        mockkObject(Tracker)
+        val tracked = slot<Throwable>()
+        every { Tracker.track(capture(tracked)) } answers { nothing }
+        every { mockedContext.startActivity(any()) } answers { nothing }
+
+        val feedback =
+            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+
+        assertThat(feedback).isEqualTo(R.string.app_share_feedback_unshareable)
+        verify(exactly = 1) { Tracker.track(any()) }
+        assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
+        assertThat(tracked.captured.cause).isInstanceOf(IllegalArgumentException::class.java)
+
+        fake.assertNotEmitted("share")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
+        verify(exactly = 0) { mockedContext.startActivity(any()) }
+    }
+
+    @Test
+    fun `share when sound has neither file nor rawRes returns broken-data feedback and tracks non-fatal`() {
+        val sound = givenASoundWithNullUri()
+        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
+
+        mockkObject(Tracker)
+        val tracked = slot<Throwable>()
+        every { Tracker.track(capture(tracked)) } answers { nothing }
+        every { mockedContext.startActivity(any()) } answers { nothing }
+
+        val feedback =
+            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+
+        assertThat(feedback).isEqualTo(R.string.app_share_feedback_broken_data)
+        verify(exactly = 1) { Tracker.track(any()) }
+        assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
+        fake.assertNotEmitted("share")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
+        verify(exactly = 0) { mockedContext.startActivity(any()) }
+    }
+
+    @Test
+    fun `share when bundled copy throws IOException returns copy-failed feedback and tracks non-fatal`() {
+        val sound = givenASoundWithResourceId()
+        val realContext = ApplicationProvider.getApplicationContext<Context>()
+        val mockedContext = spyk<Context>(realContext)
+
+        // Robolectric's external dir survives across tests in the same JVM run; if a sibling test (e.g. the one
+        // that captures the path) already copied "$dummyButtonName.mp3" to it, the bundled branch short-circuits
+        // on `fileForSharing.exists()` and never reaches our `copy(...)` mock. Delete the leftover so the copy
+        // path is exercised deterministically regardless of test execution order.
+        com.github.barriosnahuel.vossosunboton.commons.file
+            .getFile(realContext, "$dummyButtonName.mp3")
+            .delete()
+
+        mockkStatic("com.github.barriosnahuel.vossosunboton.commons.file.FileUtils")
+        every {
+            com.github.barriosnahuel.vossosunboton.commons.file
+                .copy(any(), any())
+        } throws IOException("simulated disk full while copying raw resource")
+
+        mockkObject(Tracker)
+        val tracked = slot<Throwable>()
+        every { Tracker.track(capture(tracked)) } answers { nothing }
+        every { mockedContext.startActivity(any()) } answers { nothing }
+
+        val feedback =
+            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+
+        assertThat(feedback).isEqualTo(R.string.app_share_feedback_copy_failed)
+        verify(exactly = 1) { Tracker.track(any()) }
+        assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
+        assertThat(tracked.captured.cause).isInstanceOf(IOException::class.java)
+        fake.assertNotEmitted("share")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_SHARES]).isNull()
+        verify(exactly = 0) { mockedContext.startActivity(any()) }
+    }
+
+    @Test
+    fun `share when chooser launches successfully returns null`() {
+        val sound = givenASoundWithUri()
+        val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
+        mockkStatic(FileProvider::class)
+        every { FileProvider.getUriForFile(mockedContext, any(), any()) } returns Uri.EMPTY
+        every { mockedContext.startActivity(any()) } answers { nothing }
+
+        val feedback =
+            runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
+
+        assertThat(feedback).isNull()
     }
 
     @Test
@@ -175,10 +274,6 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         runBlocking { ShareFeature.instance.share(mockedContext, sound, CanonicalScreenName.MY_SOUNDS) }
 
         return slot.captured
-    }
-
-    private fun thenWeThrowAnIllegalStateException(e: IllegalStateException) {
-        assertThat(e.message).isEqualTo("Either file URI or raw resource ID must exist on a given sound")
     }
 
     private fun thenOSShowDisambiguationWindow(intent: Intent) {

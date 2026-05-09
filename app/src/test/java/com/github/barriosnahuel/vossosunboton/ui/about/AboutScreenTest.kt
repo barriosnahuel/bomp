@@ -321,6 +321,6 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
     }
 
     private companion object {
-        const val EXTERNAL_LEGAL_ITEMS = 3
+        const val EXTERNAL_LEGAL_ITEMS = 4
     }
 }
