@@ -87,6 +87,22 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `saveNewButtonAsync does not call ContentResolver getType when scheme is rejected`() {
+        // Locks in the scheme-first ordering: a future refactor that re-runs getType before checking
+        // the scheme would mis-route the failure into the Unreadable bucket and waste a resolver call.
+        val uri = Uri.parse("http://example.com/foo.mp3")
+        val resolver = spyk(realContext.contentResolver)
+        val context = spyk(realContext)
+        every { context.contentResolver } returns resolver
+
+        runBlocking {
+            AddButtonFeature.instance.saveNewButtonAsync(context, "http", uri.toString()).await()
+        }
+
+        verify(exactly = 0) { resolver.getType(uri) }
+    }
+
+    @Test
     fun `saveNewButtonAsync rejects URIs whose MIME type is unknown`() {
         val uri = Uri.parse("content://test/no-mime")
         val context = contextWith(uri, mime = null, sizeBytes = 1024L)
