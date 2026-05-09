@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased] (v2.0.1)
 
+### Added
+- Terms of Service link in the About screen's "Legal & Privacy" section, opening the published page with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
+
 ### Fixed
 - Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
 
