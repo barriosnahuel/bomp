@@ -64,8 +64,8 @@ private class ShareFeatureImpl : ShareFeature {
         // Main dispatcher because Android's chooser expects the launching call on the UI thread.
         val resolution = withContext(Dispatchers.IO) { resolveContentUri(sound, context) }
         return when (resolution) {
-            is UriResolution.Failure -> resolution.feedback
-            is UriResolution.Success -> launchChooserAndTrack(context, sound, resolution.uri, surface)
+            is ShareOutcome.Failure -> resolution.feedback
+            is ShareOutcome.Success -> launchChooserAndTrack(context, sound, resolution.value, surface)
         }
     }
 
@@ -110,29 +110,33 @@ private class ShareFeatureImpl : ShareFeature {
     private fun resolveContentUri(
         sound: Sound,
         context: Context,
-    ): UriResolution {
-        val fileResolution = resolveFileForSharing(sound, context)
-        if (fileResolution is FileResolution.Failure) {
-            return UriResolution.Failure(fileResolution.feedback)
+    ): ShareOutcome<Uri> =
+        when (val fileResolution = resolveFileForSharing(sound, context)) {
+            is ShareOutcome.Failure -> fileResolution
+            is ShareOutcome.Success -> wrapInFileProviderUri(context, fileResolution.value, sound)
         }
-        val file = (fileResolution as FileResolution.Success).file
-        return try {
-            UriResolution.Success(FileProvider.getUriForFile(context, authority, file))
+
+    private fun wrapInFileProviderUri(
+        context: Context,
+        file: File,
+        sound: Sound,
+    ): ShareOutcome<Uri> =
+        try {
+            ShareOutcome.Success(FileProvider.getUriForFile(context, authority, file))
         } catch (e: IllegalArgumentException) {
             Tracker.track(RuntimeException("Couldn't create FileProvider URI for sound: ${sound.file}", e))
-            UriResolution.Failure(R.string.app_share_feedback_unshareable)
+            ShareOutcome.Failure(R.string.app_share_feedback_unshareable)
         }
-    }
 
     private fun resolveFileForSharing(
         sound: Sound,
         context: Context,
-    ): FileResolution =
+    ): ShareOutcome<File> =
         when {
-            sound.file != null -> FileResolution.Success(getFile(context, sound.file!!))
+            sound.file != null -> ShareOutcome.Success(getFile(context, sound.file!!))
             sound.rawRes == 0 -> {
                 Tracker.track(RuntimeException("Sound has neither file URI nor raw resource ID: ${sound.name}"))
-                FileResolution.Failure(R.string.app_share_feedback_broken_data)
+                ShareOutcome.Failure(R.string.app_share_feedback_broken_data)
             }
             else -> resolveBundledFileForSharing(sound, context)
         }
@@ -140,11 +144,11 @@ private class ShareFeatureImpl : ShareFeature {
     private fun resolveBundledFileForSharing(
         sound: Sound,
         context: Context,
-    ): FileResolution {
+    ): ShareOutcome<File> {
         val fileForSharing = getFile(context, sound.name + ".mp3")
         return if (fileForSharing.exists()) {
             Timber.d("Packaged audio already copied to share directory: %s", fileForSharing)
-            FileResolution.Success(fileForSharing)
+            ShareOutcome.Success(fileForSharing)
         } else {
             Timber.d("Packaged audio is gonna be copied to share directory: %s", fileForSharing)
             copyBundledAudioForSharing(sound, context, fileForSharing)
@@ -155,32 +159,27 @@ private class ShareFeatureImpl : ShareFeature {
         sound: Sound,
         context: Context,
         fileForSharing: File,
-    ): FileResolution =
+    ): ShareOutcome<File> =
         try {
             copy(context.resources.openRawResource(sound.rawRes), FileOutputStream(fileForSharing))
-            FileResolution.Success(fileForSharing)
+            ShareOutcome.Success(fileForSharing)
         } catch (e: IOException) {
             Tracker.track(RuntimeException("Couldn't copy bundled audio to shareable directory: ${sound.name}", e))
-            FileResolution.Failure(R.string.app_share_feedback_copy_failed)
+            ShareOutcome.Failure(R.string.app_share_feedback_copy_failed)
         }
 
-    private sealed class FileResolution {
-        data class Success(
-            val file: File,
-        ) : FileResolution()
+    /**
+     * Two-step resolution result: either a value of [T] (file path, then content URI) or an
+     * `@StringRes` feedback id paired with a non-fatal already tracked. `Failure : ShareOutcome<Nothing>`
+     * so it can flow through `ShareOutcome<File> → ShareOutcome<Uri>` without re-wrapping.
+     */
+    private sealed class ShareOutcome<out T> {
+        data class Success<out T>(
+            val value: T,
+        ) : ShareOutcome<T>()
 
         data class Failure(
             @param:StringRes val feedback: Int,
-        ) : FileResolution()
-    }
-
-    private sealed class UriResolution {
-        data class Success(
-            val uri: Uri,
-        ) : UriResolution()
-
-        data class Failure(
-            @param:StringRes val feedback: Int,
-        ) : UriResolution()
+        ) : ShareOutcome<Nothing>()
     }
 }
