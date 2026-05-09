@@ -3,6 +3,9 @@
 
     <string name="app_share_chooser_title">Share vía</string>
     <string name="app_share_feedback_unshareable">Couldn\'t share this Bomp. Nahu\'s already on it.</string>
+    <string name="app_share_feedback_no_app_for_audio">No app on your device can share audio. Try installing one.</string>
+    <string name="app_share_feedback_copy_failed">Couldn\'t prepare this Bomp for sharing. Free up some space and try again — Nahu\'s already looking into it.</string>
+    <string name="app_share_feedback_broken_data">This Bomp\'s data is broken. Nahu\'s already on it.</string>
     <string name="app_undo">Undo!</string>
     <string name="app_feedback_audio_deleted">Audio deleted</string>
     <string name="app_feedback_button_saved">%1$s is now yours!</string>
@@ -71,6 +74,7 @@
     <string name="app_addbutton_name_is_required_error">Name is required</string>
     <string name="app_addbutton_missing_parameter_error">Missing audio file</string>
     <string name="app_addbutton_feedback_saved_ok">Saved!</string>
+    <string name="app_addbutton_feedback_uri_unreadable">Couldn\'t read the audio you picked. Nahu\'s already on it.</string>
 
     <!-- My Sounds empty state (welcome consumed, no custom sounds yet) -->
     <string name="app_my_sounds_empty_headline">This is where the voices live.</string>

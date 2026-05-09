@@ -60,7 +60,13 @@ internal class PlayerControllerImpl(
 
             listener?.onPlayerStart(sound, durationMs)
             currentSound = sound
-            mediaPlayer.start()
+            try {
+                mediaPlayer.start()
+            } catch (e: IllegalStateException) {
+                Tracker.track(RuntimeException("Media player can't be started for playback.", e))
+                listener?.onPlayerError(sound)
+                return
+            }
             handler.post(progressRunnable)
         }
     }

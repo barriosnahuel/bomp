@@ -109,6 +109,27 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `on startPlayingSound when start throws IllegalStateException should call onPlayerError and track non-fatal`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+        every { mp.start() } throws IllegalStateException("MediaPlayer in invalid state")
+
+        mockkObject(Tracker)
+        every { Tracker.track(any()) } answers { nothing }
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = PlayerControllerImpl(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+
+        verify { listener.onPlayerError(sound) }
+        verify(exactly = 1) { Tracker.track(any()) }
+    }
+
+    @Test
     fun `on natural completion the listener receives onPlayerStop with completed = true`() {
         val context = mockk<Context>(relaxed = true)
         val sound = Sound("test", rawRes = 1)

@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -168,7 +169,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                         } else {
                             CanonicalScreenName.EXPLORE_SOUNDS
                         }
-                    coroutineScope.launch { ShareFeature.instance.share(context, sound, surface) }
+                    coroutineScope.launch { shareWithFeedback(context, sound, surface, snackbarHostState) }
                 },
                 onDelete = { sound -> viewModel.deleteSound(sound) },
                 onPinClick = { sound -> viewModel.togglePin(sound) },
@@ -192,7 +193,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onSeek = viewModel::seekTo,
             onShareClick = { sound ->
                 coroutineScope.launch {
-                    ShareFeature.instance.share(context, sound, CanonicalScreenName.SEARCH_SOUND)
+                    shareWithFeedback(context, sound, CanonicalScreenName.SEARCH_SOUND, snackbarHostState)
                 }
             },
             onPinClick = viewModel::togglePin,
@@ -200,6 +201,21 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                 viewModel.hideSearch()
                 viewModel.deleteSound(sound)
             },
+        )
+    }
+}
+
+private suspend fun shareWithFeedback(
+    context: Context,
+    sound: Sound,
+    surface: String,
+    snackbarHostState: SnackbarHostState,
+) {
+    val errorRes = ShareFeature.instance.share(context, sound, surface)
+    if (errorRes != null) {
+        snackbarHostState.showSnackbar(
+            message = context.getString(errorRes),
+            duration = SnackbarDuration.Short,
         )
     }
 }
