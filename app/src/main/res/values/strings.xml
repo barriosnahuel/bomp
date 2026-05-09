@@ -49,9 +49,9 @@
     <string name="app_about_terms_of_service">Terms of Service</string>
     <string name="app_about_open_in_browser">Opens in browser</string>
     <string name="app_about_error_no_browser">Couldn\'t open in a browser</string>
-    <string name="app_about_privacy_policy_url" translatable="false">https://barriosnahuel.github.io/bomp/privacy-policy.html</string>
-    <string name="app_about_data_safety_url" translatable="false">https://barriosnahuel.github.io/bomp/data-safety.html</string>
-    <string name="app_about_terms_of_service_url" translatable="false">https://barriosnahuel.github.io/bomp/terms-of-service.html</string>
+    <string name="app_about_privacy_policy_url" translatable="false">https://barriosnahuel.github.io/bomp/privacy-policy</string>
+    <string name="app_about_data_safety_url" translatable="false">https://barriosnahuel.github.io/bomp/data-safety</string>
+    <string name="app_about_terms_of_service_url" translatable="false">https://barriosnahuel.github.io/bomp/terms-of-service</string>
     <string name="app_about_gratitude_eyebrow">Brightened your day?</string>
     <string name="app_about_gratitude_title">Buy me a virtual coffee.</string>
     <string name="app_about_gratitude_body">Bomp is free and ad-free.\nIf you enjoyed it and want to say thanks, you can do it with a virtual coffee. Either way, using it and sharing it already counts — thank you!</string>

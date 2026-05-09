@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### For nerds 🤓
 
+#### Changed
+- About screen's external Legal & Privacy links now open extensionless URLs (`/privacy-policy`, `/data-safety`, `/terms-of-service`) — GitHub Pages serves the same content under both forms, so this is a cosmetic cleanup with no destination or behavior change
+
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
 
