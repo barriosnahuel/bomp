@@ -118,6 +118,19 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         context: Context,
         uri: Uri,
     ): ValidationResult {
+        // Scheme check first: a rejected scheme (e.g. http://) shouldn't trigger ContentResolver work
+        // that may itself blow up on the unsupported URI and confuse the Unreadable vs Rejected metric.
+        if (uri.scheme !in ALLOWED_SCHEMES) {
+            Timber.w("Rejected inbound URI: scheme=%s", uri.scheme)
+            return ValidationResult.Rejected
+        }
+        return validateContentUri(context, uri)
+    }
+
+    private fun validateContentUri(
+        context: Context,
+        uri: Uri,
+    ): ValidationResult {
         val resolver = context.contentResolver
         val mimeResult = runCatching { resolver.getType(uri) }
         if (mimeResult.isFailure) {
@@ -130,7 +143,6 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         val size = resolveSize(resolver, uri)
         val rejection =
             when {
-                uri.scheme !in ALLOWED_SCHEMES -> "scheme=${uri.scheme}"
                 mime == null || !mime.startsWith(AUDIO_MIME_PREFIX) -> "mime=$mime"
                 size == null || size > MAX_AUDIO_BYTES -> "size=$size"
                 else -> null
