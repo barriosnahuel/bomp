@@ -6,7 +6,7 @@
   <title data-i18n="head.title.404">404 — Bomp</title>
   <meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)" />
-  <meta http-equiv="refresh" content="5;url=/" />
+  <meta http-equiv="refresh" content="5;url=/bomp/" />
   <meta name="robots" content="noindex" />
 
   <link rel="alternate" hreflang="es-AR" href="https://barriosnahuel.github.io/bomp/404.html?hl=es-AR" />
@@ -16,15 +16,34 @@
   <link rel="alternate" hreflang="pt-BR" href="https://barriosnahuel.github.io/bomp/404.html?hl=pt-BR" />
   <link rel="alternate" hreflang="x-default" href="https://barriosnahuel.github.io/bomp/" />
 
-  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
-  <link rel="stylesheet" href="assets/css/tokens.css" />
-  <link rel="stylesheet" href="assets/css/base.css" />
-  <link rel="stylesheet" href="assets/css/landing.css" />
+  <link rel="icon" type="image/svg+xml" href="/bomp/assets/img/favicon.svg" />
+  <link rel="stylesheet" href="/bomp/assets/css/tokens.css" />
+  <link rel="stylesheet" href="/bomp/assets/css/base.css" />
+  <link rel="stylesheet" href="/bomp/assets/css/landing.css" />
   <script>
     (function () {
       try {
         var t = localStorage.getItem("bomp-theme");
         if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+  <script>
+    (function () {
+      try {
+        var hl = new URLSearchParams(location.search).get("hl");
+        if (!hl) return;
+        var allowed = ["es-AR", "es-419", "es-ES", "en", "pt-BR"];
+        var match = null;
+        for (var i = 0; i < allowed.length; i++) {
+          if (allowed[i].toLowerCase() === hl.toLowerCase()) { match = allowed[i]; break; }
+        }
+        if (!match) return;
+        var qs = "?hl=" + encodeURIComponent(match);
+        var meta = document.querySelector('meta[http-equiv="refresh"]');
+        if (meta) meta.setAttribute("content", "5;url=/bomp/" + qs);
+        var cta = document.querySelector(".err__cta");
+        if (cta) cta.setAttribute("href", "/bomp/" + qs);
       } catch (e) {}
     })();
   </script>
@@ -91,7 +110,7 @@
         <p class="err__sub" data-i18n="404.sub">
           Volvé al hub. Te redirigimos en 5 segundos.
         </p>
-        <a class="err__cta" href="/">
+        <a class="err__cta" href="/bomp/">
           <span data-i18n="404.cta">← Volver al hub</span>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M5 12h14M13 5l7 7-7 7"/>
@@ -102,7 +121,7 @@
     </main>
   </div>
 
-  <script src="assets/js/i18n.js" defer></script>
-  <script src="assets/js/anchor-focus.js" defer></script>
+  <script src="/bomp/assets/js/i18n.js" defer></script>
+  <script src="/bomp/assets/js/anchor-focus.js" defer></script>
 </body>
 </html>
