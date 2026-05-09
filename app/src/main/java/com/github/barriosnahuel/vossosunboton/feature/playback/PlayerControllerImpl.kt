@@ -43,34 +43,43 @@ internal class PlayerControllerImpl(
         handler.removeCallbacks(progressRunnable)
         mediaPlayer.reset()
 
-        if (setupSoundSource(context, sound)) {
-            try {
-                mediaPlayer.prepare()
-            } catch (e: IOException) {
-                Tracker.track(RuntimeException("Media player can't be prepared for playback.", e))
-                listener?.onPlayerError(sound)
-                return
-            }
+        if (!prepareForPlayback(context, sound)) {
+            listener?.onPlayerError(sound)
+            return
+        }
 
-            val durationMs = mediaPlayer.duration
-            mediaPlayer.setOnCompletionListener {
-                handler.removeCallbacks(progressRunnable)
-                listener?.onPlayerStop(sound, completed = true)
-            }
+        val durationMs = mediaPlayer.duration
+        mediaPlayer.setOnCompletionListener {
+            handler.removeCallbacks(progressRunnable)
+            listener?.onPlayerStop(sound, completed = true)
+        }
 
-            currentSound = sound
-            try {
-                mediaPlayer.start()
-            } catch (e: IllegalStateException) {
-                Tracker.track(RuntimeException("Media player can't be started for playback.", e))
-                listener?.onPlayerError(sound)
-                return
-            }
-            // onPlayerStart fires AFTER start() succeeds so the UI never flips to "playing" when start
-            // is going to throw. Both happen on Main, so the listener still updates before the first
-            // progressRunnable post lands.
-            listener?.onPlayerStart(sound, durationMs)
-            handler.post(progressRunnable)
+        currentSound = sound
+        try {
+            mediaPlayer.start()
+        } catch (e: IllegalStateException) {
+            Tracker.track(RuntimeException("Media player can't be started for playback.", e))
+            listener?.onPlayerError(sound)
+            return
+        }
+        // onPlayerStart fires AFTER start() succeeds so the UI never flips to "playing" when start
+        // is going to throw. Both happen on Main, so the listener still updates before the first
+        // progressRunnable post lands.
+        listener?.onPlayerStart(sound, durationMs)
+        handler.post(progressRunnable)
+    }
+
+    private fun prepareForPlayback(
+        context: Context,
+        sound: Sound,
+    ): Boolean {
+        if (!setupSoundSource(context, sound)) return false
+        return try {
+            mediaPlayer.prepare()
+            true
+        } catch (e: IOException) {
+            Tracker.track(RuntimeException("Media player can't be prepared for playback.", e))
+            false
         }
     }
 

@@ -12,7 +12,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Sharing a Bomp whose audio path can't be resolved by the FileProvider no longer crashes the app; the failure is reported to the user with a Snackbar and tracked as a non-fatal so it can be investigated
 - Sharing a Bomp no longer crashes the app when no installed app handles audio sharing, when external storage can't be written, or when the Sound has corrupt data — each case shows a tailored Snackbar and is tracked as a non-fatal
 - Tapping play on a Bomp no longer crashes the app if MediaPlayer rejects the start call; the playback error Snackbar is shown instead and a non-fatal is tracked
+- Tapping play on a Bomp whose audio source can't be opened now shows the playback error Snackbar instead of doing nothing
 - Saving a new Bomp from a revoked or unreadable inbound URI now shows a tailored "couldn't read the audio" Snackbar instead of failing silently; the underlying ContentResolver failure is tracked as a non-fatal
+- Saving a new Bomp now keeps the user on the form with a clear error Snackbar when the underlying file copy fails, instead of silently navigating away as if the save had succeeded
 - Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
 
 
@@ -27,6 +29,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
+- Failures while extracting duration metadata for a newly imported audio are now tracked as non-fatals (Crashlytics) for visibility; the save still succeeds
 - Stopped a duplicate startup log breadcrumb fired from both CustomBuildTypeApplication and MainApplication; renamed the surviving log to "Starting <build-type> application"
 
 ## \[v2.0.0] - 2026-05-07

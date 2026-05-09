@@ -56,11 +56,11 @@ private class AddButtonFeatureImpl : AddButtonFeature {
 
         @OptIn(DelicateCoroutinesApi::class)
         return GlobalScope.async(Dispatchers.IO) {
-            var feedbackMessage = R.string.app_feedback_generic_error_contact_support
+            var feedbackMessage = R.string.app_addbutton_feedback_save_failed
             val parsed = Uri.parse(uri)
             when (validateAudioUri(context, parsed)) {
                 ValidationResult.Ok -> Unit
-                ValidationResult.Rejected -> return@async feedbackMessage
+                ValidationResult.Rejected -> return@async R.string.app_feedback_generic_error_contact_support
                 ValidationResult.Unreadable -> return@async R.string.app_addbutton_feedback_uri_unreadable
             }
             // getFile() resolves context.getExternalFilesDir(...), which performs disk I/O —
@@ -70,7 +70,10 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                 FileOutputStream(targetFile).use { fileOutputStream ->
                     context.contentResolver.openInputStream(parsed).use { inputStream ->
                         if (inputStream == null) {
-                            Timber.e("Input stream obtained from the specified content URI is null: %s", uri)
+                            Tracker.track(
+                                RuntimeException("Inbound URI returned null inputStream after validation: $uri"),
+                            )
+                            return@async R.string.app_addbutton_feedback_uri_unreadable
                         } else {
                             copy(inputStream, fileOutputStream)
                             val repo = SoundsRepository(context)
@@ -84,6 +87,10 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                                     } finally {
                                         retriever.release()
                                     }
+                                }.onFailure {
+                                    Tracker.track(
+                                        RuntimeException("Failed to extract duration metadata for $fileName", it),
+                                    )
                                 }.getOrNull()
                             if (durationMs != null) {
                                 repo.saveDuration(name, durationMs)
@@ -94,9 +101,9 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                     }
                 }
             } catch (e: FileNotFoundException) {
-                Timber.e("Can't create new button's path")
+                Tracker.track(RuntimeException("Can't create new button's path: $fileName", e))
             } catch (e: IOException) {
-                Timber.e("Can't copy original audio")
+                Tracker.track(RuntimeException("Can't copy original audio: $fileName", e))
             }
 
             feedbackMessage

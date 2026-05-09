@@ -78,6 +78,7 @@
     <string name="app_addbutton_missing_parameter_error">Missing audio file</string>
     <string name="app_addbutton_feedback_saved_ok">Saved!</string>
     <string name="app_addbutton_feedback_uri_unreadable">Couldn\'t read the audio you picked. Nahu\'s already on it.</string>
+    <string name="app_addbutton_feedback_save_failed">Couldn\'t save this Bomp. Free up some space and try again — Nahu\'s already on it.</string>
 
     <!-- My Sounds empty state (welcome consumed, no custom sounds yet) -->
     <string name="app_my_sounds_empty_headline">This is where the voices live.</string>

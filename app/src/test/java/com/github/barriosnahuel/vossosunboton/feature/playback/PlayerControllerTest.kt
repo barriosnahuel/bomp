@@ -88,6 +88,24 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `on startPlayingSound when source setup fails should call onPlayerError`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns false
+
+        val controller = PlayerControllerImpl(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+
+        verify { listener.onPlayerError(sound) }
+        verify(exactly = 0) { listener.onPlayerStart(any(), any()) }
+    }
+
+    @Test
     fun `on startPlayingSound when prepare throws should call onPlayerError and not start`() {
         val context = mockk<Context>(relaxed = true)
         val sound = Sound("test", rawRes = 1)
