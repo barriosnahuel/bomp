@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### For nerds 🤓
 
+#### Changed
+- Migrated Firebase to per-build-type projects (bomp-prod for release, bomp-debug for debug); added BigQuery export documentation
+
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
 
