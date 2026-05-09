@@ -69,7 +69,6 @@ private class ShareFeatureImpl : ShareFeature {
         }
     }
 
-    @StringRes
     private fun launchChooserAndTrack(
         context: Context,
         sound: Sound,
