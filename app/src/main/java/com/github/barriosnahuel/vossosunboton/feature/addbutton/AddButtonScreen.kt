@@ -6,7 +6,8 @@
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.Context
-import android.media.MediaPlayer
+import android.media.MediaMetadataRetriever
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -48,7 +49,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,10 +61,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
+import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
@@ -73,8 +77,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import timber.log.Timber
-import java.io.IOException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -158,14 +160,18 @@ fun AddButtonScreen(
                     .padding(innerPadding)
                     .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
         ) {
-            val editSound = (mode as? AddButtonMode.Edit)?.sound
-            val editFile = editSound?.file
-            if (editFile != null) {
+            val previewSource: Uri? =
+                when (val m = mode) {
+                    is AddButtonMode.Create -> m.uri
+                    is AddButtonMode.Edit -> m.sound.file?.let { getFile(context, it).toUri() }
+                }
+            val previewDateAdded = (mode as? AddButtonMode.Edit)?.sound?.dateAdded
+            if (previewSource != null) {
                 AudioPreview(
                     context = context,
-                    fileName = editFile,
+                    source = previewSource,
                     soundName = name,
-                    dateAdded = editSound.dateAdded,
+                    dateAdded = previewDateAdded,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -236,47 +242,56 @@ fun AddButtonScreen(
 @Composable
 private fun AudioPreview(
     context: Context,
-    fileName: String,
+    source: Uri,
     soundName: String,
     dateAdded: Long?,
 ) {
-    var isPlaying by remember { mutableStateOf(false) }
-    var sliderPosition by remember { mutableFloatStateOf(0f) }
-    val player = remember { MediaPlayer() }
-    var isReady by remember { mutableStateOf(false) }
-    var durationMs by remember { mutableStateOf(0) }
+    val controller = remember { PlayerControllerFactory.instance }
+    var durationMs by remember(source) { mutableStateOf(0) }
 
-    LaunchedEffect(fileName) {
-        val prepared =
+    LaunchedEffect(source) {
+        // MediaMetadataRetriever runs off-thread to avoid blocking the main looper. Failure leaves
+        // durationMs at 0 which keeps the Card hidden — same UX as a player that can't prepare.
+        // Mirrors AddButtonFeature's canonical pattern (same wrapper message so both call-sites
+        // group under one Crashlytics issue; the breadcrumb disambiguates the path).
+        durationMs =
             withContext(Dispatchers.IO) {
                 runCatching {
-                    val file = getFile(context, fileName)
-                    player.setDataSource(file.absolutePath)
-                    player.prepare()
-                    player.duration
-                }
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(context, source)
+                        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toInt() ?: 0
+                    } finally {
+                        retriever.release()
+                    }
+                }.onFailure {
+                    Tracker.log("addbutton.preview.uri=$source")
+                    Tracker.track(RuntimeException("Failed to extract duration metadata", it))
+                }.getOrDefault(0)
             }
-        prepared
-            .onSuccess { duration ->
-                durationMs = duration
-                player.setOnCompletionListener {
-                    isPlaying = false
-                    sliderPosition = 0f
-                }
-                isReady = true
-            }.onFailure { e ->
-                when (e) {
-                    is IOException -> Timber.w(e, "Could not load audio preview for file: %s", fileName)
-                    is IllegalStateException -> Timber.w(e, "MediaPlayer in invalid state for file: %s", fileName)
-                    else -> throw e
-                }
-            }
-    }
-    DisposableEffect(Unit) {
-        onDispose { player.release() }
     }
 
-    if (isReady) {
+    val playbackState by controller.playbackState.collectAsStateWithLifecycle()
+    val isOurPreview = playbackState?.uri == source
+    val isPlaying = isOurPreview && playbackState?.isPlaying == true
+    val sliderPosition =
+        if (isOurPreview && durationMs > 0) {
+            playbackState!!.positionMs.toFloat() / durationMs
+        } else {
+            0f
+        }
+
+    DisposableEffect(source) {
+        onDispose {
+            // Stop preview playback when the user backs out of AddButton. Guard against pre-empting
+            // an unrelated playback (e.g., user backed out and Home is now the active player).
+            if (controller.playbackState.value?.uri == source) {
+                controller.stopPlayingSound()
+            }
+        }
+    }
+
+    if (durationMs > 0) {
         Card(
             border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant),
             colors =
@@ -314,12 +329,10 @@ private fun AudioPreview(
                     ) {
                         FilledIconButton(
                             onClick = {
-                                if (isPlaying) {
-                                    player.pause()
-                                    isPlaying = false
-                                } else {
-                                    player.start()
-                                    isPlaying = true
+                                when {
+                                    isPlaying -> controller.pause()
+                                    isOurPreview -> controller.resume()
+                                    else -> controller.startPlayingUri(context, source)
                                 }
                             },
                             modifier = Modifier.size(44.dp),
@@ -339,8 +352,7 @@ private fun AudioPreview(
                         Slider(
                             value = sliderPosition,
                             onValueChange = { value ->
-                                sliderPosition = value
-                                if (durationMs > 0) player.seekTo((value * durationMs).toInt())
+                                if (durationMs > 0) controller.seekTo((value * durationMs).toInt())
                             },
                             enabled = isPlaying,
                             colors =

@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -104,6 +105,19 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
             assertThat(event.params["name_changed"]).isEqualTo(false)
             assertThat(event.params["name_length"]).isEqualTo(EXISTING_NAME.length)
             fake.assertNotEmitted("sound_add")
+        }
+    }
+
+    @Test
+    fun `Create mode invokes preview path for incoming URI without crashing the tree`() {
+        // Symmetry contract with Edit mode: AudioPreview's LaunchedEffect must run for the share-incoming URI.
+        // We can't assert the play/pause Card here: SAMPLE_URI is unresolvable so MediaPlayer.prepare fails and
+        // the Card stays hidden by the `if (isReady)` guard. Asserting the form below remains reachable proves
+        // the LaunchedEffect didn't throw. Happy-path interactivity needs a playable test URI — see PR notes.
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).assertIsDisplayed()
         }
     }
 

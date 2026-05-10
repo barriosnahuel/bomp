@@ -6,19 +6,62 @@
 package com.github.barriosnahuel.vossosunboton.feature.playback
 
 import android.content.Context
+import android.net.Uri
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import kotlinx.coroutines.flow.StateFlow
 
 internal object PlayerControllerFactory {
     internal var instance: PlayerController = PlayerControllerImpl()
 }
 
+/**
+ * Snapshot of an in-progress Stream (preview) playback. Null when no Stream is playing.
+ *
+ * Sound (Home/Explore list) playback is reported through [PlayerControllerListener], not through
+ * this StateFlow — see ADR 0005 for the bridging rationale and revisit criteria.
+ */
+internal data class PlaybackState(
+    val uri: Uri,
+    val positionMs: Int,
+    val durationMs: Int,
+    val isPlaying: Boolean,
+)
+
 internal interface PlayerController {
+    /**
+     * Emits a non-null value while a Uri-bound (preview) playback is active. Consumers filter by
+     * matching [PlaybackState.uri] against their own source.
+     */
+    val playbackState: StateFlow<PlaybackState?>
+
     fun startPlayingSound(
         context: Context,
         sound: Sound,
     )
 
+    /**
+     * Starts playback of an arbitrary [uri]. If a Sound is currently playing it is stopped first
+     * (the registered [PlayerControllerListener] sees `onPlayerStop(currentSound, completed = false)`).
+     * Progress is reported via [playbackState] only — listener events are not fired (no Sound to
+     * pass).
+     */
+    fun startPlayingUri(
+        context: Context,
+        uri: Uri,
+    )
+
     fun stopPlayingSound()
+
+    /**
+     * Pauses an in-progress Stream playback. No-op for Sound playback (the Home UX is
+     * "tap again to stop", not pause/resume).
+     */
+    fun pause()
+
+    /**
+     * Resumes a paused Stream playback from its last position.
+     */
+    fun resume()
 
     fun seekTo(positionMs: Int)
 
