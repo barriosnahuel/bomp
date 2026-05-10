@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Lookup before working:** § Sources of truth · § Project-specific overrides
 - **Architecture & code conventions:** § Module Architecture · § Persistence · § Worktree setup · § Android resources naming · § Copyright headers
-- **Testing:** § Bug fixes — TDD workflow · § Features — test coverage workflow · § Test naming convention · § Activity smoke tests · § Local UI test suite
+- **Testing:** § Bug fixes — TDD workflow · § Features — test coverage workflow · § Test naming convention · § Test assertions · § Activity smoke tests · § Local UI test suite
 - **Pre-merge / pre-push:** § Pre-PR checklist · § Pre-push checklist
 - **Cross-cutting code rules:** § Analytics events · § Error tracking (non-fatals) · § StrictMode debug audit · § Security boundaries · § Accessibility (WCAG 2.2 AA) · § Design system
 - **Product, brand & copy:** § Product & brand context · § Repo writing language · § Copy & localization · § Store listing asset generation
@@ -205,6 +205,24 @@ Test names are descriptive sentences, never opaque identifiers. Reports list the
   fun swipeRightPinsACustomSound() { ... }
   ```
   Migrate to backticks when `minSdk` (currently 23) and AGP both pass the DEX 040 boundary.
+
+## Test assertions
+
+In test sources (`**/src/test/**`, `**/src/androidTest/**`), use **Truth's `assertThat(...)`**, **JUnit's `assertEquals` / `assertTrue` / `assertNotNull` / ...**, or the **Compose UI Test API** (`assertCountEquals`, `assertIsDisplayed`, ...). **Never use `kotlin.assert(...)`** — bare `assert(cond) { msg }` is forbidden.
+
+`kotlin.assert` is the global builtin from the Kotlin preludio. The JVM only evaluates its condition when assertions are enabled (`-ea`). The Android instrumented runner turns them on, so a misused `assert` *appears* to fire locally — but the same code in any environment without `-ea` (a contributor's IDE config, a JVM unit-test task without explicit flags, a future runner change) is a silent no-op and the failure-message lambda never runs. Latent bugs ride along until something flips the flag — that's the canonical trap (PR #1117 fixed an `EXTERNAL_LEGAL_ITEMS` count that had been wrong for one release because a `kotlin.assert` masked it).
+
+It is also a path of least resistance: `assert` needs no import, so it sneaks in mid-flow inside `.let { ... }` chains. Don't break the convention to keep an inline `assert` — switch to `assertCountEquals(0)` (Compose) or `assertThat(it).isEmpty()` (Truth), which give better failure output anyway (Compose lists the matched semantics tree; Truth formats expected vs actual).
+
+Enforced by the CircleCI `test-assertion-guard` job (defined inline in `.circleci/config.yml`, mirrors `analytics-wrapper-guard`). The job fails the build if any `*.kt` file under the test source roots contains a bare `assert(` call. Run the same check locally before pushing:
+
+```bash
+grep -rnE '(^|[^[:alnum:]_])assert[[:space:]]*\(' --include='*.kt' \
+    app/src/test app/src/androidTest \
+    commons_android/src/test commons_file/src/test model/src/test
+```
+
+Empty output = clean. Any hit is a hard failure — fix the call-site, do not add an exclusion.
 
 ## Activity smoke tests
 

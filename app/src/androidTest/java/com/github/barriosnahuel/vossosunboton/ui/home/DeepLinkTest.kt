@@ -7,6 +7,7 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -36,9 +37,8 @@ internal class DeepLinkTest : AbstractUiTest() {
         ActivityScenario.launch<LandingActivity>(deeplink("/home")).use {
             // Custom sound is on Home; bundled sound is on Explore.
             composeRule.awaitNodeWithText("custom_1").assertIsDisplayed()
-            composeRule.onAllNodes(hasText(bundled.first().name)).fetchSemanticsNodes().let {
-                assert(it.isEmpty()) { "Bundled sound should not be visible on Home." }
-            }
+            // Bundled sound should not be visible on Home.
+            composeRule.onAllNodes(hasText(bundled.first().name)).assertCountEquals(0)
         }
     }
 
@@ -53,9 +53,8 @@ internal class DeepLinkTest : AbstractUiTest() {
 
         ActivityScenario.launch<LandingActivity>(deeplink("/explore")).use {
             composeRule.awaitNodeWithText(bundled.first().name).assertIsDisplayed()
-            composeRule.onAllNodes(hasText("custom_1")).fetchSemanticsNodes().let {
-                assert(it.isEmpty()) { "Custom sound should not be visible on Explore." }
-            }
+            // Custom sound should not be visible on Explore.
+            composeRule.onAllNodes(hasText("custom_1")).assertCountEquals(0)
         }
     }
 
@@ -71,9 +70,7 @@ internal class DeepLinkTest : AbstractUiTest() {
             // Custom sound (Home content) is visible.
             composeRule.awaitNodeWithText("custom_1").assertIsDisplayed()
             // BottomBar is hidden since hasBundledSounds == false.
-            composeRule.onAllNodesWithContentDescription(exploreTabLabel()).fetchSemanticsNodes().let {
-                assert(it.isEmpty()) { "BottomBar should be hidden when there are no bundled sounds." }
-            }
+            composeRule.onAllNodesWithContentDescription(exploreTabLabel()).assertCountEquals(0)
         }
     }
 
@@ -90,9 +87,8 @@ internal class DeepLinkTest : AbstractUiTest() {
             // Per the closed deep-link allowlist in LandingActivity.handleDeeplink,
             // any unknown path must safely fall back to MY_SOUNDS — never silently route to Explore.
             composeRule.awaitNodeWithText("custom_1").assertIsDisplayed()
-            composeRule.onAllNodes(hasText(bundled.first().name)).fetchSemanticsNodes().let {
-                assert(it.isEmpty()) { "Bundled sound should not be visible since unknown paths fall back to MY_SOUNDS." }
-            }
+            // Bundled sound should not be visible since unknown paths fall back to MY_SOUNDS.
+            composeRule.onAllNodes(hasText(bundled.first().name)).assertCountEquals(0)
         }
     }
 

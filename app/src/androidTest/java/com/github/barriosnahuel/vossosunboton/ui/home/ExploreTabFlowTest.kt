@@ -76,10 +76,10 @@ internal class ExploreTabFlowTest : AbstractUiTest() {
             // Card stays at the same position with the pin icon (not unpin) — swipe-left
             // only fires a reject haptic for bundled sounds.
             composeRule.onNodeWithText(firstBundledName).assertIsDisplayed()
+            // Sound should not be pinned after swipe left — bundled cards reject pin via swipe-left.
             composeRule
                 .onAllNodesWithContentDescription(unpinLabel())
-                .fetchSemanticsNodes()
-                .let { assert(it.isEmpty()) { "Sound should not be pinned after swipe left." } }
+                .assertCountEquals(0)
         }
     }
 
