@@ -18,7 +18,6 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
-import io.mockk.mockkObject
 import io.mockk.spyk
 import io.mockk.unmockkAll
 import io.mockk.verify
@@ -129,9 +128,6 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
         val context = spyk(realContext)
         every { context.contentResolver } returns resolver
 
-        mockkObject(Tracker)
-        every { Tracker.track(any()) } answers { nothing }
-
         val result =
             runBlocking {
                 AddButtonFeature.instance.saveNewButtonAsync(context, "revoked", uri.toString()).await()
@@ -153,10 +149,6 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
         every { resolver.openInputStream(uri) } returns null
         val context = spyk(realContext)
         every { context.contentResolver } returns resolver
-
-        mockkObject(Tracker)
-        every { Tracker.track(any()) } answers { nothing }
-        every { Tracker.log(any()) } answers { nothing }
 
         val result =
             runBlocking {
@@ -191,10 +183,6 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
         val context = spyk(realContext)
         every { context.contentResolver } returns resolver
 
-        mockkObject(Tracker)
-        every { Tracker.track(any()) } answers { nothing }
-        every { Tracker.log(any()) } answers { nothing }
-
         val result =
             runBlocking {
                 AddButtonFeature.instance.saveNewButtonAsync(context, "ioerror", uri.toString()).await()
@@ -210,9 +198,6 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
         val uri = Uri.parse("content://test/retriever-fail")
         val context = contextWith(uri, mime = "audio/mpeg", sizeBytes = 1024L)
 
-        mockkObject(Tracker)
-        every { Tracker.track(any()) } answers { nothing }
-        every { Tracker.log(any()) } answers { nothing }
         mockkConstructor(MediaMetadataRetriever::class)
         every { anyConstructed<MediaMetadataRetriever>().setDataSource(any<String>()) } throws
             RuntimeException("Retriever blew up")
