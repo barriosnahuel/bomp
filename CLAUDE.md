@@ -365,7 +365,7 @@ Hard rules:
   }
   ```
 - Expected and recoverable exceptions (e.g. user dismissed a chooser) don't need `Tracker.track`. Reserve it for things you want to investigate.
-- In tests, mock `Tracker` with MockK (see `PlayerControllerTest.kt`): `every { Tracker.track(any()) } answers { nothing }`.
+- In tests, `AbstractRobolectricTest` already calls `mockkObject(Tracker)` and stubs both `track` / `log` to no-ops in `@Before` (and unmocks in `@After`). Required because `TestApplication` does not initialise Firebase, so `Tracker.track`'s underlying `FirebaseCrashlytics.getInstance()` would throw `IllegalStateException` and the leaked exception lands in `kotlinx.coroutines.test`'s `ExceptionCollector`, surfacing later as `UncaughtExceptionsBeforeTest` on whichever Compose UI test happens to drain the buffer first. Subclasses do not need to re-mock; just add `verify(exactly = 1) { Tracker.track(any()) }` to lock in the invocation contract. Override the global stub only if you need to capture the throwable (`every { Tracker.track(capture(slot)) } answers { nothing }`).
 
 For SQL post-mortem on accumulated crash history, see `CONTRIBUTING.md` § *BigQuery export*. Releases-only — `bomp-prod` exports Crashlytics, Analytics, and Performance to BigQuery (`us` multi-region, daily); `bomp-debug` does not export.
 

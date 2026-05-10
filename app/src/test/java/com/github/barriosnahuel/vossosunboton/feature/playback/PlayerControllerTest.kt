@@ -113,8 +113,6 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         val listener = mockk<PlayerControllerListener>(relaxed = true)
         every { mp.prepare() } throws java.io.IOException("fail")
 
-        mockkObject(Tracker)
-        every { Tracker.track(any()) } answers { nothing }
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
@@ -157,8 +155,6 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         val listener = mockk<PlayerControllerListener>(relaxed = true)
         every { mp.start() } throws IllegalStateException("MediaPlayer in invalid state")
 
-        mockkObject(Tracker)
-        every { Tracker.track(any()) } answers { nothing }
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
