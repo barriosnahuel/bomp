@@ -1,4 +1,4 @@
-# ADR 0005 — No bare `kotlin.assert(...)` in tests
+# ADR 0006 — No bare `kotlin.assert(...)` in tests
 
 - **Status:** Accepted
 - **Date:** 2026-05-09

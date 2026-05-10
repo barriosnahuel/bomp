@@ -64,7 +64,7 @@ Testing rules and invariants live in `CLAUDE.md` (§ *Bug fixes — TDD workflow
 
 ### Test assertions
 
-Bare `kotlin.assert(...)` is forbidden in test sources — it's a silent no-op without JVM `-ea`. Use Truth (`assertThat`), JUnit (`assertEquals` / `assertTrue` / `assertNotNull`), or the Compose UI Test API (`assertCountEquals`, `assertIsDisplayed`). Full rationale and the incident that prompted the rule (PR #1117) live in [ADR 0005](docs/adr/0005-no-kotlin-assert-in-tests.md). Enforced by the CircleCI `test-assertion-guard` job and by `scripts/check-adr-invariants.sh`. Run the same check locally before pushing:
+Bare `kotlin.assert(...)` is forbidden in test sources — it's a silent no-op without JVM `-ea`. Use Truth (`assertThat`), JUnit (`assertEquals` / `assertTrue` / `assertNotNull`), or the Compose UI Test API (`assertCountEquals`, `assertIsDisplayed`). Full rationale and the incident that prompted the rule (PR #1117) live in [ADR 0006](docs/adr/0006-no-kotlin-assert-in-tests.md). Enforced by the CircleCI `test-assertion-guard` job and by `scripts/check-adr-invariants.sh`. Run the same check locally before pushing:
 
 ```bash
 grep -rnE '(^|[^[:alnum:]_])assert[[:space:]]*\(' --include='*.kt' \
