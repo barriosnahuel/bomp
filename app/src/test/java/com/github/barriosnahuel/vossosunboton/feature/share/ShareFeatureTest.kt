@@ -23,7 +23,6 @@ import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
-import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.spyk
@@ -101,7 +100,6 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         every { FileProvider.getUriForFile(mockedContext, any(), any()) } throws
             IllegalArgumentException("Failed to find configured root that contains /data/local/tmp/external/x.mp3")
 
-        mockkObject(Tracker)
         val tracked = slot<Throwable>()
         every { Tracker.track(capture(tracked)) } answers { nothing }
         every { mockedContext.startActivity(any()) } answers { nothing }
@@ -121,7 +119,6 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         val sound = givenASoundWithNullUri()
         val mockedContext = spyk<Context>(ApplicationProvider.getApplicationContext<Context>())
 
-        mockkObject(Tracker)
         val tracked = slot<Throwable>()
         every { Tracker.track(capture(tracked)) } answers { nothing }
         every { mockedContext.startActivity(any()) } answers { nothing }
@@ -155,7 +152,6 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
                 .copy(any(), any())
         } throws IOException("simulated disk full while copying raw resource")
 
-        mockkObject(Tracker)
         val tracked = slot<Throwable>()
         every { Tracker.track(capture(tracked)) } answers { nothing }
         every { mockedContext.startActivity(any()) } answers { nothing }
@@ -226,7 +222,6 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         val baseIntent = Intent().apply { action = Intent.ACTION_SEND }
         every { mockedContext.startActivity(any()) } throws ActivityNotFoundException("no app handles audio share")
 
-        mockkObject(Tracker)
         val tracked = slot<Throwable>()
         every { Tracker.track(capture(tracked)) } answers { nothing }
 
