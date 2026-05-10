@@ -245,7 +245,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
 
     companion object {
         private const val WAIT_TIMEOUT_MS = 5_000L
-        private const val EXTERNAL_LEGAL_ITEMS = 3
+        private const val EXTERNAL_LEGAL_ITEMS = 4
         private val SUPPORTED_HL = setOf("es-AR", "es-419", "es-ES", "en", "pt-BR")
     }
 }

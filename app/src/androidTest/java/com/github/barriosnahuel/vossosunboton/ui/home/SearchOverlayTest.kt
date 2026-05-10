@@ -107,6 +107,9 @@ internal class SearchOverlayTest : AbstractUiTest() {
             // Wait for overlay to be on screen before pressing back, otherwise pressBack closes the Activity instead.
             composeRule.awaitNodeWithContentDescription(closeSearchLabel()).assertIsDisplayed()
             Espresso.pressBack()
+            // pressBack is deterministic; flush the back-handler recomposition so the FAB is
+            // settled in the next frame before assertIsDisplayed checks visibility.
+            composeRule.waitForIdle()
             composeRule.awaitNodeWithContentDescription(searchLabel()).assertIsDisplayed()
         }
     }
@@ -120,6 +123,10 @@ internal class SearchOverlayTest : AbstractUiTest() {
             composeRule.awaitNodeWithContentDescription(closeSearchLabel()).assertHasClickAction()
             composeRule.awaitNode(hasSetTextAction()).performTextInput("c")
             composeRule.awaitNodeWithContentDescription(clearSearchLabel()).assertHasClickAction()
+            // Defensive cleanup: close the overlay so the activity tears down with the IME hidden
+            // and no soft-input residue carries over to the next test in the suite.
+            composeRule.awaitNodeWithContentDescription(closeSearchLabel()).performClick()
+            composeRule.waitForIdle()
         }
     }
 

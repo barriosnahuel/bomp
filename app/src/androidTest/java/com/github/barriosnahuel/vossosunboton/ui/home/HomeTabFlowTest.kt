@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
@@ -92,7 +93,12 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithText(sound.name).performTouchInput { swipeLeft() }
             val undoLabel = context.getString(R.string.app_undo)
-            composeRule.awaitNodeWithText(undoLabel).performClick()
+            // awaitNodeWithText only confirms the snackbar's undo button exists in the
+            // semantics tree; the M3 snackbar enter animation may still be sliding it up.
+            // Settle the animation before clicking so the touch target is stable.
+            composeRule.awaitNodeWithText(undoLabel)
+            composeRule.waitForIdle()
+            composeRule.onNodeWithText(undoLabel).performClick()
             composeRule.awaitNodeWithText(sound.name).assertIsDisplayed()
         }
     }

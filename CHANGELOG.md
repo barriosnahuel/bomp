@@ -32,6 +32,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
 - Failures while extracting duration metadata for a newly imported audio are now tracked as non-fatals (Crashlytics) for visibility; the save still succeeds
 - Stopped a duplicate startup log breadcrumb fired from both CustomBuildTypeApplication and MainApplication; renamed the surviving log to "Starting <build-type> application"
+- De-flaked three instrumented tests by adding animation-settle `waitForIdle()` between deterministic actions and the next assertion: `SearchOverlayTest.systemBackClosesOverlay` (post `Espresso.pressBack()`), `SearchOverlayTest.searchOverlayExposesA11yContentDescriptions` (defensive close at end so the overlay/IME doesn't leak to the next test) and `HomeTabFlowTest.swipeLeftToDeleteThenUndoRestoresSound` (between snackbar appearing and undo click so the M3 enter animation is settled)
+- Bumped stale `AboutScreenFlowTest.EXTERNAL_LEGAL_ITEMS` constant from 3 to 4 to match the Terms of Service link added in the same release
 
 ## \[v2.0.0] - 2026-05-07
 
