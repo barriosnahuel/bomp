@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### For nerds 🤓
 
 #### Changed
+- Error-tracking non-fatals now use stable wrapper messages with per-event context attached as Crashlytics breadcrumbs (`Tracker.log("module.field=value")`) instead of interpolating dynamic data into the wrapper message; improves Crashlytics issue titles and BigQuery searchability
+- Retired "button" from internal error and log messages in favor of "audio" — user-facing copy already uses the brand name "Bomp"; internal messages stay neutral so the brand doesn't leak into operations
 - Migrated Firebase to per-build-type projects (bomp-prod for release, bomp-debug for debug); added BigQuery export documentation
 - About screen's external Legal & Privacy links now open extensionless URLs (`/privacy-policy`, `/data-safety`, `/terms-of-service`) — GitHub Pages serves the same content under both forms, so this is a cosmetic cleanup with no destination or behavior change
 - Routed the audio share flow through `SoundsViewModel` with Channel-based one-shot events, aligning ADR 0002 (constructor injection) and ADR 0003 (Channel for one-shot events); `ShareFeature` is split into `prepareShareIntent` (VM-side I/O) and `launchChooser` (UI-side)

@@ -109,6 +109,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
 
         assertThat((outcome as ShareIntentOutcome.Failure).feedback).isEqualTo(R.string.app_share_feedback_unshareable)
         verify(exactly = 1) { Tracker.track(any()) }
+        verify(atLeast = 1) { Tracker.log(any()) }
         assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
         assertThat(tracked.captured.cause).isInstanceOf(IllegalArgumentException::class.java)
         verify(exactly = 0) { mockedContext.startActivity(any()) }
@@ -128,6 +129,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
 
         assertThat((outcome as ShareIntentOutcome.Failure).feedback).isEqualTo(R.string.app_share_feedback_broken_data)
         verify(exactly = 1) { Tracker.track(any()) }
+        verify(atLeast = 1) { Tracker.log(any()) }
         assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
         verify(exactly = 0) { mockedContext.startActivity(any()) }
     }
@@ -161,6 +163,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
 
         assertThat((outcome as ShareIntentOutcome.Failure).feedback).isEqualTo(R.string.app_share_feedback_copy_failed)
         verify(exactly = 1) { Tracker.track(any()) }
+        verify(atLeast = 1) { Tracker.log(any()) }
         assertThat(tracked.captured).isInstanceOf(RuntimeException::class.java)
         assertThat(tracked.captured.cause).isInstanceOf(IOException::class.java)
         verify(exactly = 0) { mockedContext.startActivity(any()) }

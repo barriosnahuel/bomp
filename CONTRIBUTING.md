@@ -270,6 +270,20 @@ file store-listing/<locale>/images/*.png   # confirms dimensions and color depth
 ls -lh store-listing/<locale>/images/*.png # confirms weight (Play caps icon at 1024 KB)
 ```
 
+## Error tracking 📡
+
+Non-fatal exceptions go to Crashlytics via the `Tracker` wrapper at
+`commons_android/.../error/Trackable.kt`. The canonical rules and rationale
+live in [`CLAUDE.md` § Error tracking (non-fatals)](CLAUDE.md#error-tracking-non-fatals);
+TL;DR for human contributors:
+
+- Wrap the cause: `Tracker.track(RuntimeException("Static description of the failure", e))`. Keep the message stable — it becomes the Crashlytics issue title.
+- Attach dynamic per-event context as a breadcrumb on the line right above `Tracker.track(...)`:
+  `Tracker.log("module.field=value")`. Module is the feature directory (`share`, `addbutton`, `playback`, `about`, …). Use as many breadcrumbs as needed — one per key.
+- Don't say "button" in messages or comments. These are "audio" internally, "Bomp" in user-facing copy.
+- Verify locally with `adb logcat | grep -E "Tracker|FirebaseCrashlytics"` — the `log(...)` call should appear immediately before the `recordException(...)` line. Crashlytics DebugView surfaces the breadcrumb under the event detail panel.
+- In unit tests that exercise a site that emits a breadcrumb, mock both methods (`every { Tracker.log(any()) } answers { nothing }`) and assert the contract with `verify(atLeast = 1) { Tracker.log(any()) }` alongside the existing track assertion.
+
 ## Analytics events 📊
 
 The app emits Firebase Analytics through the `AnalyticsTracker` wrapper at

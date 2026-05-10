@@ -94,7 +94,7 @@ private class ShareFeatureImpl : ShareFeature {
         sound: Sound,
         surface: String,
     ): ShareIntentOutcome {
-        Timber.d("Preparing share intent for button: %s", sound.name)
+        Timber.d("Preparing share intent for audio: %s", sound.name)
 
         val resolution = withContext(Dispatchers.IO) { resolveContentUri(applicationContext, sound) }
         return when (resolution) {
@@ -162,7 +162,8 @@ private class ShareFeatureImpl : ShareFeature {
         try {
             ShareOutcome.Success(FileProvider.getUriForFile(context, authority, file))
         } catch (e: IllegalArgumentException) {
-            Tracker.track(RuntimeException("Couldn't create FileProvider URI for sound: ${sound.file}", e))
+            Tracker.log("share.soundFile=${sound.file}")
+            Tracker.track(RuntimeException("Couldn't create FileProvider URI for sound", e))
             ShareOutcome.Failure(R.string.app_share_feedback_unshareable)
         }
 
@@ -173,7 +174,8 @@ private class ShareFeatureImpl : ShareFeature {
         when {
             sound.file != null -> ShareOutcome.Success(getFile(context, sound.file!!))
             sound.rawRes == 0 -> {
-                Tracker.track(RuntimeException("Sound has neither file URI nor raw resource ID: ${sound.name}"))
+                Tracker.log("share.soundName=${sound.name}")
+                Tracker.track(RuntimeException("Sound has neither file URI nor raw resource ID"))
                 ShareOutcome.Failure(R.string.app_share_feedback_broken_data)
             }
             else -> resolveBundledFileForSharing(context, sound)
@@ -202,7 +204,8 @@ private class ShareFeatureImpl : ShareFeature {
             copy(context.resources.openRawResource(sound.rawRes), FileOutputStream(fileForSharing))
             ShareOutcome.Success(fileForSharing)
         } catch (e: IOException) {
-            Tracker.track(RuntimeException("Couldn't copy bundled audio to shareable directory: ${sound.name}", e))
+            Tracker.log("share.soundName=${sound.name}")
+            Tracker.track(RuntimeException("Couldn't copy bundled audio to shareable directory", e))
             ShareOutcome.Failure(R.string.app_share_feedback_copy_failed)
         }
 
