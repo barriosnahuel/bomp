@@ -30,10 +30,15 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - About screen's external Legal & Privacy links now open extensionless URLs (`/privacy-policy`, `/data-safety`, `/terms-of-service`) — GitHub Pages serves the same content under both forms, so this is a cosmetic cleanup with no destination or behavior change
 - Routed the audio share flow through `SoundsViewModel` with Channel-based one-shot events, aligning ADR 0002 (constructor injection) and ADR 0003 (Channel for one-shot events); `ShareFeature` is split into `prepareShareIntent` (VM-side I/O) and `launchChooser` (UI-side)
 
+#### Changed
+- Banned bare `kotlin.assert(...)` in test sources via a new CircleCI `test-assertion-guard` job; tests must use Truth's `assertThat`, JUnit's `assertEquals`, or the Compose UI Test API. `kotlin.assert` is a no-op without JVM `-ea` and silently masked an `EXTERNAL_LEGAL_ITEMS = 3` count that was stale once Terms of Service shipped. Migrated the existing offenders and bumped the constant to 4
+
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
 - Failures while extracting duration metadata for a newly imported audio are now tracked as non-fatals (Crashlytics) for visibility; the save still succeeds
 - Stopped a duplicate startup log breadcrumb fired from both CustomBuildTypeApplication and MainApplication; renamed the surviving log to "Starting <build-type> application"
+- De-flaked three instrumented tests by adding animation-settle `waitForIdle()` between deterministic actions and the next assertion: `SearchOverlayTest.systemBackClosesOverlay` (post `Espresso.pressBack()`), `SearchOverlayTest.searchOverlayExposesA11yContentDescriptions` (defensive close at end so the overlay/IME doesn't leak to the next test) and `HomeTabFlowTest.swipeLeftToDeleteThenUndoRestoresSound` (between snackbar appearing and undo click so the M3 enter animation is settled)
+- Bumped stale `AboutScreenFlowTest.EXTERNAL_LEGAL_ITEMS` constant from 3 to 4 to match the Terms of Service link added in the same release
 
 ## \[v2.0.0] - 2026-05-07
 
