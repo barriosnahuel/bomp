@@ -184,7 +184,7 @@ Test names are descriptive sentences, never opaque identifiers. Reports list the
 
 ## Test assertions
 
-No bare `kotlin.assert(...)` in test sources — see [ADR 0005](docs/adr/0005-no-kotlin-assert-in-tests.md). Grep-enforced by `scripts/check-adr-invariants.sh` and the CircleCI `test-assertion-guard` job. Use Truth `assertThat(...)`, JUnit `assertEquals`/`assertTrue`/`assertNotNull`, or the Compose UI Test API (`assertCountEquals`, `assertIsDisplayed`). The local check command is in CONTRIBUTING.md § *Testing → Test assertions*.
+No bare `kotlin.assert(...)` in test sources — see [ADR 0006](docs/adr/0006-no-kotlin-assert-in-tests.md). Grep-enforced by `scripts/check-adr-invariants.sh` and the CircleCI `test-assertion-guard` job. Use Truth `assertThat(...)`, JUnit `assertEquals`/`assertTrue`/`assertNotNull`, or the Compose UI Test API (`assertCountEquals`, `assertIsDisplayed`). The local check command is in CONTRIBUTING.md § *Testing → Test assertions*.
 
 ## Activity smoke tests
 
