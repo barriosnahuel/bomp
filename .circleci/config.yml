@@ -135,6 +135,25 @@ jobs:
                 exit 1
             fi
 
+  "test-assertion-guard":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+    steps:
+      - checkout
+      - run:
+          name: "Verify no bare kotlin.assert(...) in test sources"
+          command: |
+            # `kotlin.assert(cond) { msg }` is a no-op without JVM `-ea` — see CLAUDE.md § Test assertions.
+            # Tests must use Truth (`assertThat`), JUnit (`assertEquals` etc.), or the Compose UI Test API.
+            TEST_DIRS="app/src/test app/src/androidTest commons_android/src/test commons_file/src/test model/src/test"
+            if grep -rnE '(^|[^[:alnum:]_])assert[[:space:]]*\(' \
+                --include='*.kt' \
+                $TEST_DIRS; then
+                echo "ERROR: Bare assert(...) detected in test sources. kotlin.assert is a no-op without JVM -ea — use assertThat(...) (Truth), assertEquals(...) (JUnit), or assertCountEquals(...) (Compose UI Test). See CLAUDE.md § Test assertions."
+                exit 1
+            fi
+
   "bundle":
     executor:
       name: android/android_docker
@@ -173,9 +192,11 @@ workflows:
             - spotless
             - lint
       - analytics-wrapper-guard
+      - test-assertion-guard
       - adr-invariants
       - bundle:
           requires:
             - test
             - analytics-wrapper-guard
+            - test-assertion-guard
             - adr-invariants

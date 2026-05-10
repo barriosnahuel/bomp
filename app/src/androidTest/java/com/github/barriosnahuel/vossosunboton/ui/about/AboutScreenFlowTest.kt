@@ -9,6 +9,7 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
@@ -84,9 +85,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             // Before expansion the AI cards are not in the tree.
-            composeRule.onAllNodes(hasText(geminiName())).fetchSemanticsNodes().let {
-                assert(it.isEmpty()) { "Gemini card visible before expanding Credits." }
-            }
+            composeRule.onAllNodes(hasText(geminiName())).assertCountEquals(0)
             composeRule.awaitNodeWithText(creditsLabel()).performClick()
             composeRule.awaitNodeWithText(geminiName()).assertIsDisplayed()
             composeRule.onNodeWithText(claudeName()).assertIsDisplayed()
@@ -157,12 +156,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
             composeRule.awaitNodeWithText(privacyPolicyLabel()).performScrollTo()
             composeRule
                 .onAllNodesWithContentDescription(context.getString(R.string.app_about_open_in_browser))
-                .fetchSemanticsNodes()
-                .let { nodes ->
-                    assert(nodes.size == EXTERNAL_LEGAL_ITEMS) {
-                        "Expected $EXTERNAL_LEGAL_ITEMS open-in-browser hints, got ${nodes.size}"
-                    }
-                }
+                .assertCountEquals(EXTERNAL_LEGAL_ITEMS)
         }
     }
 
