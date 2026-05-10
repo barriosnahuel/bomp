@@ -2,16 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Index
-
-- **Lookup before working:** § Sources of truth · § Project-specific overrides
-- **Architecture & code conventions:** § Module Architecture · § Persistence · § Worktree setup · § Android resources naming · § Copyright headers
-- **Testing:** § Bug fixes — TDD workflow · § Features — test coverage workflow · § Test naming convention · § Test assertions · § Activity smoke tests · § Local UI test suite
-- **Pre-merge / pre-push:** § Pre-PR checklist · § Pre-push checklist
-- **Cross-cutting code rules:** § Analytics events · § Error tracking (non-fatals) · § StrictMode debug audit · § Security boundaries · § Accessibility (WCAG 2.2 AA) · § Design system
-- **Product, brand & copy:** § Product & brand context · § Repo writing language · § Copy & localization · § Store listing asset generation
-- **Process & metadata:** § Labels and milestone · § Third-party notices · § Changelog · § Handoff notes & issue tracking
-
 ## Commands
 
 ```bash
@@ -94,9 +84,7 @@ Decisions this repo took that diverge from — or narrow — the generic Android
 - **Networking, image loading, Room:** none in the dependency graph today. New deps for any of these need an ADR before the feature PR.
 - **Analytics, error tracking, StrictMode, security, design system, accessibility:** see the dedicated sections below — those rules are stricter than any generic Android guidance and override it.
 
-**Each substantive override should be backed by an ADR.** This section is the index; the long-form rationale lives in `docs/adr/*.md`. Absence of an ADR for a substantive override is debt, not permission to flip silently. ADRs that have grep-able invariants declare them in an `## Invariants` section enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`) — if the script fails, the message names the ADR you broke.
-
-**Re-validate on dependency changes.** Bumps to `gradle/libs.versions.toml`, the Gradle wrapper, or any `build.gradle(.kts)` (especially Compose BOM, AGP, Kotlin, coroutines, lifecycle, DataStore, or new deps) — re-read this section and § *Sources of truth* in the same PR; update if the upstream pattern changed. Same after any upgrade skill (`agp-9-upgrade`, `navigation-3`, `play-billing-library-version-upgrade`, `migrate-xml-views-to-jetpack-compose`).
+**Each substantive override is backed by an ADR.** This section is the index; rationale + revisit criteria live in `docs/adr/*.md`. Grep-able invariants are enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`) — failures name the ADR you broke. On dependency bumps (`gradle/libs.versions.toml`, wrapper, any `build.gradle(.kts)`) or after running an upgrade skill, re-read this section and § *Sources of truth* in the same PR.
 
 ### Known migration debt
 
@@ -111,29 +99,18 @@ Use **Jetpack DataStore Preferences** for any new persistent key-value storage. 
 
 `SharedPreferences` is **forbidden**. The grep `getSharedPreferences|EncryptedSharedPreferences` must return zero hits in `src/main` across all modules. Reviewers reject any new SharedPrefs in PRs.
 
-When a call site needs a synchronous read on top of DataStore (e.g. analytics tracker firing events right before navigating to a chooser), use the in-memory-cache + async-write-back pattern from `DataStoreFirstFlagStore.kt` / `DataStoreCounterStore.kt`. This is the **only** documented exception to the no-`runBlocking`-in-production rule — see [ADR 0004](docs/adr/0004-datastore-sync-api-cache-prime.md) for context, scope, and why we don't generalize it.
-
-For tests: every store ships a `@VisibleForTesting(otherwise = NONE) suspend fun clearForTest()` so test setUp can reset state without poking the file system.
+When a call site needs a synchronous read on top of DataStore (e.g. analytics tracker firing events right before navigating to a chooser), use the in-memory-cache + async-write-back pattern from `DataStoreFirstFlagStore.kt` / `DataStoreCounterStore.kt`. This is the **only** documented exception to the no-`runBlocking`-in-production rule — see [ADR 0004](docs/adr/0004-datastore-sync-api-cache-prime.md) for context, scope, and why we don't generalize it. Test fixtures (every store ships `clearForTest()`) are documented in `CONTRIBUTING.md` § *Testing → Test fixtures*.
 
 ## Worktree setup
 
-The repo commits **scrubbed dummy** `google-services.json` files at `app/src/{debug,release}/google-services.json` (real `project_id` / `project_number` / `package_name`, fake `mobilesdk_app_id` and `api_key`) so CI can compile and GitGuardian doesn't flag real Firebase API keys. Real values live only in the working tree of each worktree, swapped in over the dummies and hidden from git via `git update-index --skip-worktree`.
+Invariants:
 
-After creating a new worktree, copy the real configs and audio files from the primary worktree, then mark the configs skip-worktree so any future re-download from Firebase Console doesn't accidentally land in the index:
-
-```bash
-cp "$(git rev-parse --git-common-dir)/../app/src/release/google-services.json" app/src/release/google-services.json
-cp "$(git rev-parse --git-common-dir)/../app/src/debug/google-services.json"   app/src/debug/google-services.json
-git update-index --skip-worktree app/src/release/google-services.json
-git update-index --skip-worktree app/src/debug/google-services.json
-mkdir -p model/src/debug/res/raw
-cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.mp3 model/src/debug/res/raw/ 2>/dev/null || true
-cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.ogg model/src/debug/res/raw/ 2>/dev/null || true
-```
-- Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` and `secure.properties` (with `key.alias`, `key.password`, `store.password`) in the project root — not committed.
-- Debug builds use the included debug keystore and work without the above.
+- The repo commits **scrubbed dummy** `google-services.json` at `app/src/{debug,release}/google-services.json` (real `project_id` / `project_number` / `package_name`, fake `mobilesdk_app_id` and `api_key`) so CI compiles and GitGuardian doesn't flag real keys. Real values live only in the working tree, hidden from git via `git update-index --skip-worktree` — **never** unmark skip-worktree and `git add` without first stashing the real file (CONTRIBUTING.md § *Firebase config file* has the safe edit sequence).
+- Two Firebase projects back the build types: `bomp-prod` for release (`com.github.barriosnahuel.vossosunboton`) and `bomp-debug` for debug (`com.github.barriosnahuel.vossosunboton.debug`). The Google Services Gradle plugin auto-resolves per-variant JSON by `package_name`.
+- Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` and `secure.properties` (with `key.alias`, `key.password`, `store.password`) in the project root — not committed. Debug builds use the included debug keystore and work without these.
 - Bundled audio files (`model/src/debug/res/raw/*.mp3` and `*.ogg`) are not committed; without them debug builds compile and run but the Explore tab is empty.
-- Two Firebase projects back the build types: `bomp-prod` for release (`com.github.barriosnahuel.vossosunboton`) and `bomp-debug` for debug (`com.github.barriosnahuel.vossosunboton.debug`). The Google Services Gradle plugin auto-resolves the per-variant JSON by `package_name`. See `CONTRIBUTING.md` § *Firebase config file* for swap workflow when pointing local builds at a different project.
+
+Setup procedures (fresh clone swap, primary-worktree copy, safe edit of the dummy) live in CONTRIBUTING.md § *Firebase config file*.
 
 ## Android resources naming
 
@@ -168,8 +145,6 @@ If `./gradlew check` fails with a Spotless violation, run `./gradlew spotlessApp
 
 ## Bug fixes — TDD workflow
 
-For **production bugs reported by users** (not local-repro), check Firebase Crashlytics and BigQuery first to scope frequency, affected versions, OS distribution, and recurring stack frames before reproducing locally — see `CONTRIBUTING.md` § *BigQuery export*. Then proceed with the TDD steps below.
-
 When the user reports a bug or says we are going to fix one, follow TDD:
 
 1. **Write a failing test first** that reproduces the bug. Run it to confirm it fails for the right reason.
@@ -177,6 +152,8 @@ When the user reports a bug or says we are going to fix one, follow TDD:
 3. **Run the full test suite** (`./gradlew test`).
 
 Skip TDD only when the bug lives exclusively in UI rendering or platform wiring that can't be exercised by unit / Robolectric tests (e.g. a pure layout glitch). Note why TDD was skipped.
+
+For **production bugs reported by users** (not local-repro), scope frequency, affected versions, OS distribution, and recurring stack frames in Crashlytics + BigQuery first — see `CONTRIBUTING.md` § *BigQuery export*.
 
 ## Features — test coverage workflow
 
@@ -199,34 +176,19 @@ Test names are descriptive sentences, never opaque identifiers. Reports list the
   @Test
   fun `searchResults emits empty list when query is blank`() { ... }
   ```
-- **Instrumented tests** under `src/androidTest/`: camelCase descriptive names — backticks with spaces require DEX format 040, which D8 in the current AGP refuses to emit even with `minSdk` overrides on the test variant.
+- **Instrumented tests** under `src/androidTest/`: camelCase descriptive names — backticks with spaces require DEX format 040, which the current AGP/D8 won't emit at `minSdk` 23. Migrate to backticks when that boundary moves.
   ```kotlin
   @Test
   fun swipeRightPinsACustomSound() { ... }
   ```
-  Migrate to backticks when `minSdk` (currently 23) and AGP both pass the DEX 040 boundary.
 
 ## Test assertions
 
-In test sources (`**/src/test/**`, `**/src/androidTest/**`), use **Truth's `assertThat(...)`**, **JUnit's `assertEquals` / `assertTrue` / `assertNotNull` / ...**, or the **Compose UI Test API** (`assertCountEquals`, `assertIsDisplayed`, ...). **Never use `kotlin.assert(...)`** — bare `assert(cond) { msg }` is forbidden.
-
-`kotlin.assert` is the global builtin from the Kotlin preludio. The JVM only evaluates its condition when assertions are enabled (`-ea`). The Android instrumented runner turns them on, so a misused `assert` *appears* to fire locally — but the same code in any environment without `-ea` (a contributor's IDE config, a JVM unit-test task without explicit flags, a future runner change) is a silent no-op and the failure-message lambda never runs. Latent bugs ride along until something flips the flag — that's the canonical trap (PR #1117 fixed an `EXTERNAL_LEGAL_ITEMS` count that had been wrong for one release because a `kotlin.assert` masked it).
-
-It is also a path of least resistance: `assert` needs no import, so it sneaks in mid-flow inside `.let { ... }` chains. Don't break the convention to keep an inline `assert` — switch to `assertCountEquals(0)` (Compose) or `assertThat(it).isEmpty()` (Truth), which give better failure output anyway (Compose lists the matched semantics tree; Truth formats expected vs actual).
-
-Enforced by the CircleCI `test-assertion-guard` job (defined inline in `.circleci/config.yml`, mirrors `analytics-wrapper-guard`). The job fails the build if any `*.kt` file under the test source roots contains a bare `assert(` call. Run the same check locally before pushing:
-
-```bash
-grep -rnE '(^|[^[:alnum:]_])assert[[:space:]]*\(' --include='*.kt' \
-    app/src/test app/src/androidTest \
-    commons_android/src/test commons_file/src/test model/src/test
-```
-
-Empty output = clean. Any hit is a hard failure — fix the call-site, do not add an exclusion.
+No bare `kotlin.assert(...)` in test sources — see [ADR 0005](docs/adr/0005-no-kotlin-assert-in-tests.md). Grep-enforced by `scripts/check-adr-invariants.sh` and the CircleCI `test-assertion-guard` job. Use Truth `assertThat(...)`, JUnit `assertEquals`/`assertTrue`/`assertNotNull`, or the Compose UI Test API (`assertCountEquals`, `assertIsDisplayed`). The local check command is in CONTRIBUTING.md § *Testing → Test assertions*.
 
 ## Activity smoke tests
 
-Every `Activity` in `app` must have a smoke test that verifies it reaches `Lifecycle.State.RESUMED` without crashing. Place it alongside the Activity in `app/src/test/`, extend `AbstractRobolectricTest`:
+Every `Activity` in `app` must have a smoke test (in `app/src/test/`, extending `AbstractRobolectricTest`) that verifies it reaches `Lifecycle.State.RESUMED` without crashing:
 
 ```kotlin
 ActivityScenario.launch(MyActivity::class.java).use { scenario ->
@@ -234,55 +196,11 @@ ActivityScenario.launch(MyActivity::class.java).use { scenario ->
 }
 ```
 
-Mock any singleton factories (e.g. `PlayerControllerFactory`) that would crash under Robolectric. See `LandingActivityTest`. (If a dynamic feature module is ever reintroduced, Robolectric's `ShadowPackageParser` rejects split APKs — those Activities need instrumented tests instead.)
-
-Full-screen Composables with their own business logic (PackageManager calls, raw resource reads, significant state) need a `createComposeRule()` smoke test:
-
-```kotlin
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
-internal class MyScreenTest : AbstractRobolectricTest() {
-    @get:Rule val composeTestRule = createComposeRule()
-
-    @Test
-    fun `MyScreen renders without crashing`() {
-        composeTestRule.setContent { AppTheme { MyScreen(onBack = {}) } }
-        composeTestRule.waitForIdle()
-    }
-}
-```
-
-See `AboutScreenTest`.
+Mock singleton factories (e.g. `PlayerControllerFactory`) that would crash under Robolectric — canonical template: `LandingActivityTest`. Full-screen Composables with their own business logic (PackageManager calls, raw resource reads, significant state) need a `createComposeRule()` smoke test — canonical template: `AboutScreenTest`.
 
 ## Local UI test suite
 
-Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a real emulator using Compose UI Test + Espresso + UI Automator + Espresso Accessibility Checks. CircleCI intentionally does not run them — rationale and tradeoffs in [`docs/adr/0001-local-ui-test-suite.md`](docs/adr/0001-local-ui-test-suite.md).
-
-### Setup (one-time)
-
-```bash
-# Creates the AVD `Android_14_API_34` (idempotent, ~5 min the first time including system image download)
-./scripts/setup-test-emulator.sh
-```
-
-### Run the full suite
-
-```bash
-# 1. Boot the emulator (background)
-emulator -avd Android_14_API_34 -no-snapshot-save -no-boot-anim &
-adb wait-for-device shell 'while [[ $(getprop sys.boot_completed) != 1 ]]; do sleep 1; done'
-
-# 2. Run all instrumented tests (UTP installs + runs natively)
-./gradlew app:connectedDebugAndroidTest
-```
-
-HTML report: `app/build/reports/androidTests/connected/debug/index.html`. Raw XML: `app/build/outputs/androidTest-results/connected/debug/`.
-
-### Run a single test class
-
-```bash
-./gradlew app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.github.barriosnahuel.vossosunboton.ui.home.SearchOverlayTest
-```
+Instrumented UI/functional tests live under `app/src/androidTest/`. CircleCI intentionally does not run them — see [ADR 0001](docs/adr/0001-local-ui-test-suite.md). Setup, run commands, and report paths live in CONTRIBUTING.md § *Testing → Local UI test suite*.
 
 ### When to run
 
@@ -322,13 +240,7 @@ CI linters that must pass:
 - **Spotless** — AGPLv3 headers (part of `check`; auto-fix `spotlessApply`)
 - **Android Lint** — rules in `config/android/android-lint.xml`
 
-Before pushing any branch:
-
-```bash
-./gradlew check -x test && ./gradlew test
-```
-
-Catches the same failures CI reports without waiting for a full CI run.
+Run `./gradlew check -x test && ./gradlew test` before pushing — catches the same failures CI reports without waiting for a full CI run.
 
 **Functional changes also require the local UI test suite** (§ *Local UI test suite*). If the change touches Composables, ViewModels, intents, navigation, deep links, or persistence — run the instrumented suite on an emulator before pushing. CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
 
@@ -358,7 +270,7 @@ Hard rules:
 
 - **Do NOT rely on `Timber.e(throwable, message)` to surface a non-fatal.** The `ErrorTrackerTree` (planted in debug and release) forwards only the formatted message via `Tracker.log(...)` — the throwable parameter is silently dropped. `Timber.e` / `Timber.w` are fine for logcat-only diagnostics during dev.
 - **Wrapper message MUST be static.** Crashlytics shows the latest event's message as the issue title in the dashboard, so dynamic interpolation (`"... for $name"`) makes titles flicker between events and breaks BigQuery searches by message. Attach per-event context as a Crashlytics breadcrumb via `Tracker.log("module.field=value")` emitted **immediately before** `Tracker.track(...)`. Module = feature/package directory (`share`, `addbutton`, `playback`, `about`, etc.). Multiple breadcrumbs allowed — emit one `Tracker.log` per key.
-- **Don't use "button" to describe a Sound/Bomp in error or log messages.** It's the legacy term; user-facing copy uses the brand name "Bomp" but internal messages use the neutral "audio" so the brand doesn't leak into ops/BigQuery. The Material Compose `Button` component name is fine — this rule applies to domain references, not framework identifiers or code-level package/class names like `addbutton/`/`AddButtonFeature` (those are out-of-scope churn).
+- **Don't say "button" for a Sound/Bomp in error or log messages.** Use neutral "audio" so the brand doesn't leak into ops/BigQuery. Framework/code identifiers (`addbutton/`, `AddButtonFeature`, Material `Button`) are out of scope.
 - For caught exceptions, follow the established pattern (see `PlayerControllerImpl.kt`): wrap the cause in a `RuntimeException` whose **static** message describes the operation, then hand it to `Tracker.track`. The wrapper message becomes the Crashlytics title; the original throwable is preserved as `cause`.
   ```kotlin
   } catch (e: ActivityNotFoundException) {
@@ -368,21 +280,19 @@ Hard rules:
   }
   ```
 - Expected and recoverable exceptions (e.g. user dismissed a chooser) don't need `Tracker.track`. Reserve it for things you want to investigate.
-- In tests, `AbstractRobolectricTest` already calls `mockkObject(Tracker)` and stubs both `track` / `log` to no-ops in `@Before` (and unmocks in `@After`). Required because `TestApplication` does not initialise Firebase, so `Tracker.track`'s underlying `FirebaseCrashlytics.getInstance()` would throw `IllegalStateException` and the leaked exception lands in `kotlinx.coroutines.test`'s `ExceptionCollector`, surfacing later as `UncaughtExceptionsBeforeTest` on whichever Compose UI test happens to drain the buffer first. Subclasses do not need to re-mock; just add `verify(exactly = 1) { Tracker.track(any()) }` (and `verify(atLeast = 1) { Tracker.log(any()) }` for breadcrumb sites) to lock in the invocation contract — no need to assert exact breadcrumb text (overspecification). Override the global stub only if you need to capture the throwable (`every { Tracker.track(capture(slot)) } answers { nothing }`).
+- In tests, `AbstractRobolectricTest` already mocks `Tracker.track` / `Tracker.log` to no-ops in `@Before` — **do not re-mock**. Subclasses just `verify(exactly = 1) { Tracker.track(any()) }` (and `verify(atLeast = 1) { Tracker.log(any()) }` for breadcrumb sites) to lock in the invocation contract. Don't assert exact breadcrumb text (overspecification). Override the global stub only when you need to capture the throwable (`every { Tracker.track(capture(slot)) } answers { nothing }`).
 
 For SQL post-mortem on accumulated crash history, see `CONTRIBUTING.md` § *BigQuery export*. Releases-only — `bomp-prod` exports Crashlytics, Analytics, and Performance to BigQuery (`us` multi-region, daily); `bomp-debug` does not export.
 
 ## StrictMode debug audit
 
-Single source of truth: `app/src/debug/.../StrictModeConfigurator.kt` (debug-only, never reaches release). ThreadPolicy and VmPolicy use `detectAll()` + explicit `detectNonSdkApiUsage()`. **`penaltyLog()` and `penaltyDeath()` are intentionally not set on the builders** — both fire before `penaltyListener` and bypass the filter. Every violation flows through `reportViolation()`, filters via `KNOWN_THIRD_PARTY_VIOLATIONS`, and on a hit calls `Tracker.track(StrictModeException(violation))` and posts a throw to the main looper so the process dies. Wrapper message is `"StrictMode: <ViolationClassName>"` — `grep StrictMode` in logcat without a dedicated tag. Unknown violations crash debug and instrumented runs until a matcher is added — by design.
+Single source of truth: `app/src/debug/.../StrictModeConfigurator.kt` (debug-only, never reaches release). Unknown violations crash debug and instrumented runs by design — `Tracker.track(StrictModeException(violation))` with the wrapper message `"StrictMode: <ViolationClassName>"`. Filter logcat with `adb logcat | grep StrictMode` (operator workflow in `CONTRIBUTING.md` § *Terminal: StrictMode violations*).
 
 When a new violation surfaces, choose in this order:
 
 1. **Top app-code frame is ours** (`com.github.barriosnahuel.vossosunboton.*`): fix the production code. Don't filter.
 2. **Scopable to a known-OK call-site we own** (e.g. SDK init that legitimately reads disk on first call): wrap with `StrictMode.allowThreadDiskReads()` + `try/finally` at that call-site. Canonical example: `AnalyticsTrackerProvider.createTracker`. Don't add a matcher.
 3. **Third-party class running its own code** (Compose, Espresso, GMS, framework finalizers): add a `KnownThirdPartyViolation` to the list with a comment naming the library + (when public) the upstream issue. Use `methodNameContains` when the class prefix would over-match (the framework's own `android.os.StrictMode` does); use `fileNameContains` when the classes are obfuscated and unstable (GMS Dynamite ships as `m7.*` etc., loader/module identifier lives in `StackTraceElement.fileName`).
-
-Filter logcat with `adb logcat | grep StrictMode` (or `adb logcat -s Tracker:E | grep StrictMode`). Operator workflow lives in `CONTRIBUTING.md` § "Terminal: StrictMode violations".
 
 ## Security boundaries
 
@@ -405,7 +315,7 @@ Canonical implementation: `AddButtonFeature.saveNewButtonAsync`. Any future inbo
 
 ### Backup hygiene
 
-Before adding any new DataStore preference file or persistent file path that could contain sensitive data (auth tokens, account identifiers, private user content), add explicit `<exclude>` entries to both `app/src/main/res/xml/app_backup_rules.xml` and `app/src/main/res/xml/app_data_extraction_rules.xml`. Today nothing sensitive is stored, so the rules are intentionally permissive — they `<include>` the `Music` external directory and the three DataStore preference files (`bomps`, `welcome-sticker`, `analytics-counters`). When that changes, the exclusion ships in the same commit as the new key.
+Before adding any new DataStore preference file or persistent file path that could contain sensitive data (auth tokens, account identifiers, private user content), add explicit `<exclude>` entries to both `app/src/main/res/xml/app_backup_rules.xml` and `app_data_extraction_rules.xml`. Today nothing sensitive is stored — the rules `<include>` the `Music` external directory and the DataStore preference files. When that changes, the exclusion ships in the same commit as the new key.
 
 ### Exported components default to false
 
@@ -454,33 +364,29 @@ Tokens: `Ink1000`, `Ink900`, `Ink800`, `Ink50`, `Paper`, `Acid400`, `AcidDark`, 
 
 ## Product & brand context (when relevant)
 
-Product specs, brand language, and canonical naming live in the sibling backlog repo at `../push-me-backlog/`. Consult it when working on user-facing strings, micro-copy, feature/level naming, gamification, or social-layer behavior:
+Product specs, brand language, and canonical naming live in the sibling backlog repo at `../push-me-backlog/`. Consult when working on user-facing strings, micro-copy, feature/level naming, gamification, or social-layer behavior:
 
-- [`../push-me-backlog/docs/brand-dna.md`](../push-me-backlog/docs/brand-dna.md) — canonical terminology (Bomp, Bomper, Bompear, Escala Richter levels: Bompín / Bompazo / Bompardo / Bompión, Inmortal as cloud-state descriptor)
-- [`../push-me-backlog/CLAUDE.md`](../push-me-backlog/CLAUDE.md) — Product Language glossary and spec conventions
-- [`../push-me-backlog/backlog/`](../push-me-backlog/backlog/) — pending feature specs (the "why")
+- [`docs/brand-dna.md`](../push-me-backlog/docs/brand-dna.md) — canonical terminology (Bomp, Bomper, Bompear, Escala Richter levels: Bompín / Bompazo / Bompardo / Bompión, Inmortal as cloud-state descriptor)
+- [`CLAUDE.md`](../push-me-backlog/CLAUDE.md) — Product Language glossary and spec conventions
+- [`backlog/`](../push-me-backlog/backlog/) — pending feature specs (the "why")
 
-Skip for refactors, dep bumps, build config, and platform-wiring fixes. If the sibling path isn't present (CI, alternate checkout), proceed with in-repo strings as authoritative and surface the gap.
+Skip for refactors, dep bumps, build config, platform-wiring fixes. Sibling path absent → proceed with in-repo strings as authoritative and surface the gap.
 
 ## Repo writing language
 
-Contributor-facing files in this repo are written in **English**: `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, ADRs under `docs/adr/`, `.github/` templates, `CLAUDE.md` itself, code comments, commit messages, PR descriptions, handoff notes. Applies to any new file whose audience is contributors or maintainers.
-
-Exception: **embedded examples of user-facing copy** (the ❌/✓ examples under § Copy & localization, snippets quoted from `strings.xml`) stay in their target locale (typically es-AR) so the rule is illustrated faithfully. Surrounding prose stays in English.
-
-User-facing surfaces (in-app strings, store listings, push notifs, "What's New", marketing emails) are out of scope for this rule and follow § Copy & localization.
+Contributor-facing files (`README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, ADRs, `.github/` templates, `CLAUDE.md`, code comments, commit messages, PR descriptions, handoff notes) are written in **English**. Embedded examples of user-facing copy (❌/✓ snippets, `strings.xml` quotes) stay in their target locale to illustrate the rule faithfully. User-facing surfaces (in-app strings, store listings, push notifs, "What's New", marketing emails) follow § *Copy & localization*.
 
 ## Copy & localization
 
 User-facing copy in any locale (in-app strings, store listings, push notifs, changelogs, emails) must read **native to the target locale**, not as a literal translation — and must not contradict brand DNA or published legal policies.
 
-Sources of truth (paths relative to `/Users/barrios.nahuel/Workspace/push-me/`): `../push-me-backlog/docs/brand-dna.md` (canonical terms, anti-positioning bans), `../push-me-backlog/CLAUDE.md` (Product Language glossary, including reserved terms gated to non-shipped features), `../push-me-ghpages/privacy-policy.html`, `../push-me-ghpages/data-safety.html`. If a path is missing (CI, alternate checkout), don't invent the claim — flag the gap and proceed with in-repo strings as authoritative.
+Sources of truth: `../push-me-backlog/docs/brand-dna.md` (canonical terms, anti-positioning bans), `../push-me-backlog/CLAUDE.md` (Product Language glossary + reserved terms), `../push-me-ghpages/privacy-policy.html`, `../push-me-ghpages/data-safety.html`. Missing path → flag the gap and proceed with in-repo strings as authoritative.
 
-**Default locale for in-app strings.** `app/src/main/res/values/strings.xml` is the **English** master; Spanish-AR copy lives in `values-es/strings.xml`.
+**Default locale.** `app/src/main/res/values/strings.xml` is the **English** master; Spanish-AR copy lives in `values-es/strings.xml`.
 
 Hard rules:
 
-- **No calque translations; locale-aware register.** Phrases natural in the source can be wrong in the target. Examples we hit during the en-US listing: "save a day" (calque of "salvar un día" — correct English idiom is `save the day`); "on the other side" (calque of "del otro lado" — in English means *afterlife*, the phone idiom is `on the other end`); "your audios" (calque of "tus audios" — `audio` is a mass noun in English, natural plural is `voice notes` / `voice clips` / `voice memos`). Match the register the locale expects: US English marketing → contractions, short sentences, imperatives, concrete nouns; Spanish-AR → voseo and warmth. Verify with a native speaker or a current idiom reference, not Google Translate.
+- **No calque translations; locale-aware register.** Phrases natural in the source can be wrong in the target. Match the register the locale expects: US English marketing → contractions, short sentences, imperatives, concrete nouns; Spanish-AR → voseo and warmth. Verify with a native speaker or a current idiom reference, not Google Translate. Concrete calque examples and the en-US listing post-mortem live in `CONTRIBUTING.md` § *Copy guide*.
 - **ASO awareness for store-listing copy.** Integrate high-volume queries the target market actually searches — organically, without breaching brand-DNA bans (`soundboard`, `audio sticker`, `panel`, `viralizá`, `share with friends/followers` as a CTA). Those are positioning bans, not vocabulary bans — a category descriptor like `voice notes` is fine because it names the input, not the brand position.
 - **Brand-DNA invariants.** Proper nouns Bomp / Bomper / Bompear / Bompeable NEVER translate. The manifesto closing ("Un audio de los tuyos no es un mensaje, es un abrazo que se escucha." or a locale-equivalent that preserves meaning) is invariant across surfaces and locales.
 - **Reserved-term check.** Before using any term from `brand-dna.md` or the Product Language glossary, verify it isn't reserved for a non-shipped feature or specific technical state. Reserved today: `Inmortal`/`immortal` (state descriptor for a Bompión synced via Saved Games SDK — Pro, **not shipped yet**); `Bompardo` and `Bompión` (Escala Richter levels 4 and 5, gated by share milestones — don't apply to a generic Bomp); `Bomptástico` (internal telemetry only, never in UI). ❌ "Tus Bomps son inmortales" overstates Auto Backup. ✓ "Tus Bomps quedan respaldados en tu Google Drive".
@@ -490,19 +396,7 @@ Hard rules:
 
 ## Store listing asset generation
 
-Store listing PNGs (icon, feature graphic) are rendered from SVG masters under `store-listing/`. Canonical pipeline: **`rsvg-convert`** (`brew install librsvg`) — fast, CLI, reproducible. Use Inkscape only when you need to tweak typography by hand before export.
-
-Verify required fonts are installed system-wide. Brand stack: **Inter** (Roboto + system-ui as fallbacks). Inter distribution lives zipped at `store-listing/brand/fonts/Inter.zip` (committed under SIL OFL — `OFL.txt` inside). Install on macOS:
-
-```bash
-unzip -j -o store-listing/brand/fonts/Inter.zip "*.ttf" -d ~/Library/Fonts/
-```
-
-(`-j` flattens nested `static/`; `-o` overwrites silently.)
-
-If a future asset needs a different family, drop its zip at `store-listing/brand/fonts/<Family>.zip` (license file inside) and document the install step here.
-
-Full walkthrough — tooling tradeoffs, exact export commands, screenshot capture from the running emulator — lives in `CONTRIBUTING.md` § "Store listing". For locale copy in screenshots / feature graphic taglines, see § "Copy & localization".
+Store listing PNGs (icon, feature graphic) render from SVG masters under `store-listing/`. Canonical pipeline: `rsvg-convert` (`brew install librsvg`); brand font Inter must be installed system-wide. Tooling tradeoffs, install command, exact export commands, and screenshot capture all live in `CONTRIBUTING.md` § *Store listing*. For copy in screenshots / feature graphic taglines, see § *Copy & localization*.
 
 ## Labels and milestone
 
@@ -522,18 +416,7 @@ For the milestone, read the `## [unreleased]` line in `CHANGELOG.md` — the ver
 
 ## Third-party notices
 
-`app/src/main/res/raw/app_third_party_notices.txt` lists all runtime dependencies with their license attribution. **Update this file whenever you add or remove a runtime dependency** (`implementation`, not `testImplementation` or `debugImplementation`).
-
-Each entry follows this format:
-
-```
---------------------------------------------------------------------------------
-Library Name
-Copyright (C) Author
-License Name
-https://project-url
---------------------------------------------------------------------------------
-```
+`app/src/main/res/raw/app_third_party_notices.txt` lists all runtime dependencies with their license attribution. **Update this file whenever you add or remove a runtime dependency** (`implementation`, not `testImplementation` or `debugImplementation`). Entry format is in `CONTRIBUTING.md` § *Third-party notices*.
 
 ## Changelog
 
@@ -543,7 +426,7 @@ https://project-url
 - For dependency bumps, write one line summarising the overall bump (e.g. "Bumped all dependencies to latest stable"), not one line per library
 - As part of each commit, if the change is user-visible or architecturally significant, update `## [unreleased]` before committing
 - Never add a `Fixed` entry for a bug introduced in the same `[unreleased]` cycle. If end-users never experienced the regression, no changelog entry — git history provides the traceability
-- **User-facing first, technical under "For nerds":** within `## [unreleased]`, list user-facing changes under `### Added/Changed/Fixed/Removed`, then technical/contributor-only changes under a `### For nerds 🤓` subsection with `#### Added/Changed/Fixed/Removed` sub-headings (omit any that would be empty). User-facing = visible UI, labels, copy, behavior, permissions, performance the user can feel. Technical = build/CI/tooling, dependency bumps, internal refactors, test infrastructure, Play Console assets internal to the repo, README/docs, analytics instrumentation. This split applies only to `[unreleased]` going forward — released versions stay as written
+- **User-facing first, technical under "For nerds":** within `## [unreleased]`, list user-facing changes (visible UI, labels, copy, behavior, permissions, perf the user can feel) under `### Added/Changed/Fixed/Removed`, then technical/contributor-only changes (build/CI, dep bumps, refactors, test infra, docs, analytics instrumentation) under a `### For nerds 🤓` subsection with `#### Added/Changed/Fixed/Removed` sub-headings (omit any that would be empty). Applies only to `[unreleased]` going forward; released versions stay as written.
 
 ## Handoff notes & issue tracking
 

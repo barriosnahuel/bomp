@@ -9,6 +9,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Directory structure](#directory-structure-)
 - [Debugging tools](#debugging-tools-)
 - [Continuous integration](#continuous-integration-)
+- [Testing](#testing-)
 - [Gradle upgrade](#gradle-upgrade)
 - [Firebase config file](#firebase-config-file-)
 - [Backup & restore testing](#backup--restore-testing-)
@@ -17,8 +18,11 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Signing](#signing-)
 - [Bundled audio files](#bundled-audio-files-)
 - [Store listing](#store-listing-)
+- [Copy guide](#copy-guide-)
+- [Error tracking](#error-tracking-)
 - [Analytics events](#analytics-events-)
 - [BigQuery export](#bigquery-export-)
+- [Third-party notices](#third-party-notices-)
 
 ## Local setup ⚙
 
@@ -52,7 +56,64 @@ We use Circle CI, so if you're gonna change the [config.yml](.circleci/config.ym
 > circleci config validate
 
 ### Instrumented UI tests are local-only
-The instrumented suite under `app/src/androidTest/` is **intentionally not run on CircleCI**. It needs a booted emulator and is meant to replace manual end-to-end QA on the contributor's machine. Run it before pushing functional changes — see the *Local UI test suite* section in `CLAUDE.md` and [ADR 0001](docs/adr/0001-local-ui-test-suite.md) for the rationale.
+The instrumented suite under `app/src/androidTest/` is **intentionally not run on CircleCI**. It needs a booted emulator and is meant to replace manual end-to-end QA on the contributor's machine. Setup, run commands, and synchronization helpers live in [Testing → Local UI test suite](#testing-); rationale lives in [ADR 0001](docs/adr/0001-local-ui-test-suite.md).
+
+## Testing 🧪
+
+Testing rules and invariants live in `CLAUDE.md` (§ *Bug fixes — TDD workflow*, § *Features — test coverage workflow*, § *Test naming convention*, § *Activity smoke tests*, § *Pre-PR checklist*). This section covers the *operational* side: setup, run commands, and conventions you need at the keyboard.
+
+### Test assertions
+
+Bare `kotlin.assert(...)` is forbidden in test sources — it's a silent no-op without JVM `-ea`. Use Truth (`assertThat`), JUnit (`assertEquals` / `assertTrue` / `assertNotNull`), or the Compose UI Test API (`assertCountEquals`, `assertIsDisplayed`). Full rationale and the incident that prompted the rule (PR #1117) live in [ADR 0005](docs/adr/0005-no-kotlin-assert-in-tests.md). Enforced by the CircleCI `test-assertion-guard` job and by `scripts/check-adr-invariants.sh`. Run the same check locally before pushing:
+
+```bash
+grep -rnE '(^|[^[:alnum:]_])assert[[:space:]]*\(' --include='*.kt' \
+    app/src/test app/src/androidTest \
+    commons_android/src/test commons_file/src/test model/src/test
+```
+
+Empty output = clean. Any hit is a hard failure — fix the call-site, do not add an exclusion.
+
+### Test fixtures: `clearForTest()`
+
+Every DataStore-backed store ships a `@VisibleForTesting(otherwise = NONE) suspend fun clearForTest()` so test setUp can reset state without poking the file system. Mirror the pattern when you add a new store. References: `WelcomeStickerStore`, `DataStoreFirstFlagStore`, `DataStoreCounterStore`.
+
+For tracker substitution use `AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())` — never mock `AnalyticsTracker` directly. The fake lives in `:commons_android` test fixtures, pulled into call-site tests via `testImplementation testFixtures(project(":commons_android"))`.
+
+### Local UI test suite
+
+Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a real emulator using Compose UI Test + Espresso + UI Automator + Espresso Accessibility Checks. CircleCI does not run them — see [ADR 0001](docs/adr/0001-local-ui-test-suite.md) for the rationale.
+
+#### Setup (one-time)
+
+```bash
+# Creates the AVD `Android_14_API_34` (idempotent, ~5 min the first time including system image download)
+./scripts/setup-test-emulator.sh
+```
+
+#### Run the full suite
+
+```bash
+# 1. Boot the emulator (background)
+emulator -avd Android_14_API_34 -no-snapshot-save -no-boot-anim &
+adb wait-for-device shell 'while [[ $(getprop sys.boot_completed) != 1 ]]; do sleep 1; done'
+
+# 2. Run all instrumented tests (UTP installs + runs natively)
+./gradlew app:connectedDebugAndroidTest
+```
+
+HTML report: `app/build/reports/androidTests/connected/debug/index.html`. Raw XML: `app/build/outputs/androidTest-results/connected/debug/`.
+
+#### Run a single test class
+
+```bash
+./gradlew app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.github.barriosnahuel.vossosunboton.ui.home.SearchOverlayTest
+```
+
+#### Synchronization
+
+The synchronization rule (when to use `awaitNode*` helpers vs. bare `waitForIdle()`) lives in `CLAUDE.md` § *Local UI test suite*. The `awaitNode*` helpers themselves live in `app/src/androidTest/.../ComposeTestExtensions.kt` (rationale in KDoc).
 
 ## Platform upgrades
 ### API Level
@@ -73,6 +134,24 @@ To run local builds against the real Firebase projects, swap the dummies for the
     > cp /path/to/real/google-services-debug.json   app/src/debug/google-services.json
     > git update-index --skip-worktree app/src/release/google-services.json
     > git update-index --skip-worktree app/src/debug/google-services.json
+
+### Copying from the primary worktree
+
+When you create a new git worktree (e.g. for a parallel branch), the dummies land checked-in but the real configs and the bundled audio files don't follow — the swap-and-skip-worktree state is per-worktree. Copy them from the primary worktree, then re-arm skip-worktree on the new worktree so any future re-download from Firebase Console doesn't accidentally land in the index:
+
+```bash
+cp "$(git rev-parse --git-common-dir)/../app/src/release/google-services.json" app/src/release/google-services.json
+cp "$(git rev-parse --git-common-dir)/../app/src/debug/google-services.json"   app/src/debug/google-services.json
+git update-index --skip-worktree app/src/release/google-services.json
+git update-index --skip-worktree app/src/debug/google-services.json
+mkdir -p model/src/debug/res/raw
+cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.mp3 model/src/debug/res/raw/ 2>/dev/null || true
+cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.ogg model/src/debug/res/raw/ 2>/dev/null || true
+```
+
+This is distinct from the swap-from-disk procedure above (used the first time you set up a fresh clone). The worktree-copy variant assumes the primary worktree already has the real files in place.
+
+### Editing the committed dummy
 
 To **edit the committed dummy itself** (rare — only when adding fields the plugin needs, or when scrubbing differently). Naively running `--no-skip-worktree` then `git add` would stage the real file from the working tree and leak `AIza…` keys, so use this safe sequence per file:
 
@@ -270,6 +349,32 @@ file store-listing/<locale>/images/*.png   # confirms dimensions and color depth
 ls -lh store-listing/<locale>/images/*.png # confirms weight (Play caps icon at 1024 KB)
 ```
 
+## Copy guide ✍️
+
+Hard rules and brand-DNA invariants for user-facing copy live in `CLAUDE.md` § *Copy & localization*. This section collects the **pedagogical examples** — concrete calques we hit (and fixed) during real listings — so contributors writing or reviewing copy can recognise the failure modes without re-deriving them.
+
+### Calque examples (en-US listing post-mortem)
+
+Phrases that read natural in the source but are wrong in the target:
+
+- **"save a day"** — calque of *salvar un día*. Correct English idiom: `save the day`. Caught during the en-US listing review.
+- **"on the other side"** — calque of *del otro lado*. In English this means *the afterlife*; the phone-call idiom is `on the other end`.
+- **"your audios"** — calque of *tus audios*. `audio` is a mass noun in English; the natural plural for voice messages is `voice notes` / `voice clips` / `voice memos`. The category descriptor is fine for ASO; the literal plural is not.
+
+The general failure mode: phrases natural in source can be wrong in target. Match the register the locale expects — US English marketing → contractions, short sentences, imperatives, concrete nouns; Spanish-AR → voseo and warmth. Verify with a native speaker or a current idiom reference, not Google Translate.
+
+### Reserved-term reminders
+
+Before using any term from `../push-me-backlog/docs/brand-dna.md` or the Product Language glossary, verify it isn't reserved for a non-shipped feature:
+
+- `Inmortal` / `immortal` — state descriptor for a Bompión synced via Saved Games SDK (Pro, **not shipped yet**). ❌ "Tus Bomps son inmortales" overstates Auto Backup. ✓ "Tus Bomps quedan respaldados en tu Google Drive".
+- `Bompardo`, `Bompión` — Escala Richter levels 4 and 5, gated by share milestones. Don't apply to a generic Bomp.
+- `Bomptástico` — internal telemetry only, never in UI.
+
+### Read-aloud check
+
+Before shipping any locale, read every paragraph aloud as a native speaker. Stumbles, false friends, weird tense, "wait, what?" reactions are blockers — fix before submitting.
+
 ## Error tracking 📡
 
 Non-fatal exceptions go to Crashlytics via the `Tracker` wrapper at
@@ -406,6 +511,21 @@ Returns `0` early on if no crashes — that's a feature, not a bug.
 - Performance regressions across releases — easier to diff trace medians via `WITH` clauses than to flip between Console screens.
 
 The Console is still right for: real-time DebugView, alert configuration, single-issue triage. BQ is for *retrospectives* across N events / users / days.
+
+## Third-party notices 📜
+
+`app/src/main/res/raw/app_third_party_notices.txt` lists all runtime dependencies with their license attribution. **Update it whenever you add or remove a runtime dependency** (`implementation`, not `testImplementation` or `debugImplementation`).
+
+Each entry follows this format:
+
+```
+--------------------------------------------------------------------------------
+Library Name
+Copyright (C) Author
+License Name
+https://project-url
+--------------------------------------------------------------------------------
+```
 
 ## License 📄
 
