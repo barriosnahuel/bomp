@@ -20,8 +20,15 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### Changed
 - Shortened the welcome-dismissal snackbar from 10 s to 4 s so the feedback no longer lingers; user-deleted sounds keep the longer Undo window
+- Saving a new Bomp or renaming an existing one now confirms with a brand "voice bubble" overlay that briefly fills the screen with the Bomp's name (inflates with a spring, holds, slides out — metaphor for "your Bomp is on its way") and returns the user to wherever they came from, instead of a long snackbar that lingered after the form. Honors the system "Remove animations" setting with an equivalent static confirmation
 
 ### For nerds 🤓
+
+#### Added
+- Analytics event `sound_add_abandoned_after_error` fires when the user leaves the Add Button screen with an unresolved save error (lifecycle-driven via `ON_STOP` and explicit Snackbar dismiss); best-effort — process death drops the signal
+
+#### Removed
+- Dead post-save plumbing: `EXTRA_BUTTON_SAVED` / `EXTRA_BUTTON_RENAMED` / `EXTRA_BUTTON_NAME` Intent extras, `SoundsViewModel.buttonSavedEvent` / `buttonRenamedEvent` channels and their `onButtonSaved` / `onButtonRenamed` setters, the `LandingScreen` `LaunchedEffect`s that consumed them, and `AddButtonActivity.navigateBackSaved` / `navigateBackRenamed`
 
 #### Changed
 - Error-tracking non-fatals now use stable wrapper messages with per-event context attached as Crashlytics breadcrumbs (`Tracker.log("module.field=value")`) instead of interpolating dynamic data into the wrapper message; improves Crashlytics issue titles and BigQuery searchability

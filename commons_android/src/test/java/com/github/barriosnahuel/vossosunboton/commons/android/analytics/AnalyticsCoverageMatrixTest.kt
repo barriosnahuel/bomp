@@ -55,6 +55,7 @@ internal class AnalyticsCoverageMatrixTest {
         private val EVENTS_WITH_REGRESSION_TEST: Set<String> =
             setOf(
                 "SoundAdd",
+                "SoundAddAbandonedAfterError",
                 "SoundEdit",
                 "SoundDelete",
                 "SoundDeleteUndone",

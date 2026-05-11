@@ -220,8 +220,6 @@ private fun SnackbarEffects(
     val welcomeDismissedMessage = stringResource(R.string.app_welcome_sticker_feedback_dismissed)
     val undoLabel = stringResource(R.string.app_undo)
     val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
-    val buttonSavedTemplate = stringResource(R.string.app_feedback_button_saved)
-    val buttonRenamedTemplate = stringResource(R.string.app_feedback_button_renamed)
     val shareDismissLabel = stringResource(R.string.app_snackbar_action_dismiss)
     val activityContext = LocalContext.current
 
@@ -249,24 +247,6 @@ private fun SnackbarEffects(
     LaunchedEffect(Unit) {
         viewModel.shareErrorEvent.collect { errorRes ->
             showShareErrorSnackbar(snackbarHostState, activityContext, errorRes, shareDismissLabel)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.buttonSavedEvent.collect { name ->
-            snackbarHostState.showSnackbar(
-                message = String.format(buttonSavedTemplate, name),
-                duration = SnackbarDuration.Short,
-            )
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.buttonRenamedEvent.collect { name ->
-            snackbarHostState.showSnackbar(
-                message = String.format(buttonRenamedTemplate, name),
-                duration = SnackbarDuration.Short,
-            )
         }
     }
 

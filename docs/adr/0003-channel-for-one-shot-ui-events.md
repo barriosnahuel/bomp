@@ -13,7 +13,7 @@ Android:
 1. **`Channel<T>` + `receiveAsFlow()`.** ViewModel writes to a private
    `Channel`, exposes it as a `Flow`, the screen `LaunchedEffect`s on
    `lifecycleOwner.repeatOnLifecycle` and reacts. This codebase uses this
-   pattern today: see `SoundsViewModel._buttonSavedEvent: Channel<String>`.
+   pattern today: see `SoundsViewModel._scrollToTopEvent: Channel<Unit>`.
 2. **Event-as-state.** The event becomes a field on `UiState` (e.g.
    `pendingFeedback: FeedbackId?`), the screen reads it from `state`, calls
    the ViewModel's `onEventConsumed()` after rendering. This is the pattern
@@ -30,7 +30,8 @@ Both work. They differ in delivery guarantees and in test ergonomics.
    needed.
 2. **Real failure mode of `Channel` is well understood.** A `Channel` event
    emitted while the app is backgrounded between `emit` and `collect` *can* be
-   dropped. None of the events emitted today (`buttonSavedEvent`) carry
+   dropped. None of the events emitted today (`scrollToTopEvent`,
+   `playbackErrorEvent`, `shareIntentEvent`, `shareErrorEvent`) carry
    correctness — they trigger snackbars or analytics, both tolerant of loss.
 3. **Event-as-state pays back when delivery matters.** If we add an event
    that a user must see exactly once and never miss (e.g. a payment receipt
@@ -81,5 +82,5 @@ Enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`):
 
 - `CLAUDE.md` § *Project-specific overrides* → "One-shot UI events: `Channel<T>`".
 - Canonical implementation: `app/src/main/java/.../ui/SoundsViewModel.kt`
-  (`_buttonSavedEvent`).
+  (`_scrollToTopEvent`).
 - Public guidance: https://developer.android.com/topic/architecture/ui-layer/events.
