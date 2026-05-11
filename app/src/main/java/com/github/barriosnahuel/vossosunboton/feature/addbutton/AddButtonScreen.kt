@@ -50,6 +50,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -160,16 +161,23 @@ fun AddButtonScreen(
                     .padding(innerPadding)
                     .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
         ) {
-            val previewSource: Uri? =
-                when (val m = mode) {
-                    is AddButtonMode.Create -> m.uri
-                    is AddButtonMode.Edit -> m.sound.file?.let { getFile(context, it).toUri() }
-                }
+            // Edit mode resolves the file Uri via getExternalFilesDir(), which trips a StrictMode
+            // DiskReadViolation if it runs synchronously during composition. produceState + IO keeps
+            // composition non-blocking; the null window is invisible because AudioPreview gates on durationMs > 0.
+            val previewSource: Uri? by produceState<Uri?>(initialValue = null, mode) {
+                value =
+                    withContext(Dispatchers.IO) {
+                        when (val m = mode) {
+                            is AddButtonMode.Create -> m.uri
+                            is AddButtonMode.Edit -> m.sound.file?.let { getFile(context, it).toUri() }
+                        }
+                    }
+            }
             val previewDateAdded = (mode as? AddButtonMode.Edit)?.sound?.dateAdded
-            if (previewSource != null) {
+            previewSource?.let { source ->
                 AudioPreview(
                     context = context,
-                    source = previewSource,
+                    source = source,
                     soundName = name,
                     dateAdded = previewDateAdded,
                 )
