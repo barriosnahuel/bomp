@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -60,6 +61,14 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
     fun tearDown() {
         AnalyticsTrackerProvider.setForTest(null)
         AddButtonFeatureProvider.setForTest(null)
+    }
+
+    @Test
+    fun `the name field is auto focused on entry so the keyboard opens without an extra tap`() {
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).assertIsFocused()
+        }
     }
 
     @Test

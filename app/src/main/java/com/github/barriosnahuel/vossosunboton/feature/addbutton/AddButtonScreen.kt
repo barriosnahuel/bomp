@@ -60,8 +60,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -107,6 +110,17 @@ fun AddButtonScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val retryLabel = stringResource(R.string.app_snackbar_action_retry)
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
+    val nameFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        // Save the user one tap: the name field is the primary action on this screen, so focus it
+        // on entry and let the IME come up immediately. Both modes (Create from share-sheet and
+        // Edit from long-press) lead with a name input. `withFrameNanos` waits for the first
+        // layout pass so the FocusRequester has a node attached — without it, requestFocus on the
+        // very first composition is a no-op under Robolectric (caught the regression in tests).
+        withFrameNanos { /* wait for first frame so the node is attached */ }
+        runCatching { nameFocusRequester.requestFocus() }
+    }
 
     TrackAbandonOnStop(
         pendingErrorReason = { pendingErrorReason },
@@ -227,7 +241,10 @@ fun AddButtonScreen(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { save() }),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .focusRequester(nameFocusRequester),
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 SaveButton(
