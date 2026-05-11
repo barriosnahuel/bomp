@@ -123,6 +123,19 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `Create mode invokes preview path for incoming URI without crashing the tree`() {
+        // Symmetry contract with Edit mode: AudioPreview's LaunchedEffect must run for the share-incoming URI.
+        // We can't assert the play/pause Card here: SAMPLE_URI is unresolvable so MediaPlayer.prepare fails and
+        // the Card stays hidden by the `if (isReady)` guard. Asserting the form below remains reachable proves
+        // the LaunchedEffect didn't throw. Happy-path interactivity needs a playable test URI — see PR notes.
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).assertIsDisplayed()
+        }
+    }
+
+    @Test
     fun `Create flow does not emit sound_add when saveNewButtonAsync signals the generic error`() {
         feature.saveNewFeedback = R.string.app_feedback_generic_error_contact_support
 

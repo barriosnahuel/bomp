@@ -63,6 +63,18 @@ Supersede ADR 0004 or move the call site. The no-runBlocking rule is in CLAUDE.m
 fi
 
 # ============================================================================
+# ADR 0006 — docs/adr/0006-no-kotlin-assert-in-tests.md
+# Invariant: no bare kotlin.assert(...) in any test sourceset. The JVM only
+# evaluates the condition under -ea, so a misused assert silently no-ops on
+# any runner without that flag (see PR #1117). Mirror of the CircleCI job
+# `test-assertion-guard`; kept here so contributors fail fast locally.
+# ============================================================================
+TEST_DIRS="app/src/test app/src/androidTest commons_android/src/test commons_file/src/test model/src/test"
+if grep -rnE --include='*.kt' '(^|[^[:alnum:]_])assert[[:space:]]*\(' $TEST_DIRS 2>/dev/null; then
+    fail "ADR 0006 broken: bare kotlin.assert(...) in test sources. Use Truth assertThat(...), JUnit assertEquals(...), or the Compose UI Test API (assertCountEquals, assertIsDisplayed). See CLAUDE.md § Test assertions."
+fi
+
+# ============================================================================
 if [ "$errors" -gt 0 ]; then
     echo
     echo "$errors ADR invariant(s) violated. See messages above for which ADR(s) to revisit." >&2

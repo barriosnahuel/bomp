@@ -7,9 +7,11 @@ package com.github.barriosnahuel.vossosunboton.feature.playback
 
 import android.content.Context
 import android.media.MediaPlayer
+import android.net.Uri
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -18,6 +20,9 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import io.mockk.verifyOrder
 import io.mockk.verifySequence
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Test
 
@@ -45,7 +50,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
-        PlayerControllerImpl(mp).startPlayingSound(context, sound)
+        controllerForTest(mp).startPlayingSound(context, sound)
 
         verifyOrder {
             mp.reset()
@@ -64,7 +69,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
-        PlayerControllerImpl(mp).startPlayingSound(context, sound)
+        controllerForTest(mp).startPlayingSound(context, sound)
 
         verifyOrder {
             mp.stop()
@@ -82,7 +87,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns false
 
-        PlayerControllerImpl(mp).startPlayingSound(context, sound)
+        controllerForTest(mp).startPlayingSound(context, sound)
 
         verify(exactly = 0) { mp.start() }
     }
@@ -97,7 +102,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns false
 
-        val controller = PlayerControllerImpl(mp)
+        val controller = controllerForTest(mp)
         controller.setOnStartStopListener(listener)
         controller.startPlayingSound(context, sound)
 
@@ -116,7 +121,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
-        val controller = PlayerControllerImpl(mp)
+        val controller = controllerForTest(mp)
         controller.setOnStartStopListener(listener)
         controller.startPlayingSound(context, sound)
 
@@ -137,7 +142,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
-        val controller = PlayerControllerImpl(mp)
+        val controller = controllerForTest(mp)
         controller.setOnStartStopListener(listener)
         controller.startPlayingSound(context, sound)
 
@@ -158,7 +163,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
-        val controller = PlayerControllerImpl(mp)
+        val controller = controllerForTest(mp)
         controller.setOnStartStopListener(listener)
         controller.startPlayingSound(context, sound)
 
@@ -180,7 +185,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
-        val controller = PlayerControllerImpl(mp)
+        val controller = controllerForTest(mp)
         controller.setOnStartStopListener(listener)
         controller.startPlayingSound(context, sound)
         completionSlot.captured.onCompletion(mp)
@@ -199,7 +204,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
-        val controller = PlayerControllerImpl(mp)
+        val controller = controllerForTest(mp)
         controller.setOnStartStopListener(listener)
         controller.startPlayingSound(context, sound)
         controller.stopPlayingSound()
@@ -208,10 +213,102 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `startPlayingUri emits a Stream PlaybackState with the given uri`() {
+        val context = mockk<Context>(relaxed = true)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.duration } returns 5_000
+        val uri = Uri.parse("content://test/clip.mp3")
+
+        val controller = controllerForTest(mp)
+        controller.startPlayingUri(context, uri)
+
+        val state = controller.playbackState.value
+        assertThat(state).isNotNull()
+        assertThat(state!!.uri).isEqualTo(uri)
+        assertThat(state.durationMs).isEqualTo(5_000)
+        assertThat(state.isPlaying).isTrue()
+    }
+
+    @Test
+    fun `startPlayingUri while a Sound is playing pre-empts it via onPlayerStop`() {
+        // Concurrency invariant from ADR 0005: starting a Stream stops any currently-playing Sound.
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = mockk<MediaPlayer>(relaxed = true)
+        every { mp.isPlaying } returnsMany listOf(false, true, false)
+        every { mp.duration } returns 5_000
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = controllerForTest(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+        controller.startPlayingUri(context, Uri.parse("content://test/clip.mp3"))
+
+        verify { listener.onPlayerStop(sound, completed = false) }
+    }
+
+    @Test
+    fun `pause flips isPlaying to false in the current PlaybackState`() {
+        val context = mockk<Context>(relaxed = true)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.duration } returns 5_000
+        val uri = Uri.parse("content://test/clip.mp3")
+
+        val controller = controllerForTest(mp)
+        controller.startPlayingUri(context, uri)
+        every { mp.isPlaying } returns true
+        controller.pause()
+
+        verify { mp.pause() }
+        assertThat(controller.playbackState.value?.isPlaying).isFalse()
+        assertThat(controller.playbackState.value?.uri).isEqualTo(uri)
+    }
+
+    @Test
+    fun `resume flips isPlaying back to true after a pause`() {
+        val context = mockk<Context>(relaxed = true)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.duration } returns 5_000
+
+        val controller = controllerForTest(mp)
+        controller.startPlayingUri(context, Uri.parse("content://test/clip.mp3"))
+        every { mp.isPlaying } returns true
+        controller.pause()
+        controller.resume()
+
+        // start() is called twice: once on startPlayingUri, once on resume.
+        verify(exactly = 2) { mp.start() }
+        assertThat(controller.playbackState.value?.isPlaying).isTrue()
+    }
+
+    @Test
+    fun `stopPlayingSound clears a paused Stream PlaybackState even when the player is not currently playing`() {
+        // Regression guard for the AudioPreview onDispose path: when the user pauses then closes the
+        // screen, the player is in PAUSED state (isPlaying == false) but the StateFlow still holds
+        // the preview. stopPlayingSound must clear it so a future preview doesn't see stale state.
+        val context = mockk<Context>(relaxed = true)
+        val mp = mockk<MediaPlayer>(relaxed = true)
+        every { mp.isPlaying } returnsMany listOf(false, true, false, false)
+        every { mp.duration } returns 5_000
+
+        val controller = controllerForTest(mp)
+        controller.startPlayingUri(context, Uri.parse("content://test/clip.mp3"))
+        controller.pause()
+        assertThat(controller.playbackState.value).isNotNull()
+
+        controller.stopPlayingSound()
+
+        assertThat(controller.playbackState.value).isNull()
+    }
+
+    @Test
     fun `seekTo delegates to mediaPlayer seekTo`() {
         val mp = givenAnIdleMediaPlayer()
 
-        PlayerControllerImpl(mp).seekTo(1500)
+        controllerForTest(mp).seekTo(1500)
 
         verify { mp.seekTo(1500) }
     }
@@ -228,9 +325,23 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
             every { it.isPlaying } returns false
         }
 
+    /**
+     * Constructs the controller with eager dispatchers so coroutine bodies in start*() complete
+     * before the test method moves to its `verify {}` block. UnconfinedTestDispatcher resumes the
+     * continuation on the calling thread, so withContext(ioDispatcher) does not actually schedule.
+     */
+    private fun controllerForTest(mp: MediaPlayer): PlayerControllerImpl {
+        val dispatcher = UnconfinedTestDispatcher()
+        return PlayerControllerImpl(
+            mediaPlayer = mp,
+            ioDispatcher = dispatcher,
+            scope = CoroutineScope(dispatcher + SupervisorJob()),
+        )
+    }
+
     private fun whenCallingPlayerControllerStop(mockedMediaPlayer: MediaPlayer) {
         mockkObject(PlayerControllerFactory)
-        every { PlayerControllerFactory.instance } returns PlayerControllerImpl(mockedMediaPlayer)
+        every { PlayerControllerFactory.instance } returns controllerForTest(mockedMediaPlayer)
         PlayerControllerFactory.instance.stopPlayingSound()
     }
 

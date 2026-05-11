@@ -6,11 +6,9 @@
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.Context
-import android.media.MediaPlayer
+import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,28 +20,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -55,7 +45,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -65,12 +54,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -80,15 +68,8 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
-import com.github.barriosnahuel.vossosunboton.ui.AppIcons
-import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
-import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import timber.log.Timber
-import java.io.IOException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -192,17 +173,7 @@ fun AddButtonScreen(
                         .imePadding()
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             ) {
-                val editSound = (mode as? AddButtonMode.Edit)?.sound
-                val editFile = editSound?.file
-                if (editFile != null) {
-                    AudioPreview(
-                        context = context,
-                        fileName = editFile,
-                        soundName = name,
-                        dateAdded = editSound.dateAdded,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
+                PreviewSlot(context = context, mode = mode, displayedName = name)
 
                 OutlinedTextField(
                     value = name,
@@ -264,6 +235,28 @@ fun AddButtonScreen(
 }
 
 @Composable
+private fun PreviewSlot(
+    context: Context,
+    mode: AddButtonMode,
+    displayedName: String,
+) {
+    val source: Uri? =
+        when (mode) {
+            is AddButtonMode.Create -> mode.uri
+            is AddButtonMode.Edit -> mode.sound.file?.let { getFile(context, it).toUri() }
+        }
+    if (source == null) return
+    val dateAdded = (mode as? AddButtonMode.Edit)?.sound?.dateAdded
+    AudioPreview(
+        context = context,
+        source = source,
+        soundName = displayedName,
+        dateAdded = dateAdded,
+    )
+    Spacer(modifier = Modifier.height(16.dp))
+}
+
+@Composable
 private fun SaveSuccessOverlayHost(
     outcome: SaveOutcome,
     mode: AddButtonMode,
@@ -277,145 +270,6 @@ private fun SaveSuccessOverlayHost(
         subtitleId = if (isEdit) R.string.app_addbutton_overlay_subtitle_renamed else R.string.app_addbutton_overlay_subtitle_saved,
         onFinished = { onSaved(outcome.name) },
     )
-}
-
-@Composable
-private fun AudioPreview(
-    context: Context,
-    fileName: String,
-    soundName: String,
-    dateAdded: Long?,
-) {
-    var isPlaying by remember { mutableStateOf(false) }
-    var sliderPosition by remember { mutableFloatStateOf(0f) }
-    val player = remember { MediaPlayer() }
-    var isReady by remember { mutableStateOf(false) }
-    var durationMs by remember { mutableStateOf(0) }
-
-    LaunchedEffect(fileName) {
-        val prepared =
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    val file = getFile(context, fileName)
-                    player.setDataSource(file.absolutePath)
-                    player.prepare()
-                    player.duration
-                }
-            }
-        prepared
-            .onSuccess { duration ->
-                durationMs = duration
-                player.setOnCompletionListener {
-                    isPlaying = false
-                    sliderPosition = 0f
-                }
-                isReady = true
-            }.onFailure { e ->
-                when (e) {
-                    is IOException -> Timber.w(e, "Could not load audio preview for file: %s", fileName)
-                    is IllegalStateException -> Timber.w(e, "MediaPlayer in invalid state for file: %s", fileName)
-                    else -> throw e
-                }
-            }
-    }
-    DisposableEffect(Unit) {
-        onDispose { player.release() }
-    }
-
-    if (isReady) {
-        Card(
-            border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = soundName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    val playContainerColor = MaterialTheme.colorScheme.primaryContainer
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier =
-                            Modifier
-                                .background(
-                                    color = if (isPlaying) playContainerColor.copy(alpha = 0.18f) else Color.Transparent,
-                                    shape = CircleShape,
-                                ).padding(6.dp),
-                    ) {
-                        FilledIconButton(
-                            onClick = {
-                                if (isPlaying) {
-                                    player.pause()
-                                    isPlaying = false
-                                } else {
-                                    player.start()
-                                    isPlaying = true
-                                }
-                            },
-                            modifier = Modifier.size(44.dp),
-                            colors =
-                                IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = playContainerColor,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                ),
-                        ) {
-                            Icon(
-                                imageVector = if (isPlaying) AppIcons.Pause else Icons.Default.PlayArrow,
-                                contentDescription = stringResource(R.string.app_addbutton_preview_audio),
-                            )
-                        }
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Slider(
-                            value = sliderPosition,
-                            onValueChange = { value ->
-                                sliderPosition = value
-                                if (durationMs > 0) player.seekTo((value * durationMs).toInt())
-                            },
-                            enabled = isPlaying,
-                            colors =
-                                SliderDefaults.colors(
-                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
-                                    disabledInactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
-                                    disabledThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
-                                    disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
-                                ),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = formatDuration(durationMs),
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
-                            if (dateAdded != null) {
-                                Text(
-                                    text = formatRelativeDate(dateAdded),
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 private const val MAX_NAME_LENGTH = 50

@@ -7,8 +7,11 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### Added
 - Terms of Service link in the About screen's "Legal & Privacy" section, opening the published page with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
+- New Bomp screen now shows the audio preview card with play/pause and seek above the name field, so you can listen to the incoming audio before saving — matching the card already present when renaming a Bomp
 
 ### Fixed
+- Audio preview card in Rename Bomp now advances the seek bar in real time during playback (was static)
+- Starting a preview while a Bomp from the Home list was playing would leave both audio sources playing at once; now starting a new preview cleanly stops the list playback (and vice versa)
 - Sharing a Bomp whose audio path can't be resolved by the FileProvider no longer crashes the app; the failure is reported to the user with a Snackbar and tracked as a non-fatal so it can be investigated
 - Sharing a Bomp no longer crashes the app when no installed app handles audio sharing, when external storage can't be written, or when the Sound has corrupt data — each case shows a tailored Snackbar and is tracked as a non-fatal
 - Tapping play on a Bomp no longer crashes the app if MediaPlayer rejects the start call; the playback error Snackbar is shown instead and a non-fatal is tracked
@@ -36,9 +39,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Migrated Firebase to per-build-type projects (bomp-prod for release, bomp-debug for debug); added BigQuery export documentation
 - About screen's external Legal & Privacy links now open extensionless URLs (`/privacy-policy`, `/data-safety`, `/terms-of-service`) — GitHub Pages serves the same content under both forms, so this is a cosmetic cleanup with no destination or behavior change
 - Routed the audio share flow through `SoundsViewModel` with Channel-based one-shot events, aligning ADR 0002 (constructor injection) and ADR 0003 (Channel for one-shot events); `ShareFeature` is split into `prepareShareIntent` (VM-side I/O) and `launchChooser` (UI-side)
-
-#### Changed
 - Banned bare `kotlin.assert(...)` in test sources via a new CircleCI `test-assertion-guard` job; tests must use Truth's `assertThat`, JUnit's `assertEquals`, or the Compose UI Test API. `kotlin.assert` is a no-op without JVM `-ea` and silently masked an `EXTERNAL_LEGAL_ITEMS = 3` count that was stale once Terms of Service shipped. Migrated the existing offenders and bumped the constant to 4
+- Unified the audio playback engine across the Home/Explore list and the AddButton preview card so a single `MediaPlayer` instance owns concurrency, progress polling, and lifecycle (ADR 0005); the AddButton preview no longer instantiates its own player; setDataSource/prepare moved off the main thread via constructor-injected `ioDispatcher`
 
 #### Fixed
 - Debug builds now show a gray launcher icon background again, restoring the visual distinction from release builds that was lost when the icon was modernized to an adaptive icon
