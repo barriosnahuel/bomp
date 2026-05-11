@@ -51,11 +51,12 @@ import kotlinx.coroutines.delay
 
 /**
  * Brand "voice bubble" confirmation rendered after a successful save. Inflates from the centre with a spring
- * overshoot, holds the name for ~350 ms, then slides up and fades out — metaphor for "your Bomp is on its way".
+ * overshoot and holds the name + brand subtitle for [ENTRY_PLUS_HOLD_MS]; the overlay has no own exit
+ * animation, so when [onFinished] fires the Activity's `finish()` and the system's back transition carry the
+ * user out in a single, decisive motion (no double-exit).
  *
  * Honours the system "Remove animations" setting (Accessibility): when `ANIMATOR_DURATION_SCALE = 0`, the same
- * content is shown statically for [STATIC_HOLD_MS] and dismissed instantly, preserving the equivalent
- * experience without motion.
+ * content is shown statically for [STATIC_HOLD_MS], preserving the equivalent experience without motion.
  */
 @Composable
 internal fun SaveSuccessOverlay(
@@ -97,7 +98,11 @@ internal fun SaveSuccessOverlay(
                     .background(MaterialTheme.colorScheme.primaryContainer)
                     .pointerInput(Unit) {
                         awaitPointerEventScope { while (true) awaitPointerEvent() }
-                    }.semantics {
+                    }.semantics(mergeDescendants = true) {
+                        // Consolidate the bubble into one semantic node so TalkBack announces the
+                        // full sentence once (via contentDescription) instead of reading the
+                        // live-region label + the inner name + the inner subtitle as three separate
+                        // nodes. WCAG 2.2 § 1.3.1 (info & relationships).
                         liveRegion = LiveRegionMode.Polite
                         contentDescription = announcement
                     },
