@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Saving a new Bomp from a revoked or unreadable inbound URI now shows a tailored "couldn't read the audio" Snackbar instead of failing silently; the underlying ContentResolver failure is tracked as a non-fatal
 - Saving a new Bomp now keeps the user on the form with a clear error Snackbar when the underlying file copy fails, instead of silently navigating away as if the save had succeeded
 - Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
+- Restored ripple contrast on the empty Home in light mode so the illustration reads clearly from the first launch
 
 
 ### Changed

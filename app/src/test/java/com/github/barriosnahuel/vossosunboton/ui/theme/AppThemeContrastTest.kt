@@ -166,7 +166,39 @@ internal class AppThemeContrastTest {
     fun `dark onSurfaceVariant on background About muted text passes AA`() {
         assertTextAA(DarkColors.onSurfaceVariant, DarkColors.background, "dark: onSurfaceVariant / background")
     }
+
+    // --- MySoundsEmptyState ripple pairs ---
+    // Lock the inner-ring composite (primary @ INNER_RIPPLE_ALPHA over surface) to ≥3:1 non-text
+    // in both modes. Guards against future alpha drift in MySoundsEmptyState.kt.
+
+    @Test
+    fun `light primary at inner-ripple alpha on surface passes non-text AA`() {
+        assertNonTextAA(
+            LightColors.primary.copy(alpha = INNER_RIPPLE_ALPHA_FOR_TEST).compositeOver(LightColors.surface),
+            LightColors.surface,
+            "light: primary @α=$INNER_RIPPLE_ALPHA_FOR_TEST / surface (MySoundsEmptyState inner ring)",
+        )
+    }
+
+    @Test
+    fun `dark primary at inner-ripple alpha on surface passes non-text AA`() {
+        assertNonTextAA(
+            DarkColors.primary.copy(alpha = INNER_RIPPLE_ALPHA_FOR_TEST).compositeOver(DarkColors.surface),
+            DarkColors.surface,
+            "dark: primary @α=$INNER_RIPPLE_ALPHA_FOR_TEST / surface (MySoundsEmptyState inner ring)",
+        )
+    }
 }
+
+private const val INNER_RIPPLE_ALPHA_FOR_TEST = 0.85f
+
+private fun Color.compositeOver(bg: Color): Color =
+    Color(
+        red = red * alpha + bg.red * (1f - alpha),
+        green = green * alpha + bg.green * (1f - alpha),
+        blue = blue * alpha + bg.blue * (1f - alpha),
+        alpha = 1f,
+    )
 
 private fun assertTextAA(
     fg: Color,

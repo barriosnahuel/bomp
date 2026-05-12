@@ -36,7 +36,7 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
  */
 @Composable
 internal fun MySoundsEmptyState(modifier: Modifier = Modifier) {
-    val rippleColor = MaterialTheme.colorScheme.primaryContainer
+    val rippleColor = MaterialTheme.colorScheme.primary
 
     Column(
         modifier =
@@ -97,6 +97,6 @@ private val RIPPLE_STROKE = 1.5.dp
 private val INNER_RIPPLE_RADIUS = 24.dp
 private val MID_RIPPLE_RADIUS = 48.dp
 private val OUTER_RIPPLE_RADIUS = 72.dp
-private const val INNER_RIPPLE_ALPHA = 0.55f
-private const val MID_RIPPLE_ALPHA = 0.30f
-private const val OUTER_RIPPLE_ALPHA = 0.15f
+private const val INNER_RIPPLE_ALPHA = 0.85f
+private const val MID_RIPPLE_ALPHA = 0.55f
+private const val OUTER_RIPPLE_ALPHA = 0.30f
