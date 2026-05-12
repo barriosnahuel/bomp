@@ -53,6 +53,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Stopped a duplicate startup log breadcrumb fired from both CustomBuildTypeApplication and MainApplication; renamed the surviving log to "Starting <build-type> application"
 - De-flaked three instrumented tests by adding animation-settle `waitForIdle()` between deterministic actions and the next assertion: `SearchOverlayTest.systemBackClosesOverlay` (post `Espresso.pressBack()`), `SearchOverlayTest.searchOverlayExposesA11yContentDescriptions` (defensive close at end so the overlay/IME doesn't leak to the next test) and `HomeTabFlowTest.swipeLeftToDeleteThenUndoRestoresSound` (between snackbar appearing and undo click so the M3 enter animation is settled)
 - Bumped stale `AboutScreenFlowTest.EXTERNAL_LEGAL_ITEMS` constant from 3 to 4 to match the Terms of Service link added in the same release
+- Save-flow state in the Add Button screen now survives Activity recreate (`rememberSaveable` with a custom `Saver` for the `SaveOutcome` sealed interface); on rotation mid-Success the confirmation overlay is restored with the saved name instead of disappearing. In-flight `Loading` collapses to `Idle` on restore because the save coroutine is composition-scoped — the user re-taps Save in the sub-second window
+- `FocusRequester.requestFocus()` failures on first-frame attach are now recorded as Crashlytics non-fatals (with a Mode breadcrumb) instead of swallowed by `runCatching`, so a silent focus break on the screen's primary action surfaces in the dashboard if it ever spikes
 
 ## \[v2.0.0] - 2026-05-07
 

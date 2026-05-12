@@ -88,6 +88,29 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     }
 
     @Test
+    fun saveSuccessOverlaySurvivesRotation() {
+        val sound = TestData.seedCustomSounds(context, count = 1).single()
+        val newName = "rotated_rename"
+
+        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use { scenario ->
+            composeRule.awaitNode(hasSetTextAction()).performTextClearance()
+            nameField().performTextInput(newName)
+            composeRule.onNodeWithText(context.getString(R.string.app_addbutton_save_changes)).performClick()
+            // Wait for the overlay to render BEFORE recreating, so we exercise restoration of the
+            // Success state — not a race between save() and the recreate boundary.
+            composeRule
+                .awaitNodeWithContentDescription(context.getString(R.string.app_feedback_button_renamed, newName))
+                .assertIsDisplayed()
+
+            scenario.recreate()
+
+            composeRule
+                .awaitNodeWithContentDescription(context.getString(R.string.app_feedback_button_renamed, newName))
+                .assertIsDisplayed()
+        }
+    }
+
+    @Test
     fun editScreenExposesA11yContentDescriptions() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
