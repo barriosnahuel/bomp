@@ -24,7 +24,7 @@ firebaseBom               = "34.13.0"
 
 # Other
 timber                    = "5.0.1"
-coroutines                = "1.10.2"
+coroutines                = "1.11.0"
 datastore                 = "1.2.1"
 kotlinxSerialization      = "1.11.0"
 
