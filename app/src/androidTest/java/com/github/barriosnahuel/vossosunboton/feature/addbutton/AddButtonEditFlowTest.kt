@@ -5,8 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
-import android.app.Activity
-import android.app.Instrumentation
 import android.content.Intent
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -15,11 +13,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
-import androidx.test.espresso.intent.Intents
-import androidx.test.espresso.intent.Intents.intending
-import androidx.test.espresso.intent.matcher.ComponentNameMatchers.hasClassName
-import androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -30,6 +25,7 @@ import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
+import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -69,30 +65,25 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun saveWithValidNameNavigatesBackToLandingWithRenamedExtra() {
+    fun saveWithValidNameShowsConfirmationAndFinishes() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
         val newName = "renamed_custom"
-        // Stub the LandingActivity launch so the framework does not actually start it (ActivityScenario only owns
-        // AddButtonActivity, and resolving LandingActivity here would race against AddButtonActivity finishing).
-        intending(hasComponent(hasClassName(LandingActivity::class.java.name)))
-            .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
 
-        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use {
+        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use { scenario ->
             composeRule.awaitNode(hasSetTextAction()).performTextClearance()
             nameField().performTextInput(newName)
             composeRule.onNodeWithText(context.getString(R.string.app_addbutton_save_changes)).performClick()
-            // Inspect Intents.getIntents() directly instead of Intents.intended(): when a resumed activity exists,
-            // intended() routes the matcher through Espresso.onView(isRoot()).check(...), which triggers the
-            // class-wide ATF run from AbstractUiTest. The view tree is mid-transition (AddButtonActivity finishing,
-            // LandingActivity launch stubbed), so the Espresso check throws AssertionError, runCatching swallows
-            // it, and the wait times out — even though the intent was already in the recorded list.
+            // Confirmation lives inside the success overlay (no snackbar). Its semantics carry the
+            // localised announcement with the new name interpolated.
+            composeRule
+                .awaitNodeWithContentDescription(context.getString(R.string.app_feedback_button_renamed, newName))
+                .assertIsDisplayed()
+            // Overlay finishes the entry+hold+exit window and then the Activity must finish so back
+            // stack returns to the caller.
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                Intents.getIntents().any { intent ->
-                    intent.component?.className == LandingActivity::class.java.name &&
-                        intent.getBooleanExtra(LandingActivity.EXTRA_BUTTON_RENAMED, false) &&
-                        intent.getStringExtra(LandingActivity.EXTRA_BUTTON_NAME) == newName
-                }
+                scenario.state == Lifecycle.State.DESTROYED
             }
+            assertThat(scenario.state).isEqualTo(Lifecycle.State.DESTROYED)
         }
     }
 

@@ -257,25 +257,6 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `onButtonSaved selects MY_SOUNDS tab`() {
-        val viewModel = givenAViewModel()
-
-        viewModel.onButtonSaved("test")
-
-        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
-    }
-
-    @Test
-    fun `onButtonSaved emits buttonSavedEvent with the button name`() =
-        runTest {
-            val viewModel = givenAViewModel()
-
-            viewModel.onButtonSaved("Juancho")
-
-            assertThat(viewModel.buttonSavedEvent.first()).isEqualTo("Juancho")
-        }
-
-    @Test
     fun `togglePin moves pinned sound to top of list`() {
         val viewModel = givenAViewModel()
         val sound1 = Sound(name = "alpha", file = "a.mp3", rawRes = 0, isPlaying = false, dateAdded = 2000L)

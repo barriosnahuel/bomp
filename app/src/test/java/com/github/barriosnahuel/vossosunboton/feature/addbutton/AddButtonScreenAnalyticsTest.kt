@@ -9,12 +9,19 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
@@ -55,6 +62,25 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
     fun tearDown() {
         AnalyticsTrackerProvider.setForTest(null)
         AddButtonFeatureProvider.setForTest(null)
+    }
+
+    @Test
+    fun `the name field is auto focused on entry so the keyboard opens without an extra tap`() {
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).assertIsFocused()
+        }
+    }
+
+    @Test
+    fun `Edit mode places the cursor at the end of the existing name so the user can append immediately`() {
+        ActivityScenario.launch<AddButtonActivity>(editIntent()).use {
+            composeTestRule.waitForIdle()
+            val node = composeTestRule.onNode(hasSetTextAction()).fetchSemanticsNode()
+            val selection = node.config[SemanticsProperties.TextSelectionRange]
+            assertThat(selection.start).isEqualTo(EXISTING_NAME.length)
+            assertThat(selection.end).isEqualTo(EXISTING_NAME.length)
+        }
     }
 
     @Test
@@ -133,6 +159,143 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
 
             assertThat(feature.saveNewCalls).isEqualTo(1)
             fake.assertNotEmitted("sound_add")
+        }
+    }
+
+    @Test
+    fun `save success shows the confirmation overlay with the bomp name and subtitle`() {
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
+            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+
+            val expectedAnnouncement = context.getString(R.string.app_feedback_button_saved, NEW_NAME)
+            composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeTestRule
+                    .onAllNodesWithContentDescription(expectedAnnouncement)
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+            composeTestRule.onNodeWithContentDescription(expectedAnnouncement).assertIsDisplayed()
+            // Brand subtitle is the visible "ahora es tuyo" / "is now yours" below the name.
+            composeTestRule
+                .onNodeWithText(context.getString(R.string.app_addbutton_overlay_subtitle_saved))
+                .assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun `rename success shows the confirmation overlay with the renamed subtitle`() {
+        ActivityScenario.launch<AddButtonActivity>(editIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule
+                .onNodeWithText(context.getString(R.string.app_addbutton_save_changes))
+                .performClick()
+
+            val expectedAnnouncement = context.getString(R.string.app_feedback_button_renamed, EXISTING_NAME)
+            composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeTestRule
+                    .onAllNodesWithContentDescription(expectedAnnouncement)
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+            composeTestRule
+                .onNodeWithText(context.getString(R.string.app_addbutton_overlay_subtitle_renamed))
+                .assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun `save success shows the confirmation overlay under reduce motion when ANIMATOR_DURATION_SCALE is zero`() {
+        // Verifies the overlay's content reaches the user even with Remove Animations ON. The full
+        // entry+hold+exit timing and the subsequent finish() are covered by the instrumented test on
+        // device — Robolectric's paused looper makes the Activity lifecycle transition flaky here.
+        Settings.Global.putFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
+        try {
+            ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+                composeTestRule.waitForIdle()
+                composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
+                composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+
+                val expectedAnnouncement = context.getString(R.string.app_feedback_button_saved, NEW_NAME)
+                composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                    composeTestRule
+                        .onAllNodesWithContentDescription(expectedAnnouncement)
+                        .fetchSemanticsNodes()
+                        .isNotEmpty()
+                }
+                composeTestRule.onNodeWithContentDescription(expectedAnnouncement).assertIsDisplayed()
+            }
+        } finally {
+            Settings.Global.putFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+        }
+    }
+
+    @Test
+    fun `save failure shows snackbar with retry action and keeps user on form`() {
+        feature.saveNewFeedback = R.string.app_addbutton_feedback_save_failed
+
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use { scenario ->
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
+            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+
+            val errorMessage = context.getString(R.string.app_addbutton_feedback_save_failed)
+            composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeTestRule.onAllNodesWithText(errorMessage).fetchSemanticsNodes().isNotEmpty()
+            }
+            composeTestRule
+                .onNodeWithText(context.getString(R.string.app_snackbar_action_retry))
+                .assertIsDisplayed()
+            // Activity must remain RESUMED so the user can retry without re-typing.
+            assertThat(scenario.state).isEqualTo(Lifecycle.State.RESUMED)
+        }
+    }
+
+    @Test
+    fun `tapping retry on the error snackbar runs save again`() {
+        feature.saveNewFeedback = R.string.app_addbutton_feedback_save_failed
+
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
+            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+            composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeTestRule
+                    .onAllNodesWithText(context.getString(R.string.app_snackbar_action_retry))
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+
+            // Flip the feature to succeed before retrying so this test does not loop on errors.
+            feature.saveNewFeedback = R.string.app_addbutton_feedback_saved_ok
+            composeTestRule.onNodeWithText(context.getString(R.string.app_snackbar_action_retry)).performClick()
+            composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) { feature.saveNewCalls >= 2 }
+
+            assertThat(feature.saveNewCalls).isEqualTo(2)
+            fake.assertNotEmitted("sound_add_abandoned_after_error")
+        }
+    }
+
+    @Test
+    fun `stopping the activity with an unresolved error tracks abandonment once`() {
+        feature.saveNewFeedback = R.string.app_addbutton_feedback_save_failed
+
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use { scenario ->
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
+            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+            composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeTestRule
+                    .onAllNodesWithText(context.getString(R.string.app_snackbar_action_retry))
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+
+            scenario.moveToState(Lifecycle.State.CREATED)
+
+            val abandoned = fake.assertEmitted("sound_add_abandoned_after_error")
+            assertThat(abandoned.params["reason"]).isEqualTo("save_failed")
         }
     }
 

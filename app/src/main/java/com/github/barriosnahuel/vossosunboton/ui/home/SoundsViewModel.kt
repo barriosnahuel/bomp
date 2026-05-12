@@ -126,12 +126,6 @@ class SoundsViewModel(
     private val _deletedSoundEvent = MutableStateFlow<DeletedSoundEvent?>(null)
     val deletedSoundEvent: StateFlow<DeletedSoundEvent?> = _deletedSoundEvent.asStateFlow()
 
-    private val _buttonSavedEvent = Channel<String>(Channel.BUFFERED)
-    val buttonSavedEvent: Flow<String> = _buttonSavedEvent.receiveAsFlow()
-
-    private val _buttonRenamedEvent = Channel<String>(Channel.BUFFERED)
-    val buttonRenamedEvent: Flow<String> = _buttonRenamedEvent.receiveAsFlow()
-
     private val _scrollToTopEvent = Channel<Unit>(Channel.BUFFERED)
     val scrollToTopEvent: Flow<Unit> = _scrollToTopEvent.receiveAsFlow()
 
@@ -434,16 +428,6 @@ class SoundsViewModel(
 
     fun clearDeleteEvent() {
         _deletedSoundEvent.value = null
-    }
-
-    fun onButtonSaved(name: String) {
-        selectTab(AppTab.MY_SOUNDS)
-        _buttonSavedEvent.trySend(name)
-    }
-
-    fun onButtonRenamed(name: String) {
-        selectTab(AppTab.MY_SOUNDS)
-        _buttonRenamedEvent.trySend(name)
     }
 
     private suspend fun loadSounds() {

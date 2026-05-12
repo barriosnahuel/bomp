@@ -58,6 +58,16 @@ sealed class AnalyticsEvent(
             }
     }
 
+    /**
+     * Save flow ended in error and the user left without retrying. Emitted on explicit Dismiss of the error snackbar
+     * or on `ON_STOP` while the error is still pending. Best-effort: process death silently drops the signal.
+     */
+    data class SoundAddAbandonedAfterError(
+        val reason: String,
+    ) : AnalyticsEvent(name = "sound_add_abandoned_after_error", hasFirstVariant = false) {
+        override fun params(): Bundle = Bundle().apply { putString("reason", reason) }
+    }
+
     /** Audio deleted (post-snackbar commit). NOT emitted when the user taps "Undo" before the timeout. */
     object SoundDelete : AnalyticsEvent(name = "sound_delete", hasFirstVariant = true)
 

@@ -58,7 +58,7 @@ class AddButtonActivity : ComponentActivity() {
                 AddButtonScreen(
                     context = this,
                     mode = AddButtonMode.Edit(sound),
-                    onSaved = { name -> navigateBackRenamed(name) },
+                    onSaved = { finish() },
                     onNavigateUp = { finish() },
                 )
             }
@@ -72,35 +72,13 @@ class AddButtonActivity : ComponentActivity() {
                 AddButtonScreen(
                     context = this,
                     mode = AddButtonMode.Create(uri),
-                    onSaved = { name -> navigateBackSaved(name) },
+                    onSaved = { finish() },
                     onNavigateUp = { finish() },
                 )
             }
         }
         val extras = Bundle().apply { putString("source", SOURCE_SHARE) }
         AnalyticsTrackerProvider.get(this).logScreen(CanonicalScreenName.ADD_SOUND, extras)
-    }
-
-    private fun navigateBackSaved(name: String) {
-        startActivity(
-            Intent(this, LandingActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra(LandingActivity.EXTRA_BUTTON_SAVED, true)
-                putExtra(LandingActivity.EXTRA_BUTTON_NAME, name)
-            },
-        )
-        finishAndRemoveTask()
-    }
-
-    private fun navigateBackRenamed(name: String) {
-        startActivity(
-            Intent(this, LandingActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra(LandingActivity.EXTRA_BUTTON_RENAMED, true)
-                putExtra(LandingActivity.EXTRA_BUTTON_NAME, name)
-            },
-        )
-        finishAndRemoveTask()
     }
 
     companion object {
