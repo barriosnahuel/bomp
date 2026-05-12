@@ -57,7 +57,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
@@ -83,7 +85,11 @@ fun AddButtonScreen(
     onNavigateUp: () -> Unit,
 ) {
     var name by remember {
-        mutableStateOf(if (mode is AddButtonMode.Edit) mode.sound.name else "")
+        // Pre-populate the cursor at the end in Edit mode so the user can append/correct without
+        // first navigating to the end of the existing name. In Create mode the field is empty so
+        // position 0 is correct.
+        val initial = if (mode is AddButtonMode.Edit) mode.sound.name else ""
+        mutableStateOf(TextFieldValue(text = initial, selection = TextRange(initial.length)))
     }
     var nameError by remember { mutableStateOf<String?>(null) }
     var saveOutcome by remember { mutableStateOf<SaveOutcome>(SaveOutcome.Idle) }
@@ -116,7 +122,7 @@ fun AddButtonScreen(
     )
 
     fun save() {
-        if (name.isBlank()) {
+        if (name.text.isBlank()) {
             nameError = context.getString(R.string.app_addbutton_name_is_required_error)
             return
         }
@@ -124,7 +130,7 @@ fun AddButtonScreen(
         keyboardController?.hide()
         saveOutcome = SaveOutcome.Loading
         coroutineScope.launch {
-            val trimmedName = name.trim()
+            val trimmedName = name.text.trim()
             val feature = AddButtonFeatureProvider.get()
             when (val m = mode) {
                 is AddButtonMode.Create -> {
@@ -176,12 +182,12 @@ fun AddButtonScreen(
                         .imePadding()
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             ) {
-                PreviewSlot(context = context, mode = mode, displayedName = name)
+                PreviewSlot(context = context, mode = mode, displayedName = name.text)
 
                 OutlinedTextField(
                     value = name,
-                    onValueChange = {
-                        name = it.take(MAX_NAME_LENGTH)
+                    onValueChange = { new ->
+                        name = new.copy(text = new.text.take(MAX_NAME_LENGTH))
                         nameError = null
                     },
                     label = {
@@ -209,7 +215,7 @@ fun AddButtonScreen(
                             } else {
                                 Spacer(modifier = Modifier.weight(1f))
                             }
-                            Text(text = "${name.length}/$MAX_NAME_LENGTH")
+                            Text(text = "${name.text.length}/$MAX_NAME_LENGTH")
                         }
                     },
                     singleLine = true,

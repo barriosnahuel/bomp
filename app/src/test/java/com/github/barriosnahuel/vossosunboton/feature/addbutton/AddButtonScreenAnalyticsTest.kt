@@ -10,6 +10,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
@@ -68,6 +69,17 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
         ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasSetTextAction()).assertIsFocused()
+        }
+    }
+
+    @Test
+    fun `Edit mode places the cursor at the end of the existing name so the user can append immediately`() {
+        ActivityScenario.launch<AddButtonActivity>(editIntent()).use {
+            composeTestRule.waitForIdle()
+            val node = composeTestRule.onNode(hasSetTextAction()).fetchSemanticsNode()
+            val selection = node.config[SemanticsProperties.TextSelectionRange]
+            assertThat(selection.start).isEqualTo(EXISTING_NAME.length)
+            assertThat(selection.end).isEqualTo(EXISTING_NAME.length)
         }
     }
 
