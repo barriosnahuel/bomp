@@ -46,6 +46,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -68,8 +69,10 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -240,20 +243,29 @@ private fun PreviewSlot(
     mode: AddButtonMode,
     displayedName: String,
 ) {
-    val source: Uri? =
-        when (mode) {
-            is AddButtonMode.Create -> mode.uri
-            is AddButtonMode.Edit -> mode.sound.file?.let { getFile(context, it).toUri() }
-        }
-    if (source == null) return
-    val dateAdded = (mode as? AddButtonMode.Edit)?.sound?.dateAdded
-    AudioPreview(
-        context = context,
-        source = source,
-        soundName = displayedName,
-        dateAdded = dateAdded,
-    )
-    Spacer(modifier = Modifier.height(16.dp))
+    // Edit mode resolves the file Uri via getExternalFilesDir(), which trips a StrictMode
+    // DiskReadViolation if it runs synchronously during composition (see develop's 3f514cb).
+    // produceState + Dispatchers.IO keeps composition non-blocking; the null window is invisible
+    // because AudioPreview itself gates rendering on durationMs > 0.
+    val source: Uri? by produceState<Uri?>(initialValue = null, mode) {
+        value =
+            withContext(Dispatchers.IO) {
+                when (val m = mode) {
+                    is AddButtonMode.Create -> m.uri
+                    is AddButtonMode.Edit -> m.sound.file?.let { getFile(context, it).toUri() }
+                }
+            }
+    }
+    source?.let { resolvedSource ->
+        val dateAdded = (mode as? AddButtonMode.Edit)?.sound?.dateAdded
+        AudioPreview(
+            context = context,
+            source = resolvedSource,
+            soundName = displayedName,
+            dateAdded = dateAdded,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+    }
 }
 
 @Composable
