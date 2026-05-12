@@ -63,6 +63,23 @@ Supersede ADR 0004 or move the call site. The no-runBlocking rule is in CLAUDE.m
 fi
 
 # ============================================================================
+# ADR 0005 — docs/adr/0005-unified-audio-player.md
+# Invariant: the only MediaPlayer() constructor in src/main lives inside
+# feature/playback/PlayerControllerImpl.kt. New audio surfaces must route
+# through PlayerController, not allocate their own player.
+# ============================================================================
+ALLOWED_MEDIAPLAYER="app/src/main/java/com/github/barriosnahuel/vossosunboton/feature/playback/PlayerControllerImpl.kt"
+unexpected_mediaplayer=$(
+    grep -rlE --include="*.kt" 'MediaPlayer\s*\(\s*\)' $MAIN_DIRS 2>/dev/null \
+        | grep -vxF "$ALLOWED_MEDIAPLAYER" || true
+)
+if [ -n "$unexpected_mediaplayer" ]; then
+    fail "ADR 0005 broken: MediaPlayer() constructor outside PlayerControllerImpl.kt:
+$unexpected_mediaplayer
+Route through PlayerController.startPlayingUri / startPlayingSound, or supersede ADR 0005."
+fi
+
+# ============================================================================
 # ADR 0006 — docs/adr/0006-no-kotlin-assert-in-tests.md
 # Invariant: no bare kotlin.assert(...) in any test sourceset. The JVM only
 # evaluates the condition under -ea, so a misused assert silently no-ops on
