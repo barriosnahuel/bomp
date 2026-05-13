@@ -5,9 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
-import android.os.Build
-import android.view.HapticFeedbackConstants
-import android.view.View
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -65,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import com.github.barriosnahuel.vossosunboton.ui.haptics.performConfirmHaptic
+import com.github.barriosnahuel.vossosunboton.ui.haptics.performRejectHaptic
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -245,22 +244,6 @@ fun SoundItem(
             onDelete = onDelete,
             originLabel = originLabel,
         )
-    }
-}
-
-private fun performConfirmHaptic(view: View) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-    } else {
-        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-    }
-}
-
-private fun performRejectHaptic(view: View) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        view.performHapticFeedback(HapticFeedbackConstants.REJECT)
-    } else {
-        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
     }
 }
 
