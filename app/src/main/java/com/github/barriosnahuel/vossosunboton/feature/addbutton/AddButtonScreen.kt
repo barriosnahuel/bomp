@@ -49,6 +49,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -70,6 +72,7 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performRejectHaptic
@@ -86,17 +89,20 @@ fun AddButtonScreen(
     onSaved: (String) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
-    var name by remember {
+    var name by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         // Pre-populate the cursor at the end in Edit mode so the user can append/correct without
         // first navigating to the end of the existing name. In Create mode the field is empty so
-        // position 0 is correct.
+        // position 0 is correct. Saveable so a mid-typing rotation does not reset the user's input
+        // back to the original (Edit) or empty (Create).
         val initial = if (mode is AddButtonMode.Edit) mode.sound.name else ""
         mutableStateOf(TextFieldValue(text = initial, selection = TextRange(initial.length)))
     }
-    var nameError by remember { mutableStateOf<String?>(null) }
-    var saveOutcome by remember { mutableStateOf<SaveOutcome>(SaveOutcome.Idle) }
-    var pendingErrorReason by remember { mutableStateOf<String?>(null) }
-    var abandonTracked by remember { mutableStateOf(false) }
+    var nameError by rememberSaveable { mutableStateOf<String?>(null) }
+    var saveOutcome by rememberSaveable(stateSaver = SaveOutcomeSaver) {
+        mutableStateOf<SaveOutcome>(SaveOutcome.Idle)
+    }
+    var pendingErrorReason by rememberSaveable { mutableStateOf<String?>(null) }
+    var abandonTracked by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -113,6 +119,15 @@ fun AddButtonScreen(
         // very first composition is a no-op under Robolectric (caught the regression in tests).
         withFrameNanos { /* wait for first frame so the node is attached */ }
         runCatching { nameFocusRequester.requestFocus() }
+            .onFailure {
+                // requestFocus() on a never-attached FocusRequester silently failed before; the
+                // user lost focus on the screen's primary action with nothing in logcat. Surface
+                // as a non-fatal so a spike points at a real composition-lifecycle bug (disposed
+                // before first frame, IME-driven recomposition, etc.). Static wrapper title +
+                // breadcrumb per CLAUDE.md § Error tracking.
+                Tracker.log("addbutton.mode=${if (mode is AddButtonMode.Edit) "edit" else "create"}")
+                Tracker.track(RuntimeException("AddButton name field focus request failed", it))
+            }
     }
 
     TrackAbandonOnStop(
@@ -307,6 +322,32 @@ private sealed interface SaveOutcome {
         val name: String,
     ) : SaveOutcome
 }
+
+/**
+ * Persists [SaveOutcome] across Activity recreate (e.g. rotation during the success overlay).
+ * [SaveOutcome.Loading] deliberately collapses to [SaveOutcome.Idle] on save: the save coroutine is
+ * launched in `rememberCoroutineScope`, which is cancelled with the composition — restoring
+ * `Loading` would leave the spinner running with no completer. The `Loading` window is sub-second,
+ * so the cost of the rare re-tap is bounded.
+ */
+private val SaveOutcomeSaver: Saver<SaveOutcome, Any> =
+    Saver(
+        save = { outcome ->
+            when (outcome) {
+                SaveOutcome.Idle, SaveOutcome.Loading -> IDLE_TAG
+                is SaveOutcome.Success -> outcome.name
+            }
+        },
+        restore = { value ->
+            when (value) {
+                IDLE_TAG -> SaveOutcome.Idle
+                is String -> SaveOutcome.Success(value)
+                else -> SaveOutcome.Idle
+            }
+        },
+    )
+
+private const val IDLE_TAG = "__idle__"
 
 private fun mapFeedbackToReason(
     @StringRes feedbackId: Int,

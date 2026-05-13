@@ -93,6 +93,12 @@ Things the current codebase does that are *not* the recommended pattern. New cod
 - **`collectAsState()` → `collectAsStateWithLifecycle()`.** The lifecycle-aware variant stops collection in `STOPPED`, avoiding wasted work and stale `StateFlow` references. New Composables collecting a ViewModel `StateFlow` must use `collectAsStateWithLifecycle()`; existing call-sites migrate when their file is touched.
 - **String resources: every user-facing string via `stringResource(R.string.app_*)`.** Plain best practice (i18n + a11y + maintainability). No hardcoded literals in Composables. `contentDescription` for non-decorative `Icon`/`Image` is mandatory and must come from a string resource (see § *Accessibility*); decorative assets use `contentDescription = null` explicitly.
 
+## Stateful Composables — `rememberSaveable` for durable state
+
+`remember { mutableStateOf(...) }` is for transient gesture state (drag offset, dismissable popups). State that represents user progress — typed text, an opened overlay/sheet/sub-screen, an in-flight error — goes through `rememberSaveable` so an Activity recreate (rotation, theme change, system kill) does not silently rewind the user. For non-autosaveable types (sealed classes with data, etc.), write an explicit `Saver` next to the Composable; canonical template is `SaveOutcomeSaver` at the bottom of `AddButtonScreen.kt`, including which variants intentionally collapse on restore and why.
+
+When a `LaunchedEffect` calls `FocusRequester.requestFocus()` on first composition, wait for the first frame then guard the call: `withFrameNanos { } ; runCatching { requestFocus() }.onFailure { Tracker.log(...) ; Tracker.track(RuntimeException("static title", it)) }`. The bare call silently no-ops if the node is not yet attached (the user loses the IME on the screen's primary input). Reference: `AddButtonScreen.kt`, `SearchOverlay.kt`.
+
 ## Persistence
 
 Use **Jetpack DataStore Preferences** for any new persistent key-value storage. Pattern lives in `model/.../SoundsRepository.kt` (top-level `Context.bompsStore` delegate via `preferencesDataStore(...)` + `ReplaceFileCorruptionHandler`). Mirror it. `WelcomeStickerStore`, `DataStoreFirstFlagStore`, `DataStoreCounterStore` are reference implementations.
@@ -227,6 +233,7 @@ Before opening a PR for any feature or bug fix, verify:
 - [ ] Failure modes at system/external boundaries have tests (file I/O, MediaPlayer, permissions, network, Play feature delivery)
 - [ ] New `Activity` has a smoke test (§ Activity smoke tests)
 - [ ] New full-screen Composable with business logic has a `createComposeRule()` smoke test
+- [ ] Composables with durable state (text input, opened overlays/sheets, sub-screens, in-flight error) have at least one `scenario.recreate()` test (§ *Stateful Composables*)
 - [ ] Any skipped scenario is explicitly noted with a reason
 - [ ] Self code review: re-read every changed file as a reviewer, not author — logic gaps, missing edge cases, unclear naming
 
@@ -269,7 +276,7 @@ Non-fatal exceptions go to Firebase Crashlytics through the `Tracker` wrapper at
 Hard rules:
 
 - **Do NOT rely on `Timber.e(throwable, message)` to surface a non-fatal.** The `ErrorTrackerTree` (planted in debug and release) forwards only the formatted message via `Tracker.log(...)` — the throwable parameter is silently dropped. `Timber.e` / `Timber.w` are fine for logcat-only diagnostics during dev.
-- **Wrapper message MUST be static.** Crashlytics shows the latest event's message as the issue title in the dashboard, so dynamic interpolation (`"... for $name"`) makes titles flicker between events and breaks BigQuery searches by message. Attach per-event context as a Crashlytics breadcrumb via `Tracker.log("module.field=value")` emitted **immediately before** `Tracker.track(...)`. Module = feature/package directory (`share`, `addbutton`, `playback`, `about`, etc.). Multiple breadcrumbs allowed — emit one `Tracker.log` per key.
+- **Wrapper message MUST be static.** Crashlytics shows the latest event's message as the issue title in the dashboard, so dynamic interpolation (`"... for $name"`) makes titles flicker between events and breaks BigQuery searches by message. Attach per-event context as a Crashlytics breadcrumb via `Tracker.log("module.field=value")` emitted **immediately before** `Tracker.track(...)`. Module = stable feature/surface concept, mirroring the `CanonicalScreenName` literal when one exists (`addbutton` ↔ `ADD_SOUND`, `about` ↔ `ABOUT`, `search` ↔ `SEARCH_SOUND`). Don't use the source directory if it's a layout grouping that may shift over time — `SearchOverlay.kt` lives under `ui/home/` but its module is `search`, not `home`, because the surrounding tab can change without the search feature changing. Multiple breadcrumbs allowed — emit one `Tracker.log` per key.
 - **Don't say "button" for a Sound/Bomp in error or log messages.** Use neutral "audio" so the brand doesn't leak into ops/BigQuery. Framework/code identifiers (`addbutton/`, `AddButtonFeature`, Material `Button`) are out of scope.
 - For caught exceptions, follow the established pattern (see `PlayerControllerImpl.kt`): wrap the cause in a `RuntimeException` whose **static** message describes the operation, then hand it to `Tracker.track`. The wrapper message becomes the Crashlytics title; the original throwable is preserved as `cause`.
   ```kotlin

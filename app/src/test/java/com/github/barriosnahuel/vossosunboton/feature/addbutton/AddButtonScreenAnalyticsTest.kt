@@ -13,6 +13,7 @@ import android.provider.Settings
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -206,6 +207,53 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `name input survives Activity recreate so the user does not lose what they typed`() {
+        // The OutlinedTextField is the screen's primary action — losing the user's draft on
+        // rotation is a worse UX bug than the (already covered) Success overlay disappearing.
+        // Edit mode pre-populates with EXISTING_NAME and places the cursor at the end, so a
+        // performTextInput(TYPED_DRAFT) appends to it: post-recreate the field must still
+        // contain TYPED_DRAFT, otherwise rememberSaveable on `name` regressed.
+        ActivityScenario.launch<AddButtonActivity>(editIntent()).use { scenario ->
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(TYPED_DRAFT)
+
+            scenario.recreate()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNode(hasSetTextAction()).assertTextContains(TYPED_DRAFT, substring = true)
+        }
+    }
+
+    @Test
+    fun `save success overlay survives Activity recreate and still renders the saved name`() {
+        // Pause the clock BEFORE clicking save so the overlay's delay(600ms) auto-finish cannot
+        // resolve between Success appearing and scenario.recreate(). Without the pause, the
+        // post-recreate composition's LaunchedEffect could finish() the Activity before the
+        // assertion runs.
+        ActivityScenario.launch<AddButtonActivity>(editIntent()).use { scenario ->
+            composeTestRule.waitForIdle()
+            composeTestRule.mainClock.autoAdvance = false
+            composeTestRule
+                .onNodeWithText(context.getString(R.string.app_addbutton_save_changes))
+                .performClick()
+            // Advance just enough for save() to flip saveOutcome to Success and for the overlay to
+            // enter composition; well under the 600 ms auto-finish window.
+            composeTestRule.mainClock.advanceTimeBy(CLOCK_STEP_MS)
+
+            scenario.recreate()
+            composeTestRule.mainClock.advanceTimeBy(CLOCK_STEP_MS)
+
+            val expectedAnnouncement = context.getString(R.string.app_feedback_button_renamed, EXISTING_NAME)
+            composeTestRule.onNodeWithContentDescription(expectedAnnouncement).assertIsDisplayed()
+            composeTestRule
+                .onNodeWithText(context.getString(R.string.app_addbutton_overlay_subtitle_renamed))
+                .assertIsDisplayed()
+
+            composeTestRule.mainClock.autoAdvance = true
+        }
+    }
+
+    @Test
     fun `save success shows the confirmation overlay under reduce motion when ANIMATOR_DURATION_SCALE is zero`() {
         // Verifies the overlay's content reaches the user even with Remove Animations ON. The full
         // entry+hold+exit timing and the subsequent finish() are covered by the instrumented test on
@@ -339,6 +387,8 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
         val SAMPLE_URI: Uri = Uri.parse("content://test/audio.mp3")
         const val NEW_NAME = "Test sound"
         const val EXISTING_NAME = "Existing sound"
+        const val TYPED_DRAFT = "_mid_edit_typed"
         const val WAIT_TIMEOUT_MS = 5_000L
+        const val CLOCK_STEP_MS = 100L
     }
 }
