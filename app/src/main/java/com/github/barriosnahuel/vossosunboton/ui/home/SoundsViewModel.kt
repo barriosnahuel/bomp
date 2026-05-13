@@ -26,6 +26,7 @@ import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeSticker
 import com.github.barriosnahuel.vossosunboton.feature.welcome.welcomeSticker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -142,15 +144,15 @@ class SoundsViewModel(
 
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
-        // Single coroutine: read welcome-sticker visibility BEFORE loadSounds so the prepend
-        // logic sees the right state on the first paint. selectTab cannot fire before VM init
-        // returns, so loadSounds() always observes a stable `_welcomeStickerVisible` snapshot.
+        // Single coroutine: read welcome-sticker visibility BEFORE the first loadSounds so the
+        // prepend logic sees the right state on the first paint. selectTab cannot fire before VM
+        // init returns, so the first loadSounds always observes a stable
+        // `_welcomeStickerVisible` snapshot.
         //
         // The whole block is wrapped in try/catch so that any failure between `isActive()` and the
         // `try/finally` inside `loadSounds()` still flips `mutableInitialLoadComplete` — otherwise
         // tests that await `isInitialLoadComplete.first { it }` would deadlock.
         viewModelScope.launch(ioDispatcher) {
-            @Suppress("TooGenericExceptionCaught")
             try {
                 val active = welcomeStore.isActive()
                 _welcomeStickerVisible.value = active
@@ -158,12 +160,38 @@ class SoundsViewModel(
                     tracker.log(AnalyticsEvent.WelcomeStickerShown)
                 }
                 loadSounds()
-            } catch (e: Throwable) {
-                // Intentionally broad: anything that escapes between `isActive()` and the
-                // `try/finally` inside `loadSounds()` still has to flip
-                // `mutableInitialLoadComplete` so awaiting tests don't deadlock.
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
                 Tracker.track(RuntimeException("SoundsViewModel init failed", e))
                 mutableInitialLoadComplete.value = true
+            }
+        }
+        // Reactive trigger: any change to the persisted sound list (save / rename / pin /
+        // duration / delete) re-runs `loadSounds` so the visible list catches up. This is the
+        // fix for the post-PR-#1130 regression where AddButton save/rename never propagated to
+        // Home — `loadSounds` only ran on cold start and tab switch.
+        //
+        // `drop(1)` skips this collector's own initial snapshot — the `loadSounds()` above has
+        // already consumed it. `repo.sounds` is `distinctUntilChanged` upstream, so a write
+        // that re-encodes to the same JSON does not redundantly re-trigger `loadSounds`.
+        //
+        // `CancellationException` is rethrown so structured concurrency keeps working when
+        // `viewModelScope` is cancelled — important in tests where each VM is cancelled in
+        // `@After` to stop the collector outliving the test.
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                repo.sounds
+                    .drop(1)
+                    .collect { loadSounds() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
+                Tracker.track(RuntimeException("SoundsViewModel repo observation failed", e))
             }
         }
     }
@@ -401,10 +429,13 @@ class SoundsViewModel(
 
     private fun consumeWelcomeAsync() {
         viewModelScope.launch(ioDispatcher) {
-            @Suppress("TooGenericExceptionCaught")
             try {
                 welcomeStore.consume()
-            } catch (e: Throwable) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
                 // The in-memory cache flip in `welcomeStore.consume()` already happened, so the
                 // current process behaves correctly. Surface the persistence failure so we can see
                 // why the welcome reappears on the next cold start.
@@ -415,10 +446,13 @@ class SoundsViewModel(
 
     private fun restoreWelcomeAsync() {
         viewModelScope.launch(ioDispatcher) {
-            @Suppress("TooGenericExceptionCaught")
             try {
                 welcomeStore.restore()
-            } catch (e: Throwable) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
                 // Same shape as `consumeWelcomeAsync` — the in-memory state is already correct;
                 // we only lose the disk persistence of the demoted-position flag.
                 Tracker.track(RuntimeException("Welcome sticker restore persistence failed", e))

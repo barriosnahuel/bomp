@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -21,6 +22,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -33,6 +35,7 @@ import org.junit.Test
 
 internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     private lateinit var fake: FakeAnalyticsTracker
+    private val createdViewModels = mutableListOf<SoundsViewModel>()
 
     @Before
     fun setUp() {
@@ -50,6 +53,13 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
+        // Cancel each VM's `viewModelScope` so the reactive `repo.sounds` collector added in the
+        // post-PR-#1130 fix doesn't survive past the test boundary. Without this cleanup, the
+        // next test's `clearForTest()` would emit through the old VM's collector, fire
+        // `loadSounds` against the old VM's `_searchQuery`, and leak `search_zero_results`
+        // events into the new test's `fake`.
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
         AnalyticsTrackerProvider.setForTest(null)
         unmockkAll()
     }
@@ -243,6 +253,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                 ioDispatcher = UnconfinedTestDispatcher(),
                 searchDebounceMs = searchDebounceMs,
             )
+        createdViewModels += vm
         runBlocking { vm.isInitialLoadComplete.first { it } }
         return vm
     }

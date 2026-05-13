@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import androidx.lifecycle.viewModelScope
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -13,6 +14,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
@@ -20,6 +22,8 @@ import org.junit.Before
 import org.junit.Test
 
 internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
+    private val createdViewModels = mutableListOf<SoundsViewModel>()
+
     @Before
     fun setUp() {
         mockkObject(PlayerControllerFactory)
@@ -28,6 +32,11 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
+        // Cancel each VM's `viewModelScope` to stop the reactive `repo.sounds` collector added
+        // in the post-PR-#1130 fix; otherwise it survives the test boundary and pollutes the
+        // next test by re-running `loadSounds` against stale in-memory state.
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
         unmockkAll()
     }
 
@@ -134,11 +143,15 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel =
-        SoundsViewModel(
-            androidx.test.core.app.ApplicationProvider
-                .getApplicationContext(),
-            ioDispatcher = UnconfinedTestDispatcher(),
-            searchDebounceMs = 0L,
-        )
+    private fun givenAViewModel(): SoundsViewModel {
+        val vm =
+            SoundsViewModel(
+                androidx.test.core.app.ApplicationProvider
+                    .getApplicationContext(),
+                ioDispatcher = UnconfinedTestDispatcher(),
+                searchDebounceMs = 0L,
+            )
+        createdViewModels += vm
+        return vm
+    }
 }
