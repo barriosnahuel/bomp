@@ -253,7 +253,7 @@ private fun SearchField(
         withFrameNanos { /* wait for first frame so the node is attached */ }
         runCatching { focusRequester.requestFocus() }
             .onFailure {
-                Tracker.log("searchoverlay.field=search")
+                Tracker.log("home.field=search")
                 Tracker.track(RuntimeException("Search field focus request failed", it))
             }
     }
