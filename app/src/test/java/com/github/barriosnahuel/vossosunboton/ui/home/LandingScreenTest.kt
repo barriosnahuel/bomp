@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
@@ -17,6 +18,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -32,6 +34,8 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    private val createdViewModels = mutableListOf<SoundsViewModel>()
+
     @Before
     fun setUp() {
         mockkObject(PlayerControllerFactory)
@@ -40,6 +44,10 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
+        // Cancel each VM's `viewModelScope` to stop the reactive `repo.sounds` collector added
+        // in the post-PR-#1130 fix; otherwise it survives the test boundary.
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
         unmockkAll()
     }
 
@@ -72,6 +80,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
                 ApplicationProvider.getApplicationContext(),
                 ioDispatcher = UnconfinedTestDispatcher(),
             )
+        createdViewModels += vm
         // Wait for init's loadSounds to populate state — DataStore IO suspends off
         // UnconfinedTestDispatcher, so without this wait, reflection-based injection
         // races with the in-flight load and gets overwritten.

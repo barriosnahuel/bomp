@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.content.Intent
+import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -25,6 +26,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -36,7 +38,10 @@ import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 
+@Suppress("LargeClass")
 internal class SoundsViewModelTest : AbstractRobolectricTest() {
+    private val createdViewModels = mutableListOf<SoundsViewModel>()
+
     @Before
     fun setUp() {
         runBlocking {
@@ -49,6 +54,11 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
+        // Cancel each VM's `viewModelScope` so the reactive `repo.sounds` collector added in the
+        // post-PR-#1130 fix doesn't survive past the test boundary and pollute the next test
+        // (e.g. firing `loadSounds` against the prior VM's stale `_searchQuery`).
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
         unmockkAll()
     }
 
@@ -431,6 +441,47 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         }
 
     @Test
+    fun `repo save after VM init makes the new sound appear without selectTab`() {
+        // Regression for the post-PR-#1130 bug: AddButton save persisted but the visible list
+        // stayed stale until the user killed and reopened the app. The reactive `combine` in
+        // `observeSoundsList` is what pulls the new emission through. Uses `runBlocking` rather
+        // than `runTest` because the underlying `repo.save` suspends on real `Dispatchers.IO`
+        // (StateFlow propagation runs in real time, not virtual).
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val repo = SoundsRepository(context)
+        val viewModel = givenAViewModel()
+        assertThat(viewModel.sounds.value.none { it.name == "fresh" }).isTrue()
+
+        runBlocking {
+            repo.save(Sound("fresh", "fresh.mp3"))
+            withTimeoutOrNull(5_000L) {
+                viewModel.sounds.first { list -> list.any { it.name == "fresh" } }
+            }
+        }
+        assertThat(viewModel.sounds.value.any { it.name == "fresh" }).isTrue()
+    }
+
+    @Test
+    fun `repo rename after VM init replaces the old name in the list without selectTab`() {
+        // Same regression family as the save test above, but for the Edit-flow rename path —
+        // see `AddButtonActivity` and `SoundsRepository.rename`.
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val repo = SoundsRepository(context)
+        runBlocking { repo.save(Sound("old-name", "old.mp3")) }
+        val viewModel = givenAViewModel()
+        assertThat(viewModel.sounds.value.any { it.name == "old-name" }).isTrue()
+
+        runBlocking {
+            repo.rename("old-name", "new-name")
+            withTimeoutOrNull(5_000L) {
+                viewModel.sounds.first { list -> list.any { it.name == "new-name" } }
+            }
+        }
+        assertThat(viewModel.sounds.value.any { it.name == "new-name" }).isTrue()
+        assertThat(viewModel.sounds.value.none { it.name == "old-name" }).isTrue()
+    }
+
+    @Test
     fun `sounds are sorted alphabetically`() {
         val viewModel = givenAViewModel()
         val sounds = viewModel.sounds.value
@@ -472,6 +523,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
                 welcomeStore = welcomeStore ?: WelcomeStickerStore(context),
                 shareFeature = shareFeature ?: ShareFeature.instance,
             )
+        createdViewModels += vm
         runBlocking { vm.isInitialLoadComplete.first { it } }
         return vm
     }
