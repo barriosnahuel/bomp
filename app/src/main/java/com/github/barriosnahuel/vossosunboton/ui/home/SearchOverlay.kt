@@ -41,6 +41,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -50,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
@@ -243,7 +245,17 @@ private fun SearchField(
     )
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        // Mirrors AddButtonScreen's auto-focus contract: search opens, the IME comes up, the user
+        // types — so requestFocus is the path that makes the overlay usable. `withFrameNanos`
+        // waits for the first layout pass so the FocusRequester has a node attached. A failure
+        // here means the user has to tap the field manually, which is silent at runtime — surface
+        // it as a non-fatal so a spike points at a real composition-lifecycle bug.
+        withFrameNanos { /* wait for first frame so the node is attached */ }
+        runCatching { focusRequester.requestFocus() }
+            .onFailure {
+                Tracker.log("searchoverlay.field=search")
+                Tracker.track(RuntimeException("Search field focus request failed", it))
+            }
     }
 }
 

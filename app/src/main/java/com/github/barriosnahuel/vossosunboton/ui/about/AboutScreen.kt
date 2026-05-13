@@ -59,6 +59,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,7 +86,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    var isLicenseSheetVisible by remember { mutableStateOf(false) }
+    // Saveable so a rotation while reading the license sheet does not collapse it back to the
+    // About screen and force the user to find + reopen it.
+    var isLicenseSheetVisible by rememberSaveable { mutableStateOf(false) }
     val licenseText = remember { context.readRawResource(R.raw.app_license) }
     val creditsText = remember { context.readRawResource(R.raw.app_third_party_notices) }
     val creditEntries = remember { parseCreditEntries(creditsText) }

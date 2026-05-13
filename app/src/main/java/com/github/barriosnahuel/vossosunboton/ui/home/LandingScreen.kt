@@ -53,6 +53,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -87,7 +88,9 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val tabBackStack = remember { mutableStateListOf<AppTab>() }
-    var isAboutVisible by remember { mutableStateOf(false) }
+    // Saveable so a rotation while About is open does not silently bounce the user back to the
+    // sound list (About early-returns from this composable, so losing the flag = losing the screen).
+    var isAboutVisible by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(selectedTab, isAboutVisible, isSearchVisible) {
         val name =

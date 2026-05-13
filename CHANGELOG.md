@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Tapping play on a Bomp whose audio source can't be opened now shows the playback error Snackbar instead of doing nothing
 - Saving a new Bomp from a revoked or unreadable inbound URI now shows a tailored "couldn't read the audio" Snackbar instead of failing silently; the underlying ContentResolver failure is tracked as a non-fatal
 - Saving a new Bomp now keeps the user on the form with a clear error Snackbar when the underlying file copy fails, instead of silently navigating away as if the save had succeeded
+- Rotating the device while typing a name in the Add Button or Edit Bomp screen no longer wipes the user's draft — the field now restores what was typed (and any visible "name is required" error) after recreate
+- Rotating the device while the About screen is open no longer bounces the user back to the sound list; About stays open
+- Rotating the device while the License sheet is open in About no longer collapses the sheet; the sheet stays open
 - Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
 - Restored ripple contrast on the empty Home in light mode so the illustration reads clearly from the first launch
 
@@ -55,6 +58,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Bumped stale `AboutScreenFlowTest.EXTERNAL_LEGAL_ITEMS` constant from 3 to 4 to match the Terms of Service link added in the same release
 - Save-flow state in the Add Button screen now survives Activity recreate (`rememberSaveable` with a custom `Saver` for the `SaveOutcome` sealed interface); on rotation mid-Success the confirmation overlay is restored with the saved name instead of disappearing. In-flight `Loading` collapses to `Idle` on restore because the save coroutine is composition-scoped — the user re-taps Save in the sub-second window
 - `FocusRequester.requestFocus()` failures on first-frame attach are now recorded as Crashlytics non-fatals (with a Mode breadcrumb) instead of swallowed by `runCatching`, so a silent focus break on the screen's primary action surfaces in the dashboard if it ever spikes
+- Extended `rememberSaveable` coverage to the rest of the durable state in the touched surfaces: Add Button `name` (`TextFieldValue.Saver`) and `nameError`, `LandingScreen.isAboutVisible`, `AboutScreen.isLicenseSheetVisible` — closes the gaps audited app-wide alongside the original PR
+- Search overlay's auto-focus now mirrors the Add Button pattern: `withFrameNanos` wait + `runCatching { requestFocus() }` with `Tracker.track` on failure (static wrapper title, breadcrumb `searchoverlay.field=search`), so a first-frame focus break on the search input is no longer silent
+- New CLAUDE.md § *Stateful Composables — `rememberSaveable` is the default for durable state* documents the rule, references `SaveOutcomeSaver` as the Saver template, and adds a Pre-PR checklist line requiring `scenario.recreate()` tests for screens with durable state
 
 ## \[v2.0.0] - 2026-05-07
 

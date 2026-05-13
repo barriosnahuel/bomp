@@ -13,6 +13,7 @@ import android.provider.Settings
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -206,6 +207,24 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `name input survives Activity recreate so the user does not lose what they typed`() {
+        // The OutlinedTextField is the screen's primary action — losing the user's draft on
+        // rotation is a worse UX bug than the (already covered) Success overlay disappearing.
+        // Edit mode pre-populates with EXISTING_NAME and places the cursor at the end, so a
+        // performTextInput(TYPED_DRAFT) appends to it: post-recreate the field must still
+        // contain TYPED_DRAFT, otherwise rememberSaveable on `name` regressed.
+        ActivityScenario.launch<AddButtonActivity>(editIntent()).use { scenario ->
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(TYPED_DRAFT)
+
+            scenario.recreate()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNode(hasSetTextAction()).assertTextContains(TYPED_DRAFT, substring = true)
+        }
+    }
+
+    @Test
     fun `save success overlay survives Activity recreate and still renders the saved name`() {
         // Pause the clock BEFORE clicking save so the overlay's delay(600ms) auto-finish cannot
         // resolve between Success appearing and scenario.recreate(). Without the pause, the
@@ -368,6 +387,7 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
         val SAMPLE_URI: Uri = Uri.parse("content://test/audio.mp3")
         const val NEW_NAME = "Test sound"
         const val EXISTING_NAME = "Existing sound"
+        const val TYPED_DRAFT = "_mid_edit_typed"
         const val WAIT_TIMEOUT_MS = 5_000L
         const val CLOCK_STEP_MS = 100L
     }

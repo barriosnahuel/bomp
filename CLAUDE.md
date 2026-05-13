@@ -93,6 +93,16 @@ Things the current codebase does that are *not* the recommended pattern. New cod
 - **`collectAsState()` → `collectAsStateWithLifecycle()`.** The lifecycle-aware variant stops collection in `STOPPED`, avoiding wasted work and stale `StateFlow` references. New Composables collecting a ViewModel `StateFlow` must use `collectAsStateWithLifecycle()`; existing call-sites migrate when their file is touched.
 - **String resources: every user-facing string via `stringResource(R.string.app_*)`.** Plain best practice (i18n + a11y + maintainability). No hardcoded literals in Composables. `contentDescription` for non-decorative `Icon`/`Image` is mandatory and must come from a string resource (see § *Accessibility*); decorative assets use `contentDescription = null` explicitly.
 
+## Stateful Composables — `rememberSaveable` is the default for durable state
+
+`var X by remember { mutableStateOf(...) }` is reserved for **transient gesture state** (drag offset, hover, popup that should dismiss on touch-outside). Anything that represents *user progress* — text the user typed, an overlay/sheet/sub-screen the user opened, the step they're on in a flow, an error message currently visible — uses `rememberSaveable` so that an Activity recreate (rotation, theme change, system kill) does not silently rewind the user. Reference call-sites: `AddButtonScreen.kt` (`saveOutcome`/`pendingErrorReason`/`abandonTracked`/`name`/`nameError`), `LandingScreen.isAboutVisible`, `AboutScreen.isLicenseSheetVisible`.
+
+For types that are not autosaveable (sealed classes carrying data, etc.), write an explicit `Saver` next to the Composable. Canonical template: `SaveOutcomeSaver` at the bottom of `AddButtonScreen.kt` — encodes each variant to a tagged primitive and documents which variants intentionally collapse on restore (e.g. `Loading` → `Idle` because the coroutine is composition-scoped).
+
+When a `LaunchedEffect` calls `FocusRequester.requestFocus()` on first composition, wrap it as: `withFrameNanos { /* wait for first frame */ }` then `runCatching { requestFocus() }.onFailure { Tracker.log("...") ; Tracker.track(RuntimeException("...static title...", it)) }`. Reference: `AddButtonScreen.kt` and `SearchOverlay.kt`. The bare call silently no-ops if the node is not yet attached, which costs the user the IME on the screen's primary input.
+
+Verification: pantallas con estado durable (input del usuario, overlays, sub-screens) deben tener al menos un test `scenario.recreate()` que assertee el estado relevante. Template: `AddButtonScreenAnalyticsTest.\`save success overlay survives Activity recreate...\`` (Robolectric con `mainClock.autoAdvance = false`) y `AddButtonEditFlowTest.editedNameSurvivesRotation` (instrumentado).
+
 ## Persistence
 
 Use **Jetpack DataStore Preferences** for any new persistent key-value storage. Pattern lives in `model/.../SoundsRepository.kt` (top-level `Context.bompsStore` delegate via `preferencesDataStore(...)` + `ReplaceFileCorruptionHandler`). Mirror it. `WelcomeStickerStore`, `DataStoreFirstFlagStore`, `DataStoreCounterStore` are reference implementations.
@@ -227,6 +237,7 @@ Before opening a PR for any feature or bug fix, verify:
 - [ ] Failure modes at system/external boundaries have tests (file I/O, MediaPlayer, permissions, network, Play feature delivery)
 - [ ] New `Activity` has a smoke test (§ Activity smoke tests)
 - [ ] New full-screen Composable with business logic has a `createComposeRule()` smoke test
+- [ ] Composables with durable state (text input, opened overlays/sheets, sub-screens, in-flight error) have at least one `scenario.recreate()` test (§ *Stateful Composables*)
 - [ ] Any skipped scenario is explicitly noted with a reason
 - [ ] Self code review: re-read every changed file as a reviewer, not author — logic gaps, missing edge cases, unclear naming
 

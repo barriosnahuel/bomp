@@ -8,6 +8,7 @@ package com.github.barriosnahuel.vossosunboton.feature.addbutton
 import android.content.Intent
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -84,6 +85,24 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
                 scenario.state == Lifecycle.State.DESTROYED
             }
             assertThat(scenario.state).isEqualTo(Lifecycle.State.DESTROYED)
+        }
+    }
+
+    @Test
+    fun editedNameSurvivesRotation() {
+        val sound = TestData.seedCustomSounds(context, count = 1).single()
+        val typed = "mid_edit_typed"
+
+        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use { scenario ->
+            // Replace the existing name with a half-typed value, then rotate WITHOUT saving. The
+            // OutlinedTextField is the screen's primary action; losing the user's draft on rotation
+            // is a worse UX bug than the (already covered) Success overlay disappearing.
+            composeRule.awaitNode(hasSetTextAction()).performTextClearance()
+            nameField().performTextInput(typed)
+
+            scenario.recreate()
+
+            composeRule.awaitNode(hasSetTextAction()).assertTextContains(typed)
         }
     }
 

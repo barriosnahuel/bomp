@@ -89,14 +89,15 @@ fun AddButtonScreen(
     onSaved: (String) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
-    var name by remember {
+    var name by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         // Pre-populate the cursor at the end in Edit mode so the user can append/correct without
         // first navigating to the end of the existing name. In Create mode the field is empty so
-        // position 0 is correct.
+        // position 0 is correct. Saveable so a mid-typing rotation does not reset the user's input
+        // back to the original (Edit) or empty (Create).
         val initial = if (mode is AddButtonMode.Edit) mode.sound.name else ""
         mutableStateOf(TextFieldValue(text = initial, selection = TextRange(initial.length)))
     }
-    var nameError by remember { mutableStateOf<String?>(null) }
+    var nameError by rememberSaveable { mutableStateOf<String?>(null) }
     var saveOutcome by rememberSaveable(stateSaver = SaveOutcomeSaver) {
         mutableStateOf<SaveOutcome>(SaveOutcome.Idle)
     }
