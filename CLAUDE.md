@@ -400,19 +400,56 @@ Store listing PNGs (icon, feature graphic) render from SVG masters under `store-
 
 ## Labels and milestone
 
-Apply exactly one `a:` label to every PR before merging. Do not call `gh label list` — use this table.
+Apply exactly **one type label** (`a:*` or `an:*`) plus **zero or more concern labels** (`c:*`) to every PR before merging. Do not call `gh label list` — use these tables.
 
 For the milestone, read the `## [unreleased]` line in `CHANGELOG.md` — the version in parentheses is the milestone name (e.g. `(v2.0.0)` → milestone `v2.0.0`). Do not call `gh api repos/.../milestones`.
+
+### Type — user-facing (appear in `### Added/Changed/Fixed/Removed` of the CHANGELOG)
+
+| Label | When to use |
+|---|---|
+| `a:feature` | PR that adds new user-facing functionality |
+| `a:fix` | PR that corrects a user-visible bug |
+| `an:enhancement` | PR that improves existing user-facing functionality (UX polish, copy refinement, behavior tweaks) — strictly user-facing, not a catch-all |
+
+### Type — internal (appear under `### For nerds 🤓` of the CHANGELOG, or omitted)
+
+| Label | When to use |
+|---|---|
+| `a:refactor` | PR that restructures code without changing observable behavior |
+| `a:test` | PR for test infrastructure, flaky test fixes, new test suites or helpers |
+| `a:build` | PR that touches CI, Gradle, linters, repo tooling, or dependency bumps |
+| `a:docs` | PR for contributor-facing docs: CLAUDE.md, ADRs, README, CONTRIBUTING, `.github/` templates |
+
+### Concern — cross-cutting (orthogonal, stackable, also apply to issues)
+
+| Label | When to use |
+|---|---|
+| `c:accessibility` | Digital accessibility (WCAG): contrast, content descriptions, touch targets, screen reader |
+| `c:performance` | User-perceivable performance (cold start, scroll, app size, frame budget) |
+| `c:security` | Security boundaries: input validation, exported components, backup hygiene |
+| `c:i18n` | Localization: translations, store listings per locale, locale-aware copy |
+| `c:observability` | Analytics instrumentation, Crashlytics, logging, BigQuery |
+| `c:dependencies` | Library, plugin, or Gradle wrapper version bumps (applied automatically by Dependabot together with `a:build`) |
+
+### Issues and lifecycle
 
 | Label | When to use |
 |---|---|
 | `a:bug` | Issue reporting something broken |
-| `a:feature` | PR that adds new user-facing functionality |
-| `a:feature-request` | Issue requesting a feature not yet built |
-| `a:fix` | PR that corrects a reported bug |
-| `an:enhancement` | PR that improves existing functionality without adding new features |
-| `dependencies` | PR that updates library, plugin, or Gradle wrapper versions (applied automatically by Dependabot) |
+| `a:feature-request` | Issue requesting functionality not yet implemented |
 | `stale` | Issue or PR with no recent activity — candidate for closing |
+
+### Examples of valid combinations
+
+- WCAG contrast fix: `a:fix` + `c:accessibility`
+- New screen with localized copy: `a:feature` + `c:i18n`
+- URI validation hardening: `a:fix` + `c:security`
+- AAB size optimization: `an:enhancement` + `c:performance`
+- Dependabot bump: `a:build` + `c:dependencies` (auto-applied)
+- New Firebase Analytics event: `a:build` + `c:observability`
+- Flaky test stabilization: `a:test`
+- README rewrite: `a:docs`
 
 ## Third-party notices
 
