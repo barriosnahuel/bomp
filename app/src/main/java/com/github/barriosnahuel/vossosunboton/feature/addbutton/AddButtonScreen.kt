@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
@@ -71,6 +72,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
+import com.github.barriosnahuel.vossosunboton.ui.haptics.performRejectHaptic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -101,6 +103,7 @@ fun AddButtonScreen(
     val retryLabel = stringResource(R.string.app_snackbar_action_retry)
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
     val nameFocusRequester = remember { FocusRequester() }
+    val view = LocalView.current
 
     LaunchedEffect(Unit) {
         // Save the user one tap: the name field is the primary action on this screen, so focus it
@@ -124,6 +127,7 @@ fun AddButtonScreen(
     fun save() {
         if (name.text.isBlank()) {
             nameError = context.getString(R.string.app_addbutton_name_is_required_error)
+            performRejectHaptic(view)
             return
         }
         if (saveOutcome != SaveOutcome.Idle || pendingErrorReason != null) return
