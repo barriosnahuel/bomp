@@ -8,11 +8,13 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 import android.os.Build
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import io.mockk.every
 import io.mockk.mockkObject
@@ -73,6 +75,39 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         composeTestRule.onNodeWithText("Explore").assertIsDisplayed()
     }
 
+    @Test
+    fun `Search FAB is hidden when sound list is empty`() {
+        val viewModel = givenAViewModel()
+        viewModel.injectSounds(emptyList())
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Search").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Search FAB is hidden when sound list has 6 items`() {
+        val viewModel = givenAViewModel()
+        viewModel.injectSounds(stubSounds(count = 6))
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Search").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Search FAB is shown when sound list has 7 items`() {
+        val viewModel = givenAViewModel()
+        viewModel.injectSounds(stubSounds(count = 7))
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Search").assertIsDisplayed()
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun givenAViewModel(): SoundsViewModel {
         val vm =
@@ -95,4 +130,14 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
             // Safe: _hasBundledSounds is always MutableStateFlow<Boolean> — type parameter erased at runtime
             .let { (it.get(this) as MutableStateFlow<Boolean>).value = value }
     }
+
+    private fun SoundsViewModel.injectSounds(value: List<Sound>) {
+        SoundsViewModel::class.java
+            .getDeclaredField("_sounds")
+            .also { it.isAccessible = true }
+            // Safe: _sounds is always MutableStateFlow<List<Sound>> — type parameter erased at runtime
+            .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = value }
+    }
+
+    private fun stubSounds(count: Int): List<Sound> = List(count) { Sound(name = "stub-$it", file = "/tmp/stub-$it.mp3") }
 }

@@ -30,7 +30,7 @@ import org.junit.runner.RunWith
 internal class SearchOverlayTest : AbstractUiTest() {
     @Test
     fun fabOpensSearchOverlay() {
-        TestData.seedCustomSounds(context, count = 1)
+        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -41,7 +41,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun typingQueryFiltersResultsToMatchingSound() {
-        TestData.seedCustomSounds(context, count = 3)
+        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -59,7 +59,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun queryWithNoMatchShowsZeroResultsMessage() {
-        TestData.seedCustomSounds(context, count = 1)
+        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -70,7 +70,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun trailingClearIconClearsQueryWithoutClosingOverlay() {
-        TestData.seedCustomSounds(context, count = 1)
+        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -86,7 +86,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun backArrowClosesOverlay() {
-        TestData.seedCustomSounds(context, count = 1)
+        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -100,7 +100,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun systemBackClosesOverlay() {
-        TestData.seedCustomSounds(context, count = 1)
+        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -116,7 +116,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun searchOverlayExposesA11yContentDescriptions() {
-        TestData.seedCustomSounds(context, count = 1)
+        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -135,4 +135,10 @@ internal class SearchOverlayTest : AbstractUiTest() {
     private fun closeSearchLabel() = context.getString(R.string.app_search_close)
 
     private fun clearSearchLabel() = context.getString(R.string.app_search_clear)
+
+    private companion object {
+        // Matches SEARCH_FAB_MIN_SOUNDS in LandingScreen.kt — the FAB stays hidden below this
+        // threshold, so any test that needs to tap it must seed at least this many sounds.
+        const val SOUNDS_FOR_VISIBLE_FAB = 7
+    }
 }
