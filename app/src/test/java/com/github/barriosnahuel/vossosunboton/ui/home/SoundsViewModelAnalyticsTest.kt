@@ -22,10 +22,10 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.withTimeout
@@ -53,12 +53,13 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
-        // Cancel each VM's `viewModelScope` so the reactive `repo.sounds` collector added in the
-        // post-PR-#1130 fix doesn't survive past the test boundary. Without this cleanup, the
-        // next test's `clearForTest()` would emit through the old VM's collector, fire
-        // `loadSounds` against the old VM's `_searchQuery`, and leak `search_zero_results`
-        // events into the new test's `fake`.
-        createdViewModels.forEach { it.viewModelScope.cancel() }
+        // Deterministically stop the reactive `repo.sounds` collector each VM starts in `init`
+        // (post-PR-#1130 fix). A bare `cancel()` is fire-and-forget: the collector can outlive the
+        // test, parked on the process-singleton DataStore, and the next test's `clearForTest()` /
+        // `save(...)` writes emit through it — leaking events (`milestone_sounds_3`,
+        // `search_zero_results`) into the new test's `fake`. `cancelAndJoinAll()` joins until it
+        // unwinds — see ViewModelTestCleanup.kt.
+        createdViewModels.cancelAndJoinAll()
         createdViewModels.clear()
         AnalyticsTrackerProvider.setForTest(null)
         unmockkAll()
@@ -209,6 +210,33 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
         givenAViewModel()
 
+        fake.assertNotEmitted("milestone_sounds_3")
+    }
+
+    @Test
+    fun `cancelAndJoinAll fully stops a ViewModel repo collector so it cannot pollute a later test`() {
+        // Build a VM, then tear it down the way @After does — but assert the contract a bare
+        // `viewModelScope.cancel()` does NOT give: the scope's Job is actually completed.
+        val vm = givenAViewModel()
+        createdViewModels.remove(vm) // this test owns the teardown; keep @After from double-cancelling
+
+        listOf(vm).cancelAndJoinAll()
+
+        // Deterministic regression anchor: `cancelAndJoin` waits for the full unwind, so the Job
+        // is completed. The old fire-and-forget `cancel()` left the `repo.sounds` collector parked
+        // on the singleton DataStore with the Job lingering in "cancelling".
+        val job = vm.viewModelScope.coroutineContext.job
+        assertThat(job.isActive).isFalse()
+        assertThat(job.isCompleted).isTrue()
+
+        // Behavioural check: a torn-down VM's collector must not react to later DataStore writes.
+        // Without the join, these `save(...)` calls would emit through the leaked collector and
+        // re-fire `milestone_sounds_3` into the (freshly reset) tracker.
+        fake.reset()
+        runBlocking {
+            val repo = SoundsRepository(ApplicationProvider.getApplicationContext())
+            repeat(3) { idx -> repo.save(Sound("leak-$idx", "leak-$idx.mp3")) }
+        }
         fake.assertNotEmitted("milestone_sounds_3")
     }
 
