@@ -22,6 +22,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Error tracking](#error-tracking-)
 - [Analytics events](#analytics-events-)
 - [BigQuery export](#bigquery-export-)
+- [Labels & milestone examples](#labels--milestone-examples-)
 - [Third-party notices](#third-party-notices-)
 
 ## Local setup ⚙
@@ -60,7 +61,58 @@ The instrumented suite under `app/src/androidTest/` is **intentionally not run o
 
 ## Testing 🧪
 
-Testing rules and invariants live in `CLAUDE.md` (§ *Bug fixes — TDD workflow*, § *Features — test coverage workflow*, § *Test naming convention*, § *Activity smoke tests*, § *Pre-PR checklist*). This section covers the *operational* side: setup, run commands, and conventions you need at the keyboard.
+Testing rules and invariants live in `CLAUDE.md` (§ *Bug fixes — TDD workflow*, § *Features — test coverage workflow*, § *Test naming convention*, § *Activity smoke tests*, § *Pre-PR and pre-push checklists*). This section covers the *operational* side: setup, run commands, conventions you need at the keyboard — plus the full Pre-PR / Pre-push checklists themselves.
+
+### Bug fixes — TDD procedure
+
+The trigger and the "skip only when..." invariant live in CLAUDE.md § *Bug fixes — TDD workflow*. The full three-step procedure:
+
+1. **Write a failing test first** that reproduces the bug. Run it to confirm it fails for the right reason.
+2. **Fix the production code** with the minimum change to make it pass.
+3. **Run the full test suite** (`./gradlew test`).
+
+Skip TDD only when the bug lives exclusively in UI rendering or platform wiring that can't be exercised by unit / Robolectric tests (e.g. a pure layout glitch). Note in the PR description why TDD was skipped.
+
+For **production bugs reported by users** (not local-repro), scope frequency, affected versions, OS distribution, and recurring stack frames in Crashlytics + BigQuery first — see § *BigQuery export* below.
+
+### Features — test coverage procedure
+
+The trigger lives in CLAUDE.md § *Features — test coverage workflow*. The minimum scenario set you agree on before writing production code:
+
+1. **Happy path** — works as intended under normal conditions.
+2. **Failure modes at system boundaries** — audio I/O, MediaPlayer errors, permissions denied, Play feature delivery failures.
+3. **Smoke test** — see CLAUDE.md § *Activity smoke tests*.
+
+Implement tests **alongside** the feature, not after. Any scenario not listed before starting is out of scope for the current PR — note in the PR description.
+
+Skip a scenario only when it lives exclusively in platform wiring not exercisable by unit / Robolectric tests. Note why.
+
+### Pre-PR checklist
+
+Before opening a PR for any feature or bug fix, verify:
+
+- [ ] Happy path is covered by at least one test
+- [ ] Failure modes at system/external boundaries have tests (file I/O, MediaPlayer, permissions, network, Play feature delivery)
+- [ ] New `Activity` has a smoke test (CLAUDE.md § *Activity smoke tests*)
+- [ ] New full-screen Composable with business logic has a `createComposeRule()` smoke test
+- [ ] Composables with durable state (text input, opened overlays/sheets, sub-screens, in-flight error) have at least one `scenario.recreate()` test (CLAUDE.md § *Stateful Composables*)
+- [ ] Any skipped scenario is explicitly noted with a reason
+- [ ] Self code review: re-read every changed file as a reviewer, not author — logic gaps, missing edge cases, unclear naming
+
+Then run the **Pre-push checklist** below.
+
+### Pre-push checklist
+
+CI linters that must pass:
+
+- **KtLint** — style (part of `check`; auto-fix `ktlintFormat`)
+- **Detekt** — static analysis (config `config/detekt/detekt-config.yml`; max line length 150)
+- **Spotless** — AGPLv3 headers (part of `check`; auto-fix `spotlessApply`)
+- **Android Lint** — rules in `config/android/android-lint.xml`
+
+Run `./gradlew check -x test && ./gradlew test` before pushing — catches the same failures CI reports without waiting for a full CI run.
+
+**Functional changes also require the local UI test suite** (see § *Local UI test suite → When to run* below). If the change touches Composables, ViewModels, intents, navigation, deep links, or persistence — run the instrumented suite on an emulator before pushing. CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
 
 ### Test assertions
 
@@ -83,6 +135,11 @@ For tracker substitution use `AnalyticsTrackerProvider.setForTest(FakeAnalyticsT
 ### Local UI test suite
 
 Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a real emulator using Compose UI Test + Espresso + UI Automator + Espresso Accessibility Checks. CircleCI does not run them — see [ADR 0001](docs/adr/0001-local-ui-test-suite.md) for the rationale.
+
+#### When to run
+
+- After any change to a Composable, ViewModel, intent flow, navigation, deep link, or persistence layer.
+- Not required for: CHANGELOG, copy strings, README, comments, off-device tooling config.
 
 #### Setup (one-time)
 
@@ -511,6 +568,19 @@ Returns `0` early on if no crashes — that's a feature, not a bug.
 - Performance regressions across releases — easier to diff trace medians via `WITH` clauses than to flip between Console screens.
 
 The Console is still right for: real-time DebugView, alert configuration, single-issue triage. BQ is for *retrospectives* across N events / users / days.
+
+## Labels & milestone examples 🏷️
+
+The label / milestone *rules* (which label means what; how to derive the milestone from the CHANGELOG) live in CLAUDE.md § *Labels and milestone*. The combinations below illustrate the rules in practice:
+
+- WCAG contrast fix: `a:fix` + `c:accessibility`
+- New screen with localized copy: `a:feature` + `c:i18n`
+- URI validation hardening: `a:fix` + `c:security`
+- AAB size optimization: `an:enhancement` + `c:performance`
+- Dependabot bump: `a:build` + `c:dependencies` (auto-applied)
+- New Firebase Analytics event: `a:build` + `c:observability`
+- Flaky test stabilization: `a:test`
+- README rewrite: `a:docs`
 
 ## Third-party notices 📜
 

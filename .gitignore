@@ -21,7 +21,8 @@ gradle/gradle-daemon-jvm.properties
 *.iml
 
 ### AI Agents
-.claude
+.claude/*
+!.claude/skills/
 
 ### Static Code Analyzers
 config/*
