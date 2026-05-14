@@ -12,6 +12,8 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -138,14 +140,17 @@ internal class HomeTabFlowTest : AbstractUiTest() {
 
     @Test
     fun homeScreenExposesA11yContentDescriptionsForKeyControls() {
-        TestData.seedCustomSounds(context, count = 1)
+        // 7 mirrors SEARCH_FAB_MIN_SOUNDS in LandingScreen.kt — below that, the Search FAB is
+        // hidden by design, so seeding fewer items would make the searchLabel() assertion fail.
+        // Per-sound controls (play/share/pin) match once per row, so the assertions use onFirst().
+        TestData.seedCustomSounds(context, count = 7)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).assertHasClickAction()
             composeRule.awaitNodeWithContentDescription(overflowLabel()).assertHasClickAction()
-            composeRule.awaitNodeWithContentDescription(playLabel()).assertHasClickAction()
-            composeRule.awaitNodeWithContentDescription(shareLabel()).assertHasClickAction()
-            composeRule.awaitNodeWithContentDescription(pinLabel()).assertHasClickAction()
+            composeRule.onAllNodesWithContentDescription(playLabel()).onFirst().assertHasClickAction()
+            composeRule.onAllNodesWithContentDescription(shareLabel()).onFirst().assertHasClickAction()
+            composeRule.onAllNodesWithContentDescription(pinLabel()).onFirst().assertHasClickAction()
         }
     }
 

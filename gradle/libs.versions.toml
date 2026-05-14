@@ -17,7 +17,7 @@ activityCompose           = "1.13.0"
 coreSplashscreen          = "1.2.0"
 composeBom                = "2026.05.00"
 lifecycleCompose          = "2.10.0"
-material                  = "1.13.0"
+material                  = "1.14.0"
 
 # Firebase
 firebaseBom               = "34.13.0"
