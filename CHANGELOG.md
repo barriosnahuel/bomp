@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Saving a new Bomp or renaming an existing one now confirms with a brand "voice bubble" overlay that briefly fills the screen with the Bomp's name (inflates with a spring, holds, slides out — metaphor for "your Bomp is on its way") and returns the user to wherever they came from, instead of a long snackbar that lingered after the form. Honors the system "Remove animations" setting with an equivalent static confirmation
 - The "name your Bomp" field now opens with focus and the keyboard ready, saving one tap
 - Tapping Save on the new-Bomp form without a name now plays a "reject" haptic alongside the existing error message, matching the tactile feedback used elsewhere for rejected actions
+- Search empty-state hint moved away from teaching the obvious "type to filter" toward a warmer brand-voice line ("That gem of yours is in here. Go find it." / "Esa reliquia tuya está acá. Encontrala.")
 
 ### For nerds 🤓
 
