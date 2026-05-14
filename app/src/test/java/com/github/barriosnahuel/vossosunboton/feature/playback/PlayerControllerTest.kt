@@ -60,21 +60,33 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `on startPlayingSound when a sound is already playing should stop it first`() {
+    fun `on startPlayingSound when a different sound is playing should reset without an explicit stop`() {
+        // Switching data source is the one place reset() is unavoidable (MediaPlayer needs to be
+        // taken back to IDLE before a new setDataSource). We do NOT call stop() first — reset()
+        // subsumes it and an extra transition through STOPPED is wasted work. The previous sound's
+        // position is captured before reset() via mp.currentPosition (validated in the
+        // "switching A then B then A seeks back to A's saved position" test below).
         val context = mockk<Context>(relaxed = true)
-        val sound = Sound("test", rawRes = 1)
-        val mp = mockk<MediaPlayer>(relaxed = true)
-        every { mp.isPlaying } returns true
+        val previous = Sound("previous", rawRes = 1)
+        val next = Sound("next", rawRes = 2)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.currentPosition } returns 0
+        every { mp.duration } returns 10_000
 
         mockkStatic(MediaPlayerHelper::class)
         every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
 
-        controllerForTest(mp).startPlayingSound(context, sound)
+        val controller = controllerForTest(mp)
+        controller.startPlayingSound(context, previous)
+        every { mp.isPlaying } returns true
+        controller.startPlayingSound(context, next)
 
+        verify(exactly = 0) { mp.stop() }
         verifyOrder {
-            mp.stop()
-            mp.reset()
-            mp.start()
+            mp.reset() // for previous
+            mp.start() // previous started
+            mp.reset() // for next (after preemption)
+            mp.start() // next started
         }
     }
 
@@ -107,7 +119,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         controller.startPlayingSound(context, sound)
 
         verify { listener.onPlayerError(sound) }
-        verify(exactly = 0) { listener.onPlayerStart(any(), any()) }
+        verify(exactly = 0) { listener.onPlayerStart(any(), any(), any()) }
     }
 
     @Test
@@ -148,7 +160,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
 
         verifyOrder {
             mp.start()
-            listener.onPlayerStart(sound, any())
+            listener.onPlayerStart(sound, any(), any())
         }
     }
 
@@ -170,7 +182,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         verify { listener.onPlayerError(sound) }
         verify(exactly = 1) { Tracker.track(any()) }
         // Guards the "no flicker" invariant: when start() fails, the UI must never see "playing".
-        verify(exactly = 0) { listener.onPlayerStart(any(), any()) }
+        verify(exactly = 0) { listener.onPlayerStart(any(), any(), any()) }
     }
 
     @Test
@@ -213,6 +225,185 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `pause on a playing Sound saves position and emits onPlayerStop without reset`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.duration } returns 10_000
+        every { mp.currentPosition } returns 3_500
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = controllerForTest(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+        every { mp.isPlaying } returns true
+        controller.pause()
+
+        verify { mp.pause() }
+        // Only the initial reset() to load the source — no second reset on pause.
+        verify(exactly = 1) { mp.reset() }
+        verify { listener.onPlayerStop(sound, completed = false) }
+    }
+
+    @Test
+    fun `tap a paused Sound resumes via start without reset and without re-prepare`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.duration } returns 10_000
+        every { mp.currentPosition } returns 3_500
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = controllerForTest(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+        every { mp.isPlaying } returns true
+        controller.pause()
+        every { mp.isPlaying } returns false
+        controller.startPlayingSound(context, sound)
+
+        // Exactly one reset() — for the initial load. The resume re-tap goes through mp.start()
+        // directly without resetting or re-preparing the data source.
+        verify(exactly = 1) { mp.reset() }
+        verify(exactly = 1) { mp.prepare() }
+        // start() runs twice: initial play, then resume.
+        verify(exactly = 2) { mp.start() }
+        // onPlayerStart fires on resume too, carrying the saved position so the VM can initialise
+        // _playbackProgress at 3500 ms instead of 0 (no slider flicker on resume).
+        verify { listener.onPlayerStart(sound, durationMs = 10_000, positionMs = 3_500) }
+    }
+
+    @Test
+    fun `switching from A to B and back to A seeks A to its saved position`() {
+        val context = mockk<Context>(relaxed = true)
+        val a = Sound("a", rawRes = 1)
+        val b = Sound("b", rawRes = 2)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.duration } returns 10_000
+        every { mp.currentPosition } returns 4_200 // A's position when it gets preempted by B
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = controllerForTest(mp)
+        controller.startPlayingSound(context, a)
+        every { mp.isPlaying } returns true
+        controller.startPlayingSound(context, b) // preempts A, saves currentPosition (4_200) under "a"
+        controller.startPlayingSound(context, a) // preempts B, switches back to A
+
+        // When A is reloaded, seekTo(4_200) is called between prepare() and start() so playback
+        // resumes from where it paused, not from 0.
+        verify { mp.seekTo(4_200) }
+    }
+
+    @Test
+    fun `natural completion clears the saved position so the next play starts from zero`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.currentPosition } returns 2_000
+        every { mp.duration } returns 10_000
+        val completionSlot = io.mockk.slot<MediaPlayer.OnCompletionListener>()
+        every { mp.setOnCompletionListener(capture(completionSlot)) } answers { nothing }
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = controllerForTest(mp)
+        controller.startPlayingSound(context, sound)
+        every { mp.isPlaying } returns true
+        controller.pause() // saves position at 2_000
+        every { mp.isPlaying } returns false
+        completionSlot.captured.onCompletion(mp) // natural-end fires — should clear the saved position
+        controller.startPlayingSound(context, sound) // fresh load: must re-prepare and start from 0
+
+        // No seekTo because the saved position was cleared by completion.
+        verify(exactly = 0) { mp.seekTo(any()) }
+        // Two prepares confirm the second tap went through the full load path (no in-place resume).
+        verify(exactly = 2) { mp.prepare() }
+    }
+
+    @Test
+    fun `stopPlayingSound clears the saved position for the current sound target`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.currentPosition } returns 1_500
+        every { mp.duration } returns 10_000
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = controllerForTest(mp)
+        controller.startPlayingSound(context, sound)
+        every { mp.isPlaying } returns true
+        controller.pause()
+        every { mp.isPlaying } returns false
+        controller.stopPlayingSound() // explicit stop — should clear the saved position
+        controller.startPlayingSound(context, sound)
+
+        verify(exactly = 0) { mp.seekTo(any()) }
+    }
+
+    @Test
+    fun `forgetSound on the current sound target stops resets and clears state`() {
+        val context = mockk<Context>(relaxed = true)
+        val sound = Sound("test", rawRes = 1)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.duration } returns 10_000
+        val listener = mockk<PlayerControllerListener>(relaxed = true)
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = controllerForTest(mp)
+        controller.setOnStartStopListener(listener)
+        controller.startPlayingSound(context, sound)
+        every { mp.isPlaying } returns true
+        controller.forgetSound(sound)
+
+        verify { mp.stop() }
+        // Two resets: initial load + forget-path reset to return MediaPlayer to IDLE.
+        verify(exactly = 2) { mp.reset() }
+        verify { listener.onPlayerStop(sound, completed = false) }
+    }
+
+    @Test
+    fun `forgetSound for a non-current sound clears its saved position without disturbing playback`() {
+        // User plays A, switches to B (A's position is saved). Then the app deletes A — forgetSound(A)
+        // must drop A's saved position so a future "A again" does NOT seekTo the stale value, and
+        // it must NOT touch the MediaPlayer (B is currently loaded).
+        val context = mockk<Context>(relaxed = true)
+        val a = Sound("a", rawRes = 1)
+        val b = Sound("b", rawRes = 2)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.currentPosition } returns 2_000
+        every { mp.duration } returns 10_000
+
+        mockkStatic(MediaPlayerHelper::class)
+        every { MediaPlayerHelper.setupSoundSource(any(), any(), any<Int>()) } returns true
+
+        val controller = controllerForTest(mp)
+        controller.startPlayingSound(context, a)
+        every { mp.isPlaying } returns true
+        controller.startPlayingSound(context, b) // preempts A, saves A's position
+        every { mp.isPlaying } returns true
+        controller.forgetSound(a) // A is not the current target — should be a no-op on mp
+        controller.startPlayingSound(context, a) // would seekTo if savedSoundPositions still had A
+
+        // Three resets total: initial-A + A→B switch + B→A switch. No extra reset from forgetSound.
+        verify(exactly = 3) { mp.reset() }
+        // No seekTo because forgetSound(A) cleared the saved position before the third tap.
+        verify(exactly = 0) { mp.seekTo(any()) }
+    }
+
+    @Test
     fun `startPlayingUri emits a Stream PlaybackState with the given uri`() {
         val context = mockk<Context>(relaxed = true)
         val mp = givenAnIdleMediaPlayer()
@@ -230,13 +421,15 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `startPlayingUri while a Sound is playing pre-empts it via onPlayerStop`() {
-        // Concurrency invariant from ADR 0005: starting a Stream stops any currently-playing Sound.
+    fun `startPlayingUri while a Sound is playing preempts the sound via onPlayerStop with completed=false`() {
+        // Concurrency invariant: starting a Stream while a Sound plays must surface the stop event
+        // to the Sound listener so the Home UI can collapse the playing state. The Sound's position
+        // is also captured for resume; the listener event itself does not change.
         val context = mockk<Context>(relaxed = true)
         val sound = Sound("test", rawRes = 1)
-        val mp = mockk<MediaPlayer>(relaxed = true)
-        every { mp.isPlaying } returnsMany listOf(false, true, false)
+        val mp = givenAnIdleMediaPlayer()
         every { mp.duration } returns 5_000
+        every { mp.currentPosition } returns 1_200
         val listener = mockk<PlayerControllerListener>(relaxed = true)
 
         mockkStatic(MediaPlayerHelper::class)
@@ -245,6 +438,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         val controller = controllerForTest(mp)
         controller.setOnStartStopListener(listener)
         controller.startPlayingSound(context, sound)
+        every { mp.isPlaying } returns true
         controller.startPlayingUri(context, Uri.parse("content://test/clip.mp3"))
 
         verify { listener.onPlayerStop(sound, completed = false) }
@@ -277,6 +471,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         controller.startPlayingUri(context, Uri.parse("content://test/clip.mp3"))
         every { mp.isPlaying } returns true
         controller.pause()
+        every { mp.isPlaying } returns false
         controller.resume()
 
         // start() is called twice: once on startPlayingUri, once on resume.
@@ -290,13 +485,14 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         // screen, the player is in PAUSED state (isPlaying == false) but the StateFlow still holds
         // the preview. stopPlayingSound must clear it so a future preview doesn't see stale state.
         val context = mockk<Context>(relaxed = true)
-        val mp = mockk<MediaPlayer>(relaxed = true)
-        every { mp.isPlaying } returnsMany listOf(false, true, false, false)
+        val mp = givenAnIdleMediaPlayer()
         every { mp.duration } returns 5_000
 
         val controller = controllerForTest(mp)
         controller.startPlayingUri(context, Uri.parse("content://test/clip.mp3"))
+        every { mp.isPlaying } returns true
         controller.pause()
+        every { mp.isPlaying } returns false
         assertThat(controller.playbackState.value).isNotNull()
 
         controller.stopPlayingSound()

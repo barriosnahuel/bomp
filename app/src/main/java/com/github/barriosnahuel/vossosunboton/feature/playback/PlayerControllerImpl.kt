@@ -32,7 +32,22 @@ internal class PlayerControllerImpl(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob()),
 ) : PlayerController {
     private var listener: PlayerControllerListener? = null
-    private var currentSound: Sound? = null
+
+    /**
+     * What data source is currently loaded into [mediaPlayer]. `null` means IDLE / no source.
+     * When non-null the player is in STARTED (mp.isPlaying == true) or PAUSED (mp.isPlaying ==
+     * false but the data source is intact) state.
+     */
+    private var target: PlaybackTarget? = null
+
+    /**
+     * Per-sound position cache for sounds that are NOT the currently-loaded target. When the user
+     * returns to one of these we [MediaPlayer.seekTo] the cached value before [MediaPlayer.start].
+     * In-memory only — process death loses it. Cleared on natural completion, [stopPlayingSound],
+     * or [forgetSound]. Keyed by [Sound.name] because the codebase already treats name as the
+     * effective primary key (SoundsRepository upserts by name; `_soundDurations` does the same).
+     */
+    private val savedSoundPositions = mutableMapOf<String, Int>()
 
     private val _playbackState = MutableStateFlow<PlaybackState?>(null)
     override val playbackState: StateFlow<PlaybackState?> = _playbackState.asStateFlow()
@@ -58,14 +73,33 @@ internal class PlayerControllerImpl(
      */
     private var prepareJob: Job? = null
 
+    private sealed class PlaybackTarget {
+        data class SoundTarget(
+            val sound: Sound,
+        ) : PlaybackTarget()
+
+        data class UriTarget(
+            val uri: Uri,
+        ) : PlaybackTarget()
+    }
+
     override fun startPlayingSound(
         context: Context,
         sound: Sound,
     ) {
+        val currentTarget = target
+        if (currentTarget is PlaybackTarget.SoundTarget && currentTarget.sound.name == sound.name && !mediaPlayer.isPlaying) {
+            // Same sound, paused → resume in place. MediaPlayer kept the data source and the
+            // position; no reset/prepare/seek needed. Cancel any superseded prepare just in case.
+            prepareJob?.cancel()
+            resumeCurrentTarget()
+            return
+        }
+
         prepareJob?.cancel()
         prepareJob =
             scope.launch {
-                preempt()
+                preemptCurrentTargetPreservingPosition()
                 handler.removeCallbacks(progressRunnable)
                 mediaPlayer.reset()
 
@@ -102,16 +136,24 @@ internal class PlayerControllerImpl(
     ) {
         mediaPlayer.setOnCompletionListener {
             handler.removeCallbacks(progressRunnable)
+            savedSoundPositions.remove(sound.name)
+            target = null
             listener?.onPlayerStop(sound, completed = true)
         }
-        currentSound = sound
+        val seekPos = savedSoundPositions[sound.name]
+        if (seekPos != null) {
+            // seekTo is valid in PREPARED state; the next start() picks up from the seek position.
+            runCatching { mediaPlayer.seekTo(seekPos) }
+        }
         val started = runCatching { mediaPlayer.start() }
         started
             .onSuccess {
+                target = PlaybackTarget.SoundTarget(sound)
                 // onPlayerStart fires AFTER start() succeeds so the UI never flips to "playing" when
                 // start is going to throw. Both happen on Main, so the listener still updates before
                 // the first progressRunnable post lands.
-                listener?.onPlayerStart(sound, durationMs)
+                val pos = runCatching { mediaPlayer.currentPosition }.getOrDefault(0)
+                listener?.onPlayerStart(sound, durationMs = durationMs, positionMs = pos)
                 handler.post(progressRunnable)
             }.onFailure { e ->
                 if (e is IllegalStateException) {
@@ -126,10 +168,17 @@ internal class PlayerControllerImpl(
         context: Context,
         uri: Uri,
     ) {
+        val currentTarget = target
+        if (currentTarget is PlaybackTarget.UriTarget && currentTarget.uri == uri && !mediaPlayer.isPlaying) {
+            prepareJob?.cancel()
+            resumeCurrentTarget()
+            return
+        }
+
         prepareJob?.cancel()
         prepareJob =
             scope.launch {
-                preempt()
+                preemptCurrentTargetPreservingPosition()
                 handler.removeCallbacks(progressRunnable)
                 mediaPlayer.reset()
 
@@ -155,12 +204,13 @@ internal class PlayerControllerImpl(
     ) {
         mediaPlayer.setOnCompletionListener {
             handler.removeCallbacks(progressRunnable)
+            target = null
             _playbackState.value = null
         }
-        currentSound = null
         val started = runCatching { mediaPlayer.start() }
         started
             .onSuccess {
+                target = PlaybackTarget.UriTarget(uri)
                 _playbackState.value =
                     PlaybackState(uri = uri, positionMs = 0, durationMs = durationMs, isPlaying = true)
                 handler.post(progressRunnable)
@@ -194,15 +244,30 @@ internal class PlayerControllerImpl(
     }
 
     /**
-     * Stops whatever was playing (Sound or Stream) so a new playback can take over. Fires the
-     * Sound-bound listener if a Sound was playing; clears [_playbackState] if a Stream was playing.
+     * Save the current target's playback position (if any) and emit the corresponding stop event
+     * so the consumer can update its UI. The caller is about to `mediaPlayer.reset()` for a new
+     * data source, so we capture position here while it is still valid. We do NOT call
+     * `mediaPlayer.stop()` first — `reset()` subsumes it from any state, and an extra `stop()` is
+     * wasted work that also moves the player through STOPPED, an extra state transition we don't
+     * need.
      */
-    private fun preempt() {
-        if (mediaPlayer.isPlaying) {
-            mediaPlayer.stop()
-            currentSound?.let { listener?.onPlayerStop(it, completed = false) }
-            _playbackState.value = null
+    private fun preemptCurrentTargetPreservingPosition() {
+        val t = target ?: return
+        val pos = runCatching { mediaPlayer.currentPosition }.getOrDefault(0)
+        when (t) {
+            is PlaybackTarget.SoundTarget -> {
+                savedSoundPositions[t.sound.name] = pos
+                listener?.onPlayerStop(t.sound, completed = false)
+            }
+            is PlaybackTarget.UriTarget -> {
+                // Uri previews don't get a cross-screen position cache: the AudioPreview composable
+                // already clears state on dispose via stopPlayingSound, so a saved Uri position
+                // would never be read. If a future surface wants Uri resume across navigation,
+                // introduce a savedUriPositions map symmetric to savedSoundPositions.
+                _playbackState.value = null
+            }
         }
+        target = null
     }
 
     private fun setupSoundSource(
@@ -229,49 +294,123 @@ internal class PlayerControllerImpl(
 
     override fun stopPlayingSound() {
         val isPlayingNow = mediaPlayer.isPlaying
-        val hasStreamState = _playbackState.value != null
-        if (isPlayingNow || hasStreamState) {
-            if (isPlayingNow) {
-                mediaPlayer.stop()
-            }
-            handler.removeCallbacks(progressRunnable)
-            currentSound?.let { listener?.onPlayerStop(it, completed = false) }
-            _playbackState.value = null
+        val hasUriState = _playbackState.value != null
+        val t = target
+        if (!isPlayingNow && !hasUriState && t == null) return
+
+        if (isPlayingNow) {
+            mediaPlayer.stop()
         }
+        handler.removeCallbacks(progressRunnable)
+        when (t) {
+            is PlaybackTarget.SoundTarget -> {
+                savedSoundPositions.remove(t.sound.name)
+                listener?.onPlayerStop(t.sound, completed = false)
+            }
+            is PlaybackTarget.UriTarget -> {
+                _playbackState.value = null
+            }
+            null -> {
+                // Orphan Uri state without a tracked target (e.g. after a failed start path).
+                _playbackState.value = null
+            }
+        }
+        target = null
     }
 
     override fun pause() {
-        if (mediaPlayer.isPlaying && _playbackState.value != null) {
-            mediaPlayer.pause()
-            handler.removeCallbacks(progressRunnable)
-            _playbackState.update { it?.copy(isPlaying = false) }
+        val t = target
+        if (t == null || !mediaPlayer.isPlaying) return
+        val paused = runCatching { mediaPlayer.pause() }
+        paused.onFailure { e ->
+            if (e is IllegalStateException) {
+                Tracker.log("playback.target=${describeTarget(t)}")
+                Tracker.track(RuntimeException("MediaPlayer can't pause", e))
+            }
+        }
+        if (paused.isFailure) return
+        handler.removeCallbacks(progressRunnable)
+        val pos = runCatching { mediaPlayer.currentPosition }.getOrDefault(0)
+        when (t) {
+            is PlaybackTarget.SoundTarget -> {
+                savedSoundPositions[t.sound.name] = pos
+                listener?.onPlayerStop(t.sound, completed = false)
+            }
+            is PlaybackTarget.UriTarget -> {
+                _playbackState.update { it?.copy(positionMs = pos, isPlaying = false) }
+            }
         }
     }
 
     override fun resume() {
-        val state = _playbackState.value
-        if (state != null && !state.isPlaying) {
-            val resumed = runCatching { mediaPlayer.start() }
-            resumed
-                .onSuccess {
-                    _playbackState.update { it?.copy(isPlaying = true) }
-                    handler.post(progressRunnable)
-                }.onFailure { e ->
-                    if (e is IllegalStateException) {
-                        Tracker.log("playback.uri=${state.uri}")
-                        Tracker.track(RuntimeException("MediaPlayer can't resume preview", e))
+        val t = target
+        if (t == null || mediaPlayer.isPlaying) return
+        val uriBlocked = t is PlaybackTarget.UriTarget && (_playbackState.value?.isPlaying != false)
+        if (uriBlocked) return
+        resumeCurrentTarget()
+    }
+
+    private fun resumeCurrentTarget() {
+        val t = target ?: return
+        val resumed = runCatching { mediaPlayer.start() }
+        resumed
+            .onSuccess {
+                val pos = runCatching { mediaPlayer.currentPosition }.getOrDefault(0)
+                when (t) {
+                    is PlaybackTarget.SoundTarget -> {
+                        val duration = runCatching { mediaPlayer.duration }.getOrDefault(0)
+                        listener?.onPlayerStart(t.sound, durationMs = duration, positionMs = pos)
+                        handler.post(progressRunnable)
+                    }
+                    is PlaybackTarget.UriTarget -> {
+                        _playbackState.update { it?.copy(positionMs = pos, isPlaying = true) }
+                        handler.post(progressRunnable)
                     }
                 }
-        }
+            }.onFailure { e ->
+                if (e is IllegalStateException) {
+                    when (t) {
+                        is PlaybackTarget.SoundTarget -> {
+                            Tracker.log("playback.sound=${t.sound.name}")
+                            Tracker.track(RuntimeException("MediaPlayer can't resume sound", e))
+                            listener?.onPlayerError(t.sound)
+                        }
+                        is PlaybackTarget.UriTarget -> {
+                            Tracker.log("playback.uri=${t.uri}")
+                            Tracker.track(RuntimeException("MediaPlayer can't resume preview", e))
+                        }
+                    }
+                }
+            }
     }
 
     override fun seekTo(positionMs: Int) {
         mediaPlayer.seekTo(positionMs)
     }
 
+    override fun forgetSound(sound: Sound) {
+        savedSoundPositions.remove(sound.name)
+        val t = target
+        if (t is PlaybackTarget.SoundTarget && t.sound.name == sound.name) {
+            if (mediaPlayer.isPlaying) {
+                mediaPlayer.stop()
+            }
+            handler.removeCallbacks(progressRunnable)
+            mediaPlayer.reset()
+            target = null
+            listener?.onPlayerStop(t.sound, completed = false)
+        }
+    }
+
     override fun setOnStartStopListener(listener: PlayerControllerListener) {
         this.listener = listener
     }
+
+    private fun describeTarget(t: PlaybackTarget): String =
+        when (t) {
+            is PlaybackTarget.SoundTarget -> "sound=${t.sound.name}"
+            is PlaybackTarget.UriTarget -> "uri=${t.uri}"
+        }
 
     companion object {
         private const val PROGRESS_INTERVAL_MS = 100L

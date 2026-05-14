@@ -26,6 +26,7 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     fun setUp() {
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
     }
 
     @After

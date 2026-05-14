@@ -48,7 +48,8 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.startPlayingSound(any(), any()) } answers { nothing }
-        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        every { PlayerControllerFactory.instance.pause() } answers { nothing }
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
     }
 
     @After
@@ -369,7 +370,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
     @Test
     fun `deleteSound on welcome logs welcome_sticker_dismissed`() {
-        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val viewModel = givenAViewModel()
         val welcomeTitle =
             ApplicationProvider
@@ -384,7 +385,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
     @Test
     fun `deleteSound on a custom sound does NOT log welcome_sticker_dismissed`() {
-        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val viewModel = givenAViewModel()
         val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
