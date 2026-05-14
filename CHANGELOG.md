@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 #### Added
 - Analytics event `sound_add_abandoned_after_error` fires when the user leaves the Add Button screen with an unresolved save error (lifecycle-driven via `ON_STOP` and explicit Snackbar dismiss); best-effort — process death drops the signal
 - Enforce ADR 0005 audio engine invariant via `check-adr-invariants.sh` and the CircleCI `adr-invariants` job — fails the build if a `MediaPlayer()` constructor appears in `src/main` outside `PlayerControllerImpl.kt`
+- Added `scripts/run-instrumented-tests.sh`, a wrapper that cold-boots the test emulator (wiped userdata, pinned serial) before each `connectedDebugAndroidTest` run — a warm AVD degrades across back-to-back runs (`system_server` watchdog ANRs) and produces misleading `ComposeTimeout`/`Process crashed` flakes; ADR 0001 and CONTRIBUTING now document the cold-boot requirement
 
 #### Removed
 - Dead post-save plumbing: `EXTRA_BUTTON_SAVED` / `EXTRA_BUTTON_RENAMED` / `EXTRA_BUTTON_NAME` Intent extras, `SoundsViewModel.buttonSavedEvent` / `buttonRenamedEvent` channels and their `onButtonSaved` / `onButtonRenamed` setters, the `LandingScreen` `LaunchedEffect`s that consumed them, and `AddButtonActivity.navigateBackSaved` / `navigateBackRenamed`

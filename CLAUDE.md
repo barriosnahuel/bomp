@@ -208,6 +208,10 @@ Mock singleton factories (e.g. `PlayerControllerFactory`) that would crash under
 
 Instrumented UI/functional tests live under `app/src/androidTest/`. CircleCI intentionally does not run them — see [ADR 0001](docs/adr/0001-local-ui-test-suite.md). Setup, run commands, and report paths live in CONTRIBUTING.md § *Testing → Local UI test suite*.
 
+### How to run — always via the wrapper
+
+Run the suite with `./scripts/run-instrumented-tests.sh` (extra args pass through to Gradle; `RUNS=N` repeats the cold-boot+run cycle N times). **Never invoke `./gradlew :app:connectedDebugAndroidTest` directly against an already-running emulator** — a warm AVD degrades across back-to-back runs (`system_server` watchdog ANRs, hundreds of skipped frames), and the failures masquerade as per-test flakes (`ComposeTimeoutException`, `ComposeNotIdleException`) or escalate to `Process crashed`. The wrapper cold-boots the AVD with wiped userdata and pins the emulator serial before each run. Rationale + the misdiagnosis trap: [ADR 0001 § *Cold boot per run*](docs/adr/0001-local-ui-test-suite.md). If the suite flakes, re-run via the wrapper before assuming a test or production bug.
+
 ### When to run
 
 - After any change to a Composable, ViewModel, intent flow, navigation, deep link, or persistence layer.
@@ -249,7 +253,7 @@ CI linters that must pass:
 
 Run `./gradlew check -x test && ./gradlew test` before pushing — catches the same failures CI reports without waiting for a full CI run.
 
-**Functional changes also require the local UI test suite** (§ *Local UI test suite*). If the change touches Composables, ViewModels, intents, navigation, deep links, or persistence — run the instrumented suite on an emulator before pushing. CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
+**Functional changes also require the local UI test suite** (§ *Local UI test suite*). If the change touches Composables, ViewModels, intents, navigation, deep links, or persistence — run `./scripts/run-instrumented-tests.sh` before pushing (it cold-boots the emulator; never run the Gradle task directly against a warm AVD). CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
 
 ## Analytics events
 
