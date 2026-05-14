@@ -92,6 +92,18 @@ if grep -rnE --include='*.kt' '(^|[^[:alnum:]_])assert[[:space:]]*\(' $TEST_DIRS
 fi
 
 # ============================================================================
+# CLAUDE.md size budget — see CLAUDE.md § "What goes in this file"
+# Loaded into every Claude Code context window; performance degrades above 40K.
+# Measured in bytes (wc -c): portable and deterministic, and a conservative
+# proxy for the char budget since UTF-8 bytes >= chars (fails early, never late).
+# ============================================================================
+CLAUDE_MD_SIZE=$(wc -c < CLAUDE.md | tr -d ' ')
+CLAUDE_MD_FAIL=40000
+if [ "$CLAUDE_MD_SIZE" -gt "$CLAUDE_MD_FAIL" ]; then
+    fail "CLAUDE.md is $CLAUDE_MD_SIZE bytes (hard limit: $CLAUDE_MD_FAIL). Claude Code performance degrades above 40K. Run /claude-md-audit to move reference-time content to CONTRIBUTING.md or docs/adr/."
+fi
+
+# ============================================================================
 if [ "$errors" -gt 0 ]; then
     echo
     echo "$errors ADR invariant(s) violated. See messages above for which ADR(s) to revisit." >&2

@@ -10,7 +10,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
@@ -20,7 +19,6 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -46,9 +44,11 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
-        // Cancel each VM's `viewModelScope` to stop the reactive `repo.sounds` collector added
-        // in the post-PR-#1130 fix; otherwise it survives the test boundary.
-        createdViewModels.forEach { it.viewModelScope.cancel() }
+        // Deterministically stop the reactive `repo.sounds` collector each VM starts in `init`
+        // (post-PR-#1130 fix). A bare `cancel()` is fire-and-forget: the collector can outlive the
+        // test, parked on the process-singleton DataStore. `cancelAndJoinAll()` joins until it
+        // unwinds — see ViewModelTestCleanup.kt.
+        createdViewModels.cancelAndJoinAll()
         createdViewModels.clear()
         unmockkAll()
     }

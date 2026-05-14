@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
-import androidx.lifecycle.viewModelScope
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -14,7 +13,6 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
@@ -32,10 +30,12 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
-        // Cancel each VM's `viewModelScope` to stop the reactive `repo.sounds` collector added
-        // in the post-PR-#1130 fix; otherwise it survives the test boundary and pollutes the
-        // next test by re-running `loadSounds` against stale in-memory state.
-        createdViewModels.forEach { it.viewModelScope.cancel() }
+        // Deterministically stop the reactive `repo.sounds` collector each VM starts in `init`
+        // (post-PR-#1130 fix). A bare `cancel()` is fire-and-forget: the collector can outlive the
+        // test, parked on the process-singleton DataStore, and pollute the next test by re-running
+        // `loadSounds` against stale state. `cancelAndJoinAll()` joins until it unwinds — see
+        // ViewModelTestCleanup.kt.
+        createdViewModels.cancelAndJoinAll()
         createdViewModels.clear()
         unmockkAll()
     }

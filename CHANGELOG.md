@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Analytics event `sound_add_abandoned_after_error` fires when the user leaves the Add Button screen with an unresolved save error (lifecycle-driven via `ON_STOP` and explicit Snackbar dismiss); best-effort — process death drops the signal
 - Enforce ADR 0005 audio engine invariant via `check-adr-invariants.sh` and the CircleCI `adr-invariants` job — fails the build if a `MediaPlayer()` constructor appears in `src/main` outside `PlayerControllerImpl.kt`
 - Added `scripts/run-instrumented-tests.sh`, a wrapper that cold-boots the test emulator (wiped userdata, pinned serial) before each `connectedDebugAndroidTest` run — a warm AVD degrades across back-to-back runs (`system_server` watchdog ANRs) and produces misleading `ComposeTimeout`/`Process crashed` flakes; ADR 0001 and CONTRIBUTING now document the cold-boot requirement
+- Three-layer system to keep CLAUDE.md within budget: new top-of-file routing rule that codifies write-time vs reference-time intent, a 40K-char hard limit enforced by `check-adr-invariants.sh`, and a versioned `/claude-md-audit` skill at `.claude/skills/claude-md-audit/SKILL.md` that mechanizes the audit procedure; first run trimmed CLAUDE.md from 41K to ~35K by moving procedures, checklists, and examples to CONTRIBUTING.md while keeping write-time invariants in place
 
 #### Removed
 - Dead post-save plumbing: `EXTRA_BUTTON_SAVED` / `EXTRA_BUTTON_RENAMED` / `EXTRA_BUTTON_NAME` Intent extras, `SoundsViewModel.buttonSavedEvent` / `buttonRenamedEvent` channels and their `onButtonSaved` / `onButtonRenamed` setters, the `LandingScreen` `LaunchedEffect`s that consumed them, and `AddButtonActivity.navigateBackSaved` / `navigateBackRenamed`
@@ -64,6 +65,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Extended `rememberSaveable` coverage to the rest of the durable state in the touched surfaces: Add Button `name` (`TextFieldValue.Saver`) and `nameError`, `LandingScreen.isAboutVisible`, `AboutScreen.isLicenseSheetVisible` — closes the gaps audited app-wide alongside the original PR
 - Search overlay's auto-focus now mirrors the Add Button pattern: `withFrameNanos` wait + `runCatching { requestFocus() }` with `Tracker.track` on failure (static wrapper title, breadcrumb `searchoverlay.field=search`), so a first-frame focus break on the search input is no longer silent
 - New CLAUDE.md § *Stateful Composables — `rememberSaveable` is the default for durable state* documents the rule, references `SaveOutcomeSaver` as the Saver template, and adds a Pre-PR checklist line requiring `scenario.recreate()` tests for screens with durable state
+- `AboutScreenFlowTest` back-navigation tests now use the always-present overflow-menu icon as the Landing sentinel instead of the Search FAB, which #1143 gated behind a minimum sound count
 
 ## \[v2.0.0] - 2026-05-07
 
