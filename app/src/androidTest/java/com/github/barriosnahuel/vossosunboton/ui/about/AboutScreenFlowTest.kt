@@ -53,8 +53,8 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule.onNodeWithContentDescription(backLabel()).performClick()
-            // Search FAB on Landing is back in view.
-            composeRule.awaitNodeWithContentDescription(context.getString(R.string.app_search)).assertIsDisplayed()
+            // Overflow menu is the Landing sentinel (absent on About); the Search FAB is unusable here since #1143 gates it on sound count.
+            composeRule.awaitNodeWithContentDescription(context.getString(R.string.app_overflow_menu)).assertIsDisplayed()
         }
     }
 
@@ -63,7 +63,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             Espresso.pressBack()
-            composeRule.awaitNodeWithContentDescription(context.getString(R.string.app_search)).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(context.getString(R.string.app_overflow_menu)).assertIsDisplayed()
         }
     }
 
