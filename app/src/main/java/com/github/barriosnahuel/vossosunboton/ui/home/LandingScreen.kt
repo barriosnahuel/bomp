@@ -142,15 +142,17 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.showSearch() },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = stringResource(R.string.app_search),
-                )
+            if (sounds.size >= SEARCH_FAB_MIN_SOUNDS) {
+                FloatingActionButton(
+                    onClick = { viewModel.showSearch() },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = stringResource(R.string.app_search),
+                    )
+                }
             }
         },
     ) { innerPadding ->
@@ -339,6 +341,12 @@ private fun AppBottomBar(
         )
     }
 }
+
+// 7 is the lower bound of the UX-research "ambiguous band" (7–15 items) where search starts to
+// out-perform scanning on mobile. Below 7, IME open + typing cost > scan time (NN/g "search vs.
+// browse", Baymard on mobile filter thresholds). We anchor at the lower bound because Bomp names
+// are short (fast to scan) and the dominant search task is find-specific, not browse-to-discover.
+private const val SEARCH_FAB_MIN_SOUNDS = 7
 
 private const val DELETE_ANIMATION_DURATION_MS = 300
 private val WELCOME_BORDER_WIDTH = 1.5.dp

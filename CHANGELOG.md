@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 
 ### Changed
+- The Search action is now hidden until you have enough Bomps for it to be useful, so a fresh install isn't cluttered with a control that can't find anything
 - Shortened the welcome-dismissal snackbar from 10 s to 4 s so the feedback no longer lingers; user-deleted sounds keep the longer Undo window
 - Saving a new Bomp or renaming an existing one now confirms with a brand "voice bubble" overlay that briefly fills the screen with the Bomp's name (inflates with a spring, holds, slides out — metaphor for "your Bomp is on its way") and returns the user to wherever they came from, instead of a long snackbar that lingered after the form. Honors the system "Remove animations" setting with an equivalent static confirmation
 - The "name your Bomp" field now opens with focus and the keyboard ready, saving one tap
