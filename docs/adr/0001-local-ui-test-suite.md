@@ -81,11 +81,35 @@ Adopt **Option D**, isolated under `app/src/androidTest/`:
 
 - Gradle source set already excluded from `./gradlew test` and `./gradlew check`.
 - Not invoked by `.circleci/config.yml` (the `test` job runs `./gradlew test` only).
-- A single command runs the suite: `./gradlew app:connectedDebugAndroidTest`.
-- Operator workflow: run `./scripts/setup-test-emulator.sh` once to create the AVD, boot
-  the emulator, then `./gradlew app:connectedDebugAndroidTest` for each pass.
+- A single command runs the suite: `./scripts/run-instrumented-tests.sh` (wraps
+  `./gradlew :app:connectedDebugAndroidTest`).
+- Operator workflow: run `./scripts/setup-test-emulator.sh` once to create the AVD, then
+  `./scripts/run-instrumented-tests.sh` for each pass. The wrapper cold-boots the AVD with
+  wiped userdata before every run — see *Cold boot per run* below — and pins the emulator
+  serial so the run never spills onto a physical device that happens to be attached.
 - Each screen test file owns its accessibility assertions. There is no
   `AccessibilitySweepTest` collector — a11y is part of the feature, not a separate concern.
+
+### Cold boot per run
+
+The suite must run on a freshly cold-booted emulator, not a warm one. A long-lived AVD
+degrades across back-to-back runs: `system_server`'s `InputManagerService` watchdog
+eventually ANRs, `Choreographer` skips hundreds of frames, and the instrumentation loses
+contact with the app process. The symptoms are misleading — they look like per-test flakes
+(`ComposeTimeoutException`, `ComposeNotIdleException`) or escalate to `Process crashed` and
+the run failing to start at all — but the root cause is accumulated emulator state, not the
+tests or the app (a single run from a clean cold boot finishes ~5× faster and green; the
+same tests pass on physical devices). `./scripts/run-instrumented-tests.sh` enforces this:
+it kills the AVD, relaunches it with `-no-snapshot -wipe-data`, waits for boot, then runs
+the suite — repeating the cold boot before each pass when `RUNS` > 1. Do **not** invoke
+`./gradlew :app:connectedDebugAndroidTest` directly against an already-running emulator.
+
+The wrapper resets *guest* (emulator) state — it cannot reset *host* state. The emulator is
+a VM, and a saturated host (high load average from other heavy work, or from running the
+suite dozens of times back-to-back) makes even a freshly booted guest janky enough to flake
+timing-sensitive tests. If a cold-booted run is still slow or flaky, check the host load
+before suspecting a test: close other heavy work and re-run, rather than chasing a
+non-existent test bug.
 
 ### History note: dynamic feature workaround (removed)
 
@@ -99,9 +123,11 @@ to bypass UTP's reinstall.
 
 That whole workaround was deleted when `:feature_addbutton` was promoted into
 `:app` (creating buttons is core to the product, not a freemium add-on). The
-suite is now plain `./gradlew app:connectedDebugAndroidTest` with the standard
-HTML/XML report. Reintroduce something similar if a dynamic feature returns
-for genuinely on-demand functionality.
+suite is now the standard `:app:connectedDebugAndroidTest` Gradle task with the
+standard HTML/XML report — `./scripts/run-instrumented-tests.sh` only wraps it
+with emulator lifecycle management (see *Cold boot per run*), it does not touch
+the build or install path. Reintroduce a bundletool-style workaround only if a
+dynamic feature returns for genuinely on-demand functionality.
 
 ## Consequences
 
@@ -117,6 +143,9 @@ for genuinely on-demand functionality.
 
 - Requires an emulator to run the suite. Developers without one need to run
   `./scripts/setup-test-emulator.sh` once (~5 minutes including system image download).
+- Each run pays a cold-boot cost (~30–60 s) because the wrapper wipes userdata and reboots
+  the AVD. This is deliberate: a warm run is faster to *start* but unreliable to *finish*
+  (see *Cold boot per run*), and a clean run completes the whole suite in ~3 min anyway.
 - Compose-driven interactions don't auto-trigger ATF — explicit semantics assertions are
   required per screen test. This is documented in `AbstractUiTest`'s KDoc and enforced by
   PR review (the per-screen test is supposed to include a11y bullets in the test plan).

@@ -113,7 +113,7 @@ CI linters that must pass:
 
 Run `./gradlew check -x test && ./gradlew test` before pushing — catches the same failures CI reports without waiting for a full CI run.
 
-**Functional changes also require the local UI test suite** (see § *Local UI test suite → When to run* below). If the change touches Composables, ViewModels, intents, navigation, deep links, or persistence — run the instrumented suite on an emulator before pushing. CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
+**Functional changes also require the local UI test suite** (see § *Local UI test suite → When to run* below). If the change touches Composables, ViewModels, intents, navigation, deep links, or persistence — run `./scripts/run-instrumented-tests.sh` before pushing (it cold-boots the emulator; never run the Gradle task directly against a warm AVD). CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
 
 ### Test assertions
 
@@ -152,20 +152,27 @@ Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a
 #### Run the full suite
 
 ```bash
-# 1. Boot the emulator (background)
-emulator -avd Android_14_API_34 -no-snapshot-save -no-boot-anim &
-adb wait-for-device shell 'while [[ $(getprop sys.boot_completed) != 1 ]]; do sleep 1; done'
+./scripts/run-instrumented-tests.sh
+```
 
-# 2. Run all instrumented tests (UTP installs + runs natively)
-./gradlew app:connectedDebugAndroidTest
+The wrapper cold-boots the AVD with wiped userdata, waits for it, then runs `./gradlew :app:connectedDebugAndroidTest` against that emulator only (it pins the serial, so a physical device attached at the same time is ignored).
+
+**Always go through the wrapper — do not run `./gradlew :app:connectedDebugAndroidTest` against an already-running emulator.** A warm emulator degrades across back-to-back runs (`system_server` watchdog ANRs, hundreds of skipped frames), which surfaces as `ComposeTimeoutException` / `ComposeNotIdleException` flakes or an outright `Process crashed`. A cold boot resets that — a clean run finishes in ~3 min; a degraded one takes 15+ min or never completes. Rationale: [ADR 0001 § *Cold boot per run*](docs/adr/0001-local-ui-test-suite.md).
+
+To hunt flakes, run several cold-booted passes in a row:
+
+```bash
+RUNS=3 ./scripts/run-instrumented-tests.sh
 ```
 
 HTML report: `app/build/reports/androidTests/connected/debug/index.html`. Raw XML: `app/build/outputs/androidTest-results/connected/debug/`.
 
 #### Run a single test class
 
+Any extra arguments are passed straight through to Gradle:
+
 ```bash
-./gradlew app:connectedDebugAndroidTest \
+./scripts/run-instrumented-tests.sh \
   -Pandroid.testInstrumentationRunnerArguments.class=com.github.barriosnahuel.vossosunboton.ui.home.SearchOverlayTest
 ```
 

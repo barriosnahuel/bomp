@@ -179,6 +179,8 @@ Mock singleton factories (e.g. `PlayerControllerFactory`) that crash under Robol
 
 Instrumented UI/functional tests live under `app/src/androidTest/`. CircleCI intentionally does not run them — see [ADR 0001](docs/adr/0001-local-ui-test-suite.md). When to run, setup, run commands, report paths: CONTRIBUTING.md § *Testing → Local UI test suite*.
 
+**Always run the suite via `./scripts/run-instrumented-tests.sh`** — never `./gradlew :app:connectedDebugAndroidTest` directly against an already-running emulator. A warm AVD degrades across back-to-back runs (`system_server` watchdog ANRs, skipped frames); the failures masquerade as per-test flakes (`ComposeTimeoutException` / `ComposeNotIdleException`) or escalate to `Process crashed`. The wrapper cold-boots the AVD before each run. If the suite flakes, re-run via the wrapper before suspecting a test or production bug. Rationale: [ADR 0001 § *Cold boot per run*](docs/adr/0001-local-ui-test-suite.md).
+
 ### Synchronization (avoid bare `waitForIdle()` for state-dependent nodes)
 
 `waitForIdle()` only flushes Compose recompositions — not the `DataStore → StateFlow → render` chain (canonical race, PR #1111). For nodes whose existence depends on ViewModel/DataStore state, use `awaitNode*` helpers in `app/src/androidTest/.../ComposeTestExtensions.kt` (rationale in KDoc):
@@ -197,7 +199,7 @@ Full checklists: CONTRIBUTING.md § *Testing → Pre-PR checklist* / *Pre-push c
 
 - Smoke tests required: new `Activity` (§ *Activity smoke tests*); new full-screen Composable with business logic (`createComposeRule()`); Composables with durable state need at least one `scenario.recreate()` test (§ *Stateful Composables*).
 - Run `./gradlew check -x test && ./gradlew test` before pushing — same failures CI reports. Detekt max line length: **150**.
-- **Functional changes also require the local UI test suite** (§ *Local UI test suite*). Touching Composables, ViewModels, intents, navigation, deep links, or persistence → run the instrumented suite on an emulator. CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy, README, comments) are exempt.
+- **Functional changes also require the local UI test suite** (§ *Local UI test suite*). Touching Composables, ViewModels, intents, navigation, deep links, or persistence → run `./scripts/run-instrumented-tests.sh` (cold-boots the emulator; never run the Gradle task against a warm AVD). CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy, README, comments) are exempt.
 
 ## Analytics events
 

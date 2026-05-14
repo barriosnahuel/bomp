@@ -57,10 +57,11 @@ echo "no" | avdmanager create avd \
 cat <<EOF
 ✔ AVD '${AVD_NAME}' ready.
 
-Launch it before running the UI test suite:
-  emulator -avd ${AVD_NAME} -no-snapshot-save -no-boot-anim &
-  adb wait-for-device shell 'while [[ \$(getprop sys.boot_completed) != 1 ]]; do sleep 1; done'
+Run the UI test suite with the wrapper — it cold-boots the AVD (wiped userdata)
+before every run, which the suite needs to stay reliable:
+  ./scripts/run-instrumented-tests.sh
 
-Then run the suite:
-  ./gradlew app:connectedDebugAndroidTest
+A warm emulator degrades across back-to-back runs; do not invoke
+'./gradlew :app:connectedDebugAndroidTest' against an already-running instance.
+See ./scripts/run-instrumented-tests.sh and docs/adr/0001-local-ui-test-suite.md.
 EOF
