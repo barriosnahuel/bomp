@@ -425,9 +425,11 @@ private fun SoundCardMetaRow(
     trailingLabel: String?,
 ) {
     Row(modifier = Modifier.fillMaxWidth()) {
+        // `playbackProgress` is non-null while playing AND while paused (the caller passes the
+        // retained paused position), so a paused sound shows where it is, not its full duration.
         val displayMs =
             when {
-                sound.isPlaying && playbackProgress != null -> playbackProgress.positionMs
+                playbackProgress != null -> playbackProgress.positionMs
                 durationMs != null -> durationMs
                 else -> null
             }

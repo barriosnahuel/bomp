@@ -257,7 +257,11 @@ internal class PlayerControllerImpl(
         when (t) {
             is PlaybackTarget.SoundTarget -> {
                 savedSoundPositions[t.sound.name] = pos
-                listener?.onPlayerStop(t.sound, completed = false)
+                // Preemption preserves position → it is a pause, not a stop. The consumer keeps the
+                // sound visible at `pos`. `mediaPlayer.duration` is still valid here because the
+                // caller resets the player only AFTER this method returns.
+                val dur = runCatching { mediaPlayer.duration }.getOrDefault(0)
+                listener?.onPlayerPause(t.sound, positionMs = pos, durationMs = dur)
             }
             is PlaybackTarget.UriTarget -> {
                 // Uri previews don't get a cross-screen position cache: the AudioPreview composable
@@ -334,7 +338,8 @@ internal class PlayerControllerImpl(
         when (t) {
             is PlaybackTarget.SoundTarget -> {
                 savedSoundPositions[t.sound.name] = pos
-                listener?.onPlayerStop(t.sound, completed = false)
+                val dur = runCatching { mediaPlayer.duration }.getOrDefault(0)
+                listener?.onPlayerPause(t.sound, positionMs = pos, durationMs = dur)
             }
             is PlaybackTarget.UriTarget -> {
                 _playbackState.update { it?.copy(positionMs = pos, isPlaying = false) }
