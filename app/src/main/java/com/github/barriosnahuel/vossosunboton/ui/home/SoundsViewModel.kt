@@ -122,6 +122,13 @@ class SoundsViewModel(
     private val _playbackProgress = MutableStateFlow<PlaybackProgress?>(null)
     val playbackProgress: StateFlow<PlaybackProgress?> = _playbackProgress.asStateFlow()
 
+    // Position of every sound that is paused (not the currently-playing one). Keyed by sound name.
+    // Lets the UI keep a paused sound's progress bar at its position instead of collapsing it to
+    // zero, so a pause reads as a pause rather than a reset. Cleared when the sound starts again
+    // or is definitively stopped. In-memory only — mirrors the controller's saved-position cache.
+    private val _pausedProgress = MutableStateFlow<Map<String, PlaybackProgress>>(emptyMap())
+    val pausedProgress: StateFlow<Map<String, PlaybackProgress>> = _pausedProgress.asStateFlow()
+
     private val _soundDurations = MutableStateFlow<Map<String, Int>>(emptyMap())
     val soundDurations: StateFlow<Map<String, Int>> = _soundDurations.asStateFlow()
 
@@ -535,6 +542,8 @@ class SoundsViewModel(
         // it (rather than 0) prevents a ~100 ms slider flicker before the first progressRunnable
         // tick reports the real position.
         _playbackProgress.value = PlaybackProgress(positionMs = positionMs, durationMs = durationMs)
+        // The sound is playing now, not paused — drop any retained paused position for it.
+        _pausedProgress.update { it - sound.name }
         _soundDurations.update { it + (sound.name to durationMs) }
         viewModelScope.launch(ioDispatcher) {
             repo.saveDuration(sound.name, durationMs)
@@ -551,6 +560,8 @@ class SoundsViewModel(
         val stoppedSound = sound.copy(isPlaying = false)
         _playingSound.value = null
         _playbackProgress.value = null
+        // A definitive stop discards the position — drop any retained paused progress for it.
+        _pausedProgress.update { it - sound.name }
         _sounds.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
         allSoundsCache.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
         recomputeSearchResults()
@@ -562,6 +573,25 @@ class SoundsViewModel(
             _deletedSoundEvent.value = DeletedSoundEvent(stoppedSound, position)
             tracker.log(AnalyticsEvent.WelcomeStickerCompleted)
         }
+    }
+
+    override fun onPlayerPause(
+        sound: Sound,
+        positionMs: Int,
+        durationMs: Int,
+    ) {
+        // Paused (toggle) or preempted (another playback started). The sound is no longer the
+        // active one, so `_playingSound` / `_playbackProgress` clear — but unlike a stop, we
+        // retain its position in `_pausedProgress` so the UI keeps the slider where it was.
+        val pausedSound = sound.copy(isPlaying = false)
+        if (_playingSound.value?.name == sound.name) {
+            _playingSound.value = null
+            _playbackProgress.value = null
+        }
+        _pausedProgress.update { it + (sound.name to PlaybackProgress(positionMs = positionMs, durationMs = durationMs)) }
+        _sounds.update { list -> list.map { if (it.name == sound.name) pausedSound else it } }
+        allSoundsCache.update { list -> list.map { if (it.name == sound.name) pausedSound else it } }
+        recomputeSearchResults()
     }
 
     override fun onProgressUpdate(positionMs: Int) {

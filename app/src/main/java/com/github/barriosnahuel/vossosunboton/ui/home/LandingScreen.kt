@@ -78,6 +78,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val hasBundledSounds by viewModel.hasBundledSounds.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
+    val pausedProgress by viewModel.pausedProgress.collectAsState()
     val soundDurations by viewModel.soundDurations.collectAsState()
     val isSearchVisible by viewModel.isSearchVisible.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -162,6 +163,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             SoundsList(
                 sounds = sounds,
                 playbackProgress = playbackProgress,
+                pausedProgress = pausedProgress,
                 soundDurations = soundDurations,
                 listState = listState,
                 modifier = Modifier.padding(innerPadding),
@@ -183,6 +185,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             results = searchResults,
             isSearchPending = isSearchPending,
             playbackProgress = playbackProgress,
+            pausedProgress = pausedProgress,
             soundDurations = soundDurations,
             onQueryChange = viewModel::onSearchQueryChange,
             onClose = viewModel::hideSearch,
@@ -355,6 +358,7 @@ private val WELCOME_BORDER_WIDTH = 1.5.dp
 private fun SoundsList(
     sounds: List<Sound>,
     playbackProgress: PlaybackProgress?,
+    pausedProgress: Map<String, PlaybackProgress>,
     soundDurations: Map<String, Int>,
     listState: LazyListState,
     modifier: Modifier = Modifier,
@@ -393,6 +397,10 @@ private fun SoundsList(
                         ) + fadeOut(animationSpec = tween(durationMillis = DELETE_ANIMATION_DURATION_MS)),
                 ) {
                     val resolvedDurationMs = soundDurations[sound.name]
+                    // A sound shows progress when it is playing (live `playbackProgress`) OR when it
+                    // is paused (`pausedProgress[name]`, retained so the bar doesn't snap to zero).
+                    val effectiveProgress =
+                        if (sound.isPlaying) playbackProgress else pausedProgress[sound.name]
                     val welcomeBorder =
                         if (isWelcome) {
                             BorderStroke(WELCOME_BORDER_WIDTH, MaterialTheme.colorScheme.primaryContainer)
@@ -403,8 +411,8 @@ private fun SoundsList(
                         if (isWelcome) {
                             val remainingMs =
                                 when {
-                                    sound.isPlaying && playbackProgress != null ->
-                                        (playbackProgress.durationMs - playbackProgress.positionMs).coerceAtLeast(0)
+                                    effectiveProgress != null ->
+                                        (effectiveProgress.durationMs - effectiveProgress.positionMs).coerceAtLeast(0)
                                     resolvedDurationMs != null -> resolvedDurationMs
                                     else -> null
                                 }
@@ -414,7 +422,7 @@ private fun SoundsList(
                         }
                     SoundItem(
                         sound = sound,
-                        playbackProgress = if (sound.isPlaying) playbackProgress else null,
+                        playbackProgress = effectiveProgress,
                         durationMs = resolvedDurationMs,
                         onPlayClick = { onPlayClick(sound) },
                         onSeek = onSeek,

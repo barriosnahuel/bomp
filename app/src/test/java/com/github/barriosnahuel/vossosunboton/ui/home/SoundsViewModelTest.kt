@@ -166,6 +166,55 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `onPlayerPause retains the sound position in pausedProgress and clears playingSound`() {
+        // The core "pause is not a reset" guarantee: after a pause the sound is no longer the
+        // active one (playingSound / playbackProgress clear), but its position stays in
+        // pausedProgress so the UI keeps the progress bar where it was instead of snapping to 0.
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", rawRes = 1)
+        viewModel.injectSounds(listOf(sound))
+        viewModel.onPlayerStart(sound, durationMs = 10_000)
+
+        viewModel.onPlayerPause(sound, positionMs = 3_500, durationMs = 10_000)
+
+        assertThat(viewModel.playingSound.value).isNull()
+        assertThat(viewModel.playbackProgress.value).isNull()
+        val paused = viewModel.pausedProgress.value["test"]
+        assertThat(paused).isNotNull()
+        assertThat(paused!!.positionMs).isEqualTo(3_500)
+        assertThat(paused.durationMs).isEqualTo(10_000)
+        assertThat(
+            viewModel.sounds.value
+                .single { it.name == "test" }
+                .isPlaying,
+        ).isFalse()
+    }
+
+    @Test
+    fun `onPlayerStart clears a previously-paused sound from pausedProgress`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", rawRes = 1)
+        viewModel.injectSounds(listOf(sound))
+        viewModel.onPlayerPause(sound, positionMs = 3_500, durationMs = 10_000)
+
+        viewModel.onPlayerStart(sound, durationMs = 10_000, positionMs = 3_500)
+
+        assertThat(viewModel.pausedProgress.value).doesNotContainKey("test")
+    }
+
+    @Test
+    fun `onPlayerStop clears a previously-paused sound from pausedProgress`() {
+        val viewModel = givenAViewModel()
+        val sound = Sound("test", rawRes = 1)
+        viewModel.injectSounds(listOf(sound))
+        viewModel.onPlayerPause(sound, positionMs = 3_500, durationMs = 10_000)
+
+        viewModel.onPlayerStop(sound, completed = false)
+
+        assertThat(viewModel.pausedProgress.value).doesNotContainKey("test")
+    }
+
+    @Test
     fun `playOrStop when sound is not playing calls startPlayingSound`() {
         every { PlayerControllerFactory.instance.startPlayingSound(any(), any()) } answers { nothing }
         val viewModel = givenAViewModel()

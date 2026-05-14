@@ -100,17 +100,34 @@ internal interface PlayerController {
 
 internal interface PlayerControllerListener {
     /**
-     * Perform any action you want after player has stopped.
+     * Perform any action you want after the player has definitively stopped — the playback
+     * position is gone.
      * @param sound The sound that was playing before.
      * @param completed `true` when the audio reached natural end-of-stream
-     *   (`MediaPlayer.OnCompletionListener`); `false` when the user paused (toggle), when the
-     *   target was preempted by a new playback, or when [PlayerController.stopPlayingSound] was
-     *   called explicitly. The Sticker Cero auto-destruct branch in `SoundsViewModel` relies on
-     *   this to distinguish a finished welcome message from a user-initiated pause/preemption.
+     *   (`MediaPlayer.OnCompletionListener`); `false` when [PlayerController.stopPlayingSound] or
+     *   [PlayerController.forgetSound] was called explicitly. The Sticker Cero auto-destruct branch
+     *   in `SoundsViewModel` relies on `completed` to distinguish a finished welcome message from
+     *   an explicit stop. NOTE: a user pause or a preemption is NOT a stop — see [onPlayerPause].
      */
     fun onPlayerStop(
         sound: Sound,
         completed: Boolean,
+    )
+
+    /**
+     * The given [sound] was paused with its position retained — either by a user toggle or by
+     * being preempted when another playback started. A later resume continues from [positionMs].
+     * Distinct from [onPlayerStop]: the consumer should keep the sound visible as "paused at
+     * [positionMs]" (e.g. the progress bar stays where it was) rather than collapsing it to a
+     * fresh "stopped" state.
+     * @param sound The sound that was paused.
+     * @param positionMs Playback position preserved for resume, in milliseconds.
+     * @param durationMs Total duration of the audio in milliseconds.
+     */
+    fun onPlayerPause(
+        sound: Sound,
+        positionMs: Int,
+        durationMs: Int,
     )
 
     /**

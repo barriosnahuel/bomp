@@ -225,7 +225,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `pause on a playing Sound saves position and emits onPlayerStop without reset`() {
+    fun `pause on a playing Sound saves position and emits onPlayerPause without reset`() {
         val context = mockk<Context>(relaxed = true)
         val sound = Sound("test", rawRes = 1)
         val mp = givenAnIdleMediaPlayer()
@@ -245,7 +245,10 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         verify { mp.pause() }
         // Only the initial reset() to load the source — no second reset on pause.
         verify(exactly = 1) { mp.reset() }
-        verify { listener.onPlayerStop(sound, completed = false) }
+        // A pause is NOT a stop: the listener gets onPlayerPause (position retained) so the UI can
+        // keep the progress bar where it was, and onPlayerStop is never fired.
+        verify { listener.onPlayerPause(sound, positionMs = 3_500, durationMs = 10_000) }
+        verify(exactly = 0) { listener.onPlayerStop(sound, any()) }
     }
 
     @Test
@@ -421,10 +424,11 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `startPlayingUri while a Sound is playing preempts the sound via onPlayerStop with completed=false`() {
-        // Concurrency invariant: starting a Stream while a Sound plays must surface the stop event
-        // to the Sound listener so the Home UI can collapse the playing state. The Sound's position
-        // is also captured for resume; the listener event itself does not change.
+    fun `startPlayingUri while a Sound is playing preempts the sound via onPlayerPause`() {
+        // Concurrency invariant: starting a Stream while a Sound plays must surface the event to
+        // the Sound listener so the Home UI updates. Because the Sound's position is captured for
+        // a later resume, the event is onPlayerPause (not onPlayerStop) — the UI keeps the Sound's
+        // progress bar at its position rather than collapsing it.
         val context = mockk<Context>(relaxed = true)
         val sound = Sound("test", rawRes = 1)
         val mp = givenAnIdleMediaPlayer()
@@ -441,7 +445,8 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         every { mp.isPlaying } returns true
         controller.startPlayingUri(context, Uri.parse("content://test/clip.mp3"))
 
-        verify { listener.onPlayerStop(sound, completed = false) }
+        verify { listener.onPlayerPause(sound, positionMs = 1_200, durationMs = 5_000) }
+        verify(exactly = 0) { listener.onPlayerStop(sound, any()) }
     }
 
     @Test
