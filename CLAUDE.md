@@ -29,7 +29,7 @@ Run `/claude-md-audit` when this file approaches 40K or feels bloated.
 ./gradlew :model:test --tests "com.github.barriosnahuel.vossosunboton.model.SomeTest"   # Single test class
 ```
 
-Release-only commands (`app:lintVitalRelease`, `app:bundle`) and emulator workflows in CONTRIBUTING.md. The Android CLI tools — `adb`, `fastboot`, `emulator` — are on `PATH`.
+Release-only commands (`app:lintVitalRelease`, `app:bundle`) in CONTRIBUTING.md § *Release builds*; emulator workflows in § *Testing → Local UI test suite*. The Android CLI tools — `adb`, `fastboot`, `emulator` — are on `PATH`.
 
 ## Module Architecture
 

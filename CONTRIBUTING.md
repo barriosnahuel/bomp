@@ -16,6 +16,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Logcat](#logcat-)
 - [Resources](#resources-)
 - [Signing](#signing-)
+- [Release builds](#release-builds-)
 - [Bundled audio files](#bundled-audio-files-)
 - [Store listing](#store-listing-)
 - [Copy guide](#copy-guide-)
@@ -319,6 +320,15 @@ Empty output means every detected violation matched a `KnownThirdPartyViolation`
 The following files must be located into the root dir:
 - `nahuelbarrios.keystore-appbundle.pkcs12`
 - `secure.properties`
+
+## Release builds 📦
+
+Release-only Gradle commands (need the signing files above in the project root):
+
+```bash
+./gradlew app:lintVitalRelease   # Android lint, release variant — the release lint gate
+./gradlew app:bundle             # Build the AAB for Play Store upload
+```
 
 ## Bundled audio files 🔊
 
