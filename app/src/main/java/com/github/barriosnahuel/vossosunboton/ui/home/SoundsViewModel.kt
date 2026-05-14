@@ -291,7 +291,11 @@ class SoundsViewModel(
 
     fun playOrStop(sound: Sound) {
         if (sound.isPlaying) {
-            PlayerControllerFactory.instance.stopPlayingSound()
+            // Tap-while-playing now pauses (preserving position via the controller's in-process
+            // cache) rather than stopping. The icon and slider still collapse to "not playing"
+            // because _playingSound goes null on onPlayerStop — the saved position is invisible to
+            // the VM/UI and only surfaces when the user re-taps and the controller resumes.
+            PlayerControllerFactory.instance.pause()
         } else {
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
             if (isWelcomeSticker(sound)) {
@@ -326,9 +330,12 @@ class SoundsViewModel(
         val position = currentSounds.indexOf(currentSound)
         val isWelcome = isWelcomeSticker(sound)
 
-        if (_playingSound.value?.name == sound.name) {
-            PlayerControllerFactory.instance.stopPlayingSound()
-        }
+        // Always ask the controller to forget this sound: it cleans up the saved-position cache
+        // and, if this sound is the currently-loaded MediaPlayer target (playing OR paused),
+        // stops and resets it. Going through _playingSound here would miss the paused case (after
+        // the play/pause unification, `_playingSound` is null while the sound is paused but the
+        // controller still holds the data source).
+        PlayerControllerFactory.instance.forgetSound(sound)
 
         currentSounds.removeAt(position)
         _sounds.value = currentSounds
@@ -520,10 +527,14 @@ class SoundsViewModel(
     override fun onPlayerStart(
         sound: Sound,
         durationMs: Int,
+        positionMs: Int,
     ) {
         val playingSound = sound.copy(isPlaying = true)
         _playingSound.value = playingSound
-        _playbackProgress.value = PlaybackProgress(positionMs = 0, durationMs = durationMs)
+        // positionMs is non-zero on resume from a paused state; initialising _playbackProgress with
+        // it (rather than 0) prevents a ~100 ms slider flicker before the first progressRunnable
+        // tick reports the real position.
+        _playbackProgress.value = PlaybackProgress(positionMs = positionMs, durationMs = durationMs)
         _soundDurations.update { it + (sound.name to durationMs) }
         viewModelScope.launch(ioDispatcher) {
             repo.saveDuration(sound.name, durationMs)

@@ -18,7 +18,7 @@ internal object PlayerControllerFactory {
  * Snapshot of an in-progress Stream (preview) playback. Null when no Stream is playing.
  *
  * Sound (Home/Explore list) playback is reported through [PlayerControllerListener], not through
- * this StateFlow — see ADR 0005 for the bridging rationale and revisit criteria.
+ * this StateFlow — see ADR 0007 for the bridging rationale and revisit criteria.
  */
 internal data class PlaybackState(
     val uri: Uri,
@@ -34,36 +34,63 @@ internal interface PlayerController {
      */
     val playbackState: StateFlow<PlaybackState?>
 
+    /**
+     * Starts (or resumes) playback for [sound]. Behavior:
+     * - If [sound] is the currently-loaded target and the MediaPlayer is paused → resume in place
+     *   via `MediaPlayer.start()` (no reset, no re-prepare, position preserved).
+     * - Otherwise → pause any other target while preserving its position, reset, prepare the new
+     *   sound, seek to its previously-saved position (if any), and start.
+     *
+     * Saved positions live in-process and survive Activity recreation; they are lost on app/OS kill.
+     * They are also cleared when the sound finishes naturally (OnCompletionListener) or when
+     * [stopPlayingSound]/[forgetSound] is called for that sound.
+     */
     fun startPlayingSound(
         context: Context,
         sound: Sound,
     )
 
     /**
-     * Starts playback of an arbitrary [uri]. If a Sound is currently playing it is stopped first
-     * (the registered [PlayerControllerListener] sees `onPlayerStop(currentSound, completed = false)`).
-     * Progress is reported via [playbackState] only — listener events are not fired (no Sound to
-     * pass).
+     * Starts playback of an arbitrary [uri]. If another target (Sound or Uri) is currently playing
+     * or paused it is preempted: its position is saved (Sound) or its state cleared (Uri), and the
+     * registered [PlayerControllerListener] sees `onPlayerStop(currentSound, completed = false)`
+     * for the Sound case. Progress for the new preview is reported via [playbackState] only —
+     * listener events are not fired (no Sound to pass).
      */
     fun startPlayingUri(
         context: Context,
         uri: Uri,
     )
 
+    /**
+     * Fully stops the current target (if any), clears its saved position, and tears down the
+     * progress callbacks. Use this for definitive stop scenarios (e.g. AudioPreview disposal,
+     * deleting the currently-loaded sound). For "user tapped the playing sound to pause it" use
+     * [pause] instead — that preserves position.
+     */
     fun stopPlayingSound()
 
     /**
-     * Pauses an in-progress Stream playback. No-op for Sound playback (the Home UX is
-     * "tap again to stop", not pause/resume).
+     * Pauses the currently-playing target (Sound or Uri), preserving its position so a later
+     * [resume] or [startPlayingSound] of the same target picks up where it left off. No-op if
+     * nothing is playing.
      */
     fun pause()
 
     /**
-     * Resumes a paused Stream playback from its last position.
+     * Resumes a paused target from its last position. No-op if nothing is paused or the current
+     * target is already playing.
      */
     fun resume()
 
     fun seekTo(positionMs: Int)
+
+    /**
+     * Forgets all controller state associated with [sound]: removes its saved position from the
+     * cache, and if it is the currently-loaded MediaPlayer target, stops and resets. Use when a
+     * sound is being deleted so its in-memory playback state does not outlive the entity.
+     */
+    fun forgetSound(sound: Sound)
 
     /**
      * @param listener the listener that will handle all play/stop callbacks for all buttons.
@@ -76,9 +103,10 @@ internal interface PlayerControllerListener {
      * Perform any action you want after player has stopped.
      * @param sound The sound that was playing before.
      * @param completed `true` when the audio reached natural end-of-stream
-     *   (`MediaPlayer.OnCompletionListener`); `false` when stopped by the user (or pre-empted by a
-     *   new `startPlayingSound` call). The Sticker Cero auto-destruct branch in `SoundsViewModel`
-     *   relies on this to distinguish a finished welcome message from a user-initiated pause.
+     *   (`MediaPlayer.OnCompletionListener`); `false` when the user paused (toggle), when the
+     *   target was preempted by a new playback, or when [PlayerController.stopPlayingSound] was
+     *   called explicitly. The Sticker Cero auto-destruct branch in `SoundsViewModel` relies on
+     *   this to distinguish a finished welcome message from a user-initiated pause/preemption.
      */
     fun onPlayerStop(
         sound: Sound,
@@ -86,13 +114,17 @@ internal interface PlayerControllerListener {
     )
 
     /**
-     * Perform any action you want right after the given sound started to play.
+     * Perform any action you want right after the given sound started (or resumed) playback.
      * @param sound The sound that has started to play.
      * @param durationMs Total duration of the audio in milliseconds.
+     * @param positionMs Current playback position in milliseconds. Non-zero on resume from a
+     *   paused state or when starting a sound that had a saved position from a previous session
+     *   in this process; zero on a fresh start.
      */
     fun onPlayerStart(
         sound: Sound,
         durationMs: Int,
+        positionMs: Int = 0,
     )
 
     /** Called approximately every 100 ms while audio is playing. */

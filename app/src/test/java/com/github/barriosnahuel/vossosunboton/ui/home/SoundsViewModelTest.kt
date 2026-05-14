@@ -48,6 +48,12 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
+        // deleteSound always asks the controller to forget the sound. Stubbing here keeps individual
+        // delete-related tests free of boilerplate; tests that need to assert the call still verify
+        // it explicitly.
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
+        // playOrStop on a playing sound now routes through pause(), not stopPlayingSound().
+        every { PlayerControllerFactory.instance.pause() } answers { nothing }
     }
 
     @After
@@ -171,19 +177,29 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `playOrStop when sound is playing calls stopPlayingSound`() {
-        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+    fun `playOrStop when sound is playing calls pause to preserve position`() {
+        // After the play/pause unification, tap-while-playing pauses the controller (saving the
+        // position in its in-process cache) instead of fully stopping. The UI still collapses
+        // because the controller fires onPlayerStop(completed=false) on pause — the saved position
+        // is invisible to the VM and only surfaces when the user re-taps and the controller
+        // resumes via mp.start() without resetting.
+        val controller = PlayerControllerFactory.instance
         val viewModel = givenAViewModel()
         val sound = Sound("test", null, 1, isPlaying = true)
 
         viewModel.playOrStop(sound)
 
-        verify { PlayerControllerFactory.instance.stopPlayingSound() }
+        verify { controller.pause() }
+        verify(exactly = 0) { controller.stopPlayingSound() }
     }
 
     @Test
-    fun `deleteSound when sound is playing stops playback`() {
-        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+    fun `deleteSound asks the controller to forget the sound`() {
+        // Always — regardless of whether the sound is currently playing, paused, or untouched —
+        // the controller must drop its in-memory state for this sound so a future name collision
+        // can't seekTo a stale position. forgetSound handles all three cases internally (no-op
+        // when the sound has no saved state).
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val viewModel = givenAViewModel()
         val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
@@ -191,12 +207,12 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         viewModel.deleteSound(sound)
 
-        verify { PlayerControllerFactory.instance.stopPlayingSound() }
+        verify { PlayerControllerFactory.instance.forgetSound(sound) }
     }
 
     @Test
     fun `restoreSound when deleted sound was playing restores it as not playing`() {
-        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val viewModel = givenAViewModel()
         val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
@@ -213,7 +229,11 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `deleteSound when sound is not playing does not stop playback`() {
+    fun `deleteSound when sound is not playing still asks the controller to forget it`() {
+        // The forgetSound call is unconditional: the controller may hold a saved position for this
+        // sound even when nothing is currently playing (e.g. the user paused it earlier). Calling
+        // forgetSound here drops that saved state so a future name collision doesn't resurrect it.
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val controller = PlayerControllerFactory.instance
         val viewModel = givenAViewModel()
         val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
@@ -221,6 +241,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         viewModel.deleteSound(sound)
 
+        verify { controller.forgetSound(sound) }
         verify(exactly = 0) { controller.stopPlayingSound() }
     }
 
@@ -341,8 +362,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `deleteSound stops playback and removes sound even when passed a stale copy with isPlaying false`() {
-        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+    fun `deleteSound forgets the sound and removes it even when passed a stale copy with isPlaying false`() {
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val viewModel = givenAViewModel()
         val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound.copy(isPlaying = true)))
@@ -350,7 +371,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         viewModel.deleteSound(sound)
 
-        verify { PlayerControllerFactory.instance.stopPlayingSound() }
+        verify { PlayerControllerFactory.instance.forgetSound(sound) }
         assertThat(viewModel.sounds.value.none { it.name == sound.name }).isTrue()
     }
 
@@ -659,7 +680,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
     @Test
     fun `deleteSound on welcome flips visibility and emits delete event`() {
-        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val viewModel = givenAViewModel()
         val welcomeTitle =
             ApplicationProvider
@@ -680,7 +701,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
     @Test
     fun `restoreSound on welcome inserts at the END not at original position 0`() {
-        every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking {
             val repo = SoundsRepository(context)
