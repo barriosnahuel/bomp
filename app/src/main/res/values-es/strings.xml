@@ -25,7 +25,7 @@
     <string name="app_search_hint">Buscar por nombre…</string>
     <string name="app_search_close">Cerrar búsqueda</string>
     <string name="app_search_clear">Limpiar búsqueda</string>
-    <string name="app_search_initial_hint">Escribí para filtrar tus stickers…</string>
+    <string name="app_search_initial_hint">Esa reliquia tuya está acá. Encontrala.</string>
     <string name="app_search_empty_headline">Silencio absoluto…</string>
     <string name="app_search_empty_subtext">Este sticker aún no existe. Tu colección tiene un vacío que solo vos podés llenar.</string>
     <string name="app_edit">Renombrar</string>
