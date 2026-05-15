@@ -71,32 +71,30 @@ class SoundsRepository(
 
     val durations: Flow<Map<String, Int>> =
         storedSounds
-            .map { list -> list.mapNotNull { s -> s.durationMs?.let { s.name to it } }.toMap() }
+            .map { list -> list.mapNotNull { s -> s.durationMs?.let { s.id to it } }.toMap() }
             .distinctUntilChanged()
 
     suspend fun save(sound: Sound) {
         validateName(sound.name)
-        require(sound.name !in bundledNames(context)) {
-            "Sound name collides with a bundled sound: '${sound.name}'"
-        }
         mutate { current ->
-            current.filterNot { it.name == sound.name } + sound.toStored(previous = current.firstOrNull { it.name == sound.name })
+            current.filterNot { it.id == sound.id } + sound.toStored(previous = current.firstOrNull { it.id == sound.id })
         }
     }
 
     suspend fun savePin(
+        id: String,
         name: String,
         isPinned: Boolean,
     ) {
         validateName(name)
         mutate { current ->
-            val existing = current.firstOrNull { it.name == name }
+            val existing = current.firstOrNull { it.id == id }
             if (existing != null) {
-                current.map { if (it.name == name) it.copy(isPinned = isPinned) else it }
+                current.map { if (it.id == id) it.copy(isPinned = isPinned) else it }
             } else if (isPinned) {
                 // Bundled sound being pinned for the first time: persist a stub so the flag survives.
                 // We deliberately skip writing a stub for `isPinned = false` to avoid useless growth.
-                current + StoredSound(name = name, isPinned = true)
+                current + StoredSound(id = id, name = name, isPinned = true)
             } else {
                 current
             }
@@ -104,31 +102,29 @@ class SoundsRepository(
     }
 
     suspend fun saveDuration(
+        id: String,
         name: String,
         durationMs: Int,
     ) {
         validateName(name)
         mutate { current ->
-            val existing = current.firstOrNull { it.name == name }
+            val existing = current.firstOrNull { it.id == id }
             if (existing != null) {
-                current.map { if (it.name == name) it.copy(durationMs = durationMs) else it }
+                current.map { if (it.id == id) it.copy(durationMs = durationMs) else it }
             } else {
                 // Bundled sound being played: persist a stub so the cached duration survives.
-                current + StoredSound(name = name, durationMs = durationMs)
+                current + StoredSound(id = id, name = name, durationMs = durationMs)
             }
         }
     }
 
     suspend fun rename(
-        oldName: String,
+        id: String,
         newName: String,
     ) {
         validateName(newName)
-        require(newName !in bundledNames(context)) {
-            "Renaming would collide with a bundled sound: '$newName'"
-        }
         mutate { current ->
-            current.map { if (it.name == oldName) it.copy(name = newName) else it }
+            current.map { if (it.id == id) it.copy(name = newName) else it }
         }
     }
 
@@ -140,7 +136,7 @@ class SoundsRepository(
                 }
             val deletedFromDisk = deleteFile(context, file)
             if (deletedFromDisk) {
-                mutate { current -> current.filterNot { it.name == sound.name } }
+                mutate { current -> current.filterNot { it.id == sound.id } }
             }
             deletedFromDisk
         }
@@ -205,14 +201,14 @@ class SoundsRepository(
         stored: List<StoredSound>,
         bundled: List<Sound>,
     ): List<Sound> {
-        val byName = stored.associateBy { it.name }
+        val byId = stored.associateBy { it.id }
         val customSounds =
             stored
                 .filter { it.file != null }
                 .map { it.toCustomSound(context) }
         val bundledSounds =
             bundled.map { sound ->
-                val storedFlags = byName[sound.name]
+                val storedFlags = byId[sound.id]
                 if (storedFlags != null && storedFlags.isPinned) {
                     sound.copy(isPinned = true)
                 } else {
@@ -226,6 +222,7 @@ class SoundsRepository(
         val soundFile = file?.let { getFile(context, it) }
         val dateAdded = soundFile?.takeIf { it.exists() }?.lastModified()
         return Sound(
+            id = id,
             name = name,
             file = file,
             rawRes = 0,
@@ -238,6 +235,7 @@ class SoundsRepository(
 
     private fun Sound.toStored(previous: StoredSound?): StoredSound =
         StoredSound(
+            id = id,
             name = name,
             file = file,
             isFavorite = isFavorite || previous?.isFavorite == true,
@@ -251,8 +249,6 @@ class SoundsRepository(
             "Sound name must be at most $MAX_NAME_LENGTH chars (was ${name.length})"
         }
     }
-
-    private fun bundledNames(context: Context): Set<String> = PackagedAudios.get(context).map { it.name }.toSet()
 
     companion object {
         /**

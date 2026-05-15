@@ -24,7 +24,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
-import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -39,7 +39,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
     @Test
     fun `swipe right triggers pin callback`() {
         var pinCallCount = 0
-        val sound = Sound("test sound", file = "test.mp3")
+        val sound = testSound("test sound", file = "test.mp3")
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -66,7 +66,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
     @Test
     fun `swipe right twice calls onPinClick with updated sound state each time`() {
         val capturedIsPinned = mutableListOf<Boolean>()
-        var sound by mutableStateOf(Sound("test sound", file = "test.mp3"))
+        var sound by mutableStateOf(testSound("test sound", file = "test.mp3"))
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -98,7 +98,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
     @Test
     fun `swipe left triggers delete callback`() {
         var deleteCallCount = 0
-        val sound = Sound("test sound", file = "test.mp3")
+        val sound = testSound("test sound", file = "test.mp3")
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -122,7 +122,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
 
     @Test
     fun `when idle with duration shows total duration`() {
-        val sound = Sound("bell", file = "bell.mp3")
+        val sound = testSound("bell", file = "bell.mp3")
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -144,7 +144,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
 
     @Test
     fun `when playing shows elapsed time not remaining`() {
-        val sound = Sound("bell", file = "bell.mp3").copy(isPlaying = true)
+        val sound = testSound("bell", file = "bell.mp3").copy(isPlaying = true)
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -168,7 +168,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
     fun `pinned and unpinned card have the same height`() {
         var pinnedHeight = 0
         var unpinnedHeight = 0
-        val sound = Sound("test sound", file = "test.mp3")
+        val sound = testSound("test sound", file = "test.mp3")
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -206,7 +206,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
     @Test
     fun `swipe right on bundled sound triggers pin callback`() {
         var pinCallCount = 0
-        val sound = Sound("bundled sound", rawRes = 1)
+        val sound = testSound("bundled sound", rawRes = 1)
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -231,7 +231,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
     @Test
     fun `swipe left on bundled sound does not trigger delete callback`() {
         var deleteCallCount = 0
-        val sound = Sound("bundled sound", rawRes = 1)
+        val sound = testSound("bundled sound", rawRes = 1)
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -255,7 +255,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
 
     @Test
     fun `pin button is visible for bundled sound`() {
-        val sound = Sound("bundled sound", rawRes = 1)
+        val sound = testSound("bundled sound", rawRes = 1)
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -279,7 +279,7 @@ internal class SoundItemTest : AbstractRobolectricTest() {
     // matching test in WelcomeStickerScreenTest covers that single-item case.
     @Test
     fun `custom-sound long-press opens dropdown with both Edit and Delete`() {
-        val sound = Sound("custom sound", file = "custom.mp3")
+        val sound = testSound("custom sound", file = "custom.mp3")
 
         composeTestRule.setContent {
             MaterialTheme {

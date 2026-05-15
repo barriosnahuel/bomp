@@ -122,7 +122,7 @@ class SoundsViewModel(
     private val _playbackProgress = MutableStateFlow<PlaybackProgress?>(null)
     val playbackProgress: StateFlow<PlaybackProgress?> = _playbackProgress.asStateFlow()
 
-    // Position of every sound that is paused (not the currently-playing one). Keyed by sound name.
+    // Position of every sound that is paused (not the currently-playing one). Keyed by sound id.
     // Lets the UI keep a paused sound's progress bar at its position instead of collapsing it to
     // zero, so a pause reads as a pause rather than a reset. Cleared when the sound starts again
     // or is definitively stopped. In-memory only — mirrors the controller's saved-position cache.
@@ -275,7 +275,7 @@ class SoundsViewModel(
         val nowPinned = !sound.isPinned
         val sortedList = { list: List<Sound> ->
             list
-                .map { if (it.name == sound.name) it.copy(isPinned = nowPinned) else it }
+                .map { if (it.id == sound.id) it.copy(isPinned = nowPinned) else it }
                 .sortedWith(
                     compareByDescending<Sound> { it.isPinned }
                         .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
@@ -283,11 +283,11 @@ class SoundsViewModel(
                 )
         }
         _sounds.update(sortedList)
-        allSoundsCache.update { list -> list.map { if (it.name == sound.name) it.copy(isPinned = nowPinned) else it } }
+        allSoundsCache.update { list -> list.map { if (it.id == sound.id) it.copy(isPinned = nowPinned) else it } }
         recomputeSearchResults()
         if (nowPinned) _scrollToTopEvent.trySend(Unit)
         viewModelScope.launch(ioDispatcher) {
-            repo.savePin(sound.name, nowPinned)
+            repo.savePin(sound.id, sound.name, nowPinned)
         }
         tracker.log(AnalyticsEvent.PinToggle(pinned = nowPinned))
         tracker.setUserProperty(
@@ -332,7 +332,7 @@ class SoundsViewModel(
 
     fun deleteSound(sound: Sound) {
         val currentSounds = _sounds.value.toMutableList()
-        val currentSound = currentSounds.find { it.name == sound.name } ?: return
+        val currentSound = currentSounds.find { it.id == sound.id } ?: return
         val position = currentSounds.indexOf(currentSound)
         val isWelcome = isWelcomeSticker(sound)
 
@@ -347,7 +347,7 @@ class SoundsViewModel(
         _sounds.value = currentSounds
         if (!isWelcome) {
             // Welcome sticker is never in `allSoundsCache` (kept out of search) — skip the update.
-            allSoundsCache.update { list -> list.filter { it.name != sound.name } }
+            allSoundsCache.update { list -> list.filter { it.id != sound.id } }
             recomputeSearchResults()
         }
         _deletedSoundEvent.value = DeletedSoundEvent(currentSound.copy(isPlaying = false), position)
@@ -492,15 +492,15 @@ class SoundsViewModel(
             val welcomeWasRestored = welcomeStore.wasRestored()
             _soundDurations.update { current -> cachedDurations + current }
             _hasBundledSounds.value = allSounds.any { it.isBundled() }
-            val playingName = _playingSound.value?.name
+            val playingId = _playingSound.value?.id
             val deletedSound = _deletedSoundEvent.value?.sound
-            val deletedName = deletedSound?.name
+            val deletedId = deletedSound?.id
             val welcomeIsPendingDismissal = deletedSound != null && isWelcomeSticker(deletedSound)
             allSoundsCache.value =
-                if (playingName == null) {
+                if (playingId == null) {
                     allSounds
                 } else {
-                    allSounds.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
+                    allSounds.map { if (it.id == playingId) it.copy(isPlaying = true) else it }
                 }
             recomputeSearchResults()
             _sounds.update {
@@ -508,12 +508,12 @@ class SoundsViewModel(
                     when (_selectedTab.value) {
                         AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
-                    }.filter { it.name != deletedName }
+                    }.filter { it.id != deletedId }
                 val withWelcome = positionWelcomeIn(filtered, welcomeIsPendingDismissal, welcomeWasRestored)
-                if (playingName == null) {
+                if (playingId == null) {
                     withWelcome
                 } else {
-                    withWelcome.map { if (it.name == playingName) it.copy(isPlaying = true) else it }
+                    withWelcome.map { if (it.id == playingId) it.copy(isPlaying = true) else it }
                 }
             }
             val userCreatedCount = allSounds.count { !it.isBundled() }
@@ -542,13 +542,13 @@ class SoundsViewModel(
         // tick reports the real position.
         _playbackProgress.value = PlaybackProgress(positionMs = positionMs, durationMs = durationMs)
         // The sound is playing now, not paused — drop any retained paused position for it.
-        _pausedProgress.update { it - sound.name }
-        _soundDurations.update { it + (sound.name to durationMs) }
+        _pausedProgress.update { it - sound.id }
+        _soundDurations.update { it + (sound.id to durationMs) }
         viewModelScope.launch(ioDispatcher) {
-            repo.saveDuration(sound.name, durationMs)
+            repo.saveDuration(sound.id, sound.name, durationMs)
         }
-        _sounds.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
-        allSoundsCache.update { list -> list.map { if (it.name == sound.name) playingSound else it } }
+        _sounds.update { list -> list.map { if (it.id == sound.id) playingSound else it } }
+        allSoundsCache.update { list -> list.map { if (it.id == sound.id) playingSound else it } }
         recomputeSearchResults()
     }
 
@@ -560,14 +560,14 @@ class SoundsViewModel(
         _playingSound.value = null
         _playbackProgress.value = null
         // A definitive stop discards the position — drop any retained paused progress for it.
-        _pausedProgress.update { it - sound.name }
-        _sounds.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
-        allSoundsCache.update { list -> list.map { if (it.name == sound.name) stoppedSound else it } }
+        _pausedProgress.update { it - sound.id }
+        _sounds.update { list -> list.map { if (it.id == sound.id) stoppedSound else it } }
+        allSoundsCache.update { list -> list.map { if (it.id == sound.id) stoppedSound else it } }
         recomputeSearchResults()
 
         if (completed && isWelcomeSticker(sound)) {
-            val position = _sounds.value.indexOfFirst { it.name == sound.name }.coerceAtLeast(0)
-            _sounds.update { list -> list.filter { it.name != sound.name } }
+            val position = _sounds.value.indexOfFirst { it.id == sound.id }.coerceAtLeast(0)
+            _sounds.update { list -> list.filter { it.id != sound.id } }
             _welcomeStickerVisible.value = false
             _deletedSoundEvent.value = DeletedSoundEvent(stoppedSound, position)
             tracker.log(AnalyticsEvent.WelcomeStickerCompleted)
@@ -583,13 +583,13 @@ class SoundsViewModel(
         // active one, so `_playingSound` / `_playbackProgress` clear — but unlike a stop, we
         // retain its position in `_pausedProgress` so the UI keeps the slider where it was.
         val pausedSound = sound.copy(isPlaying = false)
-        if (_playingSound.value?.name == sound.name) {
+        if (_playingSound.value?.id == sound.id) {
             _playingSound.value = null
             _playbackProgress.value = null
         }
-        _pausedProgress.update { it + (sound.name to PlaybackProgress(positionMs = positionMs, durationMs = durationMs)) }
-        _sounds.update { list -> list.map { if (it.name == sound.name) pausedSound else it } }
-        allSoundsCache.update { list -> list.map { if (it.name == sound.name) pausedSound else it } }
+        _pausedProgress.update { it + (sound.id to PlaybackProgress(positionMs = positionMs, durationMs = durationMs)) }
+        _sounds.update { list -> list.map { if (it.id == sound.id) pausedSound else it } }
+        allSoundsCache.update { list -> list.map { if (it.id == sound.id) pausedSound else it } }
         recomputeSearchResults()
     }
 

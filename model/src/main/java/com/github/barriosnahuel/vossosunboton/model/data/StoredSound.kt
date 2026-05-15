@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 internal data class StoredSound(
+    val id: String,
     val name: String,
     val file: String? = null,
     val isFavorite: Boolean = false,

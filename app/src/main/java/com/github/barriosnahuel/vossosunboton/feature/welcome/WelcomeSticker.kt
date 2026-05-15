@@ -25,11 +25,10 @@ internal fun welcomeSticker(context: Context): Sound =
     )
 
 /**
- * Identifies the welcome sticker by its content, not its display name. A user-created Bomp that
- * happens to share the welcome's localized title would otherwise be misidentified as the welcome
- * — losing pin/edit affordances, emitting wrong analytics, and getting auto-removed from the list
- * on natural play completion. The combination of `file == null` (bundled-flavor) AND the specific
- * `rawRes` is unique because user sounds always have `file != null` and other bundled sounds use
- * the IDs from `PackagedAudios`.
+ * Identifies the welcome sticker by its stable [Sound.id], not its display name. A user-created
+ * Bomp that happens to share the welcome's localized title would otherwise be misidentified as the
+ * welcome — losing pin/edit affordances, emitting wrong analytics, and getting auto-removed from
+ * the list on natural play completion. Bundled ids are `"bundled:$rawRes"` (see ADR 0008), so the
+ * welcome's id is unique and stable across installs.
  */
-internal fun isWelcomeSticker(sound: Sound): Boolean = sound.file == null && sound.rawRes == R.raw.app_welcome_sticker
+internal fun isWelcomeSticker(sound: Sound): Boolean = sound.id == "bundled:${R.raw.app_welcome_sticker}"

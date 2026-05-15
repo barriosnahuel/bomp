@@ -17,6 +17,7 @@ import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerF
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
@@ -69,7 +70,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `togglePin emits pin_toggle with the resulting pinned state`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("test", file = "test.mp3")
+        val sound = testSound("test", file = "test.mp3")
         viewModel.injectSounds(listOf(sound))
 
         viewModel.togglePin(sound)
@@ -81,7 +82,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `playOrStop emits sound_play with surface = my_sounds when home tab is active`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("test", null, 0, isPlaying = false)
+        val sound = testSound("test", null, 0, isPlaying = false)
 
         viewModel.playOrStop(sound)
 
@@ -93,7 +94,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     fun `playOrStop emits sound_play with surface = explore_sounds when explore tab is active`() {
         val viewModel = givenAViewModel()
         viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
-        val sound = Sound("test", null, 0, isPlaying = false)
+        val sound = testSound("test", null, 0, isPlaying = false)
 
         viewModel.playOrStop(sound)
 
@@ -105,7 +106,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     fun `playOrStop emits sound_play with surface = search_sound while search overlay is visible`() {
         val viewModel = givenAViewModel()
         viewModel.showSearch()
-        val sound = Sound("test", null, 0, isPlaying = false)
+        val sound = testSound("test", null, 0, isPlaying = false)
 
         viewModel.playOrStop(sound)
 
@@ -116,7 +117,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `playOrStop increments lifetime_plays user property monotonically`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("test", null, 0, isPlaying = false)
+        val sound = testSound("test", null, 0, isPlaying = false)
 
         viewModel.playOrStop(sound)
         viewModel.playOrStop(sound)
@@ -127,7 +128,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `playOrStop on a playing sound does not emit sound_play`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("test", null, 1, isPlaying = true)
+        val sound = testSound("test", null, 1, isPlaying = true)
 
         viewModel.playOrStop(sound)
 
@@ -137,7 +138,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `confirmDelete emits sound_delete after the repo commit`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
+        val sound = testSound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
         viewModel.deleteSound(sound)
 
@@ -152,7 +153,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `confirmDelete on a bundled sound does not emit sound_delete`() {
         val viewModel = givenAViewModel()
-        val bundled = Sound("bundled", rawRes = 1)
+        val bundled = testSound("bundled", rawRes = 1)
         viewModel.injectSounds(listOf(bundled))
         viewModel.deleteSound(bundled)
 
@@ -164,7 +165,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `restoreSound emits sound_delete_undone and never sound_delete`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
+        val sound = testSound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
         viewModel.deleteSound(sound)
 
@@ -177,7 +178,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `togglePin updates current_pinned user property to the count of pinned sounds`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("test", file = "test.mp3")
+        val sound = testSound("test", file = "test.mp3")
         viewModel.injectSounds(listOf(sound))
 
         viewModel.togglePin(sound)
@@ -190,7 +191,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking {
             val repo = SoundsRepository(context)
-            repeat(3) { idx -> repo.save(Sound("custom-$idx", "custom-$idx.mp3")) }
+            repeat(3) { idx -> repo.save(testSound("custom-$idx", "custom-$idx.mp3")) }
         }
 
         givenAViewModel()
@@ -203,7 +204,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking {
             val repo = SoundsRepository(context)
-            repeat(3) { idx -> repo.save(Sound("custom-$idx", "custom-$idx.mp3")) }
+            repeat(3) { idx -> repo.save(testSound("custom-$idx", "custom-$idx.mp3")) }
         }
         givenAViewModel()
         // Clear only the recorded events, NOT the fired flags — simulates the same install loading the VM again.
@@ -236,7 +237,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         fake.reset()
         runBlocking {
             val repo = SoundsRepository(ApplicationProvider.getApplicationContext())
-            repeat(3) { idx -> repo.save(Sound("leak-$idx", "leak-$idx.mp3")) }
+            repeat(3) { idx -> repo.save(testSound("leak-$idx", "leak-$idx.mp3")) }
         }
         fake.assertNotEmitted("milestone_sounds_3")
     }
@@ -244,7 +245,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `search emits search_zero_results with the query length when there is no match`() {
         val viewModel = givenAViewModel(searchDebounceMs = 0L)
-        viewModel.injectSounds(listOf(Sound("alpha", "a.mp3"), Sound("beta", "b.mp3")))
+        viewModel.injectSounds(listOf(testSound("alpha", "a.mp3"), testSound("beta", "b.mp3")))
 
         viewModel.onSearchQueryChange("zzzz")
 
@@ -255,7 +256,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `search does not emit search_zero_results when there is at least one match`() {
         val viewModel = givenAViewModel(searchDebounceMs = 0L)
-        viewModel.injectSounds(listOf(Sound("alpha", "a.mp3"), Sound("beta", "b.mp3")))
+        viewModel.injectSounds(listOf(testSound("alpha", "a.mp3"), testSound("beta", "b.mp3")))
 
         viewModel.onSearchQueryChange("alp")
 
@@ -387,7 +388,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     fun `deleteSound on a custom sound does NOT log welcome_sticker_dismissed`() {
         every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val viewModel = givenAViewModel()
-        val sound = Sound("custom", "custom.mp3", 0, isPlaying = false)
+        val sound = testSound("custom", "custom.mp3", 0, isPlaying = false)
         viewModel.injectSounds(listOf(sound))
 
         viewModel.deleteSound(sound)

@@ -27,9 +27,15 @@ class AddButtonActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
 
-        val editSoundName = intent.getStringExtra(LandingActivity.EXTRA_EDIT_SOUND_NAME)
-        if (editSoundName != null) {
-            launchEditAddButtonMode(editSoundName)
+        val editSound: Sound? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(LandingActivity.EXTRA_EDIT_SOUND, Sound::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(LandingActivity.EXTRA_EDIT_SOUND)
+            }
+        if (editSound != null) {
+            launchEditAddButtonMode(editSound)
             return
         }
 
@@ -48,11 +54,7 @@ class AddButtonActivity : ComponentActivity() {
         launchCreateAddButtonMode(uri)
     }
 
-    private fun launchEditAddButtonMode(soundName: String) {
-        val file = intent.getStringExtra(LandingActivity.EXTRA_EDIT_SOUND_FILE)
-        val isFavorite = intent.getBooleanExtra(LandingActivity.EXTRA_EDIT_SOUND_FAVORITE, false)
-        val dateAddedRaw = intent.getLongExtra(LandingActivity.EXTRA_EDIT_SOUND_DATE_ADDED, 0L)
-        val sound = Sound(soundName, file, 0, false, isFavorite, if (dateAddedRaw > 0L) dateAddedRaw else null)
+    private fun launchEditAddButtonMode(sound: Sound) {
         setContent {
             AppTheme {
                 AddButtonScreen(

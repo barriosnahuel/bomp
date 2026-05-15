@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.testSound
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -43,7 +44,7 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
     @Test
     fun `save then sounds emits the saved custom sound`() =
         runTest {
-            repo.save(Sound("bell", "bell.mp3"))
+            repo.save(testSound("bell", "bell.mp3"))
 
             val result = repo.sounds.first().filter { !it.isBundled() }
 
@@ -55,7 +56,7 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
     @Test
     fun `save then clear then sounds emits no custom sounds`() =
         runTest {
-            repo.save(Sound("bell", "bell.mp3"))
+            repo.save(testSound("bell", "bell.mp3"))
 
             repo.clearForTest()
 
@@ -63,16 +64,41 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
         }
 
     @Test
+    fun `two custom sounds with the same name coexist`() =
+        runTest {
+            repo.save(Sound(id = "custom:a", name = "Bell", file = "a.mp3"))
+            repo.save(Sound(id = "custom:b", name = "Bell", file = "b.mp3"))
+
+            val customSounds = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(customSounds).hasSize(2)
+            assertThat(customSounds.map { it.id }.toSet()).containsExactly("custom:a", "custom:b")
+            assertThat(customSounds.map { it.name }.toSet()).containsExactly("Bell")
+        }
+
+    @Test
+    fun `save with the same id upserts instead of duplicating`() =
+        runTest {
+            repo.save(Sound(id = "custom:a", name = "Bell", file = "a.mp3"))
+            repo.save(Sound(id = "custom:a", name = "Doorbell", file = "a.mp3"))
+
+            val customSounds = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(customSounds).hasSize(1)
+            assertThat(customSounds.single().name).isEqualTo("Doorbell")
+        }
+
+    @Test
     fun `savePin true is reflected as isPinned in sounds emission`() =
         runTest {
-            repo.save(Sound("bell", "bell.mp3"))
+            repo.save(testSound("bell", "bell.mp3"))
 
-            repo.savePin("bell", true)
+            repo.savePin("custom:bell", "bell", true)
 
             assertThat(
                 repo.sounds
                     .first()
-                    .single { it.name == "bell" }
+                    .single { it.id == "custom:bell" }
                     .isPinned,
             ).isTrue()
         }
@@ -80,15 +106,15 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
     @Test
     fun `savePin false overrides a previous savePin true`() =
         runTest {
-            repo.save(Sound("bell", "bell.mp3"))
-            repo.savePin("bell", true)
+            repo.save(testSound("bell", "bell.mp3"))
+            repo.savePin("custom:bell", "bell", true)
 
-            repo.savePin("bell", false)
+            repo.savePin("custom:bell", "bell", false)
 
             assertThat(
                 repo.sounds
                     .first()
-                    .single { it.name == "bell" }
+                    .single { it.id == "custom:bell" }
                     .isPinned,
             ).isFalse()
         }
@@ -96,14 +122,14 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
     @Test
     fun `savePin survives across two reads of the flow`() =
         runTest {
-            repo.save(Sound("bell", "bell.mp3"))
-            repo.savePin("bell", true)
+            repo.save(testSound("bell", "bell.mp3"))
+            repo.savePin("custom:bell", "bell", true)
 
             // First read
             assertThat(
                 repo.sounds
                     .first()
-                    .single { it.name == "bell" }
+                    .single { it.id == "custom:bell" }
                     .isPinned,
             ).isTrue()
 
@@ -113,7 +139,7 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
             assertThat(
                 repo2.sounds
                     .first()
-                    .single { it.name == "bell" }
+                    .single { it.id == "custom:bell" }
                     .isPinned,
             ).isTrue()
         }
@@ -125,43 +151,45 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
         }
 
     @Test
-    fun `saveDuration then durations emits the saved duration`() =
+    fun `saveDuration then durations emits the saved duration keyed by id`() =
         runTest {
-            repo.save(Sound("bell", "bell.mp3"))
+            repo.save(testSound("bell", "bell.mp3"))
 
-            repo.saveDuration("bell", 42_000)
+            repo.saveDuration("custom:bell", "bell", 42_000)
 
-            assertThat(repo.durations.first()).containsEntry("bell", 42_000)
+            assertThat(repo.durations.first()).containsEntry("custom:bell", 42_000)
         }
 
     @Test
     fun `delete also removes the persisted duration`() =
         runTest {
-            val sound = Sound("bell", "bell.mp3")
+            val sound = testSound("bell", "bell.mp3")
             repo.save(sound)
-            repo.saveDuration("bell", 42_000)
+            repo.saveDuration("custom:bell", "bell", 42_000)
             val soundFile = getFile(context, "bell.mp3")
             soundFile.parentFile?.mkdirs()
             soundFile.createNewFile()
 
             repo.delete(sound)
 
-            assertThat(repo.durations.first()).doesNotContainKey("bell")
-            assertThat(repo.sounds.first().any { it.name == "bell" && !it.isBundled() }).isFalse()
+            assertThat(repo.durations.first()).doesNotContainKey("custom:bell")
+            assertThat(repo.sounds.first().any { it.id == "custom:bell" && !it.isBundled() }).isFalse()
         }
 
     @Test
-    fun `rename preserves pinned and duration`() =
+    fun `rename preserves pinned and duration and keeps the stable id`() =
         runTest {
-            repo.save(Sound("bell", "bell.mp3"))
-            repo.savePin("bell", true)
-            repo.saveDuration("bell", 99_999)
+            repo.save(testSound("bell", "bell.mp3"))
+            repo.savePin("custom:bell", "bell", true)
+            repo.saveDuration("custom:bell", "bell", 99_999)
 
-            repo.rename("bell", "doorbell")
+            repo.rename("custom:bell", "doorbell")
 
-            val renamed = repo.sounds.first().single { it.name == "doorbell" && !it.isBundled() }
+            val renamed = repo.sounds.first().single { it.id == "custom:bell" && !it.isBundled() }
+            assertThat(renamed.name).isEqualTo("doorbell")
             assertThat(renamed.isPinned).isTrue()
-            assertThat(repo.durations.first()).containsEntry("doorbell", 99_999)
+            // Duration survives the rename because it is keyed by the stable id, not the name.
+            assertThat(repo.durations.first()).containsEntry("custom:bell", 99_999)
             assertThat(repo.sounds.first().none { it.name == "bell" && !it.isBundled() }).isTrue()
         }
 
@@ -170,12 +198,13 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
         runTest {
             val jobs =
                 (1..20).map { i ->
-                    async { repo.save(Sound("sound-$i", "sound-$i.mp3")) }
+                    async { repo.save(testSound("sound-$i", "sound-$i.mp3")) }
                 }
             jobs.awaitAll()
 
             val customSounds = repo.sounds.first().filter { !it.isBundled() }
             assertThat(customSounds).hasSize(20)
+            assertThat(customSounds.map { it.id }.toSet()).hasSize(20)
             assertThat(customSounds.map { it.name }.toSet())
                 .isEqualTo((1..20).map { "sound-$it" }.toSet())
         }
@@ -183,26 +212,40 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
     @Test(expected = IllegalArgumentException::class)
     fun `save with blank name throws`() =
         runTest {
-            repo.save(Sound("", "bell.mp3"))
+            repo.save(testSound("", "bell.mp3"))
         }
 
     @Test(expected = IllegalArgumentException::class)
     fun `save with name longer than 200 chars throws`() =
         runTest {
-            repo.save(Sound("x".repeat(201), "bell.mp3"))
+            repo.save(testSound("x".repeat(201), "bell.mp3"))
         }
 
     @Test(expected = IllegalArgumentException::class)
     fun `rename with blank new name throws`() =
         runTest {
-            repo.save(Sound("bell", "bell.mp3"))
-            repo.rename("bell", "")
+            repo.save(testSound("bell", "bell.mp3"))
+            repo.rename("custom:bell", "")
         }
 
     @Test
     fun `malformed JSON in store returns empty list and reports via onError`() =
         runTest {
             repo.setRawJsonForTest("not-json{")
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list).isEmpty()
+            assertThat(recordedErrors).hasSize(1)
+            assertThat(recordedErrors.single().message).contains("Malformed sounds_json")
+        }
+
+    @Test
+    fun `legacy JSON without an id field returns empty list and reports via onError`() =
+        runTest {
+            // Pre-stable-id schema: valid JSON, but StoredSound.id is now a required field.
+            // No data migration ships (the app had no users) — the read degrades to an empty list.
+            repo.setRawJsonForTest("""[{"name":"bell","file":"bell.mp3"}]""")
 
             val list = repo.sounds.first().filter { !it.isBundled() }
 

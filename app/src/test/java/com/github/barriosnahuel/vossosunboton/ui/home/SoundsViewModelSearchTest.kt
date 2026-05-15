@@ -8,6 +8,7 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
@@ -44,7 +45,7 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     @Test
     fun `searchResults emits empty list when query is blank`() {
         val viewModel = givenAViewModel()
-        viewModel.injectAllSounds(listOf(Sound("Bromas de oficina", rawRes = 1), Sound("Casa feliz", file = "casa.mp3")))
+        viewModel.injectAllSounds(listOf(testSound("Bromas de oficina", rawRes = 1), testSound("Casa feliz", file = "casa.mp3")))
 
         viewModel.onSearchQueryChange("")
 
@@ -54,8 +55,8 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     @Test
     fun `searchResults filters by name case-insensitively`() {
         val viewModel = givenAViewModel()
-        val bromas = Sound("Bromas de oficina", rawRes = 1)
-        val casa = Sound("Casa feliz", file = "casa.mp3")
+        val bromas = testSound("Bromas de oficina", rawRes = 1)
+        val casa = testSound("Casa feliz", file = "casa.mp3")
         viewModel.injectAllSounds(listOf(bromas, casa))
 
         viewModel.onSearchQueryChange("bro")
@@ -66,7 +67,7 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     @Test
     fun `searchResults reflects a pin toggled while overlay is open`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("custom sound", file = "custom.mp3")
+        val sound = testSound("custom sound", file = "custom.mp3")
         viewModel.injectSoundsAndAllSounds(listOf(sound))
         viewModel.onSearchQueryChange("custom")
 
@@ -82,7 +83,7 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     @Test
     fun `searchResults removes a deleted sound immediately`() {
         val viewModel = givenAViewModel()
-        val sound = Sound("custom sound", file = "custom.mp3")
+        val sound = testSound("custom sound", file = "custom.mp3")
         viewModel.injectSoundsAndAllSounds(listOf(sound))
         viewModel.onSearchQueryChange("custom")
 
@@ -94,8 +95,8 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     @Test
     fun `searchResults sorts pinned result first after togglePin`() {
         val viewModel = givenAViewModel()
-        val alpha = Sound("test alpha", file = "a.mp3")
-        val beta = Sound("test beta", file = "b.mp3")
+        val alpha = testSound("test alpha", file = "a.mp3")
+        val beta = testSound("test beta", file = "b.mp3")
         viewModel.injectSoundsAndAllSounds(listOf(alpha, beta))
         viewModel.onSearchQueryChange("test")
 
@@ -111,7 +112,7 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     @Test
     fun `hideSearch resets query and clears results`() {
         val viewModel = givenAViewModel()
-        viewModel.injectAllSounds(listOf(Sound("Bromas de oficina", rawRes = 1)))
+        viewModel.injectAllSounds(listOf(testSound("Bromas de oficina", rawRes = 1)))
         viewModel.showSearch()
         viewModel.onSearchQueryChange("bro")
 

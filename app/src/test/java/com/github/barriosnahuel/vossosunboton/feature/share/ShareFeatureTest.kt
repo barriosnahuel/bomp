@@ -21,6 +21,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Canonica
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkStatic
@@ -85,10 +86,12 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `prepareShareIntent uses soundName dot mp3 as the bundled temp filename`() {
+    fun `prepareShareIntent uses a stable bundled filename keyed by rawRes for the share cache`() {
         val capturedFile = whenPreparingCapturingTheFilePath(givenASoundWithResourceId())
 
-        assertThat(capturedFile.name).isEqualTo("$dummyButtonName.mp3")
+        // Cache key migrated from `name + .mp3` to `bundled_<rawRes>.mp3` as part of the stable-id
+        // refactor (ADR 0008): names are no longer unique, so a name-based cache key would collide.
+        assertThat(capturedFile.name).isEqualTo("bundled_${R.raw.app_test_sound}.mp3")
     }
 
     @Test
@@ -240,11 +243,11 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
 
     // ─── helpers ───
 
-    private fun givenASoundWithUri() = Sound(dummyButtonName, "a/dummy/sound/uri")
+    private fun givenASoundWithUri() = testSound(dummyButtonName, "a/dummy/sound/uri")
 
-    private fun givenASoundWithResourceId() = Sound(dummyButtonName, rawRes = R.raw.app_test_sound)
+    private fun givenASoundWithResourceId() = testSound(dummyButtonName, rawRes = R.raw.app_test_sound)
 
-    private fun givenASoundWithNullUri() = Sound(dummyButtonName)
+    private fun givenASoundWithNullUri() = testSound(dummyButtonName)
 
     private fun whenPreparing(
         sound: Sound,
