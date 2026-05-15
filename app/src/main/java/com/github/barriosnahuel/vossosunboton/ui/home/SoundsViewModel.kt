@@ -298,10 +298,9 @@ class SoundsViewModel(
 
     fun playOrStop(sound: Sound) {
         if (sound.isPlaying) {
-            // Tap-while-playing now pauses (preserving position via the controller's in-process
-            // cache) rather than stopping. The icon and slider still collapse to "not playing"
-            // because _playingSound goes null on onPlayerStop — the saved position is invisible to
-            // the VM/UI and only surfaces when the user re-taps and the controller resumes.
+            // Tap-while-playing pauses rather than stops. The controller fires onPlayerPause (not
+            // onPlayerStop): the play icon returns because the sound is no longer the active one,
+            // but its position is retained in _pausedProgress so the progress bar stays put.
             PlayerControllerFactory.instance.pause()
         } else {
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
