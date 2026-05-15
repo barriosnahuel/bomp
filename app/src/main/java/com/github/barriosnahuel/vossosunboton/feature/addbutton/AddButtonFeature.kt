@@ -26,6 +26,7 @@ import timber.log.Timber
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.UUID
 
 interface AddButtonFeature {
     fun saveNewButtonAsync(
@@ -53,6 +54,10 @@ private class AddButtonFeatureImpl : AddButtonFeature {
     ): Deferred<Int> {
         val sanitizedName = name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
         val fileName = "$sanitizedName-${System.currentTimeMillis()}.mp3"
+        // Mint the stable id once, at the creation site — `SoundsRepository.save` is a pure upsert
+        // keyed by the id it is given, so identity must originate here, not in the repository.
+        // See ADR 0008.
+        val id = UUID.randomUUID().toString()
 
         @OptIn(DelicateCoroutinesApi::class)
         return GlobalScope.async(Dispatchers.IO) {
@@ -78,7 +83,7 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                         } else {
                             copy(inputStream, fileOutputStream)
                             val repo = SoundsRepository(context)
-                            repo.save(Sound(name, fileName))
+                            repo.save(Sound(id, name, fileName))
                             val durationMs =
                                 runCatching {
                                     val retriever = MediaMetadataRetriever()
@@ -95,7 +100,7 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                                     )
                                 }.getOrNull()
                             if (durationMs != null) {
-                                repo.saveDuration(name, durationMs)
+                                repo.saveDuration(id, name, durationMs)
                             }
 
                             feedbackMessage = R.string.app_addbutton_feedback_saved_ok
@@ -121,7 +126,7 @@ private class AddButtonFeatureImpl : AddButtonFeature {
     ): Deferred<Unit> {
         @OptIn(DelicateCoroutinesApi::class)
         return GlobalScope.async(Dispatchers.IO) {
-            SoundsRepository(context).rename(sound.name, newName)
+            SoundsRepository(context).rename(sound.id, newName)
         }
     }
 

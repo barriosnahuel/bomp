@@ -378,8 +378,8 @@ private fun SoundsList(
             state = listState,
             contentPadding = PaddingValues(top = Spacing.MD, bottom = Spacing.SM),
         ) {
-            itemsIndexed(sounds, key = { _, sound -> sound.name }) { _, sound ->
-                val isDeleting = sound.name in dismissingItems
+            itemsIndexed(sounds, key = { _, sound -> sound.id }) { _, sound ->
+                val isDeleting = sound.id in dismissingItems
                 val isWelcome = isWelcomeSticker(sound)
                 AnimatedVisibility(
                     visible = !isDeleting,
@@ -396,11 +396,11 @@ private fun SoundsList(
                             animationSpec = tween(durationMillis = DELETE_ANIMATION_DURATION_MS),
                         ) + fadeOut(animationSpec = tween(durationMillis = DELETE_ANIMATION_DURATION_MS)),
                 ) {
-                    val resolvedDurationMs = soundDurations[sound.name]
+                    val resolvedDurationMs = soundDurations[sound.id]
                     // A sound shows progress when it is playing (live `playbackProgress`) OR when it
-                    // is paused (`pausedProgress[name]`, retained so the bar doesn't snap to zero).
+                    // is paused (`pausedProgress[id]`, retained so the bar doesn't snap to zero).
                     val effectiveProgress =
-                        if (sound.isPlaying) playbackProgress else pausedProgress[sound.name]
+                        if (sound.isPlaying) playbackProgress else pausedProgress[sound.id]
                     val welcomeBorder =
                         if (isWelcome) {
                             BorderStroke(WELCOME_BORDER_WIDTH, MaterialTheme.colorScheme.primaryContainer)
@@ -428,11 +428,11 @@ private fun SoundsList(
                         onSeek = onSeek,
                         onShareClick = { onShareClick(sound) },
                         onDelete = {
-                            dismissingItems.add(sound.name)
+                            dismissingItems.add(sound.id)
                             coroutineScope.launch {
                                 delay(DELETE_ANIMATION_DURATION_MS.toLong())
                                 onDelete(sound)
-                                dismissingItems.remove(sound.name)
+                                dismissingItems.remove(sound.id)
                             }
                         },
                         onPinClick = { onPinClick(sound) },

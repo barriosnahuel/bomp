@@ -274,11 +274,11 @@ private fun SearchResultsList(
     onDelete: (Sound) -> Unit,
 ) {
     LazyColumn(contentPadding = PaddingValues(vertical = Spacing.SM)) {
-        items(results, key = { it.name }) { sound ->
+        items(results, key = { it.id }) { sound ->
             SoundItem(
                 sound = sound,
-                playbackProgress = if (sound.isPlaying) playbackProgress else pausedProgress[sound.name],
-                durationMs = soundDurations[sound.name],
+                playbackProgress = if (sound.isPlaying) playbackProgress else pausedProgress[sound.id],
+                durationMs = soundDurations[sound.id],
                 onPlayClick = { onPlayClick(sound) },
                 onSeek = onSeek,
                 onShareClick = { onShareClick(sound) },

@@ -185,7 +185,9 @@ private class ShareFeatureImpl : ShareFeature {
         context: Context,
         sound: Sound,
     ): ShareOutcome<File> {
-        val fileForSharing = getFile(context, sound.name + ".mp3")
+        // Cache key is the stable id, not the display name: names are no longer unique (ADR 0008),
+        // and this path is reached only for bundled sounds, whose id is `"bundled:$rawRes"`.
+        val fileForSharing = getFile(context, "bundled_${sound.rawRes}.mp3")
         return if (fileForSharing.exists()) {
             Timber.d("Packaged audio already copied to share directory: %s", fileForSharing)
             ShareOutcome.Success(fileForSharing)

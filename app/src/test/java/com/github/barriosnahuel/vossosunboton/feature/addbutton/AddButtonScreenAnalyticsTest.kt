@@ -31,6 +31,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
@@ -356,7 +357,9 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
 
     private fun editIntent(): Intent =
         Intent(context, AddButtonActivity::class.java).apply {
-            putExtra(LandingActivity.EXTRA_EDIT_SOUND_NAME, EXISTING_NAME)
+            // Custom sound (file != null → id = "custom:<name>") matches the real edit-flow shape,
+            // which only fires for user-created Bomps. Mirrors `AddButtonScreenStrictModeTest`.
+            putExtra(LandingActivity.EXTRA_EDIT_SOUND, testSound(EXISTING_NAME, file = "existing.mp3"))
         }
 
     /**

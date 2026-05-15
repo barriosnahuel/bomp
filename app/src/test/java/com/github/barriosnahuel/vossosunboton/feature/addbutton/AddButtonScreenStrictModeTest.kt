@@ -13,6 +13,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -35,8 +36,7 @@ internal class AddButtonScreenStrictModeTest : AbstractRobolectricTest() {
     fun `Edit mode with a non-null sound file launches without crashing`() {
         val intent =
             Intent(context, AddButtonActivity::class.java).apply {
-                putExtra(LandingActivity.EXTRA_EDIT_SOUND_NAME, "Existing sound")
-                putExtra(LandingActivity.EXTRA_EDIT_SOUND_FILE, "existing.mp3")
+                putExtra(LandingActivity.EXTRA_EDIT_SOUND, testSound("Existing sound", file = "existing.mp3"))
             }
 
         ActivityScenario.launch<AddButtonActivity>(intent).use { scenario ->

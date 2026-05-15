@@ -68,20 +68,23 @@ internal object TestData {
             val name = "custom_$index"
             val fileName = "$name.mp3"
             copyAssetToMusicDir(context, fileName)
-            val sound = Sound(name, fileName)
+            // Deterministic id derived from the seeded name keeps assertions stable across runs
+            // and matches the production constraint that ids are minted once at save time.
+            val sound = Sound(id = "custom:$name", name = name, file = fileName)
             runBlocking { r.save(sound) }
             sound
         }
     }
 
     /**
-     * Marks [soundName] as pinned. The sound must already exist (custom or bundled).
+     * Marks the [sound] as pinned. The sound must already exist (custom or bundled). Takes the
+     * full [Sound] so the id-keyed [SoundsRepository.savePin] (ADR 0008) gets both fields.
      */
     fun pin(
         context: Context,
-        soundName: String,
+        sound: Sound,
     ) {
-        runBlocking { repo(context).savePin(soundName, true) }
+        runBlocking { repo(context).savePin(sound.id, sound.name, true) }
     }
 
     /**

@@ -44,8 +44,7 @@ internal class PlayerControllerImpl(
      * Per-sound position cache for sounds that are NOT the currently-loaded target. When the user
      * returns to one of these we [MediaPlayer.seekTo] the cached value before [MediaPlayer.start].
      * In-memory only — process death loses it. Cleared on natural completion, [stopPlayingSound],
-     * or [forgetSound]. Keyed by [Sound.name] because the codebase already treats name as the
-     * effective primary key (SoundsRepository upserts by name; `_soundDurations` does the same).
+     * or [forgetSound]. Keyed by [Sound.id], the stable internal identity (see ADR 0008).
      */
     private val savedSoundPositions = mutableMapOf<String, Int>()
 
@@ -88,7 +87,7 @@ internal class PlayerControllerImpl(
         sound: Sound,
     ) {
         val currentTarget = target
-        if (currentTarget is PlaybackTarget.SoundTarget && currentTarget.sound.name == sound.name && !mediaPlayer.isPlaying) {
+        if (currentTarget is PlaybackTarget.SoundTarget && currentTarget.sound.id == sound.id && !mediaPlayer.isPlaying) {
             // Same sound, paused → resume in place. MediaPlayer kept the data source and the
             // position; no reset/prepare/seek needed. Cancel any superseded prepare just in case.
             prepareJob?.cancel()
@@ -136,11 +135,11 @@ internal class PlayerControllerImpl(
     ) {
         mediaPlayer.setOnCompletionListener {
             handler.removeCallbacks(progressRunnable)
-            savedSoundPositions.remove(sound.name)
+            savedSoundPositions.remove(sound.id)
             target = null
             listener?.onPlayerStop(sound, completed = true)
         }
-        val seekPos = savedSoundPositions[sound.name]
+        val seekPos = savedSoundPositions[sound.id]
         if (seekPos != null) {
             // seekTo is valid in PREPARED state; the next start() picks up from the seek position.
             runCatching { mediaPlayer.seekTo(seekPos) }
@@ -256,7 +255,7 @@ internal class PlayerControllerImpl(
         val pos = runCatching { mediaPlayer.currentPosition }.getOrDefault(0)
         when (t) {
             is PlaybackTarget.SoundTarget -> {
-                savedSoundPositions[t.sound.name] = pos
+                savedSoundPositions[t.sound.id] = pos
                 // Preemption preserves position → it is a pause, not a stop. The consumer keeps the
                 // sound visible at `pos`. `mediaPlayer.duration` is still valid here because the
                 // caller resets the player only AFTER this method returns.
@@ -308,7 +307,7 @@ internal class PlayerControllerImpl(
         handler.removeCallbacks(progressRunnable)
         when (t) {
             is PlaybackTarget.SoundTarget -> {
-                savedSoundPositions.remove(t.sound.name)
+                savedSoundPositions.remove(t.sound.id)
                 listener?.onPlayerStop(t.sound, completed = false)
             }
             is PlaybackTarget.UriTarget -> {
@@ -337,7 +336,7 @@ internal class PlayerControllerImpl(
         val pos = runCatching { mediaPlayer.currentPosition }.getOrDefault(0)
         when (t) {
             is PlaybackTarget.SoundTarget -> {
-                savedSoundPositions[t.sound.name] = pos
+                savedSoundPositions[t.sound.id] = pos
                 val dur = runCatching { mediaPlayer.duration }.getOrDefault(0)
                 listener?.onPlayerPause(t.sound, positionMs = pos, durationMs = dur)
             }
@@ -394,9 +393,9 @@ internal class PlayerControllerImpl(
     }
 
     override fun forgetSound(sound: Sound) {
-        savedSoundPositions.remove(sound.name)
+        savedSoundPositions.remove(sound.id)
         val t = target
-        if (t is PlaybackTarget.SoundTarget && t.sound.name == sound.name) {
+        if (t is PlaybackTarget.SoundTarget && t.sound.id == sound.id) {
             if (mediaPlayer.isPlaying) {
                 mediaPlayer.stop()
             }

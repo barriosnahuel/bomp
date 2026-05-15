@@ -14,6 +14,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import io.mockk.every
 import io.mockk.mockkObject
@@ -139,5 +140,5 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
             .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = value }
     }
 
-    private fun stubSounds(count: Int): List<Sound> = List(count) { Sound(name = "stub-$it", file = "/tmp/stub-$it.mp3") }
+    private fun stubSounds(count: Int): List<Sound> = List(count) { testSound(name = "stub-$it", file = "/tmp/stub-$it.mp3") }
 }

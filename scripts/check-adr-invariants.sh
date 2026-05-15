@@ -92,6 +92,25 @@ if grep -rnE --include='*.kt' '(^|[^[:alnum:]_])assert[[:space:]]*\(' $TEST_DIRS
 fi
 
 # ============================================================================
+# ADR 0008 — docs/adr/0008-stable-sound-id.md
+# Invariant 1: StoredSound declares a non-nullable `id` field. Catches an
+# accidental revert of the schema that breaks persistence identity.
+# Invariant 2: SoundsRepository does NOT use the three name-keyed identity
+# idioms (associateBy { it.name, filterNot { it.name ==, firstOrNull {
+# it.name ==). These are the *persistence-identity* patterns; textual `name`
+# use elsewhere (validation, search, display) is intentionally untouched.
+# ============================================================================
+STORED_SOUND="model/src/main/java/com/github/barriosnahuel/vossosunboton/model/data/StoredSound.kt"
+if ! grep -qE '^\s*val id: String' "$STORED_SOUND" 2>/dev/null; then
+    fail "ADR 0008 broken: StoredSound.kt does not declare \`val id: String\`. Persistence identity must be the stable internal id, not the display name. Supersede ADR 0008 or restore the field."
+fi
+
+SOUNDS_REPO="model/src/main/java/com/github/barriosnahuel/vossosunboton/model/data/manager/SoundsRepository.kt"
+if grep -nE 'associateBy \{ it\.name|filterNot \{ it\.name ==|firstOrNull \{ it\.name ==' "$SOUNDS_REPO" 2>/dev/null; then
+    fail "ADR 0008 broken: SoundsRepository.kt contains a name-keyed identity idiom (associateBy / filterNot / firstOrNull on it.name). Persistence identity must key by Sound.id. Supersede ADR 0008 or revert."
+fi
+
+# ============================================================================
 # CLAUDE.md size budget — see CLAUDE.md § "What goes in this file"
 # Loaded into every Claude Code context window; performance degrades above 40K.
 # Measured in bytes (wc -c): portable and deterministic, and a conservative

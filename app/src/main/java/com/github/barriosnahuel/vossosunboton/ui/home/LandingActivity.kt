@@ -64,10 +64,8 @@ class LandingActivity : ComponentActivity() {
     }
 
     companion object {
-        const val EXTRA_EDIT_SOUND_NAME = "extra_edit_sound_name"
-        const val EXTRA_EDIT_SOUND_FILE = "extra_edit_sound_file"
-        const val EXTRA_EDIT_SOUND_FAVORITE = "extra_edit_sound_favorite"
-        const val EXTRA_EDIT_SOUND_DATE_ADDED = "extra_edit_sound_date_added"
+        /** Single Parcelable [Sound] extra for the edit flow — carries the full entity, [Sound.id] included. */
+        const val EXTRA_EDIT_SOUND = "extra_edit_sound"
 
         private const val ADD_BUTTON_ACTIVITY_CLASS =
             "com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity"
@@ -78,10 +76,7 @@ class LandingActivity : ComponentActivity() {
         ): Intent =
             Intent().apply {
                 setClassName(context, ADD_BUTTON_ACTIVITY_CLASS)
-                putExtra(EXTRA_EDIT_SOUND_NAME, sound.name)
-                putExtra(EXTRA_EDIT_SOUND_FILE, sound.file)
-                putExtra(EXTRA_EDIT_SOUND_FAVORITE, sound.isFavorite)
-                sound.dateAdded?.let { putExtra(EXTRA_EDIT_SOUND_DATE_ADDED, it) }
+                putExtra(EXTRA_EDIT_SOUND, sound)
             }
     }
 }
