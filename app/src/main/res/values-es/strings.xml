@@ -72,6 +72,8 @@
     <string name="app_addbutton_save_changes">Guardar cambios</string>
     <string name="app_addbutton_preview_audio">Vista previa del audio</string>
     <string name="app_addbutton_name_is_required_error">El nombre es obligatorio</string>
+    <string name="app_addbutton_duplicate_name_hint">Ya tenés un Bomp así. ¿Querés escucharlo?</string>
+    <string name="app_addbutton_duplicate_name_hint_play_description">Escuchar el Bomp con este nombre</string>
     <string name="app_addbutton_missing_parameter_error">Falta indicar el audio</string>
     <string name="app_addbutton_feedback_saved_ok">Guardado</string>
     <string name="app_addbutton_feedback_uri_unreadable">No pude leer el audio que elegiste. Nahu ya se enteró y lo va a investigar.</string>
