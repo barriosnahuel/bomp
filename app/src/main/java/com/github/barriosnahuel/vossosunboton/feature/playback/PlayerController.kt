@@ -53,9 +53,9 @@ internal interface PlayerController {
     /**
      * Starts playback of an arbitrary [uri]. If another target (Sound or Uri) is currently playing
      * or paused it is preempted: its position is saved (Sound) or its state cleared (Uri), and the
-     * registered [PlayerControllerListener] sees `onPlayerStop(currentSound, completed = false)`
-     * for the Sound case. Progress for the new preview is reported via [playbackState] only —
-     * listener events are not fired (no Sound to pass).
+     * registered [PlayerControllerListener] sees `onPlayerPause(currentSound, ...)` for the Sound
+     * case (preemption preserves position — it is a pause, not a stop). Progress for the new
+     * preview is reported via [playbackState] only — listener events are not fired (no Sound to pass).
      */
     fun startPlayingUri(
         context: Context,

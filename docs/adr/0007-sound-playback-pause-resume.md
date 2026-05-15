@@ -34,11 +34,11 @@ The public API behavior changes:
 
 | API | Before this ADR | After this ADR |
 |---|---|---|
-| `startPlayingSound(sound)` | Always `reset()` + prepare + start. | If `sound` is the paused current target → `MediaPlayer.start()` in place (no reset, no re-prepare). Else preempt the current target (save its position, fire `onPlayerStop(prev, completed=false)`), reset, prepare, seek to `savedSoundPositions[sound.name]` if cached, start. |
+| `startPlayingSound(sound)` | Always `reset()` + prepare + start. | If `sound` is the paused current target → `MediaPlayer.start()` in place (no reset, no re-prepare). Else preempt the current target (save its position, fire `onPlayerPause(prev, ...)`), reset, prepare, seek to `savedSoundPositions[sound.name]` if cached, start. |
 | `pause()` | No-op for `Sound`; only meaningful for `Uri`. | Pauses the current target (Sound or Uri). For Sound: saves `currentPosition` in `savedSoundPositions[t.sound.name]` and fires `onPlayerPause(t.sound, positionMs, durationMs)`. For Uri: updates `_playbackState.copy(isPlaying=false, positionMs=...)`. |
 | `resume()` | No-op for `Sound`; only meaningful for `Uri`. | Resumes whichever target is paused, in place, via `MediaPlayer.start()`. Reports `onPlayerStart` for Sound (with the resumed position via the new `positionMs` parameter) or flips `_playbackState.isPlaying = true` for Uri. |
 | `stopPlayingSound()` | Hard stop; emit listener / clear state. | Hard stop **and** clear the saved position for the current sound. Use for definitive stop (AudioPreview disposal). Pause/play toggle no longer routes through this. |
-| `startPlayingUri(uri)` | Hard-stops any current Sound. | Preempts the current Sound by saving its position (fires `onPlayerStop(prev, completed=false)`), then loads the Uri. Symmetric to Sound→Sound switching. |
+| `startPlayingUri(uri)` | Hard-stops any current Sound. | Preempts the current Sound by saving its position (fires `onPlayerPause(prev, ...)`), then loads the Uri. Symmetric to Sound→Sound switching. |
 | `forgetSound(sound)` *(new)* | — | Drops the sound's saved position from the cache. If the sound is the current target, also stops and resets. Called by `SoundsViewModel.deleteSound` unconditionally so a future name-collision doesn't seekTo a stale position. |
 
 The `PlayerControllerListener.onPlayerStart` signature grows a third parameter, `positionMs: Int = 0`, so the VM can initialize `_playbackProgress` at the resumed position and avoid a slider flicker before the first `progressRunnable` tick.
