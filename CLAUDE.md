@@ -104,12 +104,13 @@ For synchronous reads on top of DataStore (e.g. analytics before nav to a choose
 
 Invariants:
 
+- Worktrees live as **siblings of the primary worktree** (`../push-me-<topic>`), never nested under `.claude/` — a nested worktree gets indexed by the IDE as a separate project in the same window, cluttering navigation. A committed `WorktreeCreate` hook (`.claude/hooks/create-sibling-worktree.sh`, registered in `.claude/settings.json`) applies the same layout to worktrees the agent harness or its subagents create.
 - Scrubbed dummy `google-services.json` at `app/src/{debug,release}/` (real `project_id`/`project_number`/`package_name`, fake `mobilesdk_app_id`/`api_key`) is committed so CI compiles. Real values live only in the working tree via `git update-index --skip-worktree` — **never** unmark + `git add` without first stashing the real file.
 - Two Firebase projects: `bomp-prod` (release, `com.github.barriosnahuel.vossosunboton`) + `bomp-debug` (debug, `...vossosunboton.debug`). Google Services plugin auto-resolves per-variant JSON by `package_name`.
 - Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` + `secure.properties` (`key.alias`, `key.password`, `store.password`) at project root — not committed. Debug uses the included debug keystore.
 - Bundled debug audio (`model/src/debug/res/raw/*.{mp3,ogg}`) not committed — without them Explore tab is empty.
 
-Setup procedures (fresh-clone swap, primary-worktree copy, safe edit sequence) in CONTRIBUTING.md § *Firebase config file*.
+Setup procedures (sibling-worktree creation, fresh-clone swap, primary-worktree copy, safe edit sequence) in CONTRIBUTING.md § *Firebase config file*.
 
 ## Android resources naming
 

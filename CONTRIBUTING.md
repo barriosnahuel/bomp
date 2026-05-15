@@ -200,6 +200,18 @@ To run local builds against the real Firebase projects, swap the dummies for the
     > git update-index --skip-worktree app/src/release/google-services.json
     > git update-index --skip-worktree app/src/debug/google-services.json
 
+### Creating a new worktree
+
+Worktrees live as **siblings of the primary worktree**, never nested under `.claude/` — a nested worktree gets indexed by the IDE as a separate project in the same window, cluttering navigation. Name them `push-me-<topic>`:
+
+```bash
+git worktree add ../push-me-<topic> -b <branch> origin/develop
+```
+
+A committed `WorktreeCreate` hook (`.claude/hooks/create-sibling-worktree.sh`, registered in `.claude/settings.json`) applies the same layout to worktrees the Claude Code harness or its subagents create — they land as `../push-me-<name>` instead of the harness default `.claude/worktrees/<name>`. The hook resolves the primary worktree root via `git rev-parse --git-common-dir`, so it works even when invoked from inside a linked worktree.
+
+A fresh worktree has the checked-in dummy `google-services.json` but not the real configs or the bundled audio — copy them next.
+
 ### Copying from the primary worktree
 
 When you create a new git worktree (e.g. for a parallel branch), the dummies land checked-in but the real configs and the bundled audio files don't follow — the swap-and-skip-worktree state is per-worktree. Copy them from the primary worktree, then re-arm skip-worktree on the new worktree so any future re-download from Firebase Console doesn't accidentally land in the index:
