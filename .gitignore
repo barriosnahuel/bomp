@@ -23,6 +23,8 @@ gradle/gradle-daemon-jvm.properties
 ### AI Agents
 .claude/*
 !.claude/skills/
+!.claude/hooks/
+!.claude/settings.json
 
 ### Static Code Analyzers
 config/*
