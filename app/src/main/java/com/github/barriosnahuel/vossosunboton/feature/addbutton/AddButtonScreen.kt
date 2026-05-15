@@ -113,9 +113,10 @@ fun AddButtonScreen(
 
     // Reactive lookup against the user's library (custom + bundled). Derivation, predicate, and
     // the supporting `produceState` live in `DuplicateNameHint.kt` so this composable stays under
-    // the detekt complexity threshold. Fires `duplicate_name_hint_shown` once per distinct match
-    // (keyed by the matched sound's stable id, ADR 0008) so typing-then-deleting-then-retyping
-    // the same name doesn't churn events, and flipping between two same-named matches still does.
+    // the detekt complexity threshold. Fires `duplicate_name_hint_shown` once per matched sound id
+    // (ADR 0008) so per-keystroke recompositions while the same match holds emit a single event;
+    // a transition to a different match (or to no-match-then-back) re-emits, which is acceptable
+    // signal for typing exploration.
     val duplicateMatch = rememberDuplicateNameMatch(context, name.text, mode)
     LaunchedEffect(duplicateMatch?.id) {
         if (duplicateMatch != null) {

@@ -25,10 +25,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
@@ -50,7 +54,7 @@ internal fun rememberDuplicateNameMatch(
     mode: AddButtonMode,
 ): Sound? {
     val existingSounds by produceState(initialValue = emptyList<Sound>(), context) {
-        SoundsRepository(context.applicationContext).sounds.collect { value = it }
+        SoundsRepository(context.applicationContext, onError = Tracker::track).sounds.collect { value = it }
     }
     return remember(typedName, existingSounds, mode) {
         val trimmed = typedName.trim().lowercase()
@@ -127,7 +131,8 @@ internal fun DuplicateNameHint(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(top = 4.dp),
+                .padding(top = 4.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -141,7 +146,7 @@ internal fun DuplicateNameHint(
                 tracker.log(AnalyticsEvent.DuplicateNameHintPlay)
                 PlayerControllerFactory.instance.startPlayingSound(context, match)
             },
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
                 imageVector = Icons.Default.PlayArrow,
