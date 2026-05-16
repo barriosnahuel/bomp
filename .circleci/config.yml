@@ -74,13 +74,13 @@ jobs:
           at: .
       - run:
           name: "Run Android Lint"
-          command: ./gradlew lint app:lintRelease app:lintVitalRelease
+          command: ./gradlew :app:lintDebug :app:lintRelease
       - store_artifacts:
           path: "app/build/reports/lint-results-debug.html"
       - store_artifacts:
           path: "app/build/reports/lint-results-release.html"
 
-  "test":
+  "test-debug":
     executor:
       name: android/android_docker
       tag: "2026.03"
@@ -91,8 +91,24 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: "Run Tests"
-          command: ./gradlew test
+          name: "Run Debug Unit Tests"
+          command: ./gradlew testDebugUnitTest
+      - store_artifacts:
+          path: "app/build/reports/tests/"
+
+  "test-release":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+      resource_class: medium+
+    steps:
+      - checkout
+      - android/restore_gradle_cache
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Run Release Unit Tests"
+          command: ./gradlew testReleaseUnitTest
       - store_artifacts:
           path: "app/build/reports/tests/"
 
@@ -175,14 +191,15 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: "Bundle Debug and Release"
-          command: ./gradlew app:bundleDebug app:bundleRelease -x lintVitalRelease -x uploadCrashlyticsMappingFileRelease
+          name: "Bundle Release"
+          command: ./gradlew app:bundleRelease -x lintVitalRelease -x uploadCrashlyticsMappingFileRelease
 
 workflows:
   version: 2.1
   "Pull Requests Workflow":
     jobs:
       - compile
+      # Cheap linters gate everything heavy — fail fast on style/format issues.
       - detekt:
           requires:
             - compile
@@ -192,22 +209,29 @@ workflows:
       - spotless:
           requires:
             - compile
+      # Heavy lint runs in parallel with test/bundle — they don't gate each other.
       - lint:
           requires:
             - compile
-      - test:
+      - test-debug:
           requires:
             - detekt
             - ktlint
             - spotless
-            - lint
+      - test-release:
+          requires:
+            - detekt
+            - ktlint
+            - spotless
       - analytics-wrapper-guard
       - test-assertion-guard
       - adr-invariants
       - security-test-count-guard
       - bundle:
           requires:
-            - test
+            - detekt
+            - ktlint
+            - spotless
             - analytics-wrapper-guard
             - test-assertion-guard
             - adr-invariants
