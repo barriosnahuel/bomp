@@ -194,6 +194,19 @@ private val KNOWN_THIRD_PARTY_VIOLATIONS =
             library = "Android framework (Activity destroy GC)",
             methodNameContains = "decrementExpectedActivityCount",
         ),
+        // Firebase Crashlytics' settings fetch (HttpGetRequest → HttpEngine.unzip → GzipSource → Inflater)
+        // leaks the underlying Inflater because the platform OkHttp shim (`com.android.okhttp.*`) does not
+        // close it deterministically. The leaked Inflater is detected later by CloseGuard during finalization,
+        // so the observable primary stack is just `Inflater.finalize` → `FinalizerDaemon`; the Firebase /
+        // okhttp frames live only in the `Caused by` chain, which the existing `com.google.firebase` matcher
+        // does not reach. Anchoring on `java.util.zip.Inflater.finalize` is precise: no app code finalizes
+        // Inflater on its own (and shouldn't — production code uses `use {}` / `try-finally`), so this matcher
+        // does not silence any in-house leak. Reproduces on develop @ 16577cb on Android 14 API 34 AVD.
+        KnownThirdPartyViolation(
+            classNamePrefix = "java.util.zip.Inflater",
+            library = "Android platform OkHttp Inflater finalize (Firebase Crashlytics settings fetch)",
+            methodNameContains = "finalize",
+        ),
     )
 
 /**
