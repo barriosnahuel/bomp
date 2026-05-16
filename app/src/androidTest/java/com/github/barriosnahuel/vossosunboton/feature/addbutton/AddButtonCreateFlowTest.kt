@@ -14,6 +14,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,7 +37,7 @@ internal class AddButtonCreateFlowTest : AbstractUiTest() {
 
     @Test
     fun createModeWithUriRendersSaveButtonAndForm() {
-        ActivityScenario.launch<AddButtonActivity>(launchIntent(uri = SAMPLE_URI)).use {
+        ActivityScenario.launch<AddButtonActivity>(launchIntent(uri = TestData.seedPreviewAudio(context))).use {
             composeRule.awaitNodeWithText(context.getString(R.string.app_addbutton_save)).assertIsDisplayed()
             composeRule.onNodeWithText(context.getString(R.string.app_addbutton_name)).assertIsDisplayed()
         }
@@ -44,7 +45,7 @@ internal class AddButtonCreateFlowTest : AbstractUiTest() {
 
     @Test
     fun saveWithBlankNameShowsRequiredError() {
-        ActivityScenario.launch<AddButtonActivity>(launchIntent(uri = SAMPLE_URI)).use {
+        ActivityScenario.launch<AddButtonActivity>(launchIntent(uri = TestData.seedPreviewAudio(context))).use {
             composeRule.awaitNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
             composeRule
                 .awaitNodeWithText(context.getString(R.string.app_addbutton_name_is_required_error))
@@ -56,10 +57,9 @@ internal class AddButtonCreateFlowTest : AbstractUiTest() {
         Intent(context, AddButtonActivity::class.java).apply {
             action = Intent.ACTION_SEND
             type = "audio/*"
-            if (uri != null) putExtra(Intent.EXTRA_STREAM, uri)
+            if (uri != null) {
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
         }
-
-    companion object {
-        private val SAMPLE_URI: Uri = Uri.parse("content://test/audio.mp3")
-    }
 }

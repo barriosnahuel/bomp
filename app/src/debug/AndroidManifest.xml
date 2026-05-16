@@ -5,6 +5,21 @@
         <meta-data
             android:name="firebase_performance_logcat_enabled"
             android:value="true" />
+
+        <!--
+            Debug-variant FileProvider for instrumented tests. Authority is parallel to the
+            production one (`${applicationId}.fileprovider`) so test-only paths (`cacheDir`)
+            do not leak into release builds. See AndroidTestFileProvider.kt.
+        -->
+        <provider
+            android:name=".AndroidTestFileProvider"
+            android:authorities="${applicationId}.androidtest.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/app_androidtest_file_paths" />
+        </provider>
     </application>
 
 </manifest>
