@@ -52,6 +52,21 @@ import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Stops in-flight URI-bound preview playback. Used by `AudioPreview`'s `DisposableEffect.onDispose`
+ * and by `AddButtonScreen.save()` when transitioning to the success morph — without the latter the
+ * only stop is the disposal path, which fires when the Activity tears down ~600 ms later, leaving
+ * audio bleeding through the confirmation overlay. Guarded on a non-null URI to leave Sound-bound
+ * playback owned by other surfaces (Home/Explore — reported via the listener, not [playbackState];
+ * see ADR 0007) untouched.
+ */
+internal fun stopActivePreviewPlayback() {
+    val controller = PlayerControllerFactory.instance
+    if (controller.playbackState.value?.uri != null) {
+        controller.stopPlayingSound()
+    }
+}
+
 @Composable
 internal fun AudioPreview(
     context: Context,

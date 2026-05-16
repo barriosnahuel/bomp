@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Rotating the device while the License sheet is open in About no longer collapses the sheet; the sheet stays open
 - Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
 - Restored ripple contrast on the empty Home in light mode so the illustration reads clearly from the first launch
+- Audio preview no longer bleeds into the success confirmation when you save a new Bomp (or save a rename) while the preview is playing — the audio now stops the moment the confirmation appears
 
 
 ### Changed

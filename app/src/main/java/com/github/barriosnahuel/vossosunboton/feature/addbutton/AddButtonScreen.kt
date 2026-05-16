@@ -155,6 +155,7 @@ fun AddButtonScreen(
                 is AddButtonMode.Create -> {
                     val feedbackId = feature.saveNewButtonAsync(context, trimmedName, m.uri.toString()).await()
                     if (feedbackId == R.string.app_addbutton_feedback_saved_ok) {
+                        stopActivePreviewPlayback()
                         trackSoundAdd(context, trimmedName, tracker)
                         saveOutcome = SaveOutcome.Success(trimmedName)
                     } else {
@@ -181,6 +182,7 @@ fun AddButtonScreen(
                 }
                 is AddButtonMode.Edit -> {
                     feature.renameButtonAsync(context, m.sound, trimmedName).await()
+                    stopActivePreviewPlayback()
                     trackSoundEdit(trimmedName, m.sound.name, tracker)
                     saveOutcome = SaveOutcome.Success(trimmedName)
                 }
