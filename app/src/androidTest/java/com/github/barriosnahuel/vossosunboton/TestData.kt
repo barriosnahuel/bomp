@@ -6,12 +6,15 @@
 package com.github.barriosnahuel.vossosunboton
 
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
+import androidx.core.content.FileProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.runBlocking
+import java.util.UUID
 
 /**
  * Helpers to seed and tear down sound data for instrumented UI tests.
@@ -52,7 +55,29 @@ internal object TestData {
             .getExternalFilesDir(Environment.DIRECTORY_MUSIC)
             ?.listFiles()
             ?.forEach { it.delete() }
+        previewAudioDir(context).listFiles()?.forEach { it.delete() }
     }
+
+    /**
+     * Seeds a playable preview-audio file in the SUT's `cacheDir/preview-audio/` directory and
+     * returns a `content://` URI minted by the debug-only [AndroidTestFileProvider]. Each call
+     * produces a fresh file (random suffix) so tests can run concurrently or repeatedly without
+     * collisions. The payload is the same 5s silent clip used by [seedCustomSounds], giving
+     * MediaPlayer enough margin to prepare/start without flaking on a starved main thread.
+     *
+     * Pair the returned URI with `Intent.FLAG_GRANT_READ_URI_PERMISSION` on the launching intent
+     * so the SUT process can open the stream when AddButtonActivity (or any consumer) resolves it.
+     */
+    fun seedPreviewAudio(context: Context): Uri {
+        val dir = previewAudioDir(context).apply { mkdirs() }
+        val file = dir.resolve("preview-audio-${UUID.randomUUID()}.mp3")
+        InstrumentationRegistry.getInstrumentation().context.assets.open(TEST_ASSET).use { input ->
+            file.outputStream().use { output -> input.copyTo(output) }
+        }
+        return FileProvider.getUriForFile(context, "${context.packageName}.androidtest.fileprovider", file)
+    }
+
+    private fun previewAudioDir(context: Context) = context.cacheDir.resolve("preview-audio")
 
     /**
      * Seeds [count] custom sounds named `custom_1`, `custom_2`, ... each backed by a copy
