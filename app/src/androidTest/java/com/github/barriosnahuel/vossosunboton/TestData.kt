@@ -14,6 +14,7 @@ import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStor
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.runBlocking
+import java.io.RandomAccessFile
 import java.util.UUID
 
 /**
@@ -30,6 +31,11 @@ import java.util.UUID
  */
 internal object TestData {
     private const val TEST_ASSET = "test_sound.mp3"
+
+    // 52 MB — comfortably above the AddButtonFeature.MAX_AUDIO_BYTES cap (50 MB) without being
+    // brittle to a couple-MB tweak of the cap. Sparse-file allocation makes the actual disk usage
+    // negligible.
+    private const val OVERSIZE_BYTES: Long = 52L * 1024 * 1024
 
     private fun repo(context: Context) = SoundsRepository(context)
 
@@ -74,8 +80,41 @@ internal object TestData {
         InstrumentationRegistry.getInstrumentation().context.assets.open(TEST_ASSET).use { input ->
             file.outputStream().use { output -> input.copyTo(output) }
         }
-        return FileProvider.getUriForFile(context, "${context.packageName}.androidtest.fileprovider", file)
+        return providerUri(context, file)
     }
+
+    /**
+     * Seeds a `content://` URI for a non-audio file (`.txt`). The `FileProvider`'s
+     * [android.content.ContentResolver.getType] returns `text/plain` for `.txt` (per
+     * [java.net.URLConnection.guessContentTypeFromName]), exercising the MIME-rejection branch
+     * of `AddButtonFeature.validateContentUri`. Payload is 4 bytes — size is irrelevant for the
+     * MIME check.
+     */
+    fun seedTextFileUri(context: Context): Uri {
+        val dir = previewAudioDir(context).apply { mkdirs() }
+        val file = dir.resolve("preview-bogus-${UUID.randomUUID()}.txt")
+        file.writeBytes(byteArrayOf(1, 2, 3, 4))
+        return providerUri(context, file)
+    }
+
+    /**
+     * Seeds an oversized (`>` 50 MB) `content://` URI as a sparse file via [RandomAccessFile.setLength],
+     * so the seeding cost is O(1) on the filesystem regardless of nominal size. The
+     * `FileProvider`'s `openAssetFileDescriptor(...).length` reports the sparse length, which
+     * `AddButtonFeature.resolveSize` reads — exercising the size-cap rejection branch. Extension
+     * stays `.mp3` so the MIME check passes and the validator reaches the size step.
+     */
+    fun seedOversizedAudioUri(context: Context): Uri {
+        val dir = previewAudioDir(context).apply { mkdirs() }
+        val file = dir.resolve("preview-oversize-${UUID.randomUUID()}.mp3")
+        RandomAccessFile(file, "rw").use { it.setLength(OVERSIZE_BYTES) }
+        return providerUri(context, file)
+    }
+
+    private fun providerUri(
+        context: Context,
+        file: java.io.File,
+    ): Uri = FileProvider.getUriForFile(context, "${context.packageName}.androidtest.fileprovider", file)
 
     private fun previewAudioDir(context: Context) = context.cacheDir.resolve("preview-audio")
 
