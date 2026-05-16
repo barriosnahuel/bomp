@@ -50,6 +50,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
         assertThat(result).isEqualTo(R.string.app_addbutton_feedback_saved_ok)
     }
 
+    /** OWASP MASVS-CODE-4 / CWE-434 (Unrestricted Upload of File with Dangerous Type — non-audio MIME). */
     @Test
     fun `saveNewButtonAsync rejects URIs with non-audio MIME types`() {
         val uri = Uri.parse("content://test/zip-file")
@@ -63,6 +64,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
         assertThat(result).isEqualTo(R.string.app_feedback_generic_error_contact_support)
     }
 
+    /** OWASP MASVS-RESILIENCE-2 / CWE-770 (Allocation of Resources Without Limits — size cap). */
     @Test
     fun `saveNewButtonAsync rejects URIs that exceed the maximum allowed size`() {
         val uri = Uri.parse("content://test/huge-audio")
@@ -77,6 +79,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
         assertThat(result).isEqualTo(R.string.app_feedback_generic_error_contact_support)
     }
 
+    /** OWASP MASVS-PLATFORM-1 / CWE-441 (Confused Deputy — untrusted IPC URI scheme). */
     @Test
     fun `saveNewButtonAsync rejects URIs with unsupported schemes`() {
         val uri = Uri.parse("http://example.com/foo.mp3")
@@ -105,6 +108,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
         verify(exactly = 0) { resolver.getType(uri) }
     }
 
+    /** OWASP MASVS-CODE-4 / CWE-434 (Null-MIME bypass of audio MIME allowlist). */
     @Test
     fun `saveNewButtonAsync rejects URIs whose MIME type is unknown`() {
         val uri = Uri.parse("content://test/no-mime")
@@ -118,6 +122,7 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
         assertThat(result).isEqualTo(R.string.app_feedback_generic_error_contact_support)
     }
 
+    /** OWASP MASVS-CODE-4 / CWE-703 (Improper Handling of Exceptional Conditions at security boundary). */
     @Test
     fun `saveNewButtonAsync returns uri-unreadable feedback when ContentResolver getType throws SecurityException`() {
         val uri = Uri.parse("content://test/revoked-grant")

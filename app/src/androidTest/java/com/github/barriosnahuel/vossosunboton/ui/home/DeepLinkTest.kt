@@ -74,6 +74,7 @@ internal class DeepLinkTest : AbstractUiTest() {
         }
     }
 
+    /** OWASP MASVS-PLATFORM-1 / CWE-940 (Improper Verification of Source — fail-closed deep link allowlist). */
     @Test
     fun unknownPathDeeplinkFallsBackToHome() {
         val bundled = PackagedAudios.get(context)

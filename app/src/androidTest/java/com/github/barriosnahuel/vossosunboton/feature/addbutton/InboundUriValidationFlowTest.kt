@@ -35,6 +35,7 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 internal class InboundUriValidationFlowTest : AbstractUiTest() {
+    /** OWASP MASVS-PLATFORM-1 / CWE-441 (Confused Deputy — untrusted IPC URI scheme). */
     @Test
     fun httpSchemeUriShowsRejectionSnackbar() {
         // `http://` is outside `AddButtonFeature.ALLOWED_SCHEMES` ({content, file}). The validator
@@ -47,6 +48,7 @@ internal class InboundUriValidationFlowTest : AbstractUiTest() {
         }
     }
 
+    /** OWASP MASVS-CODE-4 / CWE-434 (Unrestricted Upload of File with Dangerous Type — non-audio MIME). */
     @Test
     fun nonAudioMimeUriShowsRejectionSnackbar() {
         // A `.txt` file served through the FileProvider reports MIME `text/plain`. The validator
@@ -59,6 +61,7 @@ internal class InboundUriValidationFlowTest : AbstractUiTest() {
         }
     }
 
+    /** OWASP MASVS-RESILIENCE-2 / CWE-770 (Allocation of Resources Without Limits — size cap). */
     @Test
     fun oversizedAudioUriShowsRejectionSnackbar() {
         // A sparse 52 MB `.mp3` is above the validator's 50 MB cap; MIME passes (`audio/mpeg`),

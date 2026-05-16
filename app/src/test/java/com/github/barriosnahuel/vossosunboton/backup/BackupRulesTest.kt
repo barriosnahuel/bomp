@@ -23,6 +23,7 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
      */
     private val expectedDatastoreInclude = "file" to SoundsRepository.BACKUP_FILE_PATH
 
+    /** OWASP MASVS-STORAGE-2 / CWE-359 (Exposure of Private Personal Information — backup scope drift). */
     @Test
     fun `app_backup_rules includes both audio files and the bomps datastore file`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -31,6 +32,7 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
         assertThat(includes).containsAtLeast("external" to "Music", expectedDatastoreInclude)
     }
 
+    /** OWASP MASVS-STORAGE-2 / CWE-359 (cloud-backup scope drift). */
     @Test
     fun `app_data_extraction_rules cloud-backup includes both audio files and the bomps datastore file`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -43,6 +45,7 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
         assertThat(includes).containsAtLeast("external" to "Music", expectedDatastoreInclude)
     }
 
+    /** OWASP MASVS-STORAGE-2 / CWE-359 (device-transfer scope drift). */
     @Test
     fun `app_data_extraction_rules device-transfer includes both audio files and the bomps datastore file`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -56,6 +59,8 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
     }
 
     /**
+     * OWASP MASVS-STORAGE-2 (welcome-sticker state preservation across restore).
+     *
      * Sticker Cero invariant: the welcome-sticker DataStore file IS backed up. The user's "I
      * dismissed this" gesture is meaningful state that should survive an Auto Backup or
      * device-transfer restore — forcing them through the welcome card on every restored device
@@ -70,6 +75,8 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
     }
 
     /**
+     * OWASP MASVS-STORAGE-2 (lifetime-counter integrity across restore).
+     *
      * Lifetime user-property counters (`lifetime_plays`, `lifetime_shares`) MUST be backed up.
      * Without backup, a restored device starts at 0 and the next `setUserProperty` overwrites
      * the prior cumulative value in the Firebase user-property dashboard — corruption.
@@ -83,6 +90,8 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
     }
 
     /**
+     * OWASP MASVS-PRIVACY-1 / CWE-200 (analytics first_open flags excluded from cross-install backup).
+     *
      * `first_*` event flags MUST NOT be backed up. Firebase's user-identity model is per-install
      * (`first_open` is emitted per-install, not per-user). Backing up the flags would suppress
      * the `first_*` series on the restored device — desyncs from Firebase's lifecycle. Each

@@ -279,6 +279,20 @@ Before adding a DataStore preference file or persistent path with sensitive data
 
 New `Activity`/`Service`/`Receiver` in `AndroidManifest.xml` defaults `android:exported="false"`. Set `true` only with an `<intent-filter>` for external callers; document the intents in a comment above. Today's exported activities: `LandingActivity` (LAUNCHER + `push-me://open` deep link) and `AddButtonActivity` (share sheet `ACTION_SEND` with `audio/*`).
 
+### Security test tagging (OWASP MASVS / CWE)
+
+Tests that exercise a security boundary defined in this section **MUST** cite their OWASP MASVS control and (when applicable) CWE in a one-line KDoc directly above `@Test`:
+
+```kotlin
+/** OWASP MASVS-PLATFORM-1 / CWE-441 (Confused Deputy — untrusted IPC URI scheme). */
+@Test
+fun httpSchemeUriShowsRejectionSnackbar() { ... }
+```
+
+Grep contract: the marker is `OWASP MASVS-` (literal). The `scripts/check-security-test-count.sh` job (CircleCI `security-test-count-guard`) counts occurrences across `app/src/test`, `app/src/androidTest`, `commons_android/src`, `commons_file/src`, `model/src` and fails the build if the count drops below `EXPECTED_COUNT`. A drop signals an accidentally-removed security test — restore it or, for a deliberate removal, update `EXPECTED_COUNT` and explain in the PR.
+
+Map a test to the **primary** boundary the production code enforces; secondary controls go in the same KDoc separated by commas if the boundary is overlapping (e.g. `MASVS-CODE-4, MASVS-RESILIENCE-2`). Implementation-detail tests (ordering, performance) are not in scope — only boundary verifications.
+
 ## Accessibility (WCAG 2.2 AA)
 
 All UI and generated assets (store listing, What's New, changelogs) target **WCAG 2.2 Level AA**. Key requirements:
