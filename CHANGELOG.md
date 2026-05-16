@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### Added
 - Terms of Service link in the About screen's "Legal & Privacy" section, opening the published page with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
 - New Bomp screen now shows the audio preview card with play/pause and seek above the name field, so you can listen to the incoming audio before saving — matching the card already present when renaming a Bomp
-- New Bomp screen now flags when you already have a Bomp with the same name and lets you tap an inline play to hear that one before deciding — case-insensitive, trimmed. Non-blocking: you can still save the duplicate (two Bomps can legitimately share a name)
+- New Bomp screen now flags when you already have a Bomp with the same name and lets you tap an inline play/stop toggle to hear that one before deciding — case-insensitive, trimmed; tap again while playing to stop and reset. Non-blocking: you can still save the duplicate (two Bomps can legitimately share a name)
 
 ### Fixed
 - Audio preview card in Rename Bomp now advances the seek bar in real time during playback (was static)

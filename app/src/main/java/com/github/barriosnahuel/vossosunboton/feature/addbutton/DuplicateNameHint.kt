@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -29,13 +31,19 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
+import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Reactive lookup that returns the existing [Sound] matching [typedName], or `null` if there is no
@@ -117,9 +125,15 @@ internal fun NameFieldSupportingText(
 /**
  * Hint shown under the name field when the typed name matches an existing Bomp. Non-blocking —
  * the save button stays enabled because two Bomps can legitimately share a name now that identity
- * is keyed by [Sound.id] (ADR 0008). The inline play button routes through
- * [PlayerControllerFactory] (ADR 0005) so it integrates with the same pause/resume semantics
- * (ADR 0007) the main list uses.
+ * is keyed by [Sound.id] (ADR 0008).
+ *
+ * The inline button is a play/stop toggle scoped to *this specific match*: tap → play from 0; tap
+ * again while playing → stop and reset (no pause, no resume, no seeker). Routed through
+ * [PlayerController.startPlayingUri]/[PlayerController.stopPlayingSound] — the same Uri-preview
+ * path [AudioPreview] uses — so the [PlayerController.playbackState] StateFlow reflects the live
+ * status (the Sound playback path goes through a single-listener slot already taken by
+ * `SoundsViewModel`, so we cannot observe it from here). Reset-on-start is the intended UX
+ * difference vs the home list and matches a quick "is this the audio I'm thinking of?" probe.
  */
 @Composable
 internal fun DuplicateNameHint(
@@ -127,6 +141,30 @@ internal fun DuplicateNameHint(
     match: Sound,
     tracker: AnalyticsTracker,
 ) {
+    // Custom-sound URIs go through getExternalFilesDir(), which trips StrictMode DiskReadViolation
+    // if resolved on the main thread (PreviewSlot in AddButtonScreen.kt has the same pattern). The
+    // null window is invisible because the icon defaults to "play" and the click handler no-ops
+    // while resolution is pending.
+    val matchUri: Uri? by produceState<Uri?>(initialValue = null, match.id) {
+        value = withContext(Dispatchers.IO) { match.toPreviewUri(context) }
+    }
+    val controller = PlayerControllerFactory.instance
+    val playbackState by controller.playbackState.collectAsStateWithLifecycle()
+    val isPlayingThisMatch =
+        matchUri != null && playbackState?.uri == matchUri && playbackState?.isPlaying == true
+
+    DisposableEffect(matchUri) {
+        onDispose {
+            // Mirror AudioPreview: when the hint goes away (typed name no longer matches, screen
+            // backed out, match changes id), stop our own preview but never preempt an unrelated
+            // playback that may already own the controller.
+            val resolvedUri = matchUri ?: return@onDispose
+            if (controller.playbackState.value?.uri == resolvedUri) {
+                controller.stopPlayingSound()
+            }
+        }
+    }
+
     Row(
         modifier =
             Modifier
@@ -143,16 +181,41 @@ internal fun DuplicateNameHint(
         )
         IconButton(
             onClick = {
-                tracker.log(AnalyticsEvent.DuplicateNameHintPlay)
-                PlayerControllerFactory.instance.startPlayingSound(context, match)
+                val resolvedUri = matchUri ?: return@IconButton
+                if (isPlayingThisMatch) {
+                    controller.stopPlayingSound()
+                } else {
+                    tracker.log(AnalyticsEvent.DuplicateNameHintPlay)
+                    controller.startPlayingUri(context, resolvedUri)
+                }
             },
             modifier = Modifier.size(48.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = stringResource(R.string.app_addbutton_duplicate_name_hint_play_description),
+                imageVector = if (isPlayingThisMatch) AppIcons.Stop else Icons.Default.PlayArrow,
+                contentDescription =
+                    stringResource(
+                        if (isPlayingThisMatch) {
+                            R.string.app_addbutton_duplicate_name_hint_stop_description
+                        } else {
+                            R.string.app_addbutton_duplicate_name_hint_play_description
+                        },
+                    ),
                 tint = MaterialTheme.colorScheme.primaryContainer,
             )
         }
     }
 }
+
+/**
+ * Resolves the preview [Uri] for [this] sound. Bundled sounds use the `android.resource://` scheme
+ * keyed by `rawRes` (build-stable per install — see ADR 0008 § *Why `"bundled:$rawRes"` for bundled
+ * sounds*); custom sounds resolve through the same [getFile] helper [AddButtonScreen]'s
+ * `PreviewSlot` uses, so file lookup semantics stay aligned.
+ */
+private fun Sound.toPreviewUri(context: Context): Uri =
+    if (isBundled()) {
+        "android.resource://${context.packageName}/$rawRes".toUri()
+    } else {
+        getFile(context, file!!).toUri()
+    }

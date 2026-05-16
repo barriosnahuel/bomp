@@ -13,18 +13,22 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.core.net.toUri
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
+import com.github.barriosnahuel.vossosunboton.commons.file.getFile
+import com.github.barriosnahuel.vossosunboton.feature.playback.PlaybackState
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
@@ -50,6 +54,10 @@ import org.robolectric.annotation.Config
  * The hint surfaces when the user types a name that matches an existing Bomp; the save button
  * stays enabled because [SoundsRepository.save] upserts by id (ADR 0008), so two same-named
  * Bomps can legitimately coexist.
+ *
+ * The inline play/stop toggle is scoped to *this match*: tap → `startPlayingUri` (preview path,
+ * resets on each start, doesn't pollute home position cache); tap again while playing →
+ * `stopPlayingSound`; disposal → stops the controller only when our uri is the active one.
  */
 @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
 internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() {
@@ -62,9 +70,12 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         get() = context.getString(R.string.app_addbutton_duplicate_name_hint)
     private val playLabel
         get() = context.getString(R.string.app_addbutton_duplicate_name_hint_play_description)
+    private val stopLabel
+        get() = context.getString(R.string.app_addbutton_duplicate_name_hint_stop_description)
 
     private lateinit var fake: FakeAnalyticsTracker
     private lateinit var feature: FakeAddButtonFeature
+    private lateinit var playbackStateFlow: MutableStateFlow<PlaybackState?>
 
     @Before
     fun setUp() {
@@ -72,12 +83,12 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         AnalyticsTrackerProvider.setForTest(fake)
         feature = FakeAddButtonFeature()
         AddButtonFeatureProvider.setForTest(feature)
-        // Mocked so the inline-play test never actually loads a MediaPlayer; the hint only needs to
-        // verify that the click routes through the unified controller (ADR 0005). `playbackState`
-        // also needs an answer because `AddButtonScreen` renders `AudioPreview`, which reads it on
-        // every composition pass.
+        playbackStateFlow = MutableStateFlow(null)
+        // Mocked so the inline-play test never actually loads a MediaPlayer; the hint observes
+        // `playbackState` directly to drive its play/stop toggle, so the field is exposed via a
+        // `MutableStateFlow` tests can mutate to simulate live transitions.
         mockkObject(PlayerControllerFactory)
-        every { PlayerControllerFactory.instance.playbackState } returns MutableStateFlow(null)
+        every { PlayerControllerFactory.instance.playbackState } returns playbackStateFlow
         every { PlayerControllerFactory.instance.startPlayingSound(any(), any()) } answers { nothing }
         every { PlayerControllerFactory.instance.startPlayingUri(any(), any()) } answers { nothing }
         every { PlayerControllerFactory.instance.stopPlayingSound() } answers { nothing }
@@ -192,8 +203,13 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
     }
 
     @Test
-    fun `tapping the inline play button fires analytics and routes through PlayerController`() {
+    fun `tapping the inline play routes through startPlayingUri (preview path) and fires analytics`() {
         val match = seedSound(EXISTING_NAME, "existing.mp3")
+        val expected = expectedUri(match)
+        // Extract `instance` once: `verify(exactly = 0) { PlayerControllerFactory.instance.X }`
+        // also asserts the getter chain (`getInstance$app`) is never called, which fails because
+        // production code legitimately accesses it.
+        val ctrl = PlayerControllerFactory.instance
 
         ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
             composeTestRule.waitForIdle()
@@ -206,8 +222,123 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
             composeTestRule.waitForIdle()
 
             fake.assertEmitted("duplicate_name_hint_play")
-            verify { PlayerControllerFactory.instance.startPlayingSound(any(), match) }
+            verify { ctrl.startPlayingUri(any(), expected) }
+            verify(exactly = 0) { ctrl.startPlayingSound(any(), any()) }
         }
+    }
+
+    @Test
+    fun `tapping the inline button while this match is playing stops it (no restart)`() {
+        val match = seedSound(EXISTING_NAME, "existing.mp3")
+        val expected = expectedUri(match)
+        val ctrl = PlayerControllerFactory.instance
+
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
+                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
+            }
+
+            // Simulate the controller transitioning into "playing this match" — the hint should
+            // morph to the stop affordance and the next tap should hit `stopPlayingSound`.
+            playbackStateFlow.value = PlaybackState(uri = expected, positionMs = 0, durationMs = 1_000, isPlaying = true)
+            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
+                composeTestRule.onAllNodesWithContentDescription(stopLabel).fetchSemanticsNodes().isNotEmpty()
+            }
+
+            composeTestRule.onNodeWithContentDescription(stopLabel).performClick()
+            composeTestRule.waitForIdle()
+
+            verify { ctrl.stopPlayingSound() }
+            // No second start: a re-tap while playing must stop, never re-issue play.
+            verify(exactly = 0) { ctrl.startPlayingUri(any(), any()) }
+            // Stopping is not analytics-tracked — only the user-initiated play tap is.
+            fake.assertNotEmitted("duplicate_name_hint_play")
+        }
+    }
+
+    @Test
+    fun `icon stays as play when an unrelated uri is the one currently playing`() {
+        seedSound(EXISTING_NAME, "existing.mp3")
+        val unrelated = Uri.parse("content://test/other-audio.mp3")
+        playbackStateFlow.value = PlaybackState(uri = unrelated, positionMs = 0, durationMs = 1_000, isPlaying = true)
+
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
+                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
+            }
+
+            // Hint sees a non-matching playbackState → its toggle is "play" (not stop), regardless
+            // of whether something else is playing. This is the AudioPreview-coexistence case.
+            composeTestRule.onNodeWithContentDescription(playLabel).assertIsDisplayed()
+            composeTestRule.onAllNodesWithContentDescription(stopLabel).assertCountEquals(0)
+        }
+    }
+
+    @Test
+    fun `tapping play preempts an unrelated playing uri (AudioPreview coexistence)`() {
+        val match = seedSound(EXISTING_NAME, "existing.mp3")
+        val expected = expectedUri(match)
+        val unrelated = Uri.parse("content://test/other-audio.mp3")
+        playbackStateFlow.value = PlaybackState(uri = unrelated, positionMs = 0, durationMs = 1_000, isPlaying = true)
+        val ctrl = PlayerControllerFactory.instance
+
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
+                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
+            }
+
+            composeTestRule.onNodeWithContentDescription(playLabel).performClick()
+            composeTestRule.waitForIdle()
+
+            // The hint calls `startPlayingUri` even though something else is already playing — the
+            // controller's `startPlayingUri` contract handles preemption (PlayerController.kt:53-63).
+            // This test pins the expectation that we *do* call the preemption-capable API.
+            verify { ctrl.startPlayingUri(any(), expected) }
+            verify(exactly = 0) { ctrl.stopPlayingSound() }
+        }
+    }
+
+    @Test
+    fun `leaving the screen while this match is playing stops it`() {
+        val match = seedSound(EXISTING_NAME, "existing.mp3")
+        val expected = expectedUri(match)
+
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
+                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
+            }
+            playbackStateFlow.value = PlaybackState(uri = expected, positionMs = 0, durationMs = 1_000, isPlaying = true)
+            composeTestRule.waitForIdle()
+        }
+        // The Activity is destroyed on `use` exit → DisposableEffect.onDispose runs and, because
+        // the controller's playbackState still owns our match's uri, fires `stopPlayingSound`.
+        verify { PlayerControllerFactory.instance.stopPlayingSound() }
+    }
+
+    @Test
+    fun `disposal does not stop an unrelated playback that owns the controller`() {
+        seedSound(EXISTING_NAME, "existing.mp3")
+        val unrelated = Uri.parse("content://test/other-audio.mp3")
+        playbackStateFlow.value = PlaybackState(uri = unrelated, positionMs = 0, durationMs = 1_000, isPlaying = true)
+        val ctrl = PlayerControllerFactory.instance
+
+        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
+                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
+            }
+        }
+        // Hint disposal sees `playbackState.uri != ours` and must not preempt the unrelated playback.
+        verify(exactly = 0) { ctrl.stopPlayingSound() }
     }
 
     private fun seedSound(
@@ -218,6 +349,8 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         runBlocking { SoundsRepository(context).save(sound) }
         return sound
     }
+
+    private fun expectedUri(sound: Sound): Uri = getFile(context, sound.file!!).toUri()
 
     private fun createIntent(): Intent =
         Intent(context, AddButtonActivity::class.java).apply {
