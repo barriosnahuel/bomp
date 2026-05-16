@@ -94,6 +94,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
         assertThat(capturedFile.name).isEqualTo("bundled_${R.raw.app_test_sound}.mp3")
     }
 
+    /** OWASP MASVS-PLATFORM-1 / CWE-22 (Path Traversal defense — FileProvider rejects out-of-scope paths). */
     @Test
     fun `prepareShareIntent returns Failure unshareable when FileProvider rejects the file`() {
         val sound = givenASoundWithUri()
