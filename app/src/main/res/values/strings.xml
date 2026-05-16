@@ -78,6 +78,9 @@
     <string name="app_addbutton_save_changes">Save changes</string>
     <string name="app_addbutton_preview_audio">Preview audio</string>
     <string name="app_addbutton_name_is_required_error">Name is required</string>
+    <string name="app_addbutton_duplicate_name_hint">You already have a Bomp called that. Want to hear it?</string>
+    <string name="app_addbutton_duplicate_name_hint_play_description">Play the Bomp with this name</string>
+    <string name="app_addbutton_duplicate_name_hint_stop_description">Stop the Bomp with this name</string>
     <string name="app_addbutton_missing_parameter_error">Missing audio file</string>
     <string name="app_addbutton_feedback_saved_ok">Saved!</string>
     <string name="app_addbutton_feedback_uri_unreadable">Couldn\'t read the audio you picked. Nahu\'s already on it.</string>

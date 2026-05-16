@@ -111,6 +111,19 @@ fun AddButtonScreen(
     val nameFocusRequester = remember { FocusRequester() }
     val view = LocalView.current
 
+    // Reactive lookup against the user's library (custom + bundled). Derivation, predicate, and
+    // the supporting `produceState` live in `DuplicateNameHint.kt` so this composable stays under
+    // the detekt complexity threshold. Fires `duplicate_name_hint_shown` once per matched sound id
+    // (ADR 0008) so per-keystroke recompositions while the same match holds emit a single event;
+    // a transition to a different match (or to no-match-then-back) re-emits, which is acceptable
+    // signal for typing exploration.
+    val duplicateMatch = rememberDuplicateNameMatch(context, name.text, mode)
+    LaunchedEffect(duplicateMatch?.id) {
+        if (duplicateMatch != null) {
+            tracker.log(AnalyticsEvent.DuplicateNameHintShown)
+        }
+    }
+
     LaunchedEffect(Unit) {
         // Save the user one tap: the name field is the primary action on this screen, so focus it
         // on entry and let the IME come up immediately. Both modes (Create from share-sheet and
@@ -223,19 +236,14 @@ fun AddButtonScreen(
                     placeholder = { Text(stringResource(R.string.app_addbutton_placeholder)) },
                     isError = nameError != null,
                     supportingText = {
-                        val error = nameError
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            if (error != null) {
-                                Text(
-                                    text = error,
-                                    modifier = Modifier.weight(1f),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                            Text(text = "${name.text.length}/$MAX_NAME_LENGTH")
-                        }
+                        NameFieldSupportingText(
+                            error = nameError,
+                            nameLength = name.text.length,
+                            maxNameLength = MAX_NAME_LENGTH,
+                            duplicateMatch = duplicateMatch,
+                            context = context,
+                            tracker = tracker,
+                        )
                     },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),

@@ -78,6 +78,8 @@ internal class AnalyticsCoverageMatrixTest {
                 "WelcomeStickerCompleted",
                 "WelcomeStickerUndone",
                 "WelcomeStickerDismissed",
+                "DuplicateNameHintShown",
+                "DuplicateNameHintPlay",
             )
 
         private val SCREEN_VIEWS_WITH_REGRESSION_TEST: Set<String> =

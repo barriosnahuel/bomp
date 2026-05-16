@@ -39,6 +39,25 @@ public object AppIcons {
             }.build()
     }
 
+    val Stop: ImageVector by lazy {
+        ImageVector
+            .Builder(
+                name = "Stop",
+                defaultWidth = 24.dp,
+                defaultHeight = 24.dp,
+                viewportWidth = 24f,
+                viewportHeight = 24f,
+            ).apply {
+                path(fill = SolidColor(Color.Black)) {
+                    moveTo(6.0f, 6.0f)
+                    horizontalLineToRelative(12.0f)
+                    verticalLineToRelative(12.0f)
+                    horizontalLineToRelative(-12.0f)
+                    close()
+                }
+            }.build()
+    }
+
     val PushPin: ImageVector by lazy {
         ImageVector
             .Builder(

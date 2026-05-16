@@ -175,4 +175,17 @@ sealed class AnalyticsEvent(
     data class MilestoneAudios(
         val threshold: Int,
     ) : AnalyticsEvent(name = "milestone_sounds_$threshold", hasFirstVariant = false)
+
+    /**
+     * Non-blocking duplicate-name hint appeared in the New Bomp screen because the typed name
+     * matches an existing Bomp in the user's library. The call-site gates emission per distinct
+     * match (keyed by the matched sound's id) to avoid keystroke noise.
+     */
+    object DuplicateNameHintShown : AnalyticsEvent(name = "duplicate_name_hint_shown", hasFirstVariant = true)
+
+    /**
+     * User tapped the inline play button on the duplicate-name hint to listen to the existing
+     * Bomp before deciding whether to save the duplicate.
+     */
+    object DuplicateNameHintPlay : AnalyticsEvent(name = "duplicate_name_hint_play", hasFirstVariant = true)
 }
