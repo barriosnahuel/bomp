@@ -26,7 +26,19 @@ class AddButtonActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
+    }
 
+    // singleTask + a new ACTION_SEND from a share sheet arrives here while an Edit
+    // flow is still alive: the most recent user intent wins, the previous in-progress
+    // state is discarded by reading the new intent and recomposing setContent.
+    public override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
         val editSound: Sound? =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(LandingActivity.EXTRA_EDIT_SOUND, Sound::class.java)

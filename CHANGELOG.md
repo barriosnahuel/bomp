@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Optimized app size by filtering AAB locales to `en` and `es` only via AGP 9 `androidResources.localeFilters`; transitive dependencies (Material, AndroidX, Firebase, Play Services) no longer ship ~80 unused translations in the bundle
 - Restored ripple contrast on the empty Home in light mode so the illustration reads clearly from the first launch
 - Audio preview no longer bleeds into the success confirmation when you save a new Bomp (or save a rename) while the preview is playing — the audio now stops the moment the confirmation appears
+- Sharing an audio into Bomp while a rename was left open in the background no longer drops you back into that unsaved rename screen with the wrong audio's data; the share now correctly opens the new-Bomp form for the incoming audio (anything you had typed in the unsaved rename is discarded since it was never saved)
 
 
 ### Changed
