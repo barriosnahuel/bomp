@@ -139,7 +139,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `prepareShareIntent returns Failure copy_failed when bundled copy throws IOException`() {
+    fun `prepareShareIntent returns Failure with copy-error feedback when bundled copy throws IOException`() {
         val sound = givenASoundWithResourceId()
         val realContext = ApplicationProvider.getApplicationContext<Context>()
         val mockedContext = spyk<Context>(realContext)
