@@ -68,4 +68,16 @@ else
   git -C "$primary_root" worktree add "$worktree_path" -b "$branch_name" >&2
 fi
 
+# Make the worktree operational before the session opens in it: copy the
+# skip-worktree-overridden google-services configs and the bundled debug audio
+# from the primary worktree. The script is idempotent; stdout goes to stderr so
+# it doesn't pollute the path the harness reads. Setup failures aren't fatal —
+# the harness still gets a valid worktree path; the session just opens into a
+# half-configured worktree (same behavior as before this hook learned to do
+# setup), so the operator can finish by hand or re-run the script.
+(
+  cd "$worktree_path"
+  ./scripts/setup-worktree.sh >&2 || echo "⚠ setup-worktree.sh failed; finish setup by hand (see CONTRIBUTING.md § Firebase config file)" >&2
+)
+
 printf '%s\n' "$worktree_path"

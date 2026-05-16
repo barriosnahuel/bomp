@@ -110,7 +110,7 @@ Invariants:
 - Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` + `secure.properties` (`key.alias`, `key.password`, `store.password`) at project root — not committed. Debug uses the included debug keystore.
 - Bundled debug audio (`model/src/debug/res/raw/*.{mp3,ogg}`) not committed — without them Explore tab is empty.
 
-Setup procedures (sibling-worktree creation + primary-worktree copy, fresh-clone swap, safe edit sequence) in CONTRIBUTING.md § *Firebase config file*.
+After creating a worktree by hand, run `./scripts/setup-worktree.sh` from its root — it copies the real google-services configs + bundled debug audio from the primary worktree and re-arms skip-worktree. Idempotent. The `WorktreeCreate` hook above invokes it automatically. Fresh-clone swap and safe edit sequence in CONTRIBUTING.md § *Firebase config file*.
 
 ## Android resources naming
 

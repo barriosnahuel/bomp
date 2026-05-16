@@ -210,7 +210,13 @@ git worktree add ../push-me-<topic> -b <branch> origin/develop
 
 A committed `WorktreeCreate` hook (`.claude/hooks/create-sibling-worktree.sh`, registered in `.claude/settings.json`) applies the same layout to worktrees the Claude Code harness or its subagents create — they land as `../push-me-<name>` instead of the harness default `.claude/worktrees/<name>`. The hook resolves the primary worktree root via `git rev-parse --git-common-dir`, so it works even when invoked from inside a linked worktree.
 
-The dummies land checked-in on the new worktree but the real configs and the bundled audio files don't follow — the swap-and-skip-worktree state is per-worktree. Copy them from the primary worktree, then re-arm skip-worktree on the new worktree so any future re-download from Firebase Console doesn't accidentally land in the index:
+The dummies land checked-in on the new worktree but the real configs and the bundled audio files don't follow — the swap-and-skip-worktree state is per-worktree. The `WorktreeCreate` hook runs `./scripts/setup-worktree.sh` automatically when the Claude Code harness creates the worktree. For worktrees created by hand, run it once from the new worktree's root:
+
+```bash
+./scripts/setup-worktree.sh
+```
+
+The script is idempotent — re-running on an already-set-up worktree exits without changes. Equivalent manual sequence (for reference / when the script is unavailable):
 
 ```bash
 cp "$(git rev-parse --git-common-dir)/../app/src/release/google-services.json" app/src/release/google-services.json
