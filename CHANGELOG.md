@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### For nerds 🤓
 
 #### Added
+- `scripts/check-security-test-count.sh` + CircleCI `security-test-count-guard` job — strict-equality count guard for OWASP MASVS-tagged tests under all test source roots. Fails the build if a tagged test is removed (regression) or added without bumping `EXPECTED_COUNT` (visibility); the bump is a deliberate one-line edit that ships in the same PR as the test change
 - Analytics event `sound_add_abandoned_after_error` fires when the user leaves the Add Button screen with an unresolved save error (lifecycle-driven via `ON_STOP` and explicit Snackbar dismiss); best-effort — process death drops the signal
 - Analytics events `duplicate_name_hint_shown` (gated per-match by the matched sound's id so keystroke churn doesn't multiply emissions) and `duplicate_name_hint_play` (inline play tapped) for the New Bomp duplicate-name hint
 - Enforce ADR 0005 audio engine invariant via `check-adr-invariants.sh` and the CircleCI `adr-invariants` job — fails the build if a `MediaPlayer()` constructor appears in `src/main` outside `PlayerControllerImpl.kt`
