@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.collections
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.R
@@ -206,10 +209,24 @@ private fun CollectionRow(
 ) {
     val labelRes = if (collection.isSystem) R.string.app_vault_baul_name else null
     val resolvedName = labelRes?.let { stringResource(it) } ?: collection.name
+    // Action-oriented description: TalkBack reads "Add to Familia" (or, when already in,
+    // "In Familia, double-tap to remove") instead of the raw "Familia, Checkbox, …" assembly.
+    // It also gives instrumented tests a unique semantic anchor — the same collection name
+    // appears in the My Sounds filter chip row, so disambiguating by text alone is unreliable.
+    val rowDescription =
+        if (checked) {
+            stringResource(R.string.app_assign_collection_sheet_row_action_selected, resolvedName)
+        } else {
+            stringResource(R.string.app_assign_collection_sheet_row_action_unselected, resolvedName)
+        }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription = rowDescription
+                }
+                .clickable(onClick = onToggle)
                 .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

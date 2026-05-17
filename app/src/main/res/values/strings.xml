@@ -179,6 +179,8 @@
     <string name="app_assign_collection_sheet_empty">No collections yet. Create one from My Sounds or Vault first.</string>
     <string name="app_assign_collection_sheet_private_locked_cta">Show vault collections (requires unlock)</string>
     <string name="app_assign_collection_sheet_private_locked_subtitle">Unlock the vault to assign this Bomp to a private collection.</string>
+    <string name="app_assign_collection_sheet_row_action_selected">In %1$s, double-tap to remove</string>
+    <string name="app_assign_collection_sheet_row_action_unselected">Add to %1$s</string>
 
     <!-- Add / Edit Bomp — "Assign to collections" section -->
     <string name="app_addbutton_collections_section_title">Assign to collections</string>

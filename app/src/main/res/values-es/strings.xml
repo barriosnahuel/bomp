@@ -173,6 +173,8 @@
     <string name="app_assign_collection_sheet_empty">Todavía no tenés colecciones. Creá una desde Mis audios o el Baúl primero.</string>
     <string name="app_assign_collection_sheet_private_locked_cta">Mostrar colecciones del Baúl (requiere desbloqueo)</string>
     <string name="app_assign_collection_sheet_private_locked_subtitle">Desbloqueá el Baúl para agregar este Bomp a una colección privada.</string>
+    <string name="app_assign_collection_sheet_row_action_selected">En %1$s, tocá dos veces para quitar</string>
+    <string name="app_assign_collection_sheet_row_action_unselected">Agregar a %1$s</string>
 
     <!-- Add / Edit Bomp — sección "Asignar a colecciones" -->
     <string name="app_addbutton_collections_section_title">Asignar a colecciones</string>
