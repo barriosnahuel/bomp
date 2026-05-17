@@ -84,6 +84,7 @@ fun SoundItem(
     borderOverride: BorderStroke? = null,
     trailingLabel: String? = null,
     collectionLabels: List<String> = emptyList(),
+    showCollectionLabels: Boolean = true,
     shareEnabled: Boolean = true,
 ) {
     if (isWelcomeVariant) {
@@ -138,6 +139,7 @@ fun SoundItem(
                 borderOverride = borderOverride,
                 trailingLabel = trailingLabel,
                 collectionLabels = collectionLabels,
+                showCollectionLabels = showCollectionLabels,
                 shareEnabled = shareEnabled,
             )
         }
@@ -196,6 +198,7 @@ fun SoundItem(
                     onLongClick = { performRejectHaptic(view) },
                     originLabel = originLabel,
                     collectionLabels = collectionLabels,
+                    showCollectionLabels = showCollectionLabels,
                     shareEnabled = shareEnabled,
                 )
             }
@@ -254,6 +257,7 @@ fun SoundItem(
             onDelete = onDelete,
             originLabel = originLabel,
             collectionLabels = collectionLabels,
+            showCollectionLabels = showCollectionLabels,
             shareEnabled = shareEnabled,
         )
     }
@@ -313,6 +317,7 @@ private fun SoundCard(
     borderOverride: BorderStroke? = null,
     trailingLabel: String? = null,
     collectionLabels: List<String> = emptyList(),
+    showCollectionLabels: Boolean = true,
     shareEnabled: Boolean = true,
 ) {
     var sliderPosition by remember { mutableFloatStateOf(0f) }
@@ -427,7 +432,7 @@ private fun SoundCard(
                         playbackProgress = playbackProgress,
                         durationMs = durationMs,
                         trailingLabel = trailingLabel,
-                        collectionLabels = collectionLabels,
+                        collectionLabels = if (showCollectionLabels) collectionLabels else emptyList(),
                     )
                 }
             }

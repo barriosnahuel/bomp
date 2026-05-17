@@ -261,6 +261,7 @@ private fun VaultBody(
                     listState = listState,
                     collectionsByAudio = collectionsByAudio,
                     allCollections = allCollections,
+                    filterIsActive = activeFilter != null,
                     shareEnabled = false,
                     onPlayClick = { sound -> viewModel.playOrStop(sound) },
                     onSeek = { positionMs -> viewModel.seekTo(positionMs) },

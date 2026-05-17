@@ -424,6 +424,12 @@ internal fun SoundsList(
     // aware string resource for their stored literal name.
     collectionsByAudio: Map<String, List<String>> = emptyMap(),
     allCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection> = emptyList(),
+    // When true, a filter chip is currently narrowing the list — the inline collection labels
+    // inside each card become redundant context noise (the user already sees the filter pill
+    // and the ActiveFilterHeader). Hide them so the meta row reads "0:14   today" instead of
+    // "0:14   Familia · today". On unfiltered lists ("All"), labels keep helping users see
+    // taxonomy at a glance.
+    filterIsActive: Boolean = false,
     // When false, the per-card share icon is hidden. Driven from the rendering context: the
     // Vault tab passes false because every audio it shows belongs to a `LISTEN_ONLY` profile.
     shareEnabled: Boolean = true,
@@ -530,6 +536,7 @@ internal fun SoundsList(
                         borderOverride = welcomeBorder,
                         trailingLabel = welcomeTrailingLabel,
                         collectionLabels = labels,
+                        showCollectionLabels = !filterIsActive,
                         shareEnabled = shareEnabled,
                     )
                 }
@@ -593,6 +600,7 @@ private fun MySoundsBody(
                     listState = listState,
                     collectionsByAudio = collectionsByAudio,
                     allCollections = allCollections,
+                    filterIsActive = selectedTab == AppTab.MY_SOUNDS && activeFilterId != null,
                     onPlayClick = { sound -> viewModel.playOrStop(sound) },
                     onSeek = { positionMs -> viewModel.seekTo(positionMs) },
                     onShareClick = { sound -> viewModel.share(sound) },
