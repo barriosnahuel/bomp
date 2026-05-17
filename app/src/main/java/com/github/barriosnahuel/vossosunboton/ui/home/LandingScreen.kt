@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
@@ -99,6 +100,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                 isSearchVisible -> CanonicalScreenName.SEARCH_SOUND
                 isAboutVisible -> CanonicalScreenName.ABOUT
                 selectedTab == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
+                selectedTab == AppTab.VAULT -> CanonicalScreenName.VAULT
                 selectedTab == AppTab.EXPLORE_SOUNDS -> CanonicalScreenName.EXPLORE_SOUNDS
                 else -> null
             }
@@ -124,26 +126,33 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 
     SnackbarEffects(viewModel = viewModel, snackbarHostState = snackbarHostState)
 
+    val collections by viewModel.collections.collectAsState()
+    val activeFilter by viewModel.activeMySoundsFilter.collectAsState()
+    val publicCollections = remember(collections) { collections.filter { it.isPublic } }
+    val privateCollections = remember(collections) { collections.filter { it.isPrivate } }
+
     Scaffold(
         topBar = { AppTopBar(onAboutClick = { isAboutVisible = true }) },
         bottomBar = {
-            if (hasBundledSounds) {
-                AppBottomBar(
-                    selectedTab = selectedTab,
-                    onTabSelected = { tab ->
-                        if (tab == selectedTab) {
-                            coroutineScope.launch { listState.animateScrollToItem(0) }
-                        } else {
-                            tabBackStack.add(selectedTab)
-                            viewModel.selectTab(tab)
-                        }
-                    },
-                )
-            }
+            // Vault is always visible (spec § 2.1) — no `hasBundledSounds` gating. The Explore
+            // tab keeps its conditional behaviour through `AppBottomBar.hasExplore`.
+            AppBottomBar(
+                selectedTab = selectedTab,
+                hasExplore = hasBundledSounds,
+                onTabSelected = { tab ->
+                    if (tab == selectedTab) {
+                        coroutineScope.launch { listState.animateScrollToItem(0) }
+                    } else {
+                        tabBackStack.add(selectedTab)
+                        viewModel.selectTab(tab)
+                    }
+                },
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (sounds.size >= SEARCH_FAB_MIN_SOUNDS) {
+            // Search FAB only renders on the sound-list tabs; Vault has its own FAB.
+            if (selectedTab != AppTab.VAULT && sounds.size >= SEARCH_FAB_MIN_SOUNDS) {
                 FloatingActionButton(
                     onClick = { viewModel.showSearch() },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -157,27 +166,36 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             }
         },
     ) { innerPadding ->
-        if (sounds.isEmpty() && selectedTab == AppTab.MY_SOUNDS) {
-            MySoundsEmptyState(modifier = Modifier.padding(innerPadding))
-        } else {
-            SoundsList(
-                sounds = sounds,
-                playbackProgress = playbackProgress,
-                pausedProgress = pausedProgress,
-                soundDurations = soundDurations,
-                listState = listState,
-                modifier = Modifier.padding(innerPadding),
-                onPlayClick = { sound -> viewModel.playOrStop(sound) },
-                onSeek = { positionMs -> viewModel.seekTo(positionMs) },
-                onShareClick = { sound -> viewModel.share(sound) },
-                onDelete = { sound -> viewModel.deleteSound(sound) },
-                onPinClick = { sound -> viewModel.togglePin(sound) },
-                onEdit = { sound ->
-                    context.startActivity(LandingActivity.editIntent(context, sound))
-                },
-            )
+        when (selectedTab) {
+            AppTab.VAULT ->
+                com.github.barriosnahuel.vossosunboton.feature.vault.VaultScreen(
+                    collections = privateCollections,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(innerPadding),
+                )
+            else -> {
+                MySoundsBody(
+                    selectedTab = selectedTab,
+                    sounds = sounds,
+                    playbackProgress = playbackProgress,
+                    pausedProgress = pausedProgress,
+                    soundDurations = soundDurations,
+                    listState = listState,
+                    publicCollections = publicCollections,
+                    activeFilterId = activeFilter,
+                    innerPadding = innerPadding,
+                    viewModel = viewModel,
+                    context = context,
+                )
+            }
         }
     }
+
+    com.github.barriosnahuel.vossosunboton.feature.vault
+        .VaultRoutingOverlay(viewModel = viewModel)
+
+    com.github.barriosnahuel.vossosunboton.feature.collections
+        .CollectionSheetHost(viewModel = viewModel)
 
     if (isSearchVisible) {
         SearchOverlay(
@@ -317,6 +335,7 @@ private fun AppTopBar(onAboutClick: () -> Unit) {
 @Composable
 private fun AppBottomBar(
     selectedTab: AppTab,
+    hasExplore: Boolean,
     onTabSelected: (AppTab) -> Unit,
 ) {
     val itemColors =
@@ -337,11 +356,32 @@ private fun AppBottomBar(
         )
         NavigationBarItem(
             colors = itemColors,
-            selected = selectedTab == AppTab.EXPLORE_SOUNDS,
-            onClick = { onTabSelected(AppTab.EXPLORE_SOUNDS) },
-            icon = { Icon(AppIcons.ViewComfyAlt, contentDescription = stringResource(R.string.app_navigation_menu_item_explore_sounds)) },
-            label = { Text(stringResource(R.string.app_navigation_menu_item_explore_sounds)) },
+            selected = selectedTab == AppTab.VAULT,
+            onClick = { onTabSelected(AppTab.VAULT) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = stringResource(R.string.app_navigation_menu_item_vault),
+                )
+            },
+            label = { Text(stringResource(R.string.app_navigation_menu_item_vault)) },
         )
+        // Explore stays conditional: with no bundled audios there is nothing to render and the
+        // tab would land on a blank page. Spec § 2.1 keeps the existing rule for Explore.
+        if (hasExplore) {
+            NavigationBarItem(
+                colors = itemColors,
+                selected = selectedTab == AppTab.EXPLORE_SOUNDS,
+                onClick = { onTabSelected(AppTab.EXPLORE_SOUNDS) },
+                icon = {
+                    Icon(
+                        AppIcons.ViewComfyAlt,
+                        contentDescription = stringResource(R.string.app_navigation_menu_item_explore_sounds),
+                    )
+                },
+                label = { Text(stringResource(R.string.app_navigation_menu_item_explore_sounds)) },
+            )
+        }
     }
 }
 
@@ -457,3 +497,83 @@ private fun SoundsList(
 // User-deleted sounds are destructive and need Long so Undo stays reachable.
 internal fun deletionSnackbarDuration(sound: Sound): SnackbarDuration =
     if (isWelcomeSticker(sound)) SnackbarDuration.Short else SnackbarDuration.Long
+
+@Composable
+private fun MySoundsBody(
+    selectedTab: AppTab,
+    sounds: List<Sound>,
+    playbackProgress: PlaybackProgress?,
+    pausedProgress: Map<String, PlaybackProgress>,
+    soundDurations: Map<String, Int>,
+    listState: LazyListState,
+    publicCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
+    activeFilterId: String?,
+    innerPadding: PaddingValues,
+    viewModel: SoundsViewModel,
+    context: Context,
+) {
+    androidx.compose.foundation.layout.Column(modifier = Modifier.padding(innerPadding)) {
+        if (selectedTab == AppTab.MY_SOUNDS && publicCollections.isNotEmpty()) {
+            com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterChipsRow(
+                publicCollections = publicCollections,
+                activeFilterId = activeFilterId,
+                onFilterSelected = { id -> viewModel.selectMySoundsFilter(id) },
+                onCreateRequested = {
+                    viewModel.requestCreateCollection(
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                    )
+                },
+            )
+        }
+        val activeName =
+            publicCollections.firstOrNull { it.id == activeFilterId }?.name
+        val shouldShowFilterEmpty =
+            selectedTab == AppTab.MY_SOUNDS && activeFilterId != null && sounds.isEmpty() && activeName != null
+        when {
+            shouldShowFilterEmpty ->
+                MySoundsFilterEmptyState(collectionName = activeName)
+            sounds.isEmpty() && selectedTab == AppTab.MY_SOUNDS ->
+                MySoundsEmptyState()
+            else ->
+                SoundsList(
+                    sounds = sounds,
+                    playbackProgress = playbackProgress,
+                    pausedProgress = pausedProgress,
+                    soundDurations = soundDurations,
+                    listState = listState,
+                    onPlayClick = { sound -> viewModel.playOrStop(sound) },
+                    onSeek = { positionMs -> viewModel.seekTo(positionMs) },
+                    onShareClick = { sound -> viewModel.share(sound) },
+                    onDelete = { sound -> viewModel.deleteSound(sound) },
+                    onPinClick = { sound -> viewModel.togglePin(sound) },
+                    onEdit = { sound ->
+                        context.startActivity(LandingActivity.editIntent(context, sound))
+                    },
+                )
+        }
+    }
+}
+
+@Composable
+private fun MySoundsFilterEmptyState(collectionName: String) {
+    androidx.compose.foundation.layout.Column(
+        modifier = Modifier.fillMaxSize().padding(Spacing.XL),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.app_my_sounds_filter_empty_collection_headline),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        androidx.compose.foundation.layout
+            .Spacer(modifier = Modifier.padding(top = Spacing.SM))
+        Text(
+            text = stringResource(R.string.app_my_sounds_filter_empty_collection_body, collectionName),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+    }
+}

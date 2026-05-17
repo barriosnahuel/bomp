@@ -17,6 +17,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
@@ -24,7 +25,10 @@ import com.github.barriosnahuel.vossosunboton.feature.share.ShareIntentOutcome
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeSticker
 import com.github.barriosnahuel.vossosunboton.feature.welcome.welcomeSticker
+import com.github.barriosnahuel.vossosunboton.model.Collection
+import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -43,7 +47,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-enum class AppTab { MY_SOUNDS, EXPLORE_SOUNDS }
+enum class AppTab { MY_SOUNDS, VAULT, EXPLORE_SOUNDS }
+
+/**
+ * Request payload for the create/rename collection bottom sheet. A single sealed shape so the
+ * sheet host can match-on-type to derive title, placeholder, and submit semantics.
+ */
+sealed interface CollectionSheetRequest {
+    data class Create(
+        val access: CollectionAccess,
+    ) : CollectionSheetRequest
+
+    data class Rename(
+        val id: String,
+        val currentName: String,
+    ) : CollectionSheetRequest
+}
 
 data class DeletedSoundEvent(
     val sound: Sound,
@@ -57,13 +76,15 @@ data class PlaybackProgress(
     val fraction: Float get() = if (durationMs > 0) positionMs / durationMs.toFloat() else 0f
 }
 
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 class SoundsViewModel(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val searchDebounceMs: Long = 200L,
     private val welcomeStore: WelcomeStickerStore = WelcomeStickerStore(application),
     private val shareFeature: ShareFeature = ShareFeature.instance,
+    private val collectionsRepo: CollectionsRepository = CollectionsRepository(application, onError = Tracker::track),
+    private val mySoundsFilterStore: MySoundsFilterStore = MySoundsFilterStore(application),
 ) : AndroidViewModel(application),
     PlayerControllerListener {
     private val repo = SoundsRepository(application, onError = Tracker::track)
@@ -82,6 +103,37 @@ class SoundsViewModel(
 
     private val _hasBundledSounds = MutableStateFlow(false)
     val hasBundledSounds: StateFlow<Boolean> = _hasBundledSounds.asStateFlow()
+
+    /** All collections (public + private) — drives the Vault tab list and the Add/Edit tag chips. */
+    private val _collections = MutableStateFlow<List<Collection>>(emptyList())
+    val collections: StateFlow<List<Collection>> = _collections.asStateFlow()
+
+    /** Persisted last-chosen filter on My Sounds. `null` = "All" (unfiltered). */
+    private val _activeMySoundsFilter = MutableStateFlow<String?>(null)
+    val activeMySoundsFilter: StateFlow<String?> = _activeMySoundsFilter.asStateFlow()
+
+    /**
+     * Active "create or rename collection" request. `null` when no sheet is open. The single
+     * StateFlow is enough because only one create/rename sheet can be visible at a time across
+     * the whole screen graph.
+     */
+    private val _activeCollectionSheet = MutableStateFlow<CollectionSheetRequest?>(null)
+    val activeCollectionSheet: StateFlow<CollectionSheetRequest?> = _activeCollectionSheet.asStateFlow()
+
+    /**
+     * The Vault collection the user is actively listening to in immersive mode (post biometric).
+     * `null` when no immersive view is active. The id is preferred over the [Collection] because
+     * the underlying collection may be updated (rename, audio added) while immersive is open.
+     */
+    private val _activeImmersiveCollectionId = MutableStateFlow<String?>(null)
+    val activeImmersiveCollectionId: StateFlow<String?> = _activeImmersiveCollectionId.asStateFlow()
+
+    /**
+     * Pending delete-confirmation prompt for a non-system collection. Null when no dialog is
+     * showing. System collections are guarded earlier (the UI does not offer Delete for them).
+     */
+    private val _pendingCollectionDelete = MutableStateFlow<String?>(null)
+    val pendingCollectionDelete: StateFlow<String?> = _pendingCollectionDelete.asStateFlow()
 
     private val mutableInitialLoadComplete = MutableStateFlow(false)
 
@@ -201,6 +253,42 @@ class SoundsViewModel(
                 Tracker.track(RuntimeException("SoundsViewModel repo observation failed", e))
             }
         }
+        // Hydrate the last-chosen My Sounds chip and observe the collections list. The chip
+        // persists per the spec § 7 default ("persist last filter, favors single-context users").
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val persisted = mySoundsFilterStore.get()
+                _activeMySoundsFilter.value = persisted.takeIf { it != MySoundsFilterStore.ALL_SENTINEL }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
+                Tracker.track(RuntimeException("SoundsViewModel filter prime failed", e))
+            }
+        }
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                collectionsRepo.collections.collect { list ->
+                    _collections.value = list
+                    // Drop stale active filter when the underlying collection is deleted so the
+                    // user does not end up looking at a "filtered" but empty list with no chip
+                    // highlighted to clear.
+                    val active = _activeMySoundsFilter.value
+                    if (active != null && list.none { it.id == active }) {
+                        _activeMySoundsFilter.value = null
+                        runCatching { mySoundsFilterStore.set(MySoundsFilterStore.ALL_SENTINEL) }
+                    }
+                    loadSounds()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
+                Tracker.track(RuntimeException("SoundsViewModel collections observation failed", e))
+            }
+        }
     }
 
     private val tracker get() = AnalyticsTrackerProvider.get(getApplication())
@@ -219,6 +307,7 @@ class SoundsViewModel(
             when {
                 _isSearchVisible.value -> CanonicalScreenName.SEARCH_SOUND
                 _selectedTab.value == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
+                _selectedTab.value == AppTab.VAULT -> CanonicalScreenName.VAULT
                 else -> CanonicalScreenName.EXPLORE_SOUNDS
             }
 
@@ -269,6 +358,50 @@ class SoundsViewModel(
     fun selectTab(tab: AppTab) {
         _selectedTab.value = tab
         viewModelScope.launch(ioDispatcher) { loadSounds() }
+    }
+
+    /**
+     * Activates the My Sounds public-collection filter to [collectionId], or to `null` for the
+     * "All" pseudo-chip. Idempotent. Persists the choice so the next cold start lands on the
+     * same chip — spec § 7 (Preguntas Abiertas → "persist last filter, favorece monocontexto").
+     */
+    fun selectMySoundsFilter(collectionId: String?) {
+        if (_activeMySoundsFilter.value == collectionId) return
+        _activeMySoundsFilter.value = collectionId
+        val storeValue = collectionId ?: MySoundsFilterStore.ALL_SENTINEL
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { mySoundsFilterStore.set(storeValue) }
+                .onFailure {
+                    Tracker.log("collections.filter_persist_failed=${it.javaClass.simpleName}")
+                    Tracker.track(RuntimeException("My Sounds filter persist failed", it))
+                }
+            loadSounds()
+        }
+        if (collectionId != null) {
+            val matches = audiosIn(collectionId).size
+            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = matches))
+        }
+    }
+
+    private fun audiosIn(collectionId: String): List<Sound> {
+        val target = _collections.value.firstOrNull { it.id == collectionId } ?: return emptyList()
+        val ids = target.audioIds.toSet()
+        return allSoundsCache.value.filter { it.id in ids }
+    }
+
+    /**
+     * Filters [tabSounds] by the currently active My Sounds chip. Only applied when MY_SOUNDS is
+     * the selected tab — the Explore and Vault tabs ignore the chip state entirely. When the
+     * active filter id points to a deleted collection (race between deletion and a tab swap)
+     * the predicate matches nothing; the observation coroutine in `init` clears the stale id
+     * before the next `loadSounds` runs, so the empty intermediate state is brief.
+     */
+    private fun applyCollectionFilter(tabSounds: List<Sound>): List<Sound> {
+        if (_selectedTab.value != AppTab.MY_SOUNDS) return tabSounds
+        val activeId = _activeMySoundsFilter.value ?: return tabSounds
+        val activeCollection = _collections.value.firstOrNull { it.id == activeId }
+        val ids = activeCollection?.audioIds.orEmpty().toSet()
+        return tabSounds.filter { it.id in ids }
     }
 
     fun togglePin(sound: Sound) {
@@ -397,8 +530,151 @@ class SoundsViewModel(
             event == null -> Unit
             isWelcomeSticker(event.sound) -> consumeWelcomeAsync()
             event.sound.isBundled() -> Unit
-            else -> deletePersistedSoundAsync(event.sound)
+            else -> {
+                deletePersistedSoundAsync(event.sound)
+                forgetAudioFromCollectionsAsync(event.sound.id)
+            }
         }
+    }
+
+    private fun forgetAudioFromCollectionsAsync(audioId: String) {
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { collectionsRepo.forgetAudio(audioId) }
+                .onFailure {
+                    Tracker.log("collections.forget_audio_failed=${it.javaClass.simpleName}")
+                    Tracker.track(RuntimeException("Failed to sweep audio from collections", it))
+                }
+        }
+    }
+
+    /**
+     * Creates a new collection of [access] scope. Emits a [AnalyticsEvent.CollectionCreate] event;
+     * caller is responsible for any UI feedback (snackbar, sheet dismissal). Failures (e.g.
+     * duplicate name) surface as [Result.failure] — caller maps to the right field error.
+     */
+    suspend fun createCollection(
+        name: String,
+        access: CollectionAccess,
+    ): Result<Collection> =
+        runCatching {
+            val profile =
+                when (access) {
+                    CollectionAccess.PUBLIC -> com.github.barriosnahuel.vossosunboton.model.CollectionProfile.GENERIC_PUBLIC
+                    CollectionAccess.PRIVATE -> com.github.barriosnahuel.vossosunboton.model.CollectionProfile.VAULT
+                }
+            collectionsRepo.create(name = name, profile = profile).also { created ->
+                tracker.log(
+                    AnalyticsEvent.CollectionCreate(
+                        scope = if (access == CollectionAccess.PUBLIC) "public" else "private",
+                        audios = 0,
+                    ),
+                )
+            }
+        }
+
+    suspend fun renameCollection(
+        id: String,
+        newName: String,
+    ): Result<Unit> =
+        runCatching {
+            val before = _collections.value.firstOrNull { it.id == id }
+            collectionsRepo.rename(id, newName)
+            before?.let {
+                tracker.log(
+                    AnalyticsEvent.CollectionRename(
+                        scope = if (it.isPublic) "public" else "private",
+                    ),
+                )
+            }
+        }
+
+    /**
+     * Deletes a collection. Refuses to delete system collections (the UI must hide the action,
+     * but we double-check here per CLAUDE.md error-tracking conventions). Audios are NOT deleted.
+     */
+    suspend fun deleteCollection(id: String): Result<Unit> =
+        runCatching {
+            val target =
+                _collections.value.firstOrNull { it.id == id }
+                    ?: return@runCatching
+            require(!target.isSystem) { "Refusing to delete system collection $id" }
+            val priorCount = target.audioIds.size
+            collectionsRepo.delete(id)
+            tracker.log(
+                AnalyticsEvent.CollectionDelete(
+                    scope = if (target.isPublic) "public" else "private",
+                    audios = priorCount,
+                ),
+            )
+        }
+
+    /**
+     * Replaces the set of [collectionIds] this audio belongs to inside [scope]. The other access
+     * scope (e.g. private when committing public chips) is untouched — the UI commits public and
+     * private chip groups via two independent calls.
+     */
+    suspend fun setAudioCollections(
+        audioId: String,
+        collectionIds: Set<String>,
+        scope: CollectionAccess,
+    ): Result<Unit> =
+        runCatching {
+            collectionsRepo.setAudioCollections(audioId, collectionIds, scope)
+        }
+
+    /** Removes a single [audioId] from [collectionId] without touching its other tags. */
+    fun removeAudioFromCollection(
+        collectionId: String,
+        audioId: String,
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { collectionsRepo.removeAudio(collectionId, audioId) }
+                .onFailure {
+                    Tracker.log("collections.remove_audio_failed=${it.javaClass.simpleName}")
+                    Tracker.track(RuntimeException("Failed to remove audio from collection", it))
+                }
+        }
+    }
+
+    /** Opens the create-collection sheet for [access] scope. Triggered from filter row and Vault FAB. */
+    fun requestCreateCollection(access: CollectionAccess) {
+        _activeCollectionSheet.value = CollectionSheetRequest.Create(access)
+    }
+
+    /** Opens the rename sheet pre-filled with the existing collection. No-op for unknown id. */
+    fun requestRenameCollection(id: String) {
+        val target = _collections.value.firstOrNull { it.id == id } ?: return
+        _activeCollectionSheet.value = CollectionSheetRequest.Rename(id = id, currentName = target.name)
+    }
+
+    fun dismissCollectionSheet() {
+        _activeCollectionSheet.value = null
+    }
+
+    /** Opens the immersive listen view for the just-unlocked private collection. */
+    fun openImmersiveView(collectionId: String) {
+        _activeImmersiveCollectionId.value = collectionId
+        tracker.log(AnalyticsEvent.VaultEnterImmersive)
+    }
+
+    fun closeImmersiveView() {
+        _activeImmersiveCollectionId.value = null
+    }
+
+    fun requestDeleteConfirmation(collectionId: String) {
+        val target = _collections.value.firstOrNull { it.id == collectionId } ?: return
+        if (target.isSystem) return
+        _pendingCollectionDelete.value = collectionId
+    }
+
+    fun dismissDeleteConfirmation() {
+        _pendingCollectionDelete.value = null
+    }
+
+    fun confirmCollectionDelete() {
+        val target = _pendingCollectionDelete.value ?: return
+        _pendingCollectionDelete.value = null
+        viewModelScope.launch(ioDispatcher) { deleteCollection(target) }
     }
 
     /**
@@ -504,11 +780,18 @@ class SoundsViewModel(
                 }
             recomputeSearchResults()
             _sounds.update {
-                val filtered =
+                val byTab =
                     when (_selectedTab.value) {
                         AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
+                        // The Vault tab is rendered by its own dedicated screen (VaultScreen) — the
+                        // primary sound list is empty here so the bottom-bar tab swap leaves the
+                        // screen blank while VaultScreen takes over via the overlay path in
+                        // LandingScreen. Returning an empty list also keeps the sound list's empty
+                        // state composable from rendering its "no sounds yet" body for the wrong tab.
+                        AppTab.VAULT -> emptyList()
                     }.filter { it.id != deletedId }
+                val filtered = applyCollectionFilter(byTab)
                 val withWelcome = positionWelcomeIn(filtered, welcomeIsPendingDismissal, welcomeWasRestored)
                 if (playingId == null) {
                     withWelcome
