@@ -616,12 +616,16 @@ private fun rememberCollectionsState(
     )
 }
 
-private val StringSetSaver: Saver<androidx.compose.runtime.MutableState<Set<String>>, Any> =
+// rememberSaveable(stateSaver) takes a Saver over the VALUE type, not the MutableState wrapper —
+// the harness builds the MutableState around the restored value itself. Typing this as
+// `Saver<MutableState<Set<String>>, ...>` would nest a MutableState inside a MutableState at
+// the call site and the kotlinc type checker rejects it as `MutableState<MutableState<Set<String>>>`.
+private val StringSetSaver: Saver<Set<String>, Any> =
     Saver(
-        save = { state -> ArrayList(state.value) },
+        save = { value -> ArrayList(value) },
         restore = { value ->
             @Suppress("UNCHECKED_CAST")
-            mutableStateOf((value as ArrayList<String>).toSet())
+            (value as ArrayList<String>).toSet()
         },
     )
 

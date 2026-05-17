@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.PlaybackProgress
@@ -181,7 +181,7 @@ private fun ImmersiveAudioRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onPlayClick) {
                 Icon(
-                    imageVector = if (sound.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    imageVector = if (sound.isPlaying) AppIcons.Pause else Icons.Default.PlayArrow,
                     contentDescription =
                         if (sound.isPlaying) stringResource(R.string.app_pause) else stringResource(R.string.app_play),
                     tint = Color.White,
