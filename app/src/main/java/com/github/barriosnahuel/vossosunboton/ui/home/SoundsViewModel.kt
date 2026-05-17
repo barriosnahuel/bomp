@@ -406,8 +406,13 @@ class SoundsViewModel(
      * is intentionally excluded — spec § 3.1's "Restricción de cross-preset" preserves visibility
      * from the public surface.
      */
-    private fun privateOnlyAudioIds(): Set<String> {
-        val collectionsSnapshot = _collections.value
+    private suspend fun privateOnlyAudioIds(): Set<String> {
+        // Read directly from the repo's freshest snapshot instead of `_collections.value` — the
+        // VM's two init coroutines (welcome-sticker hydration + collections observation) race
+        // against each other and the welcome path can call loadSounds before the collections
+        // observer has populated `_collections`. Asking the repo here makes the filter robust
+        // against that ordering: each loadSounds always sees the post-seed, post-tagging state.
+        val collectionsSnapshot = collectionsRepo.collections.first()
         val inPrivate = collectionsSnapshot.filter { it.isPrivate }.flatMap { it.audioIds }.toSet()
         if (inPrivate.isEmpty()) return emptySet()
         val inPublic = collectionsSnapshot.filter { it.isPublic }.flatMap { it.audioIds }.toSet()
@@ -804,13 +809,14 @@ class SoundsViewModel(
                     allSounds.map { if (it.id == playingId) it.copy(isPlaying = true) else it }
                 }
             recomputeSearchResults()
+            // Snapshot of private-only ids: tagged to at least one private collection and to
+            // ZERO public collections. Spec § 3.1 + § 1 — those audios are meant to stay inside
+            // the Vault and never surface on My Sounds. Cross-tagged (private + public) audios
+            // remain visible on My Sounds because the public surface preserves visibility
+            // (the "Restricción de cross-preset" carve-out). Computed OUTSIDE the _sounds.update
+            // lambda because the helper now reads collectionsRepo.collections.first() (suspend).
+            val privateOnlyIds = privateOnlyAudioIds()
             _sounds.update {
-                // Snapshot of private-only ids: tagged to at least one private collection and to
-                // ZERO public collections. Spec § 3.1 + § 1 — those audios are meant to stay inside
-                // the Vault and never surface on My Sounds. Cross-tagged (private + public) audios
-                // remain visible on My Sounds because the public surface preserves visibility
-                // (the "Restricción de cross-preset" carve-out).
-                val privateOnlyIds = privateOnlyAudioIds()
                 val byTab =
                     when (_selectedTab.value) {
                         AppTab.MY_SOUNDS ->

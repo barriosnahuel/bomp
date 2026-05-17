@@ -164,12 +164,15 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
             repo.save(testSound("private-only", file = "private.mp3"))
             repo.save(testSound("public-only", file = "public.mp3"))
             val collections = CollectionsRepository(context)
+            // Force the system Baúl seed before addAudio() against BAUL_SYSTEM_ID — addAudio is a
+            // no-op when the target collection is missing from the persisted list, and the seed
+            // only runs as a side effect of reading the `collections` Flow.
+            collections.collections.first()
             val sounds = repo.sounds.first()
             val privateOne = sounds.first { it.name == "private-only" }
             val publicOne = sounds.first { it.name == "public-only" }
             val pub = collections.create("Work", CollectionProfile.GENERIC_PUBLIC)
             collections.addAudio(pub.id, publicOne.id)
-            // private-only audio: only in the system Baúl.
             collections.addAudio(CollectionsRepository.BAUL_SYSTEM_ID, privateOne.id)
         }
         val vm = givenAViewModel()
@@ -192,6 +195,8 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
             val repo = SoundsRepository(context)
             repo.save(testSound("cross-tagged", file = "cross.mp3"))
             val collections = CollectionsRepository(context)
+            // Force the system Baúl seed before addAudio() — see other private-only test.
+            collections.collections.first()
             val sounds = repo.sounds.first()
             val a = sounds.first { it.name == "cross-tagged" }
             val pub = collections.create("Work", CollectionProfile.GENERIC_PUBLIC)
@@ -217,10 +222,12 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
             repo.save(testSound("audio-b", file = "b.mp3"))
         }
         val vm = givenAViewModel()
+        // Wait until the library is hydrated by the initial loadSounds before asserting on .value.
+        runBlocking { vm.library.first { list -> list.any { it.name == "audio-b" } } }
         // Switch to Vault — vm.sounds collapses to emptyList(), but the library snapshot must keep
         // the user catalog so ImmersiveListenScreen can resolve collection.audioIds to real Sounds.
         vm.selectTab(AppTab.VAULT)
-        runBlocking { vm.collections.first { it.isNotEmpty() } }
+        runBlocking { vm.sounds.first { it.isEmpty() } }
 
         assertThat(vm.sounds.value).isEmpty()
         val userLibraryNames =
