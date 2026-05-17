@@ -204,6 +204,9 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     com.github.barriosnahuel.vossosunboton.feature.collections
         .AssignCollectionSheet(viewModel = viewModel)
 
+    com.github.barriosnahuel.vossosunboton.feature.collections
+        .CollectionDeleteDialog(viewModel = viewModel)
+
     if (isSearchVisible) {
         SearchOverlay(
             query = searchQuery,

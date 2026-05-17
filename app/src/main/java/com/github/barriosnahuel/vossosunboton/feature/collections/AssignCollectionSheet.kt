@@ -16,11 +16,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -30,8 +38,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -94,6 +104,19 @@ internal fun AssignCollectionSheet(viewModel: SoundsViewModel) {
             onToggle = { collectionId ->
                 viewModel.toggleAudioInCollection(audioId, collectionId)
             },
+            onRename = { collectionId ->
+                // Dismiss this sheet first — M3 ModalBottomSheet stacking is awkward, and the
+                // user is shifting from "manage assignment for this audio" to "manage this
+                // collection" which is collection-centric, not audio-centric.
+                coroutineScope.launch { sheetState.hide() }
+                viewModel.dismissAssignCollections()
+                viewModel.requestRenameCollection(collectionId)
+            },
+            onDelete = { collectionId ->
+                coroutineScope.launch { sheetState.hide() }
+                viewModel.dismissAssignCollections()
+                viewModel.requestDeleteConfirmation(collectionId)
+            },
             onDone = {
                 coroutineScope.launch { sheetState.hide() }
                 viewModel.dismissAssignCollections()
@@ -112,6 +135,8 @@ private fun AssignCollectionSheetBody(
     gateStatus: BiometricGateStatus,
     onUnlockVault: () -> Unit,
     onToggle: (String) -> Unit,
+    onRename: (String) -> Unit,
+    onDelete: (String) -> Unit,
     onDone: () -> Unit,
 ) {
     Column(
@@ -146,6 +171,8 @@ private fun AssignCollectionSheetBody(
                             collection = collection,
                             checked = audioId in collection.audioIds,
                             onToggle = { onToggle(collection.id) },
+                            onRename = { onRename(collection.id) },
+                            onDelete = { onDelete(collection.id) },
                         )
                     }
                 }
@@ -170,6 +197,8 @@ private fun AssignCollectionSheetBody(
                                 collection = collection,
                                 checked = audioId in collection.audioIds,
                                 onToggle = { onToggle(collection.id) },
+                                onRename = { onRename(collection.id) },
+                                onDelete = { onDelete(collection.id) },
                             )
                         }
                     }
@@ -206,6 +235,8 @@ private fun CollectionRow(
     collection: Collection,
     checked: Boolean,
     onToggle: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val labelRes = if (collection.isSystem) R.string.app_vault_baul_name else null
     val resolvedName = labelRes?.let { stringResource(it) } ?: collection.name
@@ -220,23 +251,77 @@ private fun CollectionRow(
             stringResource(R.string.app_assign_collection_sheet_row_action_unselected, resolvedName)
         }
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics(mergeDescendants = true) {
-                    contentDescription = rowDescription
-                }
-                .clickable(onClick = onToggle)
-                .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = { onToggle() })
-        Spacer(modifier = Modifier.padding(start = Spacing.SM))
-        Text(
-            text = resolvedName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        Row(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = rowDescription
+                    }
+                    .clickable(onClick = onToggle)
+                    .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(checked = checked, onCheckedChange = { onToggle() })
+            Spacer(modifier = Modifier.padding(start = Spacing.SM))
+            Text(
+                text = resolvedName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        // System collections (the seeded Baúl) refuse rename/delete at the repo level — surface
+        // that by hiding the overflow altogether rather than showing a disabled affordance the
+        // user can't act on.
+        if (!collection.isSystem) {
+            CollectionRowOverflow(
+                collectionName = resolvedName,
+                onRename = onRename,
+                onDelete = onDelete,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CollectionRowOverflow(
+    collectionName: String,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val overflowDescription = stringResource(R.string.app_vault_card_overflow_description, collectionName)
+    Box {
+        IconButton(onClick = { menuExpanded = true }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = overflowDescription,
+            )
+        }
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.app_vault_card_overflow_rename)) },
+                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                onClick = {
+                    menuExpanded = false
+                    onRename()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.app_vault_card_overflow_delete)) },
+                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                onClick = {
+                    menuExpanded = false
+                    onDelete()
+                },
+            )
+        }
     }
 }
 
