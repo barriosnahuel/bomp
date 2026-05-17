@@ -77,6 +77,7 @@ import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateResult
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateStatus
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
@@ -159,7 +160,10 @@ fun AddButtonScreen(
     )
 
     val collectionsState = rememberCollectionsState(context = context, mode = mode)
-    var privateRevealed by rememberSaveable { mutableStateOf(false) }
+    // Start revealed if the session already proved access to any private collection (e.g. the user
+    // walked through Vault → Immersive → "Edit this Bomp"). Avoids forcing a second biometric prompt
+    // inside the same session.
+    var privateRevealed by rememberSaveable { mutableStateOf(VaultSessionState.hasAnyUnlock()) }
     val activity = remember(context) { context.findFragmentActivity() }
     val biometricGate = remember(activity) { activity?.let { BiometricGate(it) } }
     val biometricStatus = remember(biometricGate) { biometricGate?.status() ?: BiometricGateStatus.UNAVAILABLE }
@@ -322,7 +326,14 @@ fun AddButtonScreen(
                             negativeButtonText = privateUnlockNegative,
                         ) { result ->
                             when (result) {
-                                BiometricGateResult.Granted -> privateRevealed = true
+                                BiometricGateResult.Granted -> {
+                                    // Use a sentinel "session" key for this surface — the user
+                                    // proved general session ownership here, not access to a
+                                    // specific collection. Any other surface that calls
+                                    // hasAnyUnlock() then short-circuits.
+                                    VaultSessionState.markUnlocked("addbutton-session")
+                                    privateRevealed = true
+                                }
                                 is BiometricGateResult.Denied -> {
                                     // Stay closed — user can retry by tapping again.
                                     tracker.log(AnalyticsEvent.VaultUnlock(granted = false))

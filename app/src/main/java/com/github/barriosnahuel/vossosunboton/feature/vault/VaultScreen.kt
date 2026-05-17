@@ -52,6 +52,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateResult
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateStatus
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
@@ -118,31 +119,41 @@ fun VaultScreen(
                         unprotectedWarningText = unprotectedWarningText,
                         onClick = {
                             val target = collection.id
-                            if (status != BiometricGateStatus.AVAILABLE) {
-                                // No protection: open directly. The unprotected warning is visible
-                                // both on the card and in the immersive view back-button copy.
-                                viewModel.openImmersiveView(target)
-                                tracker.log(AnalyticsEvent.VaultUnlock(granted = true))
-                            } else {
-                                gate?.requestUnlock(
-                                    title =
-                                        context.getString(
-                                            R.string.app_vault_biometric_prompt_title,
-                                            collection.name,
-                                        ),
-                                    subtitle = context.getString(R.string.app_vault_biometric_prompt_subtitle),
-                                    negativeButtonText = context.getString(R.string.app_vault_biometric_negative),
-                                ) { result ->
-                                    when (result) {
-                                        BiometricGateResult.Granted -> {
-                                            viewModel.openImmersiveView(target)
-                                            tracker.log(AnalyticsEvent.VaultUnlock(granted = true))
-                                        }
-                                        is BiometricGateResult.Denied -> {
-                                            tracker.log(AnalyticsEvent.VaultUnlock(granted = false))
+                            when {
+                                VaultSessionState.isUnlocked(target) -> {
+                                    // Session cache hit — the user already authenticated for this
+                                    // collection during the current process. Spec § 5 was per-invocation
+                                    // but post-launch usability flipped it to per-collection-per-session.
+                                    viewModel.openImmersiveView(target)
+                                }
+                                status != BiometricGateStatus.AVAILABLE -> {
+                                    // No protection: open directly. The unprotected warning is visible
+                                    // both on the card and in the immersive view back-button copy.
+                                    VaultSessionState.markUnlocked(target)
+                                    viewModel.openImmersiveView(target)
+                                    tracker.log(AnalyticsEvent.VaultUnlock(granted = true))
+                                }
+                                else ->
+                                    gate?.requestUnlock(
+                                        title =
+                                            context.getString(
+                                                R.string.app_vault_biometric_prompt_title,
+                                                collection.name,
+                                            ),
+                                        subtitle = context.getString(R.string.app_vault_biometric_prompt_subtitle),
+                                        negativeButtonText = context.getString(R.string.app_vault_biometric_negative),
+                                    ) { result ->
+                                        when (result) {
+                                            BiometricGateResult.Granted -> {
+                                                VaultSessionState.markUnlocked(target)
+                                                viewModel.openImmersiveView(target)
+                                                tracker.log(AnalyticsEvent.VaultUnlock(granted = true))
+                                            }
+                                            is BiometricGateResult.Denied -> {
+                                                tracker.log(AnalyticsEvent.VaultUnlock(granted = false))
+                                            }
                                         }
                                     }
-                                }
                             }
                         },
                         onRename = { viewModel.requestRenameCollection(collection.id) },
@@ -318,10 +329,15 @@ private fun CardOverflow(
         Icon(Icons.Default.MoreVert, contentDescription = null)
     }
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.app_vault_card_overflow_rename)) },
-            onClick = onRename,
-        )
+        if (!collection.isSystem) {
+            // System collections (the seeded Baúl) cannot be renamed — the canonical name is
+            // surfaced via a localized resource string and persisting a different one would
+            // create UI/data drift. Repository enforces this guard too as defense-in-depth.
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.app_vault_card_overflow_rename)) },
+                onClick = onRename,
+            )
+        }
         if (collection.isSystem) {
             DropdownMenuItem(
                 text = {
