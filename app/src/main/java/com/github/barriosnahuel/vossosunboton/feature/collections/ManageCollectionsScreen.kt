@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.collections
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -121,6 +122,8 @@ internal fun ManageCollectionsScreen(
     // active resume cleanly without retriggering the scroll (LaunchedEffect's key is the original
     // focusedCollectionId, not the local highlight).
     var highlightedId by rememberSaveable { mutableStateOf(focusedCollectionId) }
+
+    BackHandler { onBack() }
 
     Scaffold(
         modifier = modifier,

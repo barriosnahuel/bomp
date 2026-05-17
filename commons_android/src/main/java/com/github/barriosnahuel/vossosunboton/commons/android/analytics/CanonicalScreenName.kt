@@ -30,6 +30,9 @@ object CanonicalScreenName {
     /** Create-collection sheet (reachable from Vault FAB or from Add/Edit "+ Nueva" chip). */
     const val COLLECTION_CREATE = "collection_create"
 
+    /** Manage Collections screen — canonical home for rename / delete / create across both scopes. */
+    const val MANAGE_COLLECTIONS = "manage_collections"
+
     val ALL: List<String> =
         listOf(
             MY_SOUNDS,
@@ -42,5 +45,6 @@ object CanonicalScreenName {
             VAULT_UNLOCK,
             VAULT_COLLECTION_LISTEN,
             COLLECTION_CREATE,
+            MANAGE_COLLECTIONS,
         )
 }

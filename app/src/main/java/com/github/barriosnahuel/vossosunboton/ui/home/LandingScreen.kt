@@ -90,15 +90,20 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val tabBackStack = remember { mutableStateListOf<AppTab>() }
-    // Saveable so a rotation while About is open does not silently bounce the user back to the
-    // sound list (About early-returns from this composable, so losing the flag = losing the screen).
+    // Saveable so a rotation while About / Manage are open does not silently bounce the user back
+    // to the sound list — those screens swap out the Scaffold body via a `when` below, and losing
+    // the flag = losing the screen.
     var isAboutVisible by rememberSaveable { mutableStateOf(false) }
+    var manageRequest by rememberSaveable(stateSaver = ManageRequest.Saver) {
+        mutableStateOf<ManageRequest?>(null)
+    }
 
-    LaunchedEffect(selectedTab, isAboutVisible, isSearchVisible) {
+    LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible) {
         val name =
             when {
                 isSearchVisible -> CanonicalScreenName.SEARCH_SOUND
                 isAboutVisible -> CanonicalScreenName.ABOUT
+                manageRequest != null -> CanonicalScreenName.MANAGE_COLLECTIONS
                 selectedTab == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
                 selectedTab == AppTab.VAULT -> CanonicalScreenName.VAULT
                 selectedTab == AppTab.EXPLORE_SOUNDS -> CanonicalScreenName.EXPLORE_SOUNDS
@@ -109,12 +114,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         }
     }
 
-    if (isAboutVisible) {
-        AboutScreen(onBack = { isAboutVisible = false })
-        return
-    }
-
-    BackHandler(enabled = tabBackStack.isNotEmpty()) {
+    BackHandler(enabled = !isAboutVisible && manageRequest == null && tabBackStack.isNotEmpty()) {
         viewModel.selectTab(tabBackStack.removeAt(tabBackStack.lastIndex))
     }
 
@@ -132,8 +132,113 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val collectionsByAudio by viewModel.audioCollectionsIndex.collectAsState()
     val privateCollections = remember(collections) { collections.filter { it.isPrivate } }
 
+    when {
+        isAboutVisible -> {
+            AboutScreen(onBack = { isAboutVisible = false })
+        }
+        manageRequest != null -> {
+            com.github.barriosnahuel.vossosunboton.feature.collections.ManageCollectionsScreen(
+                viewModel = viewModel,
+                focusedCollectionId = (manageRequest as? ManageRequest.Focused)?.collectionId,
+                onBack = { manageRequest = null },
+            )
+        }
+        else -> ScaffoldedLanding(
+            viewModel = viewModel,
+            sounds = sounds,
+            selectedTab = selectedTab,
+            hasBundledSounds = hasBundledSounds,
+            playbackProgress = playbackProgress,
+            pausedProgress = pausedProgress,
+            soundDurations = soundDurations,
+            snackbarHostState = snackbarHostState,
+            listState = listState,
+            coroutineScope = coroutineScope,
+            context = context,
+            tabBackStack = tabBackStack,
+            collections = collections,
+            activeFilter = activeFilter,
+            publicCollections = publicCollections,
+            collectionsByAudio = collectionsByAudio,
+            privateCollections = privateCollections,
+            onAboutClick = { isAboutVisible = true },
+            onManageCollectionsClick = { manageRequest = ManageRequest.Generic },
+            onActiveFilterEditClick = { collectionId ->
+                manageRequest = ManageRequest.Focused(collectionId)
+            },
+        )
+    }
+
+    com.github.barriosnahuel.vossosunboton.feature.vault
+        .VaultRoutingOverlay(viewModel = viewModel)
+
+    com.github.barriosnahuel.vossosunboton.feature.collections
+        .CollectionSheetHost(viewModel = viewModel)
+
+    com.github.barriosnahuel.vossosunboton.feature.collections
+        .AssignCollectionSheet(viewModel = viewModel)
+
+    com.github.barriosnahuel.vossosunboton.feature.collections
+        .CollectionDeleteDialog(viewModel = viewModel)
+
+    if (isSearchVisible) {
+        SearchOverlay(
+            query = searchQuery,
+            results = searchResults,
+            isSearchPending = isSearchPending,
+            playbackProgress = playbackProgress,
+            pausedProgress = pausedProgress,
+            soundDurations = soundDurations,
+            onQueryChange = viewModel::onSearchQueryChange,
+            onClose = viewModel::hideSearch,
+            onPlayClick = viewModel::playOrStop,
+            onSeek = viewModel::seekTo,
+            onShareClick = { sound -> viewModel.share(sound) },
+            onPinClick = viewModel::togglePin,
+            onDelete = { sound ->
+                viewModel.hideSearch()
+                viewModel.deleteSound(sound)
+            },
+        )
+    }
+}
+
+/**
+ * Extracted Scaffold body to keep [LandingScreen] readable now that the top-level swap between
+ * Landing / About / Manage Collections lives in a `when`. All the previous Scaffold logic moves
+ * here unchanged.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ScaffoldedLanding(
+    viewModel: SoundsViewModel,
+    sounds: List<Sound>,
+    selectedTab: AppTab,
+    hasBundledSounds: Boolean,
+    playbackProgress: PlaybackProgress?,
+    pausedProgress: Map<String, PlaybackProgress>,
+    soundDurations: Map<String, Int>,
+    snackbarHostState: SnackbarHostState,
+    listState: LazyListState,
+    coroutineScope: kotlinx.coroutines.CoroutineScope,
+    context: Context,
+    tabBackStack: androidx.compose.runtime.snapshots.SnapshotStateList<AppTab>,
+    collections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
+    activeFilter: String?,
+    publicCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
+    collectionsByAudio: Map<String, List<String>>,
+    privateCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
+    onAboutClick: () -> Unit,
+    onManageCollectionsClick: () -> Unit,
+    onActiveFilterEditClick: (String) -> Unit,
+) {
     Scaffold(
-        topBar = { AppTopBar(onAboutClick = { isAboutVisible = true }) },
+        topBar = {
+            AppTopBar(
+                onAboutClick = onAboutClick,
+                onManageCollectionsClick = onManageCollectionsClick,
+            )
+        },
         bottomBar = {
             // Vault is always visible (spec § 2.1) — no `hasBundledSounds` gating. The Explore
             // tab keeps its conditional behaviour through `AppBottomBar.hasExplore`.
@@ -173,6 +278,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     privateCollections = privateCollections,
                     viewModel = viewModel,
                     listState = listState,
+                    onActiveFilterEditClick = onActiveFilterEditClick,
                     modifier = Modifier.padding(innerPadding),
                 )
             else -> {
@@ -188,44 +294,12 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     innerPadding = innerPadding,
                     collectionsByAudio = collectionsByAudio,
                     allCollections = collections,
+                    onActiveFilterEditClick = onActiveFilterEditClick,
                     viewModel = viewModel,
                     context = context,
                 )
             }
         }
-    }
-
-    com.github.barriosnahuel.vossosunboton.feature.vault
-        .VaultRoutingOverlay(viewModel = viewModel)
-
-    com.github.barriosnahuel.vossosunboton.feature.collections
-        .CollectionSheetHost(viewModel = viewModel)
-
-    com.github.barriosnahuel.vossosunboton.feature.collections
-        .AssignCollectionSheet(viewModel = viewModel)
-
-    com.github.barriosnahuel.vossosunboton.feature.collections
-        .CollectionDeleteDialog(viewModel = viewModel)
-
-    if (isSearchVisible) {
-        SearchOverlay(
-            query = searchQuery,
-            results = searchResults,
-            isSearchPending = isSearchPending,
-            playbackProgress = playbackProgress,
-            pausedProgress = pausedProgress,
-            soundDurations = soundDurations,
-            onQueryChange = viewModel::onSearchQueryChange,
-            onClose = viewModel::hideSearch,
-            onPlayClick = viewModel::playOrStop,
-            onSeek = viewModel::seekTo,
-            onShareClick = { sound -> viewModel.share(sound) },
-            onPinClick = viewModel::togglePin,
-            onDelete = { sound ->
-                viewModel.hideSearch()
-                viewModel.deleteSound(sound)
-            },
-        )
     }
 }
 
@@ -309,7 +383,10 @@ private fun SnackbarEffects(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AppTopBar(onAboutClick: () -> Unit) {
+private fun AppTopBar(
+    onAboutClick: () -> Unit,
+    onManageCollectionsClick: () -> Unit,
+) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     TopAppBar(
         title = { Text(stringResource(R.string.app_name)) },
@@ -324,6 +401,13 @@ private fun AppTopBar(onAboutClick: () -> Unit) {
                 expanded = isMenuExpanded,
                 onDismissRequest = { isMenuExpanded = false },
             ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.app_manage_collections_menu_item)) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onManageCollectionsClick()
+                    },
+                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.app_about)) },
                     onClick = {
@@ -563,11 +647,21 @@ private fun MySoundsBody(
     innerPadding: PaddingValues,
     collectionsByAudio: Map<String, List<String>>,
     allCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
+    onActiveFilterEditClick: (String) -> Unit,
     viewModel: SoundsViewModel,
     context: Context,
 ) {
+    val activeCollection = publicCollections.firstOrNull { it.id == activeFilterId }
+    val isOnMySounds = selectedTab == AppTab.MY_SOUNDS
+    val showFilterEmptyState = isOnMySounds && activeFilterId != null && sounds.isEmpty() && activeCollection != null
+    val showWelcomeEmptyState = sounds.isEmpty() && isOnMySounds && !showFilterEmptyState
+    // The ActiveFilterHeader is suppressed alongside the chip row whenever the body collapses to a
+    // ZRP — same reasoning as the Vault locked state: a header above a "nothing here yet" body
+    // adds noise instead of context.
+    val showHeader = isOnMySounds && !showWelcomeEmptyState && !showFilterEmptyState
+
     androidx.compose.foundation.layout.Column(modifier = Modifier.padding(innerPadding)) {
-        if (selectedTab == AppTab.MY_SOUNDS) {
+        if (isOnMySounds) {
             // Always rendered on My Sounds — even with no public collections the user still needs
             // the "+ Nueva" chip to bootstrap one. Hiding the whole row left the create affordance
             // unreachable, see v2.4.0 launch regression.
@@ -582,14 +676,18 @@ private fun MySoundsBody(
                 },
             )
         }
-        val activeName =
-            publicCollections.firstOrNull { it.id == activeFilterId }?.name
-        val shouldShowFilterEmpty =
-            selectedTab == AppTab.MY_SOUNDS && activeFilterId != null && sounds.isEmpty() && activeName != null
+        if (showHeader) {
+            com.github.barriosnahuel.vossosunboton.feature.collections.ActiveFilterHeader(
+                activeCollection = activeCollection,
+                audioCount = sounds.size,
+                isVaultContext = false,
+                onEditClick = { activeCollection?.id?.let(onActiveFilterEditClick) },
+            )
+        }
         when {
-            shouldShowFilterEmpty ->
-                MySoundsFilterEmptyState(collectionName = activeName)
-            sounds.isEmpty() && selectedTab == AppTab.MY_SOUNDS ->
+            showFilterEmptyState && activeCollection != null ->
+                MySoundsFilterEmptyState(collectionName = activeCollection.name)
+            showWelcomeEmptyState ->
                 MySoundsEmptyState()
             else ->
                 SoundsList(
@@ -636,5 +734,38 @@ private fun MySoundsFilterEmptyState(collectionName: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
+    }
+}
+
+/**
+ * Top-level navigation request to open [com.github.barriosnahuel.vossosunboton.feature.collections.ManageCollectionsScreen].
+ * `Generic` opens it at the top with no row highlight; `Focused` deep-links to a specific
+ * collection (scroll + transient tint). Persisted across rotation via [Saver].
+ */
+internal sealed class ManageRequest {
+    object Generic : ManageRequest()
+
+    data class Focused(val collectionId: String) : ManageRequest()
+
+    companion object {
+        val Saver: androidx.compose.runtime.saveable.Saver<ManageRequest?, Any> =
+            androidx.compose.runtime.saveable.Saver(
+                save = { value ->
+                    when (value) {
+                        null -> ""
+                        Generic -> "generic"
+                        is Focused -> "focused:${value.collectionId}"
+                    }
+                },
+                restore = { raw ->
+                    val s = raw as? String ?: return@Saver null
+                    when {
+                        s.isEmpty() -> null
+                        s == "generic" -> Generic
+                        s.startsWith("focused:") -> Focused(s.removePrefix("focused:"))
+                        else -> null
+                    }
+                },
+            )
     }
 }

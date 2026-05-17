@@ -76,6 +76,7 @@ fun VaultScreen(
     privateCollections: List<Collection>,
     viewModel: SoundsViewModel,
     listState: LazyListState,
+    onActiveFilterEditClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -120,6 +121,7 @@ fun VaultScreen(
                     privateCollections = privateCollections,
                     viewModel = viewModel,
                     listState = listState,
+                    onActiveFilterEditClick = onActiveFilterEditClick,
                 )
         }
     }
@@ -221,6 +223,7 @@ private fun VaultBody(
     privateCollections: List<Collection>,
     viewModel: SoundsViewModel,
     listState: LazyListState,
+    onActiveFilterEditClick: (String) -> Unit,
 ) {
     val vaultAudios by viewModel.vaultAudios.collectAsState()
     val activeFilter by viewModel.activeVaultFilter.collectAsState()
@@ -230,13 +233,15 @@ private fun VaultBody(
     val collectionsByAudio by viewModel.audioCollectionsIndex.collectAsState()
     val allCollections by viewModel.collections.collectAsState()
     val context = LocalContext.current
+    val activeCollection = privateCollections.firstOrNull { it.id == activeFilter }
     val systemCollectionLabel = stringResource(R.string.app_vault_baul_name)
     val activeName =
-        privateCollections
-            .firstOrNull { it.id == activeFilter }
-            ?.let {
-                if (it.isSystem) systemCollectionLabel else it.name
-            }.orEmpty()
+        activeCollection?.let { if (it.isSystem) systemCollectionLabel else it.name }.orEmpty()
+    val showZrp = vaultAudios.isEmpty() && activeFilter == null
+    val showFilterEmpty = vaultAudios.isEmpty() && activeFilter != null
+    // Header rendered alongside the chip row whenever the body shows real audios. ZRP and
+    // filtered-empty states both hide it — header on top of an empty body is just noise.
+    val showHeader = !showZrp && !showFilterEmpty
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column {
@@ -248,9 +253,17 @@ private fun VaultBody(
                     viewModel.requestCreateCollection(CollectionAccess.PRIVATE)
                 },
             )
-            if (vaultAudios.isEmpty() && activeFilter == null) {
+            if (showHeader) {
+                com.github.barriosnahuel.vossosunboton.feature.collections.ActiveFilterHeader(
+                    activeCollection = activeCollection,
+                    audioCount = vaultAudios.size,
+                    isVaultContext = true,
+                    onEditClick = { activeCollection?.id?.let(onActiveFilterEditClick) },
+                )
+            }
+            if (showZrp) {
                 VaultEmptyState()
-            } else if (vaultAudios.isEmpty()) {
+            } else if (showFilterEmpty) {
                 FilteredEmptyState(collectionName = activeName)
             } else {
                 SoundsList(
