@@ -11,17 +11,19 @@ import org.junit.After
 import org.junit.Test
 
 /**
- * Process-scoped session cache for unlocked Vault collections. Spec § 5 originally specified
- * per-collection-per-invocation auth, but post-launch usability feedback (PR review) flipped
- * the policy to "per-collection, cached for the lifetime of the process" — see decisions handoff
- * 2026-05-17.
+ * Process-scoped session cache for the Vault unlock. Spec § 5 originally specified
+ * per-collection-per-invocation auth, but post-launch usability feedback flipped the policy:
  *
- * The cache must:
- * 1. Start empty (fresh process).
- * 2. Persist a `markUnlocked` between reads inside the same process.
- * 3. Reset between tests via `clearForTest()` (a process-singleton would otherwise leak across them).
- * 4. Expose `hasAnyUnlock()` so other surfaces (Add/Edit tagging) can short-circuit their own gate
- *    when the user has already authenticated in the session.
+ *   1) First pass: per-collection, cached for the lifetime of the process.
+ *   2) Second pass (this iteration): per-VAULT, cached for the lifetime of the process.
+ *      One biometric on first entry to the Vault tab, no more prompts in the session.
+ *
+ * The state must:
+ *  - Start closed (fresh process).
+ *  - Persist `markVaultOpen` between reads inside the same process.
+ *  - Reset between tests via `clearForTest()` (a process-singleton would otherwise leak across them).
+ *  - Expose `isVaultOpen()` so any surface (Vault tab, Add/Edit private chips, immersive view) can
+ *    short-circuit its own gate when the session is already authenticated.
  */
 internal class VaultSessionStateTest : AbstractRobolectricTest() {
     @After
@@ -29,35 +31,23 @@ internal class VaultSessionStateTest : AbstractRobolectricTest() {
         VaultSessionState.clearForTest()
     }
 
-    /** OWASP MASVS-AUTH-2 / CWE-287 (default-deny: an unrecognised id must never read as unlocked). */
+    /** OWASP MASVS-AUTH-2 / CWE-287 (default-deny: a fresh process is never unlocked). */
     @Test
-    fun `fresh state reports nothing unlocked`() {
-        assertThat(VaultSessionState.isUnlocked("any-id")).isFalse()
-        assertThat(VaultSessionState.hasAnyUnlock()).isFalse()
+    fun `fresh state reports the vault as closed`() {
+        assertThat(VaultSessionState.isVaultOpen()).isFalse()
     }
 
     /** OWASP MASVS-AUTH-2 (mark+check round-trip — the affirmative path of the session contract). */
     @Test
-    fun `markUnlocked makes that id readable as unlocked`() {
-        VaultSessionState.markUnlocked("baul")
-        assertThat(VaultSessionState.isUnlocked("baul")).isTrue()
-        assertThat(VaultSessionState.hasAnyUnlock()).isTrue()
-    }
-
-    /** OWASP MASVS-AUTH-2 / CWE-287 (markUnlocked must not leak across collection ids). */
-    @Test
-    fun `markUnlocked does not falsely unlock a different id`() {
-        VaultSessionState.markUnlocked("baul")
-        assertThat(VaultSessionState.isUnlocked("other")).isFalse()
+    fun `markVaultOpen flips isVaultOpen to true`() {
+        VaultSessionState.markVaultOpen()
+        assertThat(VaultSessionState.isVaultOpen()).isTrue()
     }
 
     @Test
-    fun `clearForTest resets every unlocked id`() {
-        VaultSessionState.markUnlocked("baul")
-        VaultSessionState.markUnlocked("family")
+    fun `clearForTest resets the vault to closed`() {
+        VaultSessionState.markVaultOpen()
         VaultSessionState.clearForTest()
-        assertThat(VaultSessionState.hasAnyUnlock()).isFalse()
-        assertThat(VaultSessionState.isUnlocked("baul")).isFalse()
-        assertThat(VaultSessionState.isUnlocked("family")).isFalse()
+        assertThat(VaultSessionState.isVaultOpen()).isFalse()
     }
 }

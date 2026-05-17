@@ -115,6 +115,16 @@
     <string name="app_vault_empty_baul_headline">A place that stays close.</string>
     <string name="app_vault_empty_baul_body">The voices that move you. The "happy birthday" you keep going back to. The audio you don\'t want anyone else hearing. Tag any Bomp to Baúl and it lives only here, behind your fingerprint.</string>
 
+    <!-- Vault — inspirational empty state (zero private audios) -->
+    <string name="app_vault_zrp_eyebrow">Vault · open session</string>
+    <string name="app_vault_zrp_placeholder">your first memory</string>
+    <string name="app_vault_zrp_headline_lead">The Vault is waiting for</string>
+    <string name="app_vault_zrp_headline_emphasis">something that matters.</string>
+    <string name="app_vault_zrp_body">A voice you want to keep. A message you don\'t want to lose. It never leaves this device.</string>
+    <string name="app_vault_zrp_cta">Save the first one</string>
+    <string name="app_vault_unlock_cta">Tap to unlock</string>
+    <string name="app_vault_unlock_subtitle">The Vault stays open for the rest of this session.</string>
+
     <!-- Biometric prompt copy (Vault unlock) -->
     <string name="app_vault_biometric_prompt_title">Open %1$s</string>
     <string name="app_vault_biometric_prompt_subtitle">Use your fingerprint or screen lock to listen.</string>
@@ -162,8 +172,8 @@
 
     <!-- Add / Edit Bomp — "Assign to collections" section -->
     <string name="app_addbutton_collections_section_title">Assign to collections</string>
-    <string name="app_addbutton_collections_public_label">Public</string>
-    <string name="app_addbutton_collections_public_empty">No public collections yet.</string>
+    <string name="app_addbutton_collections_public_label">My Sounds</string>
+    <string name="app_addbutton_collections_public_empty">No collections in My Sounds yet.</string>
     <string name="app_addbutton_collections_private_label">Private</string>
     <string name="app_addbutton_collections_private_locked_cta">Show private collections (requires unlock)</string>
     <string name="app_addbutton_collections_private_unlocked_cta">Hide private collections</string>

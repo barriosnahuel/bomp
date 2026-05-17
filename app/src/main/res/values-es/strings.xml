@@ -109,6 +109,16 @@
     <string name="app_vault_empty_baul_headline">Un lugar que se queda cerca tuyo.</string>
     <string name="app_vault_empty_baul_body">Las voces que te mueven. El \"feliz cumple\" que volvés a escuchar. El audio que no querés que escuche nadie más. Etiquetá cualquier Bomp al Baúl y se queda acá, detrás de tu huella.</string>
 
+    <!-- Vault — ZRP inspiracional (sin audios privados) -->
+    <string name="app_vault_zrp_eyebrow">Vault · sesión abierta</string>
+    <string name="app_vault_zrp_placeholder">tu primer recuerdo</string>
+    <string name="app_vault_zrp_headline_lead">El Baúl está esperando</string>
+    <string name="app_vault_zrp_headline_emphasis">algo que importe.</string>
+    <string name="app_vault_zrp_body">Una voz que te quieras guardar. Un mensaje que no quieras perder. Nunca sale del dispositivo.</string>
+    <string name="app_vault_zrp_cta">Preservar el primero</string>
+    <string name="app_vault_unlock_cta">Tocá para desbloquear</string>
+    <string name="app_vault_unlock_subtitle">El Baúl queda abierto durante esta sesión.</string>
+
     <!-- Prompt biométrico (desbloqueo del Vault) -->
     <string name="app_vault_biometric_prompt_title">Abrir %1$s</string>
     <string name="app_vault_biometric_prompt_subtitle">Usá tu huella o el bloqueo del teléfono para escuchar.</string>
@@ -156,8 +166,8 @@
 
     <!-- Add / Edit Bomp — sección "Asignar a colecciones" -->
     <string name="app_addbutton_collections_section_title">Asignar a colecciones</string>
-    <string name="app_addbutton_collections_public_label">Públicas</string>
-    <string name="app_addbutton_collections_public_empty">No tenés colecciones públicas todavía.</string>
+    <string name="app_addbutton_collections_public_label">Mis audios</string>
+    <string name="app_addbutton_collections_public_empty">Todavía no creaste colecciones en Mis audios.</string>
     <string name="app_addbutton_collections_private_label">Privadas</string>
     <string name="app_addbutton_collections_private_locked_cta">Mostrar colecciones privadas (requiere desbloqueo)</string>
     <string name="app_addbutton_collections_private_unlocked_cta">Ocultar colecciones privadas</string>

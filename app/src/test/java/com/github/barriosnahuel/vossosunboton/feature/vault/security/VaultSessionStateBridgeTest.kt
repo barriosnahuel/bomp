@@ -11,11 +11,10 @@ import org.junit.After
 import org.junit.Test
 
 /**
- * Cross-surface bridging contract: when ANY private collection has been unlocked during this
- * process, the Add/Edit tagging surface should treat the user as session-authenticated and
- * skip its own reveal CTA. The test guards the contract that
- * [com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonScreen] relies on without
- * having to spin up an actual Compose harness for the section.
+ * Cross-surface contract: once the Vault has been opened during this process, ANY private surface
+ * (the Vault tab list, the Add/Edit private chips, an immersive playback view) short-circuits its
+ * own gate and trusts the session. The test pins that contract without spinning up the Compose
+ * harness for each surface.
  */
 internal class VaultSessionStateBridgeTest : AbstractRobolectricTest() {
     @After
@@ -23,23 +22,17 @@ internal class VaultSessionStateBridgeTest : AbstractRobolectricTest() {
         VaultSessionState.clearForTest()
     }
 
-    /** OWASP MASVS-AUTH-2 / CWE-287 (cross-surface contract: hasAnyUnlock reflects any prior session unlock). */
+    /** OWASP MASVS-AUTH-2 / CWE-287 (cross-surface contract: a single open vault enables all private surfaces). */
     @Test
-    fun `unlocking the Baul makes hasAnyUnlock return true for downstream surfaces`() {
-        // VaultScreen marks the unlocked collection on biometric grant. AssignToCollectionsSection
-        // queries hasAnyUnlock at composition to start its private block already revealed.
-        VaultSessionState.markUnlocked("system:baul")
-        assertThat(VaultSessionState.hasAnyUnlock()).isTrue()
-    }
+    fun `opening the vault enables every downstream surface that checks the session`() {
+        // Pre-condition: nothing open.
+        assertThat(VaultSessionState.isVaultOpen()).isFalse()
 
-    /**
-     * OWASP MASVS-AUTH-2 (the Add/Edit surface uses its own session sentinel marker — the bridge
-     * contract is "any unlocked id makes hasAnyUnlock true", regardless of what id was used).
-     */
-    @Test
-    fun `the Add Edit surface sentinel also flips hasAnyUnlock`() {
-        VaultSessionState.markUnlocked("addbutton-session")
-        assertThat(VaultSessionState.hasAnyUnlock()).isTrue()
-        assertThat(VaultSessionState.isUnlocked("addbutton-session")).isTrue()
+        // The Vault tab marks open on biometric grant.
+        VaultSessionState.markVaultOpen()
+
+        // The Add/Edit private chips, the immersive view, and any future private surface all see
+        // the same flipped flag instead of asking again.
+        assertThat(VaultSessionState.isVaultOpen()).isTrue()
     }
 }

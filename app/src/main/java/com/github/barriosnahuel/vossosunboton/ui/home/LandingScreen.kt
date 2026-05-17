@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -129,6 +130,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val collections by viewModel.collections.collectAsState()
     val activeFilter by viewModel.activeMySoundsFilter.collectAsState()
     val publicCollections = remember(collections) { collections.filter { it.isPublic } }
+    val tagsByAudio by viewModel.audioCollectionTags.collectAsState()
     val privateCollections = remember(collections) { collections.filter { it.isPrivate } }
 
     Scaffold(
@@ -169,8 +171,9 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         when (selectedTab) {
             AppTab.VAULT ->
                 com.github.barriosnahuel.vossosunboton.feature.vault.VaultScreen(
-                    collections = privateCollections,
+                    privateCollections = privateCollections,
                     viewModel = viewModel,
+                    listState = listState,
                     modifier = Modifier.padding(innerPadding),
                 )
             else -> {
@@ -184,6 +187,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     publicCollections = publicCollections,
                     activeFilterId = activeFilter,
                     innerPadding = innerPadding,
+                    tagsByAudio = tagsByAudio,
                     viewModel = viewModel,
                     context = context,
                 )
@@ -395,7 +399,7 @@ private const val DELETE_ANIMATION_DURATION_MS = 300
 private val WELCOME_BORDER_WIDTH = 1.5.dp
 
 @Composable
-private fun SoundsList(
+internal fun SoundsList(
     sounds: List<Sound>,
     playbackProgress: PlaybackProgress?,
     pausedProgress: Map<String, PlaybackProgress>,
@@ -408,6 +412,11 @@ private fun SoundsList(
     onDelete: (Sound) -> Unit,
     onPinClick: (Sound) -> Unit,
     onEdit: (Sound) -> Unit,
+    // Optional per-audio tag list (collection names this audio belongs to). When non-empty for a
+    // given audio, the renderer prepends a small chip row above its `SoundItem` card. Keeping the
+    // tags here (vs inside SoundItem) avoids dragging an extra param through every existing
+    // SoundItem call-site and lets the new behaviour ship without touching the much larger card.
+    tagsByAudio: Map<String, List<String>> = emptyMap(),
 ) {
     val dismissingItems = remember { mutableStateSetOf<String>() }
     val coroutineScope = rememberCoroutineScope()
@@ -460,35 +469,68 @@ private fun SoundsList(
                         } else {
                             null
                         }
-                    SoundItem(
-                        sound = sound,
-                        playbackProgress = effectiveProgress,
-                        durationMs = resolvedDurationMs,
-                        onPlayClick = { onPlayClick(sound) },
-                        onSeek = onSeek,
-                        onShareClick = { onShareClick(sound) },
-                        onDelete = {
-                            dismissingItems.add(sound.id)
-                            coroutineScope.launch {
-                                delay(DELETE_ANIMATION_DURATION_MS.toLong())
-                                onDelete(sound)
-                                dismissingItems.remove(sound.id)
-                            }
-                        },
-                        onPinClick = { onPinClick(sound) },
-                        onEditClick =
-                            if (!sound.isBundled()) {
-                                { onEdit(sound) }
-                            } else {
-                                null
+                    androidx.compose.foundation.layout.Column {
+                        val tags = tagsByAudio[sound.id].orEmpty()
+                        if (tags.isNotEmpty() && !isWelcome) {
+                            CollectionTagsRow(tags = tags)
+                        }
+                        SoundItem(
+                            sound = sound,
+                            playbackProgress = effectiveProgress,
+                            durationMs = resolvedDurationMs,
+                            onPlayClick = { onPlayClick(sound) },
+                            onSeek = onSeek,
+                            onShareClick = { onShareClick(sound) },
+                            onDelete = {
+                                dismissingItems.add(sound.id)
+                                coroutineScope.launch {
+                                    delay(DELETE_ANIMATION_DURATION_MS.toLong())
+                                    onDelete(sound)
+                                    dismissingItems.remove(sound.id)
+                                }
                             },
-                        originLabel = if (isWelcome) stringResource(R.string.app_welcome_sticker_origin) else null,
-                        isWelcomeVariant = isWelcome,
-                        borderOverride = welcomeBorder,
-                        trailingLabel = welcomeTrailingLabel,
-                    )
+                            onPinClick = { onPinClick(sound) },
+                            onEditClick =
+                                if (!sound.isBundled()) {
+                                    { onEdit(sound) }
+                                } else {
+                                    null
+                                },
+                            originLabel = if (isWelcome) stringResource(R.string.app_welcome_sticker_origin) else null,
+                            isWelcomeVariant = isWelcome,
+                            borderOverride = welcomeBorder,
+                            trailingLabel = welcomeTrailingLabel,
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CollectionTagsRow(tags: List<String>) {
+    androidx.compose.foundation.lazy.LazyRow(
+        contentPadding =
+            androidx.compose.foundation.layout.PaddingValues(
+                start = Spacing.LG,
+                end = Spacing.LG,
+                top = Spacing.XS,
+            ),
+        horizontalArrangement =
+            androidx.compose.foundation.layout.Arrangement
+                .spacedBy(Spacing.XS),
+    ) {
+        items(tags) { name ->
+            androidx.compose.material3.AssistChip(
+                onClick = {},
+                label = { Text(name, style = MaterialTheme.typography.labelSmall) },
+                colors =
+                    androidx.compose.material3.AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+            )
         }
     }
 }
@@ -509,6 +551,7 @@ private fun MySoundsBody(
     publicCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
     activeFilterId: String?,
     innerPadding: PaddingValues,
+    tagsByAudio: Map<String, List<String>>,
     viewModel: SoundsViewModel,
     context: Context,
 ) {
@@ -544,6 +587,7 @@ private fun MySoundsBody(
                     pausedProgress = pausedProgress,
                     soundDurations = soundDurations,
                     listState = listState,
+                    tagsByAudio = tagsByAudio,
                     onPlayClick = { sound -> viewModel.playOrStop(sound) },
                     onSeek = { positionMs -> viewModel.seekTo(positionMs) },
                     onShareClick = { sound -> viewModel.share(sound) },

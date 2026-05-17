@@ -85,6 +85,9 @@ class SoundsViewModel(
     private val shareFeature: ShareFeature = ShareFeature.instance,
     private val collectionsRepo: CollectionsRepository = CollectionsRepository(application, onError = Tracker::track),
     private val mySoundsFilterStore: MySoundsFilterStore = MySoundsFilterStore(application),
+    private val vaultFilterStore: com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore =
+        com.github.barriosnahuel.vossosunboton.feature.vault
+            .VaultFilterStore(application),
 ) : AndroidViewModel(application),
     PlayerControllerListener {
     private val repo = SoundsRepository(application, onError = Tracker::track)
@@ -108,9 +111,30 @@ class SoundsViewModel(
     private val _collections = MutableStateFlow<List<Collection>>(emptyList())
     val collections: StateFlow<List<Collection>> = _collections.asStateFlow()
 
+    /**
+     * Reverse index: `audioId → list of collection names this audio belongs to`. Derived from
+     * [_collections]; rebuilt on every emission. Drives the small tag chips rendered inside each
+     * SoundItem card so the user can see at a glance which collections an audio is tagged to
+     * without changing the active filter.
+     */
+    private val _audioCollectionTags = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+    val audioCollectionTags: StateFlow<Map<String, List<String>>> = _audioCollectionTags.asStateFlow()
+
     /** Persisted last-chosen filter on My Sounds. `null` = "All" (unfiltered). */
     private val _activeMySoundsFilter = MutableStateFlow<String?>(null)
     val activeMySoundsFilter: StateFlow<String?> = _activeMySoundsFilter.asStateFlow()
+
+    /** Persisted last-chosen filter on the Vault tab. `null` = "All private audios" (unfiltered). */
+    private val _activeVaultFilter = MutableStateFlow<String?>(null)
+    val activeVaultFilter: StateFlow<String?> = _activeVaultFilter.asStateFlow()
+
+    /**
+     * Audios visible in the Vault tab — the union of all audios tagged to any private collection,
+     * optionally narrowed to the active [activeVaultFilter] chip. Drives the Vault list directly
+     * (no separate collection grid); rendering identical to `sounds` (same `SoundItem` cards).
+     */
+    private val _vaultAudios = MutableStateFlow<List<Sound>>(emptyList())
+    val vaultAudios: StateFlow<List<Sound>> = _vaultAudios.asStateFlow()
 
     /**
      * Active "create or rename collection" request. `null` when no sheet is open. The single
@@ -263,12 +287,18 @@ class SoundsViewModel(
                 Tracker.track(RuntimeException("SoundsViewModel repo observation failed", e))
             }
         }
-        // Hydrate the last-chosen My Sounds chip and observe the collections list. The chip
-        // persists per the spec § 7 default ("persist last filter, favors single-context users").
+        // Hydrate the last-chosen filter chips. Both filters persist per spec § 7 ("persist last
+        // filter, favors single-context users").
         viewModelScope.launch(ioDispatcher) {
             try {
-                val persisted = mySoundsFilterStore.get()
-                _activeMySoundsFilter.value = persisted.takeIf { it != MySoundsFilterStore.ALL_SENTINEL }
+                val mine = mySoundsFilterStore.get()
+                _activeMySoundsFilter.value = mine.takeIf { it != MySoundsFilterStore.ALL_SENTINEL }
+                val vault = vaultFilterStore.get()
+                _activeVaultFilter.value =
+                    vault.takeIf {
+                        it !=
+                            com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore.ALL_SENTINEL
+                    }
             } catch (e: CancellationException) {
                 throw e
             } catch (
@@ -281,14 +311,25 @@ class SoundsViewModel(
             try {
                 collectionsRepo.collections.collect { list ->
                     _collections.value = list
-                    // Drop stale active filter when the underlying collection is deleted so the
+                    _audioCollectionTags.value = buildAudioTagIndex(list)
+                    // Drop stale active filters when the underlying collection is deleted so the
                     // user does not end up looking at a "filtered" but empty list with no chip
                     // highlighted to clear.
-                    val active = _activeMySoundsFilter.value
-                    if (active != null && list.none { it.id == active }) {
+                    val activeMine = _activeMySoundsFilter.value
+                    if (activeMine != null && list.none { it.id == activeMine }) {
                         _activeMySoundsFilter.value = null
                         runCatching { mySoundsFilterStore.set(MySoundsFilterStore.ALL_SENTINEL) }
                     }
+                    val activeVault = _activeVaultFilter.value
+                    if (activeVault != null && list.none { it.id == activeVault }) {
+                        _activeVaultFilter.value = null
+                        runCatching {
+                            vaultFilterStore.set(
+                                com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore.ALL_SENTINEL,
+                            )
+                        }
+                    }
+                    recomputeVaultAudios()
                     loadSounds()
                 }
             } catch (e: CancellationException) {
@@ -299,6 +340,51 @@ class SoundsViewModel(
                 Tracker.track(RuntimeException("SoundsViewModel collections observation failed", e))
             }
         }
+    }
+
+    /**
+     * Recomputes [_vaultAudios] = (audios in any private collection) optionally narrowed to the
+     * active Vault filter chip. Called from the collections observer (so tag changes propagate
+     * automatically) and explicitly after [selectVaultFilter] / loadSounds (so a freshly loaded
+     * catalog also rebuilds the Vault list).
+     */
+    private fun buildAudioTagIndex(collections: List<Collection>): Map<String, List<String>> {
+        val index = mutableMapOf<String, MutableList<String>>()
+        for (collection in collections) {
+            for (audioId in collection.audioIds) {
+                index.getOrPut(audioId) { mutableListOf() } += collection.name
+            }
+        }
+        return index.mapValues { it.value.toList() }
+    }
+
+    private fun recomputeVaultAudios() {
+        val collections = _collections.value
+        val activeFilter = _activeVaultFilter.value
+        val privateCollections = collections.filter { it.isPrivate }
+        val targetIds =
+            if (activeFilter != null) {
+                privateCollections
+                    .firstOrNull { it.id == activeFilter }
+                    ?.audioIds
+                    ?.toSet()
+                    .orEmpty()
+            } else {
+                privateCollections.flatMap { it.audioIds }.toSet()
+            }
+        if (targetIds.isEmpty()) {
+            _vaultAudios.value = emptyList()
+            return
+        }
+        val library = allSoundsCache.value
+        _vaultAudios.value =
+            library
+                .filter { it.id in targetIds }
+                .sortedWith(
+                    compareByDescending<Sound> { it.isPinned }
+                        .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
+                        .thenBy { it.name.lowercase() },
+                )
     }
 
     private val tracker get() = AnalyticsTrackerProvider.get(getApplication())
@@ -367,7 +453,65 @@ class SoundsViewModel(
 
     fun selectTab(tab: AppTab) {
         _selectedTab.value = tab
+        // Optimistically rebuild `_sounds` from the in-memory caches before kicking off the
+        // async loadSounds. Without this, the freshly selected tab renders an empty list (the
+        // previous tab's filtered view) until the IO chain settles — the user sees the empty
+        // state flash for ~150ms on every tab swap.
+        applyTabFilterFromCache()
         viewModelScope.launch(ioDispatcher) { loadSounds() }
+    }
+
+    /**
+     * Synchronous projection of the currently-cached `allSoundsCache` to `_sounds` based on the
+     * active tab. Used to bridge the visual gap between [selectTab] and the loadSounds emission —
+     * keeps the body composable rendering the right list instead of bouncing through the empty
+     * state. Returns whatever `applyCollectionFilter` produces for the active tab + chip.
+     */
+    private fun applyTabFilterFromCache() {
+        val snapshot = allSoundsCache.value
+        if (snapshot.isEmpty()) return
+        // Mirrors the byTab branch in loadSounds. We intentionally avoid `privateOnlyAudioIds`
+        // here (it would do a fresh DataStore read) — the projection is best-effort and the next
+        // loadSounds correction lands within ~50ms.
+        val privateIds = collectionsAudioIdsSnapshot()
+        val byTab =
+            when (_selectedTab.value) {
+                AppTab.MY_SOUNDS -> snapshot.filter { !it.isBundled() && it.id !in privateIds }
+                AppTab.EXPLORE_SOUNDS -> snapshot.filter { it.isBundled() }
+                AppTab.VAULT -> emptyList()
+            }
+        val filtered = applyCollectionFilter(byTab)
+        _sounds.value = filtered
+    }
+
+    private fun collectionsAudioIdsSnapshot(): Set<String> {
+        val list = _collections.value
+        val inPrivate = list.filter { it.isPrivate }.flatMap { it.audioIds }.toSet()
+        if (inPrivate.isEmpty()) return emptySet()
+        val inPublic = list.filter { it.isPublic }.flatMap { it.audioIds }.toSet()
+        return inPrivate - inPublic
+    }
+
+    /**
+     * Activates the Vault filter chip to [collectionId], or to `null` for the "All private audios"
+     * pseudo-chip. Idempotent. Persists the choice so the next cold start lands on the same chip.
+     */
+    fun selectVaultFilter(collectionId: String?) {
+        if (_activeVaultFilter.value == collectionId) return
+        _activeVaultFilter.value = collectionId
+        recomputeVaultAudios()
+        val storeValue =
+            collectionId ?: com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore.ALL_SENTINEL
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { vaultFilterStore.set(storeValue) }
+                .onFailure {
+                    Tracker.log("vault.filter_persist_failed=${it.javaClass.simpleName}")
+                    Tracker.track(RuntimeException("Vault filter persist failed", it))
+                }
+        }
+        if (collectionId != null) {
+            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = _vaultAudios.value.size))
+        }
     }
 
     /**
@@ -809,6 +953,7 @@ class SoundsViewModel(
                     allSounds.map { if (it.id == playingId) it.copy(isPlaying = true) else it }
                 }
             recomputeSearchResults()
+            recomputeVaultAudios()
             // Snapshot of private-only ids: tagged to at least one private collection and to
             // ZERO public collections. Spec § 3.1 + § 1 — those audios are meant to stay inside
             // the Vault and never surface on My Sounds. Cross-tagged (private + public) audios

@@ -214,6 +214,58 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `vaultAudios exposes only audios in private collections`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("only-vault", file = "v.mp3"))
+            repo.save(testSound("only-public", file = "p.mp3"))
+            val collections = CollectionsRepository(context)
+            collections.collections.first() // seed Baúl
+            val sounds = repo.sounds.first()
+            val v = sounds.first { it.name == "only-vault" }
+            val p = sounds.first { it.name == "only-public" }
+            val pub = collections.create("Work", CollectionProfile.GENERIC_PUBLIC)
+            collections.addAudio(pub.id, p.id)
+            collections.addAudio(CollectionsRepository.BAUL_SYSTEM_ID, v.id)
+        }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.size > 1 } }
+        runBlocking {
+            vm.vaultAudios.first { list -> list.size == 1 && list.first().name == "only-vault" }
+        }
+
+        assertThat(vm.vaultAudios.value.map { it.name }).containsExactly("only-vault")
+    }
+
+    @Test
+    fun `selecting a Vault filter narrows vaultAudios to that collection`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("baul-only", file = "b.mp3"))
+            repo.save(testSound("custom-only", file = "c.mp3"))
+            val collections = CollectionsRepository(context)
+            collections.collections.first()
+            val sounds = repo.sounds.first()
+            val baulOnly = sounds.first { it.name == "baul-only" }
+            val customOnly = sounds.first { it.name == "custom-only" }
+            val custom = collections.create("Caro", CollectionProfile.VAULT)
+            collections.addAudio(CollectionsRepository.BAUL_SYSTEM_ID, baulOnly.id)
+            collections.addAudio(custom.id, customOnly.id)
+        }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.size > 1 } }
+        runBlocking { vm.vaultAudios.first { it.size == 2 } }
+
+        val caro = vm.collections.value.first { it.name == "Caro" }
+        vm.selectVaultFilter(caro.id)
+        runBlocking { vm.vaultAudios.first { it.size == 1 && it.first().name == "custom-only" } }
+
+        assertThat(vm.vaultAudios.value.map { it.name }).containsExactly("custom-only")
+    }
+
+    @Test
     fun `library exposes the user catalog regardless of selected tab`() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking {

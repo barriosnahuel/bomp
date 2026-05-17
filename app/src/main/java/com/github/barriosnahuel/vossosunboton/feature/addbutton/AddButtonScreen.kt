@@ -160,10 +160,15 @@ fun AddButtonScreen(
     )
 
     val collectionsState = rememberCollectionsState(context = context, mode = mode)
-    // Start revealed if the session already proved access to any private collection (e.g. the user
-    // walked through Vault → Immersive → "Edit this Bomp"). Avoids forcing a second biometric prompt
-    // inside the same session.
-    var privateRevealed by rememberSaveable { mutableStateOf(VaultSessionState.hasAnyUnlock()) }
+    // Start revealed if the session already proved access to the Vault. Avoids forcing a second
+    // biometric prompt inside the same session.
+    var privateRevealed by rememberSaveable { mutableStateOf(VaultSessionState.isVaultOpen()) }
+    // Pending "+ Nueva" sheet request — null when no sheet is open. Holds the scope (PUBLIC vs
+    // PRIVATE) so the sheet renders the right title and so the auto-tag logic knows which set
+    // to grow on success.
+    var pendingNewCollectionScope by rememberSaveable {
+        mutableStateOf<CollectionAccess?>(null)
+    }
     val activity = remember(context) { context.findFragmentActivity() }
     val biometricGate = remember(activity) { activity?.let { BiometricGate(it) } }
     val biometricStatus = remember(biometricGate) { biometricGate?.status() ?: BiometricGateStatus.UNAVAILABLE }
@@ -312,8 +317,8 @@ fun AddButtonScreen(
                     privateRevealed = privateRevealed,
                     onPublicSelectionChange = { collectionsState.publicSelection.value = it },
                     onPrivateSelectionChange = { collectionsState.privateSelection.value = it },
-                    onCreatePublicRequested = { /* Sheet host lives in LandingScreen; surfaced as a TODO for handoff */ },
-                    onCreatePrivateRequested = { /* Same as above */ },
+                    onCreatePublicRequested = { pendingNewCollectionScope = CollectionAccess.PUBLIC },
+                    onCreatePrivateRequested = { pendingNewCollectionScope = CollectionAccess.PRIVATE },
                     onRequestPrivateUnlock = {
                         val gate = biometricGate
                         if (gate == null || biometricStatus != BiometricGateStatus.AVAILABLE) {
@@ -327,11 +332,10 @@ fun AddButtonScreen(
                         ) { result ->
                             when (result) {
                                 BiometricGateResult.Granted -> {
-                                    // Use a sentinel "session" key for this surface — the user
-                                    // proved general session ownership here, not access to a
-                                    // specific collection. Any other surface that calls
-                                    // hasAnyUnlock() then short-circuits.
-                                    VaultSessionState.markUnlocked("addbutton-session")
+                                    // Mark the whole Vault session as open — the user proved
+                                    // ownership here once and any other private surface in this
+                                    // process trusts the same flag.
+                                    VaultSessionState.markVaultOpen()
                                     privateRevealed = true
                                 }
                                 is BiometricGateResult.Denied -> {
@@ -356,6 +360,31 @@ fun AddButtonScreen(
             outcome = saveOutcome,
             mode = mode,
             onSaved = onSaved,
+        )
+    }
+
+    val scope = pendingNewCollectionScope
+    if (scope != null) {
+        InlineCollectionCreateSheet(
+            scope = scope,
+            onDismiss = { pendingNewCollectionScope = null },
+            onCreated = { created ->
+                // Auto-tag the in-progress audio with the freshly created collection so the user
+                // doesn't have to find it in the chip row and tap it again — the "+ Nueva" intent
+                // is "create AND tag", not just "create".
+                if (created.isPublic) {
+                    collectionsState.publicSelection.value =
+                        collectionsState.publicSelection.value + created.id
+                    collectionsState.publicCollections.value =
+                        collectionsState.publicCollections.value + created
+                } else {
+                    collectionsState.privateSelection.value =
+                        collectionsState.privateSelection.value + created.id
+                    collectionsState.privateCollections.value =
+                        collectionsState.privateCollections.value + created
+                }
+                pendingNewCollectionScope = null
+            },
         )
     }
 }
