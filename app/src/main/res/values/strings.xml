@@ -100,7 +100,7 @@
     <string name="app_navigation_menu_item_vault">Vault</string>
     <string name="app_vault_screen_title">Vault</string>
     <string name="app_vault_screen_subtitle">The voices that don\'t leave this phone.</string>
-    <string name="app_vault_baul_name">Core Vault</string>
+    <string name="app_vault_baul_name">My Vault</string>
     <string name="app_vault_collection_count_zero">No audios yet</string>
     <string name="app_vault_collection_count_one">1 audio</string>
     <string name="app_vault_collection_count_other">%1$d audios</string>
@@ -111,9 +111,9 @@
     <string name="app_vault_card_overflow_description">More options for %1$s</string>
     <string name="app_vault_card_overflow_rename">Rename</string>
     <string name="app_vault_card_overflow_delete">Delete</string>
-    <string name="app_vault_card_overflow_delete_system_disabled">The Baúl is the heart of your Vault — it stays.</string>
+    <string name="app_vault_card_overflow_delete_system_disabled">My Vault is the heart of this tab — it stays.</string>
     <string name="app_vault_empty_baul_headline">A place that stays close.</string>
-    <string name="app_vault_empty_baul_body">The voices that move you. The "happy birthday" you keep going back to. The audio you don\'t want anyone else hearing. Tag any Bomp to Baúl and it lives only here, behind your fingerprint.</string>
+    <string name="app_vault_empty_baul_body">The voices that move you. The "happy birthday" you keep going back to. The audio you don\'t want anyone else hearing. Add any Bomp to your vault and it lives only here, behind your fingerprint.</string>
 
     <!-- Vault — inspirational empty state (zero private audios) -->
     <string name="app_vault_zrp_eyebrow">Vault · open session</string>
@@ -137,7 +137,7 @@
     <string name="app_vault_listen_overflow">More options</string>
     <string name="app_vault_listen_delete_audio">Remove from %1$s</string>
     <string name="app_vault_listen_empty_headline">Nothing in here yet.</string>
-    <string name="app_vault_listen_empty_body">Open any Bomp from My Sounds and tag it to %1$s.</string>
+    <string name="app_vault_listen_empty_body">Open any Bomp from My Sounds and add it to %1$s.</string>
 
     <!-- Create / edit collection sheet -->
     <string name="app_collection_sheet_title_new_public">New public collection</string>
@@ -155,7 +155,7 @@
 
     <!-- Delete confirmation dialog -->
     <string name="app_collection_delete_dialog_title">Delete %1$s?</string>
-    <string name="app_collection_delete_dialog_body_with_audios">%1$d audios will lose this tag. The audio files themselves stay where they are — only the collection goes away.</string>
+    <string name="app_collection_delete_dialog_body_with_audios">%1$d audios will leave this collection. The audio files themselves stay where they are — only the collection goes away.</string>
     <string name="app_collection_delete_dialog_body_empty">This collection is empty. Are you sure?</string>
     <string name="app_collection_delete_dialog_confirm">Delete collection</string>
     <string name="app_collection_delete_dialog_dismiss">Keep it</string>
@@ -168,7 +168,17 @@
     <string name="app_my_sounds_filter_chip_new">+ New</string>
     <string name="app_my_sounds_filter_chip_new_description">Create a new public collection</string>
     <string name="app_my_sounds_filter_empty_collection_headline">Nothing in here yet.</string>
-    <string name="app_my_sounds_filter_empty_collection_body">Tag a Bomp to %1$s from its More menu.</string>
+    <string name="app_my_sounds_filter_empty_collection_body">Add a Bomp to %1$s from its More menu.</string>
+
+    <!-- Sound long-press menu — "Add to collection" entry + bottom-sheet picker -->
+    <string name="app_audio_menu_add_to_collection">Add to collection</string>
+    <string name="app_assign_collection_sheet_title">Add to a collection</string>
+    <string name="app_assign_collection_sheet_section_public">My Sounds</string>
+    <string name="app_assign_collection_sheet_section_private">Vault</string>
+    <string name="app_assign_collection_sheet_done">Done</string>
+    <string name="app_assign_collection_sheet_empty">No collections yet. Create one from My Sounds or Vault first.</string>
+    <string name="app_assign_collection_sheet_private_locked_cta">Show vault collections (requires unlock)</string>
+    <string name="app_assign_collection_sheet_private_locked_subtitle">Unlock the vault to assign this Bomp to a private collection.</string>
 
     <!-- Add / Edit Bomp — "Assign to collections" section -->
     <string name="app_addbutton_collections_section_title">Assign to collections</string>

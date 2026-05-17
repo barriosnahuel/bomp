@@ -107,7 +107,7 @@
     <string name="app_vault_card_overflow_delete">Eliminar</string>
     <string name="app_vault_card_overflow_delete_system_disabled">El Baúl es el corazón de esta tab — no se borra.</string>
     <string name="app_vault_empty_baul_headline">Un lugar que se queda cerca tuyo.</string>
-    <string name="app_vault_empty_baul_body">Las voces que te mueven. El \"feliz cumple\" que volvés a escuchar. El audio que no querés que escuche nadie más. Etiquetá cualquier Bomp al Baúl y se queda acá, detrás de tu huella.</string>
+    <string name="app_vault_empty_baul_body">Las voces que te mueven. El \"feliz cumple\" que volvés a escuchar. El audio que no querés que escuche nadie más. Agregá cualquier Bomp a tu Baúl y se queda acá, detrás de tu huella.</string>
 
     <!-- Vault — ZRP inspiracional (sin audios privados) -->
     <string name="app_vault_zrp_eyebrow">Vault · sesión abierta</string>
@@ -131,7 +131,7 @@
     <string name="app_vault_listen_overflow">Más opciones</string>
     <string name="app_vault_listen_delete_audio">Quitar de %1$s</string>
     <string name="app_vault_listen_empty_headline">Acá no hay nada todavía.</string>
-    <string name="app_vault_listen_empty_body">Abrí cualquier Bomp desde Mis audios y etiquetalo a %1$s.</string>
+    <string name="app_vault_listen_empty_body">Abrí cualquier Bomp desde Mis audios y agregalo a %1$s.</string>
 
     <!-- Sheet de crear / editar colección -->
     <string name="app_collection_sheet_title_new_public">Nueva colección pública</string>
@@ -149,7 +149,7 @@
 
     <!-- Diálogo de confirmación de borrado -->
     <string name="app_collection_delete_dialog_title">¿Eliminar %1$s?</string>
-    <string name="app_collection_delete_dialog_body_with_audios">%1$d audios van a perder esta etiqueta. Los archivos siguen guardados donde están — sólo se va la colección.</string>
+    <string name="app_collection_delete_dialog_body_with_audios">%1$d audios van a salir de esta colección. Los archivos siguen guardados donde están — sólo se va la colección.</string>
     <string name="app_collection_delete_dialog_body_empty">Esta colección está vacía. ¿Seguro?</string>
     <string name="app_collection_delete_dialog_confirm">Eliminar colección</string>
     <string name="app_collection_delete_dialog_dismiss">Mantener</string>
@@ -162,7 +162,17 @@
     <string name="app_my_sounds_filter_chip_new">+ Nueva</string>
     <string name="app_my_sounds_filter_chip_new_description">Crear una nueva colección pública</string>
     <string name="app_my_sounds_filter_empty_collection_headline">Acá no hay nada todavía.</string>
-    <string name="app_my_sounds_filter_empty_collection_body">Etiquetá un Bomp a %1$s desde su menú Más.</string>
+    <string name="app_my_sounds_filter_empty_collection_body">Agregá un Bomp a %1$s desde su menú Más.</string>
+
+    <!-- Long-press de un audio — "Agregar a colección" + sheet selector -->
+    <string name="app_audio_menu_add_to_collection">Agregar a colección</string>
+    <string name="app_assign_collection_sheet_title">Agregar a una colección</string>
+    <string name="app_assign_collection_sheet_section_public">Mis audios</string>
+    <string name="app_assign_collection_sheet_section_private">Baúl</string>
+    <string name="app_assign_collection_sheet_done">Listo</string>
+    <string name="app_assign_collection_sheet_empty">Todavía no tenés colecciones. Creá una desde Mis audios o el Baúl primero.</string>
+    <string name="app_assign_collection_sheet_private_locked_cta">Mostrar colecciones del Baúl (requiere desbloqueo)</string>
+    <string name="app_assign_collection_sheet_private_locked_subtitle">Desbloqueá el Baúl para agregar este Bomp a una colección privada.</string>
 
     <!-- Add / Edit Bomp — sección "Asignar a colecciones" -->
     <string name="app_addbutton_collections_section_title">Asignar a colecciones</string>
