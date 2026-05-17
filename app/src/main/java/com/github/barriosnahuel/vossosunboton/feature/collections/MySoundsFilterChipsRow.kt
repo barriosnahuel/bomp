@@ -70,16 +70,25 @@ internal fun MySoundsFilterChipsRow(
             )
         }
         items(publicCollections, key = { it.id }) { collection ->
+            // System collections (e.g. the seeded "Baúl") store a literal name in the DataStore so
+            // legacy users keep that label; we override it with the locale-aware resource at render
+            // time so an English UI doesn't display the Spanish-seeded literal.
+            val displayName =
+                if (collection.isSystem) {
+                    stringResource(R.string.app_vault_baul_name)
+                } else {
+                    collection.name
+                }
             FilterChip(
                 selected = activeFilterId == collection.id,
                 onClick = {
                     val next = if (activeFilterId == collection.id) null else collection.id
                     onFilterSelected(next)
                 },
-                label = { Text(collection.name) },
+                label = { Text(displayName) },
                 modifier =
                     Modifier.semantics {
-                        contentDescription = String.format(chipDescription, collection.name)
+                        contentDescription = String.format(chipDescription, displayName)
                     },
                 colors =
                     FilterChipDefaults.filterChipColors(

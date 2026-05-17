@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -130,7 +129,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val collections by viewModel.collections.collectAsState()
     val activeFilter by viewModel.activeMySoundsFilter.collectAsState()
     val publicCollections = remember(collections) { collections.filter { it.isPublic } }
-    val tagsByAudio by viewModel.audioCollectionTags.collectAsState()
+    val collectionsByAudio by viewModel.audioCollectionsIndex.collectAsState()
     val privateCollections = remember(collections) { collections.filter { it.isPrivate } }
 
     Scaffold(
@@ -187,7 +186,8 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     publicCollections = publicCollections,
                     activeFilterId = activeFilter,
                     innerPadding = innerPadding,
-                    tagsByAudio = tagsByAudio,
+                    collectionsByAudio = collectionsByAudio,
+                    allCollections = collections,
                     viewModel = viewModel,
                     context = context,
                 )
@@ -200,6 +200,9 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 
     com.github.barriosnahuel.vossosunboton.feature.collections
         .CollectionSheetHost(viewModel = viewModel)
+
+    com.github.barriosnahuel.vossosunboton.feature.collections
+        .AssignCollectionSheet(viewModel = viewModel)
 
     if (isSearchVisible) {
         SearchOverlay(
@@ -412,15 +415,24 @@ internal fun SoundsList(
     onDelete: (Sound) -> Unit,
     onPinClick: (Sound) -> Unit,
     onEdit: (Sound) -> Unit,
-    // Optional per-audio tag list (collection names this audio belongs to). When non-empty for a
-    // given audio, the renderer prepends a small chip row above its `SoundItem` card. Keeping the
-    // tags here (vs inside SoundItem) avoids dragging an extra param through every existing
-    // SoundItem call-site and lets the new behaviour ship without touching the much larger card.
-    tagsByAudio: Map<String, List<String>> = emptyMap(),
+    onAddToCollection: ((Sound) -> Unit)? = null,
+    // Per-audio reverse index of *collection IDs* (not names) this audio belongs to. The render
+    // site resolves each id against [allCollections] so system collections substitute the locale-
+    // aware string resource for their stored literal name.
+    collectionsByAudio: Map<String, List<String>> = emptyMap(),
+    allCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection> = emptyList(),
+    // When false, the per-card share icon is hidden. Driven from the rendering context: the
+    // Vault tab passes false because every audio it shows belongs to a `LISTEN_ONLY` profile.
+    shareEnabled: Boolean = true,
 ) {
     val dismissingItems = remember { mutableStateSetOf<String>() }
     val coroutineScope = rememberCoroutineScope()
     val remainingFormat = stringResource(R.string.app_welcome_sticker_remaining_format)
+    // Locale-aware fallback for system collections (the seeded "Baúl") — resolved once at the
+    // top of the composable since `stringResource` cannot be invoked from a non-Composable
+    // `mapNotNull` lambda.
+    val systemCollectionLabel = stringResource(R.string.app_vault_baul_name)
+    val collectionsById = remember(allCollections) { allCollections.associateBy { it.id } }
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -469,68 +481,56 @@ internal fun SoundsList(
                         } else {
                             null
                         }
-                    androidx.compose.foundation.layout.Column {
-                        val tags = tagsByAudio[sound.id].orEmpty()
-                        if (tags.isNotEmpty() && !isWelcome) {
-                            CollectionTagsRow(tags = tags)
-                        }
-                        SoundItem(
-                            sound = sound,
-                            playbackProgress = effectiveProgress,
-                            durationMs = resolvedDurationMs,
-                            onPlayClick = { onPlayClick(sound) },
-                            onSeek = onSeek,
-                            onShareClick = { onShareClick(sound) },
-                            onDelete = {
-                                dismissingItems.add(sound.id)
-                                coroutineScope.launch {
-                                    delay(DELETE_ANIMATION_DURATION_MS.toLong())
-                                    onDelete(sound)
-                                    dismissingItems.remove(sound.id)
+                    val labels =
+                        if (isWelcome) {
+                            emptyList()
+                        } else {
+                            collectionsByAudio[sound.id].orEmpty().mapNotNull { id ->
+                                val collection = collectionsById[id]
+                                when {
+                                    collection == null -> null
+                                    collection.isSystem -> systemCollectionLabel
+                                    else -> collection.name
                                 }
+                            }
+                        }
+                    SoundItem(
+                        sound = sound,
+                        playbackProgress = effectiveProgress,
+                        durationMs = resolvedDurationMs,
+                        onPlayClick = { onPlayClick(sound) },
+                        onSeek = onSeek,
+                        onShareClick = { onShareClick(sound) },
+                        onDelete = {
+                            dismissingItems.add(sound.id)
+                            coroutineScope.launch {
+                                delay(DELETE_ANIMATION_DURATION_MS.toLong())
+                                onDelete(sound)
+                                dismissingItems.remove(sound.id)
+                            }
+                        },
+                        onPinClick = { onPinClick(sound) },
+                        onEditClick =
+                            if (!sound.isBundled()) {
+                                { onEdit(sound) }
+                            } else {
+                                null
                             },
-                            onPinClick = { onPinClick(sound) },
-                            onEditClick =
-                                if (!sound.isBundled()) {
-                                    { onEdit(sound) }
-                                } else {
-                                    null
-                                },
-                            originLabel = if (isWelcome) stringResource(R.string.app_welcome_sticker_origin) else null,
-                            isWelcomeVariant = isWelcome,
-                            borderOverride = welcomeBorder,
-                            trailingLabel = welcomeTrailingLabel,
-                        )
-                    }
+                        onAddToCollection =
+                            if (!sound.isBundled() && !isWelcome && onAddToCollection != null) {
+                                { onAddToCollection(sound) }
+                            } else {
+                                null
+                            },
+                        originLabel = if (isWelcome) stringResource(R.string.app_welcome_sticker_origin) else null,
+                        isWelcomeVariant = isWelcome,
+                        borderOverride = welcomeBorder,
+                        trailingLabel = welcomeTrailingLabel,
+                        collectionLabels = labels,
+                        shareEnabled = shareEnabled,
+                    )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun CollectionTagsRow(tags: List<String>) {
-    androidx.compose.foundation.lazy.LazyRow(
-        contentPadding =
-            androidx.compose.foundation.layout.PaddingValues(
-                start = Spacing.LG,
-                end = Spacing.LG,
-                top = Spacing.XS,
-            ),
-        horizontalArrangement =
-            androidx.compose.foundation.layout.Arrangement
-                .spacedBy(Spacing.XS),
-    ) {
-        items(tags) { name ->
-            androidx.compose.material3.AssistChip(
-                onClick = {},
-                label = { Text(name, style = MaterialTheme.typography.labelSmall) },
-                colors =
-                    androidx.compose.material3.AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-            )
         }
     }
 }
@@ -551,7 +551,8 @@ private fun MySoundsBody(
     publicCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
     activeFilterId: String?,
     innerPadding: PaddingValues,
-    tagsByAudio: Map<String, List<String>>,
+    collectionsByAudio: Map<String, List<String>>,
+    allCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
     viewModel: SoundsViewModel,
     context: Context,
 ) {
@@ -587,7 +588,8 @@ private fun MySoundsBody(
                     pausedProgress = pausedProgress,
                     soundDurations = soundDurations,
                     listState = listState,
-                    tagsByAudio = tagsByAudio,
+                    collectionsByAudio = collectionsByAudio,
+                    allCollections = allCollections,
                     onPlayClick = { sound -> viewModel.playOrStop(sound) },
                     onSeek = { positionMs -> viewModel.seekTo(positionMs) },
                     onShareClick = { sound -> viewModel.share(sound) },
@@ -596,6 +598,7 @@ private fun MySoundsBody(
                     onEdit = { sound ->
                         context.startActivity(LandingActivity.editIntent(context, sound))
                     },
+                    onAddToCollection = { sound -> viewModel.requestAssignCollections(sound.id) },
                 )
         }
     }

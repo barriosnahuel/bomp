@@ -26,7 +26,6 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -61,10 +59,10 @@ import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
 /**
- * Vault tab — flat list of audios tagged to any private collection, plus a filter chip row to
- * narrow to a single private collection. Conceptually identical to My Sounds (same `SoundsList`
- * cards, same chip semantics, same FAB-less layout) but rendered against a dark surface to mark
- * the immersive boundary.
+ * Vault tab — flat list of audios in any private collection, plus a filter chip row to narrow
+ * to a single private collection. Conceptually identical to My Sounds (same `SoundsList` cards,
+ * same chip semantics) and shares its visual language with the rest of the app; the distinction
+ * is enforced by the biometric gate, not by a separate color scheme.
  *
  * Auth is per-session (spec § 5 originally per-collection-per-invocation, post-launch usability
  * feedback flipped it to one prompt per session for the whole tab). [VaultSessionState] holds
@@ -97,37 +95,32 @@ fun VaultScreen(
         }
     }
 
-    // Force the dark color scheme inside the Vault subtree so the immersive surface is consistent
-    // regardless of the system dark/light setting. The chip row + sound cards inherit the dark
-    // semantic roles from this scope.
-    MaterialTheme(colorScheme = darkColorScheme()) {
-        Box(
-            modifier =
-                modifier
-                    .fillMaxSize()
-                    .background(VAULT_INK),
-        ) {
-            when {
-                !vaultOpen ->
-                    UnlockGate(
-                        status = status,
-                        unprotectedWarning = unprotectedWarning,
-                        onUnlock = {
-                            requestUnlock(
-                                context = context,
-                                gate = gate,
-                                status = status,
-                                tracker = tracker,
-                            )
-                        },
-                    )
-                else ->
-                    VaultBody(
-                        privateCollections = privateCollections,
-                        viewModel = viewModel,
-                        listState = listState,
-                    )
-            }
+    Box(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+    ) {
+        when {
+            !vaultOpen ->
+                UnlockGate(
+                    status = status,
+                    unprotectedWarning = unprotectedWarning,
+                    onUnlock = {
+                        requestUnlock(
+                            context = context,
+                            gate = gate,
+                            status = status,
+                            tracker = tracker,
+                        )
+                    },
+                )
+            else ->
+                VaultBody(
+                    privateCollections = privateCollections,
+                    viewModel = viewModel,
+                    listState = listState,
+                )
         }
     }
 }
@@ -177,21 +170,21 @@ private fun UnlockGate(
         Icon(
             imageVector = Icons.Default.Lock,
             contentDescription = null,
-            tint = Color(0xFFD7FF3A),
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(56.dp),
         )
         Spacer(modifier = Modifier.height(Spacing.LG))
         Text(
             text = stringResource(R.string.app_vault_screen_title),
             style = MaterialTheme.typography.displaySmall,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(Spacing.SM))
         Text(
             text = stringResource(R.string.app_vault_unlock_subtitle),
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFFB8B7AE),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(Spacing.XL))
@@ -199,8 +192,8 @@ private fun UnlockGate(
             onClick = onUnlock,
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFD7FF3A),
-                    contentColor = Color(0xFF0B0B0C),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ),
         ) {
             Icon(
@@ -234,8 +227,16 @@ private fun VaultBody(
     val playbackProgress by viewModel.playbackProgress.collectAsState()
     val pausedProgress by viewModel.pausedProgress.collectAsState()
     val durations by viewModel.soundDurations.collectAsState()
-    val tagsByAudio by viewModel.audioCollectionTags.collectAsState()
+    val collectionsByAudio by viewModel.audioCollectionsIndex.collectAsState()
+    val allCollections by viewModel.collections.collectAsState()
     val context = LocalContext.current
+    val systemCollectionLabel = stringResource(R.string.app_vault_baul_name)
+    val activeName =
+        privateCollections
+            .firstOrNull { it.id == activeFilter }
+            ?.let {
+                if (it.isSystem) systemCollectionLabel else it.name
+            }.orEmpty()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column {
@@ -250,9 +251,7 @@ private fun VaultBody(
             if (vaultAudios.isEmpty() && activeFilter == null) {
                 VaultEmptyState()
             } else if (vaultAudios.isEmpty()) {
-                FilteredEmptyState(
-                    collectionName = privateCollections.firstOrNull { it.id == activeFilter }?.name.orEmpty(),
-                )
+                FilteredEmptyState(collectionName = activeName)
             } else {
                 SoundsList(
                     sounds = vaultAudios,
@@ -260,7 +259,9 @@ private fun VaultBody(
                     pausedProgress = pausedProgress,
                     soundDurations = durations,
                     listState = listState,
-                    tagsByAudio = tagsByAudio,
+                    collectionsByAudio = collectionsByAudio,
+                    allCollections = allCollections,
+                    shareEnabled = false,
                     onPlayClick = { sound -> viewModel.playOrStop(sound) },
                     onSeek = { positionMs -> viewModel.seekTo(positionMs) },
                     onShareClick = { sound -> viewModel.share(sound) },
@@ -269,6 +270,7 @@ private fun VaultBody(
                     onEdit = { sound ->
                         context.startActivity(LandingActivity.editIntent(context, sound))
                     },
+                    onAddToCollection = { sound -> viewModel.requestAssignCollections(sound.id) },
                 )
             }
         }
@@ -282,8 +284,8 @@ private fun VaultBody(
                     .align(Alignment.BottomEnd)
                     .padding(Spacing.LG)
                     .semantics { contentDescription = fabContentDescription },
-            containerColor = Color(0xFFD7FF3A),
-            contentColor = Color(0xFF0B0B0C),
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             icon = {
                 Icon(
                     imageVector = AppIcons.Add,
@@ -309,7 +311,7 @@ private fun VaultEmptyState() {
         Text(
             text = stringResource(R.string.app_vault_zrp_eyebrow).uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = Color(0xFFB8B7AE),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(Spacing.LG))
@@ -318,14 +320,14 @@ private fun VaultEmptyState() {
         Text(
             text = stringResource(R.string.app_vault_zrp_headline_lead),
             style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
         Text(
             text = stringResource(R.string.app_vault_zrp_headline_emphasis),
             style = MaterialTheme.typography.headlineMedium,
-            color = Color(0xFFD7FF3A),
+            color = MaterialTheme.colorScheme.primary,
             fontStyle = FontStyle.Italic,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
@@ -334,7 +336,7 @@ private fun VaultEmptyState() {
         Text(
             text = stringResource(R.string.app_vault_zrp_body),
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFFB8B7AE),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }
@@ -349,23 +351,23 @@ private fun PolaroidPlaceholder() {
                 .clip(RoundedCornerShape(4.dp))
                 .border(
                     width = 1.dp,
-                    color = Color(0xFF3A3A38),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                     shape = RoundedCornerShape(4.dp),
-                ).background(Color(0xFF15140F)),
+                ).background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 imageVector = Icons.Default.Favorite,
                 contentDescription = null,
-                tint = Color(0xFF4D4A3C),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                 modifier = Modifier.size(56.dp),
             )
             Spacer(modifier = Modifier.height(Spacing.MD))
             Text(
                 text = stringResource(R.string.app_vault_zrp_placeholder),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF8A8676),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontStyle = FontStyle.Italic,
             )
         }
@@ -382,20 +384,18 @@ private fun FilteredEmptyState(collectionName: String) {
         Text(
             text = stringResource(R.string.app_my_sounds_filter_empty_collection_headline),
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(Spacing.SM))
         Text(
             text = stringResource(R.string.app_my_sounds_filter_empty_collection_body, collectionName),
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFFB8B7AE),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }
 }
-
-private val VAULT_INK = Color(0xFF0B0B0C)
 
 private fun android.content.Context.findFragmentActivity(): FragmentActivity? {
     var current: android.content.Context? = this

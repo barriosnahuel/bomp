@@ -206,9 +206,11 @@ private fun PrivateBlock(
         )
         Spacer(modifier = Modifier.height(Spacing.XS))
     }
+    val systemFallback = stringResource(R.string.app_vault_baul_name)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.SM)) {
         collections.forEach { collection ->
             val selected = collection.id in selection
+            val displayName = if (collection.isSystem) systemFallback else collection.name
             FilterChip(
                 selected = selected,
                 onClick = {
@@ -216,7 +218,7 @@ private fun PrivateBlock(
                         if (selected) selection - collection.id else selection + collection.id,
                     )
                 },
-                label = { Text(collection.name) },
+                label = { Text(displayName) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Lock,

@@ -112,13 +112,13 @@ class SoundsViewModel(
     val collections: StateFlow<List<Collection>> = _collections.asStateFlow()
 
     /**
-     * Reverse index: `audioId → list of collection names this audio belongs to`. Derived from
-     * [_collections]; rebuilt on every emission. Drives the small tag chips rendered inside each
-     * SoundItem card so the user can see at a glance which collections an audio is tagged to
-     * without changing the active filter.
+     * Reverse index: `audioId → list of collection ids this audio belongs to`. IDs (not names)
+     * so the UI layer can resolve the user-facing label against `_collections` and substitute
+     * the locale-aware string resource for system collections. Derived from [_collections];
+     * rebuilt on every emission.
      */
-    private val _audioCollectionTags = MutableStateFlow<Map<String, List<String>>>(emptyMap())
-    val audioCollectionTags: StateFlow<Map<String, List<String>>> = _audioCollectionTags.asStateFlow()
+    private val _audioCollectionsIndex = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+    val audioCollectionsIndex: StateFlow<Map<String, List<String>>> = _audioCollectionsIndex.asStateFlow()
 
     /** Persisted last-chosen filter on My Sounds. `null` = "All" (unfiltered). */
     private val _activeMySoundsFilter = MutableStateFlow<String?>(null)
@@ -158,6 +158,14 @@ class SoundsViewModel(
      */
     private val _pendingCollectionDelete = MutableStateFlow<String?>(null)
     val pendingCollectionDelete: StateFlow<String?> = _pendingCollectionDelete.asStateFlow()
+
+    /**
+     * `audioId` of the sound the long-press → "Add to collection" sheet is currently editing.
+     * `null` when the sheet is closed. Only one such sheet is reachable at a time (the long-press
+     * menu collapses on selection), so a single Optional is sufficient.
+     */
+    private val _activeAssignAudioId = MutableStateFlow<String?>(null)
+    val activeAssignAudioId: StateFlow<String?> = _activeAssignAudioId.asStateFlow()
 
     private val mutableInitialLoadComplete = MutableStateFlow(false)
 
@@ -311,7 +319,7 @@ class SoundsViewModel(
             try {
                 collectionsRepo.collections.collect { list ->
                     _collections.value = list
-                    _audioCollectionTags.value = buildAudioTagIndex(list)
+                    _audioCollectionsIndex.value = buildAudioCollectionsIndex(list)
                     // Drop stale active filters when the underlying collection is deleted so the
                     // user does not end up looking at a "filtered" but empty list with no chip
                     // highlighted to clear.
@@ -348,11 +356,11 @@ class SoundsViewModel(
      * automatically) and explicitly after [selectVaultFilter] / loadSounds (so a freshly loaded
      * catalog also rebuilds the Vault list).
      */
-    private fun buildAudioTagIndex(collections: List<Collection>): Map<String, List<String>> {
+    private fun buildAudioCollectionsIndex(collections: List<Collection>): Map<String, List<String>> {
         val index = mutableMapOf<String, MutableList<String>>()
         for (collection in collections) {
             for (audioId in collection.audioIds) {
-                index.getOrPut(audioId) { mutableListOf() } += collection.name
+                index.getOrPut(audioId) { mutableListOf() } += collection.id
             }
         }
         return index.mapValues { it.value.toList() }
@@ -592,6 +600,7 @@ class SoundsViewModel(
         _sounds.update(sortedList)
         allSoundsCache.update { list -> list.map { if (it.id == sound.id) it.copy(isPinned = nowPinned) else it } }
         recomputeSearchResults()
+        recomputeVaultAudios()
         if (nowPinned) _scrollToTopEvent.trySend(Unit)
         viewModelScope.launch(ioDispatcher) {
             repo.savePin(sound.id, sound.name, nowPinned)
@@ -656,6 +665,7 @@ class SoundsViewModel(
             // Welcome sticker is never in `allSoundsCache` (kept out of search) — skip the update.
             allSoundsCache.update { list -> list.filter { it.id != sound.id } }
             recomputeSearchResults()
+            recomputeVaultAudios()
         }
         _deletedSoundEvent.value = DeletedSoundEvent(currentSound.copy(isPlaying = false), position)
         if (isWelcome) {
@@ -684,6 +694,7 @@ class SoundsViewModel(
                 list.toMutableList().also { it.add(allInsertPosition, event.sound) }
             }
             recomputeSearchResults()
+            recomputeVaultAudios()
         }
         _deletedSoundEvent.value = null
         if (isWelcome) {
@@ -813,6 +824,43 @@ class SoundsViewModel(
     /** Opens the create-collection sheet for [access] scope. Triggered from filter row and Vault FAB. */
     fun requestCreateCollection(access: CollectionAccess) {
         _activeCollectionSheet.value = CollectionSheetRequest.Create(access)
+    }
+
+    /** Opens the long-press → "Add to collection" sheet for [audioId]. */
+    fun requestAssignCollections(audioId: String) {
+        _activeAssignAudioId.value = audioId
+    }
+
+    fun dismissAssignCollections() {
+        _activeAssignAudioId.value = null
+    }
+
+    /**
+     * Toggles whether [audioId] belongs to [collectionId]. Implemented as a single mutation so
+     * the sheet can be optimistic and let the DataStore round-trip catch up. The reverse-index
+     * `audioCollectionNames` re-emits automatically when [collectionsRepo.collections] does.
+     */
+    fun toggleAudioInCollection(
+        audioId: String,
+        collectionId: String,
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            val current = collectionsRepo.collections.first()
+            val target = current.firstOrNull { it.id == collectionId } ?: return@launch
+            val alreadyIn = audioId in target.audioIds
+            val outcome =
+                runCatching {
+                    if (alreadyIn) {
+                        collectionsRepo.removeAudio(collectionId, audioId)
+                    } else {
+                        collectionsRepo.addAudio(collectionId, audioId)
+                    }
+                }
+            outcome.onFailure {
+                Tracker.log("collections.toggle_audio_failed=${it.javaClass.simpleName}")
+                Tracker.track(RuntimeException("Failed to toggle audio in collection", it))
+            }
+        }
     }
 
     /** Opens the rename sheet pre-filled with the existing collection. No-op for unknown id. */
@@ -1016,6 +1064,7 @@ class SoundsViewModel(
         _sounds.update { list -> list.map { if (it.id == sound.id) playingSound else it } }
         allSoundsCache.update { list -> list.map { if (it.id == sound.id) playingSound else it } }
         recomputeSearchResults()
+        recomputeVaultAudios()
     }
 
     override fun onPlayerStop(
@@ -1030,6 +1079,7 @@ class SoundsViewModel(
         _sounds.update { list -> list.map { if (it.id == sound.id) stoppedSound else it } }
         allSoundsCache.update { list -> list.map { if (it.id == sound.id) stoppedSound else it } }
         recomputeSearchResults()
+        recomputeVaultAudios()
 
         if (completed && isWelcomeSticker(sound)) {
             val position = _sounds.value.indexOfFirst { it.id == sound.id }.coerceAtLeast(0)
@@ -1057,6 +1107,7 @@ class SoundsViewModel(
         _sounds.update { list -> list.map { if (it.id == sound.id) pausedSound else it } }
         allSoundsCache.update { list -> list.map { if (it.id == sound.id) pausedSound else it } }
         recomputeSearchResults()
+        recomputeVaultAudios()
     }
 
     override fun onProgressUpdate(positionMs: Int) {
