@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ## \[unreleased] (v2.0.1)
 
 ### Added
+- New **Vault** tab in the bottom navigation, grouping your private collections behind your fingerprint or screen lock. The "Baúl" lives there by default and you can create more private collections for specific people, moments, or memories. Audios tagged to a private collection only play from there, in an immersive listen view with no share button
+- Public **collections** for organizing your Bomps by context (Family, Work, Recipes…). A filter chip row at the top of My Sounds lets you narrow the list to one collection at a time — the last chip you used persists across cold starts
+- New "Assign to collections" section in New Bomp and Rename Bomp. Public collections show up as multi-select chips; private collections appear behind a "Show private collections (requires unlock)" CTA that asks for your fingerprint before revealing them
 - Terms of Service link in the About screen's "Legal & Privacy" section, opening the published page with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
 - New Bomp screen now shows the audio preview card with play/pause and seek above the name field, so you can listen to the incoming audio before saving — matching the card already present when renaming a Bomp
 - New Bomp screen now flags when you already have a Bomp with the same name and lets you tap an inline play/stop toggle to hear that one before deciding — case-insensitive, trimmed; tap again while playing to stop and reset. Non-blocking: you can still save the duplicate (two Bomps can legitimately share a name)
@@ -40,6 +43,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### For nerds 🤓
 
 #### Added
+- `CollectionsRepository` + `Collection` model in `:model` (DataStore Preferences, JSON-encoded, in-memory cache, `ReplaceFileCorruptionHandler`). Mirrors `SoundsRepository` shape so the audit guards already in place (`adr-invariants`) keep applying. The `collections.preferences_pb` and `my-sounds-filter.preferences_pb` stores are excluded from `app_backup_rules.xml` and `app_data_extraction_rules.xml` per spec v2.4.0 § 5 (Vault is local-only); a new `BackupRulesTest` asserts the exclusion to catch silent regressions
+- `androidx.biometric:biometric` 1.2.0-alpha05 + `BiometricGate` wrapper isolating `BiometricPrompt` from UI code; uses `BIOMETRIC_STRONG | DEVICE_CREDENTIAL` so the screen-lock PIN is a valid fallback. `LandingActivity` and `AddButtonActivity` migrate from `ComponentActivity` to `FragmentActivity` (the parent class needed by `BiometricPrompt`) — no other functional change
+- Analytics events: `collection_create`, `collection_delete`, `collection_rename`, `collection_filter_apply`, `vault_unlock`, `vault_enter_immersive`, `vault_unprotected_warning_shown`. New `CanonicalScreenName` entries `vault`, `vault_unlock`, `vault_collection_listen`, `collection_create`
 - `scripts/check-security-test-count.sh` + CircleCI `security-test-count-guard` job — strict-equality count guard for OWASP MASVS-tagged tests under all test source roots. Fails the build if a tagged test is removed (regression) or added without bumping `EXPECTED_COUNT` (visibility); the bump is a deliberate one-line edit that ships in the same PR as the test change
 - Analytics event `sound_add_abandoned_after_error` fires when the user leaves the Add Button screen with an unresolved save error (lifecycle-driven via `ON_STOP` and explicit Snackbar dismiss); best-effort — process death drops the signal
 - Analytics events `duplicate_name_hint_shown` (gated per-match by the matched sound's id so keystroke churn doesn't multiply emissions) and `duplicate_name_hint_play` (inline play tapped) for the New Bomp duplicate-name hint
