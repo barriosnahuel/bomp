@@ -513,7 +513,10 @@ private fun MySoundsBody(
     context: Context,
 ) {
     androidx.compose.foundation.layout.Column(modifier = Modifier.padding(innerPadding)) {
-        if (selectedTab == AppTab.MY_SOUNDS && publicCollections.isNotEmpty()) {
+        if (selectedTab == AppTab.MY_SOUNDS) {
+            // Always rendered on My Sounds — even with no public collections the user still needs
+            // the "+ Nueva" chip to bootstrap one. Hiding the whole row left the create affordance
+            // unreachable, see v2.4.0 launch regression.
             com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterChipsRow(
                 publicCollections = publicCollections,
                 activeFilterId = activeFilterId,

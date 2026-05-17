@@ -100,7 +100,7 @@
     <string name="app_navigation_menu_item_vault">Vault</string>
     <string name="app_vault_screen_title">Vault</string>
     <string name="app_vault_screen_subtitle">The voices that don\'t leave this phone.</string>
-    <string name="app_vault_baul_name">Baúl</string>
+    <string name="app_vault_baul_name">Core Vault</string>
     <string name="app_vault_collection_count_zero">No audios yet</string>
     <string name="app_vault_collection_count_one">1 audio</string>
     <string name="app_vault_collection_count_other">%1$d audios</string>

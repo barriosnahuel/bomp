@@ -149,6 +149,19 @@ internal class CollectionsRepositoryTest {
         }
 
     @Test
+    fun `rename refuses to rename the system Baul`() =
+        runTest {
+            repo.collections.first() // trigger seed
+            val thrown = runCatching { repo.rename(CollectionsRepository.BAUL_SYSTEM_ID, "Mi cosa") }
+            assertThat(thrown.isFailure).isTrue()
+            assertThat(thrown.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
+            // The persisted name must stay untouched.
+            val list = repo.collections.first()
+            val baul = list.first { it.id == CollectionsRepository.BAUL_SYSTEM_ID }
+            assertThat(baul.name).isNotEqualTo("Mi cosa")
+        }
+
+    @Test
     fun `decodeSafely recovers from malformed JSON without losing future writes`() =
         runTest {
             repo.setRawJsonForTest("not valid json {}")

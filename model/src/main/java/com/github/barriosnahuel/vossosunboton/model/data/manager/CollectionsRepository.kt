@@ -113,8 +113,10 @@ class CollectionsRepository(
 
     /**
      * Renames [id] to [newName]. No-op if the collection is missing. Throws on blank/too-long
-     * names or if [newName] is already taken inside the same access scope (case-insensitive).
-     * Renaming a system collection is allowed (the system flag protects deletion, not naming).
+     * names, on duplicate names inside the same scope (case-insensitive), or on system
+     * collections (the system Baúl's name is canonical and surfaced via a localized resource
+     * string by the UI — letting the user persist a different name would create a UI/data drift
+     * because the UI override would still display the resource value).
      */
     suspend fun rename(
         id: String,
@@ -124,6 +126,7 @@ class CollectionsRepository(
         validateName(trimmed)
         mutate { current ->
             val existing = current.firstOrNull { it.id == id } ?: return@mutate current
+            require(!existing.isSystem) { "Cannot rename a system collection (id=$id)" }
             val accessScope = existing.access
             val nameTaken =
                 current.any {

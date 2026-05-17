@@ -94,7 +94,7 @@
     <string name="app_navigation_menu_item_vault">Baúl</string>
     <string name="app_vault_screen_title">Baúl</string>
     <string name="app_vault_screen_subtitle">Las voces que no salen de este teléfono.</string>
-    <string name="app_vault_baul_name">Baúl</string>
+    <string name="app_vault_baul_name">Mi Baúl</string>
     <string name="app_vault_collection_count_zero">Sin audios todavía</string>
     <string name="app_vault_collection_count_one">1 audio</string>
     <string name="app_vault_collection_count_other">%1$d audios</string>
