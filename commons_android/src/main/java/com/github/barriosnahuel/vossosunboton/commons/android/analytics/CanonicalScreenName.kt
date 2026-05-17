@@ -18,5 +18,29 @@ object CanonicalScreenName {
     const val ADD_SOUND = "add_sound"
     const val EDIT_SOUND = "edit_sound"
 
-    val ALL: List<String> = listOf(MY_SOUNDS, EXPLORE_SOUNDS, ABOUT, SEARCH_SOUND, ADD_SOUND, EDIT_SOUND)
+    /** Vault tab — list of private collections; no audio content shown until per-collection unlock. */
+    const val VAULT = "vault"
+
+    /** Per-collection biometric unlock prompt invocation surface (analytics-only marker). */
+    const val VAULT_UNLOCK = "vault_unlock"
+
+    /** Immersive listen view: a single private collection's audios, post-unlock, listen-only. */
+    const val VAULT_COLLECTION_LISTEN = "vault_collection_listen"
+
+    /** Create-collection sheet (reachable from Vault FAB or from Add/Edit "+ Nueva" chip). */
+    const val COLLECTION_CREATE = "collection_create"
+
+    val ALL: List<String> =
+        listOf(
+            MY_SOUNDS,
+            EXPLORE_SOUNDS,
+            ABOUT,
+            SEARCH_SOUND,
+            ADD_SOUND,
+            EDIT_SOUND,
+            VAULT,
+            VAULT_UNLOCK,
+            VAULT_COLLECTION_LISTEN,
+            COLLECTION_CREATE,
+        )
 }

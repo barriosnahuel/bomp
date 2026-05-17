@@ -188,4 +188,78 @@ sealed class AnalyticsEvent(
      * Bomp before deciding whether to save the duplicate.
      */
     object DuplicateNameHintPlay : AnalyticsEvent(name = "duplicate_name_hint_play", hasFirstVariant = true)
+
+    /**
+     * A new collection was created. [scope] is `"public"` or `"private"`; [audios] is the audio
+     * count at creation (always 0 today but kept for future "create from selection" flows).
+     */
+    data class CollectionCreate(
+        val scope: String,
+        val audios: Int,
+    ) : AnalyticsEvent(name = "collection_create", hasFirstVariant = true) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString("scope", scope)
+                putInt("audios", audios)
+            }
+    }
+
+    /**
+     * A collection was deleted. [scope] mirrors [CollectionCreate]; [audios] is the count of
+     * audios that lost their tag (audio files themselves are not removed from disk).
+     */
+    data class CollectionDelete(
+        val scope: String,
+        val audios: Int,
+    ) : AnalyticsEvent(name = "collection_delete", hasFirstVariant = false) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString("scope", scope)
+                putInt("audios", audios)
+            }
+    }
+
+    /** A collection was renamed. */
+    data class CollectionRename(
+        val scope: String,
+    ) : AnalyticsEvent(name = "collection_rename", hasFirstVariant = false) {
+        override fun params(): Bundle = Bundle().apply { putString("scope", scope) }
+    }
+
+    /**
+     * A public-collection filter chip was activated on My Sounds. [matches] is the number of
+     * audios that survive the filter; useful for spotting collections users actively manage
+     * vs. empty/abandoned ones.
+     */
+    data class CollectionFilterApply(
+        val matches: Int,
+    ) : AnalyticsEvent(name = "collection_filter_apply", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putInt("matches", matches) }
+    }
+
+    /**
+     * Biometric prompt resolved for a Vault collection. [granted] reflects whether the user
+     * authenticated successfully (true) or cancelled / failed (false). No PII — collection id is
+     * out of scope; only the cumulative grant/cancel rate matters for product.
+     */
+    data class VaultUnlock(
+        val granted: Boolean,
+    ) : AnalyticsEvent(name = "vault_unlock", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putBoolean("granted", granted) }
+    }
+
+    /**
+     * User entered the immersive listen view of a Vault collection (post biometric grant). Paired
+     * with [VaultUnlock] (granted = true) but reported separately so dashboards can spot drop-off
+     * between authentication and engagement.
+     */
+    object VaultEnterImmersive : AnalyticsEvent(name = "vault_enter_immersive", hasFirstVariant = true)
+
+    /**
+     * Device has no biometric or device-credential lock configured but a private collection
+     * exists — the warning chip on the card is showing. Emitted at most once per process via
+     * `markFiredOnce("vault_unprotected_warning")` so we don't flood dashboards on scroll.
+     */
+    object VaultUnprotectedWarningShown :
+        AnalyticsEvent(name = "vault_unprotected_warning_shown", hasFirstVariant = false)
 }
