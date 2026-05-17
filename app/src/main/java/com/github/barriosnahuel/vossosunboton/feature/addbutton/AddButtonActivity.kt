@@ -11,10 +11,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
@@ -22,7 +22,9 @@ import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
-class AddButtonActivity : ComponentActivity() {
+// FragmentActivity (vs ComponentActivity) is required so the Add/Edit tagging UI can fire
+// BiometricPrompt when the user requests to assign the new audio to a private collection.
+class AddButtonActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)

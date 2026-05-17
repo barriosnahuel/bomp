@@ -9,17 +9,19 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
-class LandingActivity : ComponentActivity() {
+// FragmentActivity (vs the smaller ComponentActivity) is required so androidx.biometric's
+// BiometricPrompt can manage its hosting fragment when the user opens a Vault collection.
+class LandingActivity : FragmentActivity() {
     private val viewModel: SoundsViewModel by viewModels { SoundsViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
