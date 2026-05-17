@@ -176,6 +176,29 @@
     <string name="app_assign_collection_sheet_row_action_selected">En %1$s, tocá dos veces para quitar</string>
     <string name="app_assign_collection_sheet_row_action_unselected">Agregar a %1$s</string>
 
+    <!-- Header del filtro activo (debajo de los chips en Mis audios y Baúl) -->
+    <string name="app_active_filter_header_all_my_sounds">Todos los audios · %1$d</string>
+    <string name="app_active_filter_header_all_vault">Todo el Baúl · %1$d</string>
+    <string name="app_active_filter_header_with_collection">%1$s · %2$d audios</string>
+    <string name="app_active_filter_header_edit_description">Editar %1$s</string>
+
+    <!-- Pantalla "Gestionar colecciones" -->
+    <string name="app_manage_collections_menu_item">Gestionar colecciones</string>
+    <string name="app_manage_collections_title">Gestionar colecciones</string>
+    <string name="app_manage_collections_back">Volver</string>
+    <string name="app_manage_collections_section_public">Mis audios</string>
+    <string name="app_manage_collections_section_vault">Baúl</string>
+    <string name="app_manage_collections_system_tag">Del sistema</string>
+    <string name="app_manage_collections_row_sounds_count">%1$d audios</string>
+    <string name="app_manage_collections_new_public">+ Nueva colección pública</string>
+    <string name="app_manage_collections_new_vault">+ Nueva colección privada</string>
+    <string name="app_manage_collections_empty_public">Todavía no creaste colecciones públicas.</string>
+    <string name="app_manage_collections_empty_vault">Todavía no creaste colecciones privadas.</string>
+    <string name="app_manage_collections_vault_locked_title">Baúl bloqueado</string>
+    <string name="app_manage_collections_vault_locked_body">Desbloqueá para gestionar tus colecciones privadas.</string>
+    <string name="app_manage_collections_vault_locked_cta">Desbloquear</string>
+    <string name="app_manage_collections_row_overflow_description">Opciones para %1$s</string>
+
     <!-- Add / Edit Bomp — sección "Asignar a colecciones" -->
     <string name="app_addbutton_collections_section_title">Asignar a colecciones</string>
     <string name="app_addbutton_collections_public_label">Mis audios</string>

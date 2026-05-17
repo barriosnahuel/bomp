@@ -182,6 +182,29 @@
     <string name="app_assign_collection_sheet_row_action_selected">In %1$s, double-tap to remove</string>
     <string name="app_assign_collection_sheet_row_action_unselected">Add to %1$s</string>
 
+    <!-- Active filter header (below the chip row on My Sounds + Vault) -->
+    <string name="app_active_filter_header_all_my_sounds">All sounds · %1$d</string>
+    <string name="app_active_filter_header_all_vault">All vault sounds · %1$d</string>
+    <string name="app_active_filter_header_with_collection">%1$s · %2$d sounds</string>
+    <string name="app_active_filter_header_edit_description">Edit %1$s</string>
+
+    <!-- Manage collections screen -->
+    <string name="app_manage_collections_menu_item">Manage collections</string>
+    <string name="app_manage_collections_title">Manage collections</string>
+    <string name="app_manage_collections_back">Back</string>
+    <string name="app_manage_collections_section_public">My Sounds</string>
+    <string name="app_manage_collections_section_vault">Vault</string>
+    <string name="app_manage_collections_system_tag">System</string>
+    <string name="app_manage_collections_row_sounds_count">%1$d sounds</string>
+    <string name="app_manage_collections_new_public">+ New public collection</string>
+    <string name="app_manage_collections_new_vault">+ New private collection</string>
+    <string name="app_manage_collections_empty_public">No public collections yet.</string>
+    <string name="app_manage_collections_empty_vault">No private collections yet.</string>
+    <string name="app_manage_collections_vault_locked_title">Vault locked</string>
+    <string name="app_manage_collections_vault_locked_body">Unlock to manage your private collections.</string>
+    <string name="app_manage_collections_vault_locked_cta">Unlock</string>
+    <string name="app_manage_collections_row_overflow_description">Options for %1$s</string>
+
     <!-- Add / Edit Bomp — "Assign to collections" section -->
     <string name="app_addbutton_collections_section_title">Assign to collections</string>
     <string name="app_addbutton_collections_public_label">My Sounds</string>
