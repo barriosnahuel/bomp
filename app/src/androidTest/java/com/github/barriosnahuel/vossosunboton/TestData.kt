@@ -10,9 +10,14 @@ import android.net.Uri
 import android.os.Environment
 import androidx.core.content.FileProvider
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
+import com.github.barriosnahuel.vossosunboton.model.Collection
+import com.github.barriosnahuel.vossosunboton.model.CollectionProfile
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.io.RandomAccessFile
 import java.util.UUID
@@ -39,6 +44,8 @@ internal object TestData {
 
     private fun repo(context: Context) = SoundsRepository(context)
 
+    private fun collectionsRepo(context: Context) = CollectionsRepository(context, onError = { /* swallow in tests */ })
+
     /**
      * Wipes the sounds DataStore and deletes every file in the Music external dir. Also marks the
      * welcome sticker as already-consumed so it doesn't appear at row 0 of MY_SOUNDS during tests
@@ -51,11 +58,15 @@ internal object TestData {
     fun clearAll(context: Context) {
         runBlocking {
             repo(context).clearForTest()
+            collectionsRepo(context).clearForTest()
             // Hide welcome by default in instrumented tests; opt-in via [enableWelcomeSticker].
             val welcome = WelcomeStickerStore(context)
             welcome.clearForTest()
             welcome.consume()
         }
+        // Process-scoped singleton — survives across tests in the same instrumentation process,
+        // so reset it explicitly to keep biometric-gate tests deterministic.
+        VaultSessionState.clearForTest()
 
         context
             .getExternalFilesDir(Environment.DIRECTORY_MUSIC)
@@ -160,6 +171,58 @@ internal object TestData {
     fun enableWelcomeSticker(context: Context) {
         runBlocking { WelcomeStickerStore(context).clearForTest() }
     }
+
+    /**
+     * Seeds a public collection named [name] containing [audioIds]. Returns the new collection id
+     * so the caller can pass it to [SoundsViewModel.selectMySoundsFilter] or assert against a chip.
+     *
+     * Idempotent across tests because `clearAll` wipes the underlying DataStore.
+     */
+    fun seedPublicCollection(
+        context: Context,
+        name: String,
+        audioIds: List<String> = emptyList(),
+    ): String = seedCollection(context, name, CollectionProfile.GENERIC_PUBLIC, audioIds)
+
+    /**
+     * Seeds a private collection named [name] containing [audioIds]. The system Baúl is seeded by
+     * the repo on first read; if your test needs it visible without creating other private
+     * collections, call [touchPrivateCollections] in `@Before` so the seed lands.
+     */
+    fun seedPrivateCollection(
+        context: Context,
+        name: String,
+        audioIds: List<String> = emptyList(),
+    ): String = seedCollection(context, name, CollectionProfile.VAULT, audioIds)
+
+    /**
+     * Forces the repo to seed the system Baúl collection without creating any other collection.
+     * Useful for tests that need to assert against the system chip after [clearAll] reset the store.
+     */
+    fun touchPrivateCollections(context: Context): List<Collection> =
+        runBlocking { collectionsRepo(context).collections.first() }
+
+    /**
+     * Marks the per-session Vault unlock as already granted so a test that doesn't exercise the
+     * biometric gate can land directly on the Vault body. Pair with [VaultSessionState.clearForTest]
+     * in `@After` (already wired into [clearAll]).
+     */
+    fun markVaultOpen() {
+        VaultSessionState.markVaultOpen()
+    }
+
+    private fun seedCollection(
+        context: Context,
+        name: String,
+        profile: CollectionProfile,
+        audioIds: List<String>,
+    ): String =
+        runBlocking {
+            val repo = collectionsRepo(context)
+            val created = repo.create(name = name, profile = profile)
+            audioIds.forEach { audioId -> repo.addAudio(created.id, audioId) }
+            created.id
+        }
 
     private fun copyAssetToMusicDir(
         context: Context,
