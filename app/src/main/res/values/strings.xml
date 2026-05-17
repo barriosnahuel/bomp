@@ -95,4 +95,79 @@
     <string name="app_welcome_sticker_origin">From the maker</string>
     <string name="app_welcome_sticker_remaining_format">-%1$s</string>
     <string name="app_welcome_sticker_feedback_dismissed">Catch you around!</string>
+
+    <!-- Vault tab (private collections — biometric-gated per collection) -->
+    <string name="app_navigation_menu_item_vault">Vault</string>
+    <string name="app_vault_screen_title">Vault</string>
+    <string name="app_vault_screen_subtitle">The voices that don\'t leave this phone.</string>
+    <string name="app_vault_baul_name">Baúl</string>
+    <string name="app_vault_collection_count_zero">No audios yet</string>
+    <string name="app_vault_collection_count_one">1 audio</string>
+    <string name="app_vault_collection_count_other">%1$d audios</string>
+    <string name="app_vault_card_locked_hint">Tap to unlock with your fingerprint or screen lock</string>
+    <string name="app_vault_unprotected_warning_chip">Not protected — set a screen lock</string>
+    <string name="app_vault_unprotected_explainer">This device has no fingerprint or screen lock. Your Vault is still saved locally but anyone holding the phone can open it.</string>
+    <string name="app_vault_fab_new">New private collection</string>
+    <string name="app_vault_card_overflow_description">More options for %1$s</string>
+    <string name="app_vault_card_overflow_rename">Rename</string>
+    <string name="app_vault_card_overflow_delete">Delete</string>
+    <string name="app_vault_card_overflow_delete_system_disabled">The Baúl is the heart of your Vault — it stays.</string>
+    <string name="app_vault_empty_baul_headline">A place that stays close.</string>
+    <string name="app_vault_empty_baul_body">The voices that move you. The "happy birthday" you keep going back to. The audio you don\'t want anyone else hearing. Tag any Bomp to Baúl and it lives only here, behind your fingerprint.</string>
+
+    <!-- Biometric prompt copy (Vault unlock) -->
+    <string name="app_vault_biometric_prompt_title">Open %1$s</string>
+    <string name="app_vault_biometric_prompt_subtitle">Use your fingerprint or screen lock to listen.</string>
+    <string name="app_vault_biometric_negative">Cancel</string>
+    <string name="app_vault_biometric_denied_message">Couldn\'t unlock %1$s</string>
+
+    <!-- Vault — immersive listen view (per collection) -->
+    <string name="app_vault_listen_title_format">%1$s</string>
+    <string name="app_vault_listen_back">Close and lock again</string>
+    <string name="app_vault_listen_overflow">More options</string>
+    <string name="app_vault_listen_delete_audio">Remove from %1$s</string>
+    <string name="app_vault_listen_empty_headline">Nothing in here yet.</string>
+    <string name="app_vault_listen_empty_body">Open any Bomp from My Sounds and tag it to %1$s.</string>
+
+    <!-- Create / edit collection sheet -->
+    <string name="app_collection_sheet_title_new_public">New public collection</string>
+    <string name="app_collection_sheet_title_new_private">New private collection</string>
+    <string name="app_collection_sheet_title_rename">Rename collection</string>
+    <string name="app_collection_sheet_name_label">Name</string>
+    <string name="app_collection_sheet_name_placeholder_public">Family, Work, Recipes…</string>
+    <string name="app_collection_sheet_name_placeholder_private">Caro, Christmas 2024…</string>
+    <string name="app_collection_sheet_save">Save</string>
+    <string name="app_collection_sheet_cancel">Cancel</string>
+    <string name="app_collection_sheet_error_name_required">Give your collection a name.</string>
+    <string name="app_collection_sheet_error_name_too_long">Keep it under %1$d characters.</string>
+    <string name="app_collection_sheet_error_name_taken">You already have a collection with that name.</string>
+    <string name="app_collection_sheet_private_disclaimer">Private collections stay on this phone and ask for your fingerprint every time you open them.</string>
+
+    <!-- Delete confirmation dialog -->
+    <string name="app_collection_delete_dialog_title">Delete %1$s?</string>
+    <string name="app_collection_delete_dialog_body_with_audios">%1$d audios will lose this tag. The audio files themselves stay where they are — only the collection goes away.</string>
+    <string name="app_collection_delete_dialog_body_empty">This collection is empty. Are you sure?</string>
+    <string name="app_collection_delete_dialog_confirm">Delete collection</string>
+    <string name="app_collection_delete_dialog_dismiss">Keep it</string>
+    <string name="app_collection_delete_feedback">Collection deleted</string>
+
+    <!-- My Sounds — public collection filter chips -->
+    <string name="app_my_sounds_filter_all">All</string>
+    <string name="app_my_sounds_filter_chip_description">Filter by %1$s</string>
+    <string name="app_my_sounds_filter_active_clear_description">Clear collection filter</string>
+    <string name="app_my_sounds_filter_chip_new">+ New</string>
+    <string name="app_my_sounds_filter_chip_new_description">Create a new public collection</string>
+    <string name="app_my_sounds_filter_empty_collection_headline">Nothing in here yet.</string>
+    <string name="app_my_sounds_filter_empty_collection_body">Tag a Bomp to %1$s from its More menu.</string>
+
+    <!-- Add / Edit Bomp — "Assign to collections" section -->
+    <string name="app_addbutton_collections_section_title">Assign to collections</string>
+    <string name="app_addbutton_collections_public_label">Public</string>
+    <string name="app_addbutton_collections_public_empty">No public collections yet.</string>
+    <string name="app_addbutton_collections_private_label">Private</string>
+    <string name="app_addbutton_collections_private_locked_cta">Show private collections (requires unlock)</string>
+    <string name="app_addbutton_collections_private_unlocked_cta">Hide private collections</string>
+    <string name="app_addbutton_collections_private_unprotected_hint">Your private collections show up here because this device has no fingerprint or screen lock.</string>
+    <string name="app_addbutton_collections_new_chip">+ New collection</string>
+    <string name="app_addbutton_collections_new_private_chip">+ New private</string>
 </resources>

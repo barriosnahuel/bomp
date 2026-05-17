@@ -90,6 +90,34 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
     }
 
     /**
+     * OWASP MASVS-STORAGE-2 / CWE-359 (Vault contents must not leave the device via cloud backup).
+     *
+     * Collections + Vault metadata are local-only per spec v2.4.0 § 5 ("Sincronización del Vault
+     * a la nube" + "Sincronización de colecciones públicas entre dispositivos" both Out of Scope).
+     * Cloud backup uploading them would silently lift the local-only promise to "lives in your
+     * Drive too" — the regression net for this guarantee.
+     */
+    @Test
+    fun `collections datastore is NOT referenced by any include rule`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val backupIncludes = parseIncludes(context.resources.getXml(R.xml.app_backup_rules))
+        val cloudIncludes =
+            parseIncludes(
+                context.resources.getXml(R.xml.app_data_extraction_rules),
+                parentTag = "cloud-backup",
+            )
+        val transferIncludes =
+            parseIncludes(
+                context.resources.getXml(R.xml.app_data_extraction_rules),
+                parentTag = "device-transfer",
+            )
+        val allIncludes = backupIncludes + cloudIncludes + transferIncludes
+
+        assertThat(allIncludes.none { (_, path) -> path.contains("collections.preferences_pb") }).isTrue()
+        assertThat(allIncludes.none { (_, path) -> path.contains("my-sounds-filter.preferences_pb") }).isTrue()
+    }
+
+    /**
      * OWASP MASVS-PRIVACY-1 / CWE-200 (analytics first_open flags excluded from cross-install backup).
      *
      * `first_*` event flags MUST NOT be backed up. Firebase's user-identity model is per-install
