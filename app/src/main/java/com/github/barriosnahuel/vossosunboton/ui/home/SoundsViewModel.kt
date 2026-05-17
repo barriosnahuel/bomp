@@ -154,6 +154,16 @@ class SoundsViewModel(
 
     private val allSoundsCache = MutableStateFlow<List<Sound>>(emptyList())
 
+    /**
+     * Snapshot of the full catalog (custom + bundled) regardless of the currently selected tab.
+     * Distinct from [sounds], which is the tab-filtered list that powers the visible LazyColumn —
+     * on the Vault tab `sounds` collapses to an empty list (the Vault renders private collection
+     * cards instead of audios). [library] keeps the full set available so detail screens like
+     * `ImmersiveListenScreen` can resolve a collection's `audioIds` to real Sound objects without
+     * caring about which tab the user happens to be on.
+     */
+    val library: StateFlow<List<Sound>> = allSoundsCache.asStateFlow()
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -387,6 +397,21 @@ class SoundsViewModel(
         val target = _collections.value.firstOrNull { it.id == collectionId } ?: return emptyList()
         val ids = target.audioIds.toSet()
         return allSoundsCache.value.filter { it.id in ids }
+    }
+
+    /**
+     * Returns the set of audio ids that belong to at least one PRIVATE collection AND zero PUBLIC
+     * collections. Used to hide "Vault-only" audios from My Sounds (spec § 1: those audios are
+     * "preserved inside the app and never come out"). The cross-tagged case (private + public)
+     * is intentionally excluded — spec § 3.1's "Restricción de cross-preset" preserves visibility
+     * from the public surface.
+     */
+    private fun privateOnlyAudioIds(): Set<String> {
+        val collectionsSnapshot = _collections.value
+        val inPrivate = collectionsSnapshot.filter { it.isPrivate }.flatMap { it.audioIds }.toSet()
+        if (inPrivate.isEmpty()) return emptySet()
+        val inPublic = collectionsSnapshot.filter { it.isPublic }.flatMap { it.audioIds }.toSet()
+        return inPrivate - inPublic
     }
 
     /**
@@ -780,9 +805,16 @@ class SoundsViewModel(
                 }
             recomputeSearchResults()
             _sounds.update {
+                // Snapshot of private-only ids: tagged to at least one private collection and to
+                // ZERO public collections. Spec § 3.1 + § 1 — those audios are meant to stay inside
+                // the Vault and never surface on My Sounds. Cross-tagged (private + public) audios
+                // remain visible on My Sounds because the public surface preserves visibility
+                // (the "Restricción de cross-preset" carve-out).
+                val privateOnlyIds = privateOnlyAudioIds()
                 val byTab =
                     when (_selectedTab.value) {
-                        AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
+                        AppTab.MY_SOUNDS ->
+                            allSounds.filter { !it.isBundled() && it.id !in privateOnlyIds }
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
                         // The Vault tab is rendered by its own dedicated screen (VaultScreen) — the
                         // primary sound list is empty here so the bottom-bar tab swap leaves the

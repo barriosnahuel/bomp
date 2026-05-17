@@ -35,8 +35,13 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         runBlocking {
             SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
             CollectionsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
-            WelcomeStickerStore(ApplicationProvider.getApplicationContext()).clearForTest()
             MySoundsFilterStore(ApplicationProvider.getApplicationContext()).clearForTest()
+            // Consume (not clear) the welcome sticker so it does NOT appear on top of the
+            // sound list during these tests. clearForTest() resets the consumed flag, which
+            // re-enables the sticker — exactly the opposite of what we need here.
+            val welcome = WelcomeStickerStore(ApplicationProvider.getApplicationContext())
+            welcome.clearForTest()
+            welcome.consume()
         }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
@@ -82,6 +87,9 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
 
         val collection = vm.collections.value.first { it.name == "Work" }
         vm.selectMySoundsFilter(collection.id)
+        // selectMySoundsFilter triggers an async loadSounds on real IO — wait for the post-filter
+        // emission rather than reading .value before it propagates.
+        runBlocking { vm.sounds.first { list -> list.size == 1 && list.first().name == "audio-a" } }
 
         assertThat(vm.sounds.value.map { it.name }).containsExactly("audio-a")
     }
@@ -104,6 +112,9 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         val c = vm.collections.value.first { it.name == "Work" }
         vm.selectMySoundsFilter(c.id)
         vm.selectMySoundsFilter(null)
+        runBlocking {
+            vm.sounds.first { list -> list.map { it.name }.toSet() == setOf("audio-a", "audio-b") }
+        }
 
         assertThat(vm.sounds.value.map { it.name }).containsExactly("audio-a", "audio-b")
     }
@@ -143,6 +154,80 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         val baul = vm.collections.value.first { it.id == CollectionsRepository.BAUL_SYSTEM_ID }
         assertThat(baul.isPrivate).isTrue()
         assertThat(baul.isSystem).isTrue()
+    }
+
+    @Test
+    fun `audio tagged only to a private collection disappears from MY_SOUNDS`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("private-only", file = "private.mp3"))
+            repo.save(testSound("public-only", file = "public.mp3"))
+            val collections = CollectionsRepository(context)
+            val sounds = repo.sounds.first()
+            val privateOne = sounds.first { it.name == "private-only" }
+            val publicOne = sounds.first { it.name == "public-only" }
+            val pub = collections.create("Work", CollectionProfile.GENERIC_PUBLIC)
+            collections.addAudio(pub.id, publicOne.id)
+            // private-only audio: only in the system Baúl.
+            collections.addAudio(CollectionsRepository.BAUL_SYSTEM_ID, privateOne.id)
+        }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.size > 1 } }
+        // Wait for the loadSounds triggered by the collections emission to settle. The MY_SOUNDS
+        // tab must converge to the single public-only entry once the private-only filter applies.
+        runBlocking {
+            vm.sounds.first { list -> list.size == 1 && list.first().name == "public-only" }
+        }
+
+        val visibleNames = vm.sounds.value.map { it.name }
+        assertThat(visibleNames).containsExactly("public-only")
+        assertThat(visibleNames).doesNotContain("private-only")
+    }
+
+    @Test
+    fun `audio tagged to BOTH a private and a public collection still appears in MY_SOUNDS`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("cross-tagged", file = "cross.mp3"))
+            val collections = CollectionsRepository(context)
+            val sounds = repo.sounds.first()
+            val a = sounds.first { it.name == "cross-tagged" }
+            val pub = collections.create("Work", CollectionProfile.GENERIC_PUBLIC)
+            collections.addAudio(pub.id, a.id)
+            collections.addAudio(CollectionsRepository.BAUL_SYSTEM_ID, a.id)
+        }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.size > 1 } }
+        runBlocking {
+            vm.sounds.first { list -> list.size == 1 && list.first().name == "cross-tagged" }
+        }
+
+        // Spec § 3.1 cross-preset: a public tag preserves visibility from MY_SOUNDS.
+        assertThat(vm.sounds.value.map { it.name }).containsExactly("cross-tagged")
+    }
+
+    @Test
+    fun `library exposes the user catalog regardless of selected tab`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("audio-a", file = "a.mp3"))
+            repo.save(testSound("audio-b", file = "b.mp3"))
+        }
+        val vm = givenAViewModel()
+        // Switch to Vault — vm.sounds collapses to emptyList(), but the library snapshot must keep
+        // the user catalog so ImmersiveListenScreen can resolve collection.audioIds to real Sounds.
+        vm.selectTab(AppTab.VAULT)
+        runBlocking { vm.collections.first { it.isNotEmpty() } }
+
+        assertThat(vm.sounds.value).isEmpty()
+        val userLibraryNames =
+            vm.library.value
+                .filter { it.file != null }
+                .map { it.name }
+        assertThat(userLibraryNames).containsExactly("audio-a", "audio-b")
     }
 
     @Test

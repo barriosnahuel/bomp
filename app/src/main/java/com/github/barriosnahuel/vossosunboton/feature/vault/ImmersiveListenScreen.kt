@@ -51,9 +51,9 @@ import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
-import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.PlaybackProgress
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
@@ -77,14 +77,18 @@ internal fun ImmersiveListenScreen(
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
-    val allSounds by viewModel.sounds.collectAsState()
+    // Source from `library` (full catalog) instead of `sounds` (tab-filtered). When the Vault tab
+    // is selected, `sounds` collapses to emptyList() so the LazyColumn would render zero rows
+    // even though the collection holds audios. `library` carries the whole user catalog so
+    // resolving `collection.audioIds → Sound` works regardless of selected tab.
+    val library by viewModel.library.collectAsState()
     val collectionsState by viewModel.collections.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
     val pausedProgress by viewModel.pausedProgress.collectAsState()
     val durations by viewModel.soundDurations.collectAsState()
 
     // The collection's audioIds are looked up against the latest snapshot so a tag-changed
-    // upstream (in another tab) reflects immediately. Sounds not present in allSounds (e.g. file
+    // upstream (in another tab) reflects immediately. Sounds not present in `library` (e.g. file
     // deleted) are filtered out so the row count matches what the user can actually play.
     val freshCollection =
         remember(collection.id, collectionsState) {
@@ -92,8 +96,8 @@ internal fun ImmersiveListenScreen(
         }
     val audioIds = remember(freshCollection) { freshCollection.audioIds.toSet() }
     val visibleSounds =
-        remember(audioIds, allSounds) {
-            allSounds.filter { it.id in audioIds }
+        remember(audioIds, library) {
+            library.filter { it.id in audioIds }
         }
 
     LaunchedEffect(collection.id) {
