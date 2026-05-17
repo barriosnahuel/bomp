@@ -129,6 +129,8 @@ internal class AddButtonScreenPlaybackTest : AbstractRobolectricTest() {
                     context: Context,
                     name: String,
                     uri: String,
+                    publicCollectionIds: Set<String>,
+                    privateCollectionIds: Set<String>,
                 ): Deferred<Int> = CompletableDeferred(R.string.app_addbutton_feedback_save_failed)
 
                 override fun renameButtonAsync(
@@ -189,6 +191,8 @@ internal class AddButtonScreenPlaybackTest : AbstractRobolectricTest() {
             context: Context,
             name: String,
             uri: String,
+            publicCollectionIds: Set<String>,
+            privateCollectionIds: Set<String>,
         ): Deferred<Int> = CompletableDeferred(R.string.app_addbutton_feedback_saved_ok)
 
         override fun renameButtonAsync(
