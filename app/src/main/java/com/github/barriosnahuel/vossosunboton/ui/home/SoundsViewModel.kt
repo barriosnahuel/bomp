@@ -647,10 +647,16 @@ class SoundsViewModel(
     }
 
     fun deleteSound(sound: Sound) {
-        val currentSounds = _sounds.value.toMutableList()
-        val currentSound = currentSounds.find { it.id == sound.id } ?: return
-        val position = currentSounds.indexOf(currentSound)
         val isWelcome = isWelcomeSticker(sound)
+        // `_sounds.value` only contains the audios visible on the *currently-selected* tab. On
+        // the Vault tab it is empty by design (VaultScreen reads `_vaultAudios` directly), so a
+        // swipe-to-delete from the Vault would have early-returned here and left the dismissed
+        // card in zombie state — the SwipeToDismissBox stuck at EndToStart, snackbar never
+        // firing. Look the sound up in `allSoundsCache` instead so deletion works regardless of
+        // which tab triggered it, and treat the visible-list update as optional bookkeeping.
+        val sourceList = if (isWelcome) _sounds.value else allSoundsCache.value
+        val resolvedSound = sourceList.firstOrNull { it.id == sound.id } ?: return
+        val sourcePosition = sourceList.indexOf(resolvedSound)
 
         // Always ask the controller to forget this sound: it cleans up the saved-position cache
         // and, if this sound is the currently-loaded MediaPlayer target (playing OR paused),
@@ -659,15 +665,19 @@ class SoundsViewModel(
         // controller still holds the data source).
         PlayerControllerFactory.instance.forgetSound(sound)
 
-        currentSounds.removeAt(position)
-        _sounds.value = currentSounds
+        // Drop from the visible list when present. On Vault tab the audio is not in `_sounds` —
+        // `recomputeVaultAudios()` below handles the equivalent update for `_vaultAudios`.
+        val visibleIndex = _sounds.value.indexOfFirst { it.id == sound.id }
+        if (visibleIndex >= 0) {
+            _sounds.value = _sounds.value.toMutableList().also { it.removeAt(visibleIndex) }
+        }
         if (!isWelcome) {
             // Welcome sticker is never in `allSoundsCache` (kept out of search) — skip the update.
             allSoundsCache.update { list -> list.filter { it.id != sound.id } }
             recomputeSearchResults()
             recomputeVaultAudios()
         }
-        _deletedSoundEvent.value = DeletedSoundEvent(currentSound.copy(isPlaying = false), position)
+        _deletedSoundEvent.value = DeletedSoundEvent(resolvedSound.copy(isPlaying = false), sourcePosition)
         if (isWelcome) {
             _welcomeStickerVisible.value = false
             tracker.log(AnalyticsEvent.WelcomeStickerDismissed)
@@ -677,18 +687,25 @@ class SoundsViewModel(
     fun restoreSound() {
         val event = _deletedSoundEvent.value ?: return
         val isWelcome = isWelcomeSticker(event.sound)
-        val currentSounds = _sounds.value.toMutableList()
-        if (isWelcome) {
-            // Demote to the end of MY_SOUNDS — the prime row 0 spot belongs to the user once
-            // they've shown they want this sticker back rather than letting it consume.
-            currentSounds.add(event.sound)
-        } else {
-            val insertPosition = event.position.coerceAtMost(currentSounds.size)
-            currentSounds.add(insertPosition, event.sound)
+        // Mirror the symmetric guard in `deleteSound`: on the Vault tab the audio is never
+        // directly in `_sounds`, so mutating that list would push a private-only audio into the
+        // My Sounds projection until the next loadSounds wipes it. Keep `_sounds` untouched on
+        // Vault and let `recomputeVaultAudios()` do the user-visible work.
+        val shouldUpdateVisibleSounds = isWelcome || _selectedTab.value != AppTab.VAULT
+        if (shouldUpdateVisibleSounds) {
+            val currentSounds = _sounds.value.toMutableList()
+            if (isWelcome) {
+                // Demote to the end of MY_SOUNDS — the prime row 0 spot belongs to the user once
+                // they've shown they want this sticker back rather than letting it consume.
+                currentSounds.add(event.sound)
+            } else {
+                val insertPosition = event.position.coerceAtMost(currentSounds.size)
+                currentSounds.add(insertPosition, event.sound)
+            }
+            _sounds.value = currentSounds
         }
-        _sounds.value = currentSounds
         if (!isWelcome) {
-            val insertPosition = event.position.coerceAtMost(_sounds.value.size)
+            val insertPosition = event.position.coerceAtMost(allSoundsCache.value.size)
             allSoundsCache.update { list ->
                 val allInsertPosition = insertPosition.coerceAtMost(list.size)
                 list.toMutableList().also { it.add(allInsertPosition, event.sound) }

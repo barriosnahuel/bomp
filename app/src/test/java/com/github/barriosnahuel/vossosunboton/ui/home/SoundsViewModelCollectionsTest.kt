@@ -290,6 +290,65 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `deleting a Vault-only audio removes it from vaultAudios and emits a delete event for undo`() {
+        // Regression: pre-fix, deleteSound returned early on the Vault tab because `_sounds.value`
+        // is empty there — the audio was never removed from `_vaultAudios`, the snackbar never
+        // fired, and the SwipeToDismissBox kept its swiped-away state forever (the red background
+        // with the trash icon stayed pinned where the card used to be).
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("only-vault", file = "v.mp3"))
+            val collections = CollectionsRepository(context)
+            collections.collections.first() // seed Baúl
+            val sounds = repo.sounds.first()
+            val v = sounds.first { it.name == "only-vault" }
+            collections.addAudio(CollectionsRepository.BAUL_SYSTEM_ID, v.id)
+        }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.size >= 1 } }
+        runBlocking { vm.vaultAudios.first { it.size == 1 } }
+        // The user is on the Vault tab when they swipe-to-delete; `_sounds` collapses to empty on
+        // Vault by design (the VaultScreen reads `_vaultAudios` directly).
+        vm.selectTab(AppTab.VAULT)
+        runBlocking { vm.sounds.first { it.isEmpty() } }
+
+        val target = vm.vaultAudios.value.single()
+        vm.deleteSound(target)
+
+        // Bug repro asserts:
+        assertThat(vm.vaultAudios.value.map { it.id }).doesNotContain(target.id)
+        assertThat(vm.deletedSoundEvent.value).isNotNull()
+        assertThat(vm.deletedSoundEvent.value?.sound?.id).isEqualTo(target.id)
+    }
+
+    @Test
+    fun `restoring a Vault-only audio from undo brings it back into vaultAudios`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("only-vault", file = "v.mp3"))
+            val collections = CollectionsRepository(context)
+            collections.collections.first()
+            val sounds = repo.sounds.first()
+            val v = sounds.first { it.name == "only-vault" }
+            collections.addAudio(CollectionsRepository.BAUL_SYSTEM_ID, v.id)
+        }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.isNotEmpty() } }
+        runBlocking { vm.vaultAudios.first { it.size == 1 } }
+        vm.selectTab(AppTab.VAULT)
+        runBlocking { vm.sounds.first { it.isEmpty() } }
+
+        val target = vm.vaultAudios.value.single()
+        vm.deleteSound(target)
+        vm.restoreSound()
+
+        assertThat(vm.vaultAudios.value.map { it.id }).contains(target.id)
+        assertThat(vm.deletedSoundEvent.value).isNull()
+    }
+
+    @Test
     fun `creating a private collection emits with the VAULT profile defaults`() {
         val vm = givenAViewModel()
         runBlocking { vm.collections.first { it.isNotEmpty() } }
