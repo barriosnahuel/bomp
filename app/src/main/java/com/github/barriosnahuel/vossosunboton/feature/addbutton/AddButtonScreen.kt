@@ -257,7 +257,15 @@ fun AddButtonScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // imePadding() lives on the outer Box, not the inner content Column. With the modifier
+    // applied inside the Scaffold body the IME inset was only reducing the *content* region —
+    // the SaveButton (pinned to the bottom of that region) would slide up correctly, but on
+    // some devices the scroll container's measured height didn't update fast enough and the
+    // last field appeared to sit under the IME with no overflow to scroll into. Anchoring the
+    // imePadding on the screen root keeps the whole Scaffold above the keyboard, so every
+    // child — top bar, scrollable form, pinned button — shifts together and there is always
+    // either room on screen or visible overflow to scroll.
+    Box(modifier = Modifier.fillMaxSize().imePadding()) {
         Scaffold(
             topBar = { AddButtonTopBar(mode = mode, onNavigateUp = onNavigateUp) },
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -267,7 +275,6 @@ fun AddButtonScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .imePadding()
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             ) {
                 // The form content scrolls; the SaveButton stays pinned at the bottom so the
