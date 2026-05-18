@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -268,85 +270,96 @@ fun AddButtonScreen(
                         .imePadding()
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             ) {
-                PreviewSlot(context = context, mode = mode, displayedName = name.text)
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { new ->
-                        name = new.copy(text = new.text.take(MAX_NAME_LENGTH))
-                        nameError = null
-                    },
-                    label = {
-                        Text(
-                            stringResource(
-                                if (mode is AddButtonMode.Edit) {
-                                    R.string.app_addbutton_edit_name_label
-                                } else {
-                                    R.string.app_addbutton_name
-                                },
-                            ),
-                        )
-                    },
-                    placeholder = { Text(stringResource(R.string.app_addbutton_placeholder)) },
-                    isError = nameError != null,
-                    supportingText = {
-                        NameFieldSupportingText(
-                            error = nameError,
-                            nameLength = name.text.length,
-                            maxNameLength = MAX_NAME_LENGTH,
-                            duplicateMatch = duplicateMatch,
-                            context = context,
-                            tracker = tracker,
-                        )
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { save() }),
+                // The form content scrolls; the SaveButton stays pinned at the bottom so the
+                // primary action is always reachable even when the device is short / the IME is
+                // up / a long Assign-to-Collections section overflows the viewport.
+                Column(
                     modifier =
                         Modifier
+                            .weight(1f)
                             .fillMaxWidth()
-                            .focusRequester(nameFocusRequester),
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                AssignToCollectionsSection(
-                    publicCollections = collectionsState.publicCollections.value,
-                    privateCollections = collectionsState.privateCollections.value,
-                    publicSelection = collectionsState.publicSelection.value,
-                    privateSelection = collectionsState.privateSelection.value,
-                    biometricStatus = biometricStatus,
-                    privateRevealed = privateRevealed,
-                    onPublicSelectionChange = { collectionsState.publicSelection.value = it },
-                    onPrivateSelectionChange = { collectionsState.privateSelection.value = it },
-                    onCreatePublicRequested = { pendingNewCollectionScope = CollectionAccess.PUBLIC },
-                    onCreatePrivateRequested = { pendingNewCollectionScope = CollectionAccess.PRIVATE },
-                    onRequestPrivateUnlock = {
-                        val gate = biometricGate
-                        if (gate == null || biometricStatus != BiometricGateStatus.AVAILABLE) {
-                            privateRevealed = true
-                            return@AssignToCollectionsSection
-                        }
-                        gate.requestUnlock(
-                            title = privateUnlockTitle,
-                            subtitle = privateUnlockSubtitle,
-                            negativeButtonText = privateUnlockNegative,
-                        ) { result ->
-                            when (result) {
-                                BiometricGateResult.Granted -> {
-                                    // Mark the whole Vault session as open — the user proved
-                                    // ownership here once and any other private surface in this
-                                    // process trusts the same flag.
-                                    VaultSessionState.markVaultOpen()
-                                    privateRevealed = true
-                                }
-                                is BiometricGateResult.Denied -> {
-                                    // Stay closed — user can retry by tapping again.
-                                    tracker.log(AnalyticsEvent.VaultUnlock(granted = false))
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    PreviewSlot(context = context, mode = mode, displayedName = name.text)
+
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { new ->
+                            name = new.copy(text = new.text.take(MAX_NAME_LENGTH))
+                            nameError = null
+                        },
+                        label = {
+                            Text(
+                                stringResource(
+                                    if (mode is AddButtonMode.Edit) {
+                                        R.string.app_addbutton_edit_name_label
+                                    } else {
+                                        R.string.app_addbutton_name
+                                    },
+                                ),
+                            )
+                        },
+                        placeholder = { Text(stringResource(R.string.app_addbutton_placeholder)) },
+                        isError = nameError != null,
+                        supportingText = {
+                            NameFieldSupportingText(
+                                error = nameError,
+                                nameLength = name.text.length,
+                                maxNameLength = MAX_NAME_LENGTH,
+                                duplicateMatch = duplicateMatch,
+                                context = context,
+                                tracker = tracker,
+                            )
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { save() }),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .focusRequester(nameFocusRequester),
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    AssignToCollectionsSection(
+                        publicCollections = collectionsState.publicCollections.value,
+                        privateCollections = collectionsState.privateCollections.value,
+                        publicSelection = collectionsState.publicSelection.value,
+                        privateSelection = collectionsState.privateSelection.value,
+                        biometricStatus = biometricStatus,
+                        privateRevealed = privateRevealed,
+                        onPublicSelectionChange = { collectionsState.publicSelection.value = it },
+                        onPrivateSelectionChange = { collectionsState.privateSelection.value = it },
+                        onCreatePublicRequested = { pendingNewCollectionScope = CollectionAccess.PUBLIC },
+                        onCreatePrivateRequested = { pendingNewCollectionScope = CollectionAccess.PRIVATE },
+                        onRequestPrivateUnlock = {
+                            val gate = biometricGate
+                            if (gate == null || biometricStatus != BiometricGateStatus.AVAILABLE) {
+                                privateRevealed = true
+                                return@AssignToCollectionsSection
+                            }
+                            gate.requestUnlock(
+                                title = privateUnlockTitle,
+                                subtitle = privateUnlockSubtitle,
+                                negativeButtonText = privateUnlockNegative,
+                            ) { result ->
+                                when (result) {
+                                    BiometricGateResult.Granted -> {
+                                        // Mark the whole Vault session as open — the user proved
+                                        // ownership here once and any other private surface in this
+                                        // process trusts the same flag.
+                                        VaultSessionState.markVaultOpen()
+                                        privateRevealed = true
+                                    }
+                                    is BiometricGateResult.Denied -> {
+                                        // Stay closed — user can retry by tapping again.
+                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = false))
+                                    }
                                 }
                             }
-                        }
-                    },
-                    onHidePrivate = { privateRevealed = false },
-                )
+                        },
+                        onHidePrivate = { privateRevealed = false },
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
                 SaveButton(
                     outcome = saveOutcome,

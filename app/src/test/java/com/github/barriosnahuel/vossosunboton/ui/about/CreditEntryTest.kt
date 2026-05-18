@@ -13,14 +13,14 @@ import org.junit.Test
 
 internal class CreditEntryTest : AbstractRobolectricTest() {
     @Test
-    fun `parseCreditEntries returns 9 entries for the bundled notices file`() {
+    fun `parseCreditEntries returns 10 entries for the bundled notices file`() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val text =
             context.resources
                 .openRawResource(R.raw.app_third_party_notices)
                 .bufferedReader()
                 .use { it.readText() }
-        assertThat(parseCreditEntries(text)).hasSize(9)
+        assertThat(parseCreditEntries(text)).hasSize(10)
     }
 
     @Test

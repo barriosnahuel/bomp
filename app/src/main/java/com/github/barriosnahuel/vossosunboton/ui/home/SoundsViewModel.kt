@@ -309,6 +309,14 @@ class SoundsViewModel(
         }
         viewModelScope.launch(ioDispatcher) {
             try {
+                // The first emission is the cold-start snapshot — `loadSounds()` from the init
+                // launch above already read this same snapshot via `privateOnlyAudioIds()`, so
+                // a second redundant `loadSounds()` here would just race with that work (and,
+                // in tests, with reflection-based `injectSounds(...)` calls scheduled after
+                // `isInitialLoadComplete`). The non-loadSounds bookkeeping (audio index, stale-
+                // filter cleanup, vault recompute, user property sync) still has to fire on the
+                // first emission because those fields start empty and depend on the snapshot.
+                var firstEmission = true
                 collectionsRepo.collections.collect { list ->
                     _collections.value = list
                     _audioCollectionsIndex.value = buildAudioCollectionsIndex(list)
@@ -331,7 +339,10 @@ class SoundsViewModel(
                     }
                     recomputeVaultAudios()
                     syncCollectionsUserProperties(list)
-                    loadSounds()
+                    if (!firstEmission) {
+                        loadSounds()
+                    }
+                    firstEmission = false
                 }
             } catch (e: CancellationException) {
                 throw e
