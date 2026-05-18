@@ -12,4 +12,5 @@
     -->
     <exclude domain="file" path="datastore/collections.preferences_pb" />
     <exclude domain="file" path="datastore/my-sounds-filter.preferences_pb" />
+    <exclude domain="file" path="datastore/vault-filter.preferences_pb" />
 </full-backup-content>
