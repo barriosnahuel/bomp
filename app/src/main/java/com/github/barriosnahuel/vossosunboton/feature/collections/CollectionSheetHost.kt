@@ -19,6 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -83,6 +84,7 @@ internal fun CollectionSheetHost(viewModel: SoundsViewModel) {
     ) {
         CollectionSheetBody(
             request = activeRequest,
+            sheetExpanded = sheetState.currentValue == SheetValue.Expanded,
             onCancel = {
                 coroutineScope.launch { sheetState.hide() }
                 viewModel.dismissCollectionSheet()
@@ -106,6 +108,7 @@ internal fun CollectionSheetHost(viewModel: SoundsViewModel) {
 @Composable
 private fun CollectionSheetBody(
     request: CollectionSheetRequest,
+    sheetExpanded: Boolean,
     onCancel: () -> Unit,
     onSubmit: suspend (String) -> Result<Unit>,
 ) {
@@ -120,12 +123,14 @@ private fun CollectionSheetBody(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Open the sheet with the field already focused and the IME up. Wait one frame so the node
-    // is attached before requesting focus (per CLAUDE.md § Stateful Composables — without the
-    // withFrameNanos guard a bare requestFocus() no-ops silently and the user lands on an empty
-    // field with no keyboard).
-    LaunchedEffect(Unit) {
-        androidx.compose.runtime.withFrameNanos { }
+    // Open the sheet with the field focused and the IME up — but only AFTER the sheet has
+    // finished sliding in. Firing focus + IME on first composition (before `sheetState`
+    // reaches `Expanded`) made the keyboard appear first and the sheet animate over the
+    // top of it, which read as two staggered animations instead of one cohesive entry.
+    // Waiting on `sheetExpanded` lets the bottom-sheet finish its tween, then the IME
+    // slides up under it; the perceived effect is one animation, not two.
+    LaunchedEffect(sheetExpanded) {
+        if (!sheetExpanded) return@LaunchedEffect
         runCatching { focusRequester.requestFocus() }
             .onFailure {
                 com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
@@ -260,12 +265,13 @@ private fun CollectionSheetBody(
 }
 
 // Material 3 chip text guidance: "Labels should be brief". The collection name renders as a
-// FilterChip across the app (My Sounds + Vault), so we cap input at 50 — matches the Bomp name
-// limit (AddButtonScreen.MAX_NAME_LENGTH) for cross-screen consistency. The repo enforces a
-// looser 80-char hard limit as a defensive backstop for migrations and seeded data.
-private const val COLLECTION_NAME_MAX = 50
+// FilterChip across the app (My Sounds + Vault). 20 chars is the practical chip cap before the
+// label starts truncating on phone-sized screens; chosen empirically over the 50-char interim.
+// The repo enforces a looser 80-char hard limit as a defensive backstop for seeded / imported
+// data, but the UI never lets a fresh entry exceed this.
+private const val COLLECTION_NAME_MAX = 20
 private const val COLLECTION_NAME_MAX_INPUT = COLLECTION_NAME_MAX
 
 // Threshold at which the supporting counter switches to the accent color — gives the user a
 // visual cue before they hit the hard cap.
-private const val COLLECTION_NAME_COUNTER_WARN_OFFSET = 5
+private const val COLLECTION_NAME_COUNTER_WARN_OFFSET = 3

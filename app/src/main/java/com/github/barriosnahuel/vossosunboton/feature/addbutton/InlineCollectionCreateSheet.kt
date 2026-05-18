@@ -19,6 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -31,7 +32,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -68,6 +72,24 @@ internal fun InlineCollectionCreateSheet(
     val coroutineScope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    // Auto-focus the field + show the IME once the sheet has finished animating in. Same
+    // staging trick the canonical CollectionSheetHost uses — keying off `sheetState.currentValue`
+    // == Expanded keeps the IME slide-in synced with the sheet's tween instead of firing on
+    // first composition (which made the keyboard appear *before* the sheet was even visible).
+    LaunchedEffect(sheetState.currentValue) {
+        if (sheetState.currentValue != SheetValue.Expanded) return@LaunchedEffect
+        runCatching { focusRequester.requestFocus() }
+            .onFailure {
+                com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+                    .log("inline_collection_sheet.focus_request_failed")
+                com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+                    .track(RuntimeException("InlineCollectionCreateSheet focus request failed", it))
+            }
+        keyboardController?.show()
+    }
 
     var name by rememberSaveable { mutableStateOf("") }
     var errorRes by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -170,7 +192,10 @@ internal fun InlineCollectionCreateSheet(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { attemptSubmit() }),
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
             )
             if (scope == CollectionAccess.PRIVATE) {
                 Text(
@@ -203,4 +228,7 @@ internal fun InlineCollectionCreateSheet(
     LaunchedEffect(Unit) { sheetState.show() }
 }
 
-private const val COLLECTION_NAME_MAX = 80
+// Mirror of CollectionSheetHost.COLLECTION_NAME_MAX. Both sheets cap the field at 20 chars so the
+// resulting chip stays readable on phone-sized screens. Keeping the constant local — file-private
+// — avoids a circular module dep just for a single number; if it drifts a code-review catches it.
+private const val COLLECTION_NAME_MAX = 20

@@ -40,31 +40,31 @@ internal class CollectionSheetCharCounterTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openCreateCollectionSheet()
 
-            // Empty state: "0 / 50".
+            // Empty state: "0 / 20".
             composeRule.awaitNodeWithText(counter(0)).assertIsDisplayed()
 
-            // Type "Familia" → counter renders "7 / 50".
+            // Type "Familia" → counter renders "7 / 20".
             composeRule.awaitNode(hasSetTextAction()).performTextInput("Familia")
             composeRule.awaitNodeWithText(counter(7)).assertIsDisplayed()
-            // Old counter is gone — exactly one instance of any "/ 50" suffix.
+            // Old counter is gone — exactly one instance of any "/ 20" suffix.
             composeRule
-                .onAllNodesWithText("/ 50", substring = true)
+                .onAllNodesWithText("/ $COLLECTION_NAME_MAX_UI", substring = true)
                 .assertCountEquals(1)
         }
     }
 
     @Test
-    fun typingPastTheLimitGetsTruncatedToFiftyChars() {
+    fun typingPastTheLimitGetsTruncatedToTwentyChars() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openCreateCollectionSheet()
 
-            // 55 chars on input; the OutlinedTextField caps at 50 internally so the counter
+            // 25 chars on input; the OutlinedTextField caps at 20 internally so the counter
             // shows the truncated length, not the typed length.
-            composeRule.awaitNode(hasSetTextAction()).performTextInput("A".repeat(55))
-            composeRule.awaitNodeWithText(counter(50)).assertIsDisplayed()
-            // No "55 / 50" leaks through — if the cap broke, this would fail with two matches
+            composeRule.awaitNode(hasSetTextAction()).performTextInput("A".repeat(25))
+            composeRule.awaitNodeWithText(counter(COLLECTION_NAME_MAX_UI)).assertIsDisplayed()
+            // No "25 / 20" leaks through — if the cap broke, this would fail with two matches
             // before the truncation logic stabilizes.
-            composeRule.onAllNodesWithText("55 /", substring = true).assertCountEquals(0)
+            composeRule.onAllNodesWithText("25 /", substring = true).assertCountEquals(0)
         }
     }
 
@@ -86,6 +86,6 @@ internal class CollectionSheetCharCounterTest : AbstractUiTest() {
     private companion object {
         // Mirror of the production COLLECTION_NAME_MAX in CollectionSheetHost.kt. Kept here as a
         // local constant so the test doesn't depend on a `private const val` from the screen file.
-        const val COLLECTION_NAME_MAX_UI = 50
+        const val COLLECTION_NAME_MAX_UI = 20
     }
 }
