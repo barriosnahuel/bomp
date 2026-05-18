@@ -349,6 +349,58 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `deleting the currently-filtered public collection clears the My Sounds filter`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("audio-a", file = "a.mp3"))
+            val collections = CollectionsRepository(context)
+            val sounds = repo.sounds.first()
+            val a = sounds.first { it.name == "audio-a" }
+            val c = collections.create("Work", CollectionProfile.GENERIC_PUBLIC)
+            collections.addAudio(c.id, a.id)
+        }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.isNotEmpty() } }
+        val collection = vm.collections.value.first { it.name == "Work" }
+        vm.selectMySoundsFilter(collection.id)
+        runBlocking { vm.activeMySoundsFilter.first { it == collection.id } }
+
+        // The repo deletion path is what the Manage screen triggers behind the dialog confirm —
+        // it propagates through the collections observer in the VM init, which is responsible
+        // for resetting the stale active-filter id.
+        runBlocking { CollectionsRepository(context).delete(collection.id) }
+        runBlocking { vm.activeMySoundsFilter.first { it == null } }
+
+        assertThat(vm.activeMySoundsFilter.value).isNull()
+    }
+
+    @Test
+    fun `deleting the currently-filtered private collection clears the Vault filter`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("audio-v", file = "v.mp3"))
+            val collections = CollectionsRepository(context)
+            collections.collections.first() // seed Baúl
+            val sounds = repo.sounds.first()
+            val v = sounds.first { it.name == "audio-v" }
+            val c = collections.create("Caro", CollectionProfile.VAULT)
+            collections.addAudio(c.id, v.id)
+        }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.size > 1 } }
+        val caro = vm.collections.value.first { it.name == "Caro" }
+        vm.selectVaultFilter(caro.id)
+        runBlocking { vm.activeVaultFilter.first { it == caro.id } }
+
+        runBlocking { CollectionsRepository(context).delete(caro.id) }
+        runBlocking { vm.activeVaultFilter.first { it == null } }
+
+        assertThat(vm.activeVaultFilter.value).isNull()
+    }
+
+    @Test
     fun `creating a private collection emits with the VAULT profile defaults`() {
         val vm = givenAViewModel()
         runBlocking { vm.collections.first { it.isNotEmpty() } }

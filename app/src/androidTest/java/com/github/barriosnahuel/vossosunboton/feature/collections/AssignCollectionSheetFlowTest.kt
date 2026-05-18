@@ -29,8 +29,7 @@ import org.junit.runner.RunWith
  * The sheet is new in round-3 and replaces the prior "tag-only-from-Add/Edit" entry-point. The
  * flow under test:
  *
- * 1. User long-presses a sound card → dropdown menu opens with the new "Add to collection" item
- *    (before "Rename" and "Delete").
+ * 1. User long-presses a sound card → dropdown menu opens with the "Add to collection" item.
  * 2. Selecting that item dismisses the menu and opens an `AssignCollectionSheet` that lists
  *    public collections first, then a divider, then private.
  * 3. Toggling a public collection writes through `SoundsViewModel.toggleAudioInCollection`,
