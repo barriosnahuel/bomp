@@ -169,8 +169,7 @@ internal class ManageCollectionsFlowTest : AbstractUiTest() {
 
     private fun manageScreenTitle() = context.getString(R.string.app_manage_collections_title)
 
-    private fun overflowForRow(collection: String) =
-        context.getString(R.string.app_vault_card_overflow_description, collection)
+    private fun overflowForRow(collection: String) = context.getString(R.string.app_vault_card_overflow_description, collection)
 
     private fun renameMenuLabel() = context.getString(R.string.app_vault_card_overflow_rename)
 

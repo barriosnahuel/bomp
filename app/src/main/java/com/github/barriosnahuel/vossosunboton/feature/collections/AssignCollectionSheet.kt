@@ -225,8 +225,7 @@ private fun CollectionRow(
                 .fillMaxWidth()
                 .semantics(mergeDescendants = true) {
                     contentDescription = rowDescription
-                }
-                .clickable(onClick = onToggle)
+                }.clickable(onClick = onToggle)
                 .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -108,14 +108,14 @@ internal class ActiveFilterHeaderFlowTest : AbstractUiTest() {
         }
     }
 
-    private fun allMySoundsHeader(count: Int) =
-        context.getString(R.string.app_active_filter_header_all_my_sounds, count)
+    private fun allMySoundsHeader(count: Int) = context.getString(R.string.app_active_filter_header_all_my_sounds, count)
 
-    private fun headerWithCollection(name: String, count: Int) =
-        context.getString(R.string.app_active_filter_header_with_collection, name, count)
+    private fun headerWithCollection(
+        name: String,
+        count: Int,
+    ) = context.getString(R.string.app_active_filter_header_with_collection, name, count)
 
-    private fun editDescription(name: String) =
-        context.getString(R.string.app_active_filter_header_edit_description, name)
+    private fun editDescription(name: String) = context.getString(R.string.app_active_filter_header_edit_description, name)
 
     private fun manageScreenTitle() = context.getString(R.string.app_manage_collections_title)
 

@@ -143,30 +143,31 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                 onBack = { manageRequest = null },
             )
         }
-        else -> ScaffoldedLanding(
-            viewModel = viewModel,
-            sounds = sounds,
-            selectedTab = selectedTab,
-            hasBundledSounds = hasBundledSounds,
-            playbackProgress = playbackProgress,
-            pausedProgress = pausedProgress,
-            soundDurations = soundDurations,
-            snackbarHostState = snackbarHostState,
-            listState = listState,
-            coroutineScope = coroutineScope,
-            context = context,
-            tabBackStack = tabBackStack,
-            collections = collections,
-            activeFilter = activeFilter,
-            publicCollections = publicCollections,
-            collectionsByAudio = collectionsByAudio,
-            privateCollections = privateCollections,
-            onAboutClick = { isAboutVisible = true },
-            onManageCollectionsClick = { manageRequest = ManageRequest.Generic },
-            onActiveFilterEditClick = { collectionId ->
-                manageRequest = ManageRequest.Focused(collectionId)
-            },
-        )
+        else ->
+            ScaffoldedLanding(
+                viewModel = viewModel,
+                sounds = sounds,
+                selectedTab = selectedTab,
+                hasBundledSounds = hasBundledSounds,
+                playbackProgress = playbackProgress,
+                pausedProgress = pausedProgress,
+                soundDurations = soundDurations,
+                snackbarHostState = snackbarHostState,
+                listState = listState,
+                coroutineScope = coroutineScope,
+                context = context,
+                tabBackStack = tabBackStack,
+                collections = collections,
+                activeFilter = activeFilter,
+                publicCollections = publicCollections,
+                collectionsByAudio = collectionsByAudio,
+                privateCollections = privateCollections,
+                onAboutClick = { isAboutVisible = true },
+                onManageCollectionsClick = { manageRequest = ManageRequest.Generic },
+                onActiveFilterEditClick = { collectionId ->
+                    manageRequest = ManageRequest.Focused(collectionId)
+                },
+            )
     }
 
     com.github.barriosnahuel.vossosunboton.feature.vault
@@ -745,7 +746,9 @@ private fun MySoundsFilterEmptyState(collectionName: String) {
 internal sealed class ManageRequest {
     object Generic : ManageRequest()
 
-    data class Focused(val collectionId: String) : ManageRequest()
+    data class Focused(
+        val collectionId: String,
+    ) : ManageRequest()
 
     companion object {
         val Saver: androidx.compose.runtime.saveable.Saver<ManageRequest?, Any> =

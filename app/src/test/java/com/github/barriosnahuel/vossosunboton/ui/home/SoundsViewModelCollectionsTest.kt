@@ -319,7 +319,11 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         // Bug repro asserts:
         assertThat(vm.vaultAudios.value.map { it.id }).doesNotContain(target.id)
         assertThat(vm.deletedSoundEvent.value).isNotNull()
-        assertThat(vm.deletedSoundEvent.value?.sound?.id).isEqualTo(target.id)
+        assertThat(
+            vm.deletedSoundEvent.value
+                ?.sound
+                ?.id,
+        ).isEqualTo(target.id)
     }
 
     @Test

@@ -199,8 +199,7 @@ internal object TestData {
      * Forces the repo to seed the system Baúl collection without creating any other collection.
      * Useful for tests that need to assert against the system chip after [clearAll] reset the store.
      */
-    fun touchPrivateCollections(context: Context): List<Collection> =
-        runBlocking { collectionsRepo(context).collections.first() }
+    fun touchPrivateCollections(context: Context): List<Collection> = runBlocking { collectionsRepo(context).collections.first() }
 
     /**
      * Marks the per-session Vault unlock as already granted so a test that doesn't exercise the

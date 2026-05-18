@@ -579,8 +579,9 @@ class SoundsViewModel(
      * before the next `loadSounds` runs, so the empty intermediate state is brief.
      */
     private fun applyCollectionFilter(tabSounds: List<Sound>): List<Sound> {
-        if (_selectedTab.value != AppTab.MY_SOUNDS) return tabSounds
-        val activeId = _activeMySoundsFilter.value ?: return tabSounds
+        val activeId =
+            _activeMySoundsFilter.value.takeIf { _selectedTab.value == AppTab.MY_SOUNDS }
+                ?: return tabSounds
         val activeCollection = _collections.value.firstOrNull { it.id == activeId }
         val ids = activeCollection?.audioIds.orEmpty().toSet()
         return tabSounds.filter { it.id in ids }

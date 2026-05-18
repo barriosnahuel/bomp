@@ -35,10 +35,9 @@ import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
  */
 @Composable
 internal fun CollectionDeleteDialog(viewModel: SoundsViewModel) {
-    val pendingId = viewModel.pendingCollectionDelete.collectAsState().value ?: return
+    val pendingId = viewModel.pendingCollectionDelete.collectAsState().value
     val collections by viewModel.collections.collectAsState()
-    val target = collections.firstOrNull { it.id == pendingId } ?: return
-    if (target.isSystem) return
+    val target = pendingId?.let { id -> collections.firstOrNull { it.id == id && !it.isSystem } } ?: return
 
     val displayName = target.name
     val audioCount = target.audioIds.size

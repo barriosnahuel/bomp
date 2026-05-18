@@ -118,8 +118,7 @@ internal class AssignCollectionSheetFlowTest : AbstractUiTest() {
 
     private fun doneLabel() = context.getString(R.string.app_assign_collection_sheet_done)
 
-    private fun addToActionFor(name: String) =
-        context.getString(R.string.app_assign_collection_sheet_row_action_unselected, name)
+    private fun addToActionFor(name: String) = context.getString(R.string.app_assign_collection_sheet_row_action_unselected, name)
 
     companion object {
         private const val SHEET_DISMISS_TIMEOUT_MS = 5_000L

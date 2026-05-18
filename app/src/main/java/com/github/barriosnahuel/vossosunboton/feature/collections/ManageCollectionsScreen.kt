@@ -51,7 +51,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,7 +70,6 @@ import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
  * Canonical entry point for renaming, deleting, and creating collections — both public ("My
@@ -113,7 +111,6 @@ internal fun ManageCollectionsScreen(
     val publics = remember(collections) { collections.filter { it.isPublic } }
     val privates = remember(collections) { collections.filter { it.isPrivate } }
     val lazyListState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
 
     // Highlight state: we copy the deep-link id into a Saveable that the row reads. After a delay
     // we wipe it so the tint fades. Using rememberSaveable lets a rotation while the highlight is
@@ -148,7 +145,9 @@ internal fun ManageCollectionsScreen(
         LazyColumn(
             state = lazyListState,
             modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Spacing.SM),
+            contentPadding =
+                androidx.compose.foundation.layout
+                    .PaddingValues(vertical = Spacing.SM),
             verticalArrangement = Arrangement.spacedBy(Spacing.XS),
         ) {
             // PUBLIC SECTION
@@ -243,24 +242,23 @@ private fun computeRowIndex(
     privates: List<Collection>,
     isVaultLocked: Boolean,
 ): Int {
-    var index = 0
-    // header_public
-    index += 1
+    var index = 1 // header_public
     if (publics.isEmpty()) index += 1 // empty_public
     val publicHit = publics.indexOfFirst { it.id == id }
-    if (publicHit >= 0) return index + publicHit
-    index += publics.size
-    // new_public
-    index += 1
-    // header_vault
-    index += 1
-    if (isVaultLocked) return -1
-    val managedPrivates = privates
-    val showEmptyVault = managedPrivates.none { !it.isSystem }
-    if (showEmptyVault) index += 1
-    val privateHit = managedPrivates.indexOfFirst { it.id == id }
-    if (privateHit >= 0) return index + privateHit
-    return -1
+    val hit =
+        when {
+            publicHit >= 0 -> index + publicHit
+            isVaultLocked -> -1
+            else -> {
+                index += publics.size + 1 // rows + new_public
+                index += 1 // header_vault
+                val showEmptyVault = privates.none { !it.isSystem }
+                if (showEmptyVault) index += 1
+                val privateHit = privates.indexOfFirst { it.id == id }
+                if (privateHit >= 0) index + privateHit else -1
+            }
+        }
+    return hit
 }
 
 @Composable
