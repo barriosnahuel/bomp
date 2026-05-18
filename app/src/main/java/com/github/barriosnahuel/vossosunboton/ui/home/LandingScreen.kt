@@ -518,6 +518,10 @@ internal fun SoundsList(
     // When false, the per-card share icon is hidden. Driven from the rendering context: the
     // Vault tab passes false because every audio it shows belongs to a `LISTEN_ONLY` profile.
     shareEnabled: Boolean = true,
+    // Bottom padding for the underlying LazyColumn. Surfaces that overlay an FAB or persistent
+    // CTA on top of the list (e.g. the Vault tab's ExtendedFloatingActionButton) bump this so the
+    // last item can scroll above the overlay; everything else stays at the default Spacing.SM.
+    bottomContentPadding: androidx.compose.ui.unit.Dp = Spacing.SM,
 ) {
     val dismissingItems = remember { mutableStateSetOf<String>() }
     val coroutineScope = rememberCoroutineScope()
@@ -531,7 +535,7 @@ internal fun SoundsList(
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(top = Spacing.MD, bottom = Spacing.SM),
+            contentPadding = PaddingValues(top = Spacing.MD, bottom = bottomContentPadding),
         ) {
             itemsIndexed(sounds, key = { _, sound -> sound.id }) { _, sound ->
                 val isDeleting = sound.id in dismissingItems

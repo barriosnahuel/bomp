@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -138,6 +139,7 @@ private fun requestUnlock(
     if (status != BiometricGateStatus.AVAILABLE || gate == null) {
         VaultSessionState.markVaultOpen()
         tracker.log(AnalyticsEvent.VaultUnlock(granted = true))
+        bumpVaultUnlockCounter(tracker)
         return
     }
     gate.requestUnlock(
@@ -149,10 +151,24 @@ private fun requestUnlock(
             BiometricGateResult.Granted -> {
                 VaultSessionState.markVaultOpen()
                 tracker.log(AnalyticsEvent.VaultUnlock(granted = true))
+                bumpVaultUnlockCounter(tracker)
             }
             is BiometricGateResult.Denied -> tracker.log(AnalyticsEvent.VaultUnlock(granted = false))
         }
     }
+}
+
+private fun bumpVaultUnlockCounter(
+    tracker: com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker,
+) {
+    val newCount =
+        tracker.incrementCounter(
+            com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty.LIFETIME_VAULT_UNLOCKS,
+        )
+    tracker.setUserProperty(
+        com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty.LIFETIME_VAULT_UNLOCKS,
+        newCount.toString(),
+    )
 }
 
 @Composable
@@ -276,6 +292,10 @@ private fun VaultBody(
                     allCollections = allCollections,
                     filterIsActive = activeFilter != null,
                     shareEnabled = false,
+                    // Leave room for the ExtendedFloatingActionButton overlay so the last row
+                    // can scroll fully into view instead of sitting under the FAB. Default FAB
+                    // height (56dp) + Spacing.LG margin + Spacing.MD breathing room.
+                    bottomContentPadding = VAULT_FAB_CLEARANCE,
                     onPlayClick = { sound -> viewModel.playOrStop(sound) },
                     onSeek = { positionMs -> viewModel.seekTo(positionMs) },
                     onShareClick = { sound -> viewModel.share(sound) },
@@ -313,48 +333,80 @@ private fun VaultBody(
 
 @Composable
 private fun VaultEmptyState() {
-    Column(
+    // Warm radial wash centered behind the polaroid. We adapt Claude Design's brown/amber gradient
+    // to the project's ink × acid palette: the accent role at low alpha gives an emotional glow
+    // without introducing a one-off warm token (and works in both light and dark mode because the
+    // role itself is theme-aware).
+    val accent = MaterialTheme.colorScheme.primary
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val zrpBackground =
+        Brush.radialGradient(
+            colorStops =
+                arrayOf(
+                    0.0f to accent.copy(alpha = ZRP_GLOW_CENTER_ALPHA),
+                    0.5f to accent.copy(alpha = ZRP_GLOW_MID_ALPHA),
+                    1.0f to backgroundColor,
+                ),
+        )
+    Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = Spacing.XXL),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+                .background(zrpBackground),
+        contentAlignment = Alignment.Center,
     ) {
-        // Eyebrow tracker line, mimics the Claude Design "VAULT · SESIÓN ABIERTA" marker.
-        Text(
-            text = stringResource(R.string.app_vault_zrp_eyebrow).uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(Spacing.LG))
-        PolaroidPlaceholder()
-        Spacer(modifier = Modifier.height(Spacing.XL))
-        Text(
-            text = stringResource(R.string.app_vault_zrp_headline_lead),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = stringResource(R.string.app_vault_zrp_headline_emphasis),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontStyle = FontStyle.Italic,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(Spacing.MD))
-        Text(
-            text = stringResource(R.string.app_vault_zrp_body),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        Column(
+            modifier = Modifier.padding(horizontal = Spacing.XXL),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            // Eyebrow tracker line, mimics the Claude Design "VAULT · SESIÓN ABIERTA" marker.
+            Text(
+                text = stringResource(R.string.app_vault_zrp_eyebrow).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(Spacing.LG))
+            PolaroidPlaceholder()
+            Spacer(modifier = Modifier.height(Spacing.XL))
+            Text(
+                text = stringResource(R.string.app_vault_zrp_headline_lead),
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.app_vault_zrp_headline_emphasis),
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(Spacing.MD))
+            Text(
+                text = stringResource(R.string.app_vault_zrp_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
+
+// Alpha values for the ZRP radial gradient. Low-on-purpose: the goal is an emotional warmth, not
+// a chip-color competing with the polaroid for attention. Verified against AppThemeContrastTest
+// indirectly — the gradient stays under the bodyMedium text, which still reads against background.
+private const val ZRP_GLOW_CENTER_ALPHA = 0.16f
+private const val ZRP_GLOW_MID_ALPHA = 0.04f
+
+// Space the LazyColumn reserves at the bottom so the ExtendedFloatingActionButton can sit on top
+// of the last row without clipping it. Computed from the FAB design: 56dp (M3 ExtendedFAB minimum
+// height) + Spacing.LG (16dp outer margin) + Spacing.MD (12dp breathing room) = 84dp. Round to 88
+// to match the 8dp grid.
+private val VAULT_FAB_CLEARANCE = 88.dp
 
 @Composable
 private fun PolaroidPlaceholder() {
