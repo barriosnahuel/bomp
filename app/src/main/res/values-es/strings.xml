@@ -93,22 +93,13 @@
     <!-- Vault (colecciones privadas — biométrico por colección) -->
     <string name="app_navigation_menu_item_vault">Baúl</string>
     <string name="app_vault_screen_title">Baúl</string>
-    <string name="app_vault_screen_subtitle">Las voces que no salen de este teléfono.</string>
     <string name="app_vault_baul_name">Mi Baúl</string>
-    <string name="app_vault_collection_count_zero">Sin audios todavía</string>
-    <string name="app_vault_collection_count_one">1 audio</string>
-    <string name="app_vault_collection_count_other">%1$d audios</string>
-    <string name="app_vault_card_locked_hint">Tocá para desbloquear con tu huella o el bloqueo del teléfono</string>
     <string name="app_vault_unprotected_warning_chip">Sin protección — configurá un bloqueo de pantalla</string>
-    <string name="app_vault_unprotected_explainer">Este teléfono no tiene huella ni bloqueo de pantalla. Tu Baúl sigue guardado solo acá, pero cualquiera que agarre el teléfono lo puede abrir.</string>
-    <string name="app_vault_fab_new">Nueva colección privada</string>
+    <string name="app_vault_fab_new">Nueva colección del Baúl</string>
     <string name="app_vault_card_overflow_description">Más opciones para %1$s</string>
     <string name="app_manage_collections_overflow_view">Ver colección</string>
     <string name="app_vault_card_overflow_rename">Renombrar</string>
     <string name="app_vault_card_overflow_delete">Eliminar</string>
-    <string name="app_vault_card_overflow_delete_system_disabled">El Baúl es el corazón de esta tab — no se borra.</string>
-    <string name="app_vault_empty_baul_headline">Un lugar que se queda cerca tuyo.</string>
-    <string name="app_vault_empty_baul_body">Las voces que te mueven. El \"feliz cumple\" que volvés a escuchar. El audio que no querés que escuche nadie más. Agregá cualquier Bomp a tu Baúl y se queda acá, detrás de tu huella.</string>
 
     <!-- Vault — ZRP inspiracional (sin audios privados) -->
     <string name="app_vault_zrp_eyebrow">Vault · sesión abierta</string>
@@ -116,7 +107,6 @@
     <string name="app_vault_zrp_headline_lead">El Baúl está esperando</string>
     <string name="app_vault_zrp_headline_emphasis">algo que importe.</string>
     <string name="app_vault_zrp_body">Una voz que te quieras guardar. Un mensaje que no quieras perder. Nunca sale del dispositivo.</string>
-    <string name="app_vault_zrp_cta">Preservar el primero</string>
     <string name="app_vault_unlock_cta">Tocá para desbloquear</string>
     <string name="app_vault_unlock_subtitle">El Baúl queda abierto durante esta sesión.</string>
 
@@ -124,15 +114,6 @@
     <string name="app_vault_biometric_prompt_title">Abrir %1$s</string>
     <string name="app_vault_biometric_prompt_subtitle">Usá tu huella o el bloqueo del teléfono para escuchar.</string>
     <string name="app_vault_biometric_negative">Cancelar</string>
-    <string name="app_vault_biometric_denied_message">No se pudo desbloquear %1$s</string>
-
-    <!-- Vault — vista de escucha inmersiva (por colección) -->
-    <string name="app_vault_listen_title_format">%1$s</string>
-    <string name="app_vault_listen_back">Cerrar y volver a bloquear</string>
-    <string name="app_vault_listen_overflow">Más opciones</string>
-    <string name="app_vault_listen_delete_audio">Quitar de %1$s</string>
-    <string name="app_vault_listen_empty_headline">Acá no hay nada todavía.</string>
-    <string name="app_vault_listen_empty_body">Abrí cualquier Bomp desde Mis audios y agregalo a %1$s.</string>
 
     <!-- Sheet de crear / editar colección -->
     <string name="app_collection_sheet_title_new_public">Nueva colección</string>
@@ -144,17 +125,23 @@
     <string name="app_collection_sheet_save">Guardar</string>
     <string name="app_collection_sheet_cancel">Cancelar</string>
     <string name="app_collection_sheet_error_name_required">Poné un nombre para la colección.</string>
-    <string name="app_collection_sheet_error_name_too_long">Que sean menos de %1$d caracteres.</string>
+    <plurals name="app_collection_sheet_error_name_too_long">
+        <item quantity="one">Que sea menos de %1$d carácter.</item>
+        <item quantity="other">Que sean menos de %1$d caracteres.</item>
+    </plurals>
     <string name="app_collection_sheet_error_name_taken">Ya tenés una colección con ese nombre.</string>
+    <string name="app_collection_sheet_name_counter">%1$d / %2$d</string>
     <string name="app_collection_sheet_private_disclaimer">Las colecciones del Baúl se quedan en este teléfono y te piden la huella cada vez que las abrís.</string>
 
     <!-- Diálogo de confirmación de borrado -->
     <string name="app_collection_delete_dialog_title">¿Eliminar %1$s?</string>
-    <string name="app_collection_delete_dialog_body_with_audios">%1$d audios van a salir de esta colección. Los archivos siguen guardados donde están — sólo se va la colección.</string>
+    <plurals name="app_collection_delete_dialog_body_with_audios">
+        <item quantity="one">%1$d audio va a salir de esta colección. El archivo sigue guardado donde está — sólo se va la colección.</item>
+        <item quantity="other">%1$d audios van a salir de esta colección. Los archivos siguen guardados donde están — sólo se va la colección.</item>
+    </plurals>
     <string name="app_collection_delete_dialog_body_empty">Esta colección está vacía. ¿Seguro?</string>
     <string name="app_collection_delete_dialog_confirm">Eliminar colección</string>
     <string name="app_collection_delete_dialog_dismiss">Mantener</string>
-    <string name="app_collection_delete_feedback">Colección eliminada</string>
 
     <!-- Mis audios — chips de filtrado por colección -->
     <string name="app_my_sounds_filter_all">Todo</string>
@@ -180,7 +167,10 @@
     <!-- Header del filtro activo (debajo de los chips en Mis audios y Baúl) -->
     <string name="app_active_filter_header_all_my_sounds">Todos los audios · %1$d</string>
     <string name="app_active_filter_header_all_vault">Todo el Baúl · %1$d</string>
-    <string name="app_active_filter_header_with_collection">%1$s · %2$d audios</string>
+    <plurals name="app_active_filter_header_with_collection">
+        <item quantity="one">%1$s · %2$d audio</item>
+        <item quantity="other">%1$s · %2$d audios</item>
+    </plurals>
     <string name="app_active_filter_header_edit_description">Editar %1$s</string>
 
     <!-- Pantalla "Gestionar colecciones" -->
@@ -190,7 +180,10 @@
     <string name="app_manage_collections_section_public">Mis audios</string>
     <string name="app_manage_collections_section_vault">Baúl</string>
     <string name="app_manage_collections_system_tag">Del sistema</string>
-    <string name="app_manage_collections_row_sounds_count">%1$d audios</string>
+    <plurals name="app_manage_collections_row_sounds_count">
+        <item quantity="one">%1$d audio</item>
+        <item quantity="other">%1$d audios</item>
+    </plurals>
     <string name="app_manage_collections_new_public">Nueva colección</string>
     <string name="app_manage_collections_new_vault">Nueva colección del Baúl</string>
     <string name="app_manage_collections_empty_public">Todavía no creaste colecciones.</string>
@@ -198,7 +191,6 @@
     <string name="app_manage_collections_vault_locked_title">Baúl bloqueado</string>
     <string name="app_manage_collections_vault_locked_body">Desbloqueá para gestionar tus colecciones del Baúl.</string>
     <string name="app_manage_collections_vault_locked_cta">Desbloquear</string>
-    <string name="app_manage_collections_row_overflow_description">Opciones para %1$s</string>
 
     <!-- Add / Edit Bomp — sección "Asignar a colecciones" -->
     <string name="app_addbutton_collections_section_title">Asignar a colecciones</string>

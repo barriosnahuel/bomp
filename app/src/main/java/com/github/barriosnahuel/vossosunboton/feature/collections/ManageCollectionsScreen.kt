@@ -58,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
@@ -378,25 +379,34 @@ private fun ManageRow(
                 }
             }
             Text(
-                text = stringResource(R.string.app_manage_collections_row_sounds_count, audioCount),
+                text =
+                    pluralStringResource(
+                        R.plurals.app_manage_collections_row_sounds_count,
+                        audioCount,
+                        audioCount,
+                    ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (!collection.isSystem) {
-            ManageRowOverflow(
-                collectionName = displayName,
-                onViewClick = onViewClick,
-                onRenameClick = onRenameClick,
-                onDeleteClick = onDeleteClick,
-            )
-        }
+        ManageRowOverflow(
+            collectionName = displayName,
+            // System collections (the seeded Baúl) only expose the "View collection" action —
+            // they cannot be renamed or deleted (repo guards both with `require(!isSystem)`).
+            // Hiding the entire overflow used to leave the user without a contextual entry to
+            // jump to the Vault tab; offering a view-only overflow keeps the affordance.
+            isSystem = collection.isSystem,
+            onViewClick = onViewClick,
+            onRenameClick = onRenameClick,
+            onDeleteClick = onDeleteClick,
+        )
     }
 }
 
 @Composable
 private fun ManageRowOverflow(
     collectionName: String,
+    isSystem: Boolean,
     onViewClick: () -> Unit,
     onRenameClick: () -> Unit,
     onDeleteClick: () -> Unit,
@@ -416,7 +426,8 @@ private fun ManageRowOverflow(
         ) {
             // "View collection" sits above Rename — most common positive action; bumping the user
             // straight to the relevant tab with the filter chip applied is the canonical happy path
-            // from Manage.
+            // from Manage. For system collections it's the *only* action: rename and delete are
+            // refused at the repo layer, so they should not appear in the menu.
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.app_manage_collections_overflow_view)) },
                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
@@ -425,22 +436,24 @@ private fun ManageRowOverflow(
                     onViewClick()
                 },
             )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.app_vault_card_overflow_rename)) },
-                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                onClick = {
-                    menuExpanded = false
-                    onRenameClick()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.app_vault_card_overflow_delete)) },
-                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                onClick = {
-                    menuExpanded = false
-                    onDeleteClick()
-                },
-            )
+            if (!isSystem) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.app_vault_card_overflow_rename)) },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    onClick = {
+                        menuExpanded = false
+                        onRenameClick()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.app_vault_card_overflow_delete)) },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                    onClick = {
+                        menuExpanded = false
+                        onDeleteClick()
+                    },
+                )
+            }
         }
     }
 }

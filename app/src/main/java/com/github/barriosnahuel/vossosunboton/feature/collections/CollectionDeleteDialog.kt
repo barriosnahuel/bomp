@@ -12,6 +12,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
@@ -56,7 +57,11 @@ internal fun CollectionDeleteDialog(viewModel: SoundsViewModel) {
                     if (audioCount == 0) {
                         stringResource(R.string.app_collection_delete_dialog_body_empty)
                     } else {
-                        stringResource(R.string.app_collection_delete_dialog_body_with_audios, audioCount)
+                        pluralStringResource(
+                            R.plurals.app_collection_delete_dialog_body_with_audios,
+                            audioCount,
+                            audioCount,
+                        )
                     },
                 style = MaterialTheme.typography.bodyMedium,
             )

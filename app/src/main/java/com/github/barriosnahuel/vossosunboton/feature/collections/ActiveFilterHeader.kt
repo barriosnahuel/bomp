@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -69,8 +70,9 @@ internal fun ActiveFilterHeader(
             activeCollection == null ->
                 stringResource(R.string.app_active_filter_header_all_my_sounds, audioCount)
             else ->
-                stringResource(
-                    R.string.app_active_filter_header_with_collection,
+                pluralStringResource(
+                    R.plurals.app_active_filter_header_with_collection,
+                    audioCount,
                     displayName!!,
                     audioCount,
                 )

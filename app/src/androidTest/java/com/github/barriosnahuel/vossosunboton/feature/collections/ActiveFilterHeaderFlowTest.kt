@@ -113,7 +113,7 @@ internal class ActiveFilterHeaderFlowTest : AbstractUiTest() {
     private fun headerWithCollection(
         name: String,
         count: Int,
-    ) = context.getString(R.string.app_active_filter_header_with_collection, name, count)
+    ) = context.resources.getQuantityString(R.plurals.app_active_filter_header_with_collection, count, name, count)
 
     private fun editDescription(name: String) = context.getString(R.string.app_active_filter_header_edit_description, name)
 

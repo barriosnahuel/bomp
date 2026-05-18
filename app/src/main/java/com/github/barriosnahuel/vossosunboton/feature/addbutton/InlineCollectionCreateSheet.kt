@@ -32,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import com.github.barriosnahuel.vossosunboton.R
@@ -75,7 +76,7 @@ internal fun InlineCollectionCreateSheet(
     val attemptSubmit: () -> Unit = {
         when {
             name.isBlank() -> errorRes = R.string.app_collection_sheet_error_name_required
-            name.length > COLLECTION_NAME_MAX -> errorRes = R.string.app_collection_sheet_error_name_too_long
+            name.length > COLLECTION_NAME_MAX -> errorRes = R.plurals.app_collection_sheet_error_name_too_long
             inflight -> Unit
             else -> {
                 errorRes = null
@@ -158,8 +159,8 @@ internal fun InlineCollectionCreateSheet(
                 supportingText = {
                     errorRes?.let { res ->
                         val msg =
-                            if (res == R.string.app_collection_sheet_error_name_too_long) {
-                                stringResource(res, COLLECTION_NAME_MAX)
+                            if (res == R.plurals.app_collection_sheet_error_name_too_long) {
+                                pluralStringResource(res, COLLECTION_NAME_MAX, COLLECTION_NAME_MAX)
                             } else {
                                 stringResource(res)
                             }

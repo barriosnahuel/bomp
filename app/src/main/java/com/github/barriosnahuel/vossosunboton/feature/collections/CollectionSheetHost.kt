@@ -23,13 +23,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import com.github.barriosnahuel.vossosunboton.R
@@ -111,6 +117,24 @@ private fun CollectionSheetBody(
     var name by rememberSaveable { mutableStateOf(initial) }
     var errorRes by rememberSaveable { mutableStateOf<Int?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    // Open the sheet with the field already focused and the IME up. Wait one frame so the node
+    // is attached before requesting focus (per CLAUDE.md § Stateful Composables — without the
+    // withFrameNanos guard a bare requestFocus() no-ops silently and the user lands on an empty
+    // field with no keyboard).
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.withFrameNanos { }
+        runCatching { focusRequester.requestFocus() }
+            .onFailure {
+                com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+                    .log("collection_sheet.focus_request_failed")
+                com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+                    .track(RuntimeException("CollectionSheet focus request failed", it))
+            }
+        keyboardController?.show()
+    }
     val isPrivate =
         when (request) {
             is CollectionSheetRequest.Create -> request.access == CollectionAccess.PRIVATE
@@ -136,7 +160,7 @@ private fun CollectionSheetBody(
     val attemptSubmit: () -> Unit = {
         when {
             name.isBlank() -> errorRes = R.string.app_collection_sheet_error_name_required
-            name.length > COLLECTION_NAME_MAX -> errorRes = R.string.app_collection_sheet_error_name_too_long
+            name.length > COLLECTION_NAME_MAX -> errorRes = R.plurals.app_collection_sheet_error_name_too_long
             else -> {
                 errorRes = null
                 coroutineScope.launch {
@@ -172,20 +196,38 @@ private fun CollectionSheetBody(
             placeholder = { Text(stringResource(placeholderRes)) },
             isError = errorRes != null,
             supportingText = {
-                errorRes?.let { res ->
+                val res = errorRes
+                if (res != null) {
                     val msg =
-                        if (res == R.string.app_collection_sheet_error_name_too_long) {
-                            stringResource(res, COLLECTION_NAME_MAX)
+                        if (res == R.plurals.app_collection_sheet_error_name_too_long) {
+                            pluralStringResource(res, COLLECTION_NAME_MAX, COLLECTION_NAME_MAX)
                         } else {
                             stringResource(res)
                         }
                     Text(msg, color = MaterialTheme.colorScheme.error)
+                } else {
+                    // Mirror the Bomp name counter (AddButton): give the user a visible budget so
+                    // the M3 chip-friendly max (50) is discoverable while they type, not just on
+                    // error. Defaults to onSurfaceVariant; turns acid as they near the cap.
+                    val approachingLimit = name.length >= COLLECTION_NAME_MAX - COLLECTION_NAME_COUNTER_WARN_OFFSET
+                    Text(
+                        text = stringResource(R.string.app_collection_sheet_name_counter, name.length, COLLECTION_NAME_MAX),
+                        color =
+                            if (approachingLimit) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                    )
                 }
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { attemptSubmit() }),
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
         )
 
         if (isPrivate) {
@@ -217,5 +259,13 @@ private fun CollectionSheetBody(
     }
 }
 
-private const val COLLECTION_NAME_MAX = 80
+// Material 3 chip text guidance: "Labels should be brief". The collection name renders as a
+// FilterChip across the app (My Sounds + Vault), so we cap input at 50 — matches the Bomp name
+// limit (AddButtonScreen.MAX_NAME_LENGTH) for cross-screen consistency. The repo enforces a
+// looser 80-char hard limit as a defensive backstop for migrations and seeded data.
+private const val COLLECTION_NAME_MAX = 50
 private const val COLLECTION_NAME_MAX_INPUT = COLLECTION_NAME_MAX
+
+// Threshold at which the supporting counter switches to the accent color — gives the user a
+// visual cue before they hit the hard cap.
+private const val COLLECTION_NAME_COUNTER_WARN_OFFSET = 5

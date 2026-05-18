@@ -11,7 +11,6 @@ import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -169,7 +168,7 @@ internal class ManageCollectionsFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun systemBaulRowHidesOverflowAndShowsSystemTag() {
+    fun systemBaulRowShowsViewOnlyOverflow() {
         TestData.markVaultOpen()
         TestData.touchPrivateCollections(context)
 
@@ -178,10 +177,17 @@ internal class ManageCollectionsFlowTest : AbstractUiTest() {
             // The Baúl row renders with its localized name plus the "System" label tag.
             composeRule.awaitNodeWithText(systemBaulLabel()).assertIsDisplayed()
             composeRule.onNodeWithText(systemTagLabel()).assertIsDisplayed()
-            // And no overflow icon for it.
+
+            // The overflow IS present (the system row exposes "View collection" only — refusing
+            // Rename/Delete at the repo layer means the affordance to *jump to* the Baúl in the
+            // Vault tab needs another entry point, and the row's ⋮ is the canonical one).
             composeRule
-                .onAllNodesWithContentDescription(overflowForRow(systemBaulLabel()))
-                .assertCountEquals(0)
+                .onNodeWithContentDescription(overflowForRow(systemBaulLabel()))
+                .performClick()
+            composeRule.awaitNodeWithText(viewMenuLabel()).assertIsDisplayed()
+            // Rename and Delete entries are hidden for system rows.
+            composeRule.onAllNodesWithText(renameMenuLabel()).assertCountEquals(0)
+            composeRule.onAllNodesWithText(deleteMenuLabel()).assertCountEquals(0)
         }
     }
 
@@ -232,7 +238,7 @@ internal class ManageCollectionsFlowTest : AbstractUiTest() {
     private fun headerWithCollection(
         name: String,
         count: Int,
-    ) = context.getString(R.string.app_active_filter_header_with_collection, name, count)
+    ) = context.resources.getQuantityString(R.plurals.app_active_filter_header_with_collection, count, name, count)
 
     private fun renameSheetTitle() = context.getString(R.string.app_collection_sheet_title_rename)
 
