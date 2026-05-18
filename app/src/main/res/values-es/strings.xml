@@ -103,6 +103,7 @@
     <string name="app_vault_unprotected_explainer">Este teléfono no tiene huella ni bloqueo de pantalla. Tu Baúl sigue guardado solo acá, pero cualquiera que agarre el teléfono lo puede abrir.</string>
     <string name="app_vault_fab_new">Nueva colección privada</string>
     <string name="app_vault_card_overflow_description">Más opciones para %1$s</string>
+    <string name="app_manage_collections_overflow_view">Ver colección</string>
     <string name="app_vault_card_overflow_rename">Renombrar</string>
     <string name="app_vault_card_overflow_delete">Eliminar</string>
     <string name="app_vault_card_overflow_delete_system_disabled">El Baúl es el corazón de esta tab — no se borra.</string>

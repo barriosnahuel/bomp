@@ -121,6 +121,54 @@ internal class ManageCollectionsFlowTest : AbstractUiTest() {
     }
 
     @Test
+    fun viewCollectionFromManageScreenAppliesTheChipAndSwitchesTab() {
+        val (audio) = TestData.seedCustomSounds(context, count = 1)
+        TestData.seedPublicCollection(context, name = "Familia", audioIds = listOf(audio.id))
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openManageFromOverflow()
+
+            composeRule
+                .onNodeWithContentDescription(overflowForRow("Familia"))
+                .performClick()
+            composeRule.awaitNodeWithText(viewMenuLabel()).performClick()
+
+            // Landed on My Sounds. The ActiveFilterHeader is the user-visible proof both that the
+            // chip is applied and that the tab is My Sounds (the header is My-Sounds-specific copy).
+            composeRule.awaitNodeWithText(mySoundsTabLabel()).assertIsDisplayed()
+            composeRule
+                .awaitNodeWithText(headerWithCollection("Familia", 1))
+                .assertIsDisplayed()
+            composeRule.awaitNodeWithText(audio.name).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun viewVaultCollectionFromManageScreenAppliesTheChipAndOpensVault() {
+        // Pre-grant the per-session unlock so this test does not depend on the emulator having a
+        // biometric configured — same fallback pattern as `manageScreenSurfacesVaultLockedCardWhenSessionIsClosed`.
+        TestData.markVaultOpen()
+        val (audio) = TestData.seedCustomSounds(context, count = 1)
+        TestData.seedPrivateCollection(context, name = "Caro", audioIds = listOf(audio.id))
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openManageFromOverflow()
+
+            composeRule
+                .onNodeWithContentDescription(overflowForRow("Caro"))
+                .performClick()
+            composeRule.awaitNodeWithText(viewMenuLabel()).performClick()
+
+            // Vault tab is now selected and the chip is applied — verify via the ActiveFilterHeader.
+            composeRule.awaitNodeWithText(vaultTabLabel()).assertIsDisplayed()
+            composeRule
+                .awaitNodeWithText(headerWithCollection("Caro", 1))
+                .assertIsDisplayed()
+            composeRule.awaitNodeWithText(audio.name).assertIsDisplayed()
+        }
+    }
+
+    @Test
     fun systemBaulRowHidesOverflowAndShowsSystemTag() {
         TestData.markVaultOpen()
         TestData.touchPrivateCollections(context)
@@ -171,9 +219,20 @@ internal class ManageCollectionsFlowTest : AbstractUiTest() {
 
     private fun overflowForRow(collection: String) = context.getString(R.string.app_vault_card_overflow_description, collection)
 
+    private fun viewMenuLabel() = context.getString(R.string.app_manage_collections_overflow_view)
+
     private fun renameMenuLabel() = context.getString(R.string.app_vault_card_overflow_rename)
 
     private fun deleteMenuLabel() = context.getString(R.string.app_vault_card_overflow_delete)
+
+    private fun mySoundsTabLabel() = context.getString(R.string.app_navigation_menu_item_my_sounds)
+
+    private fun vaultTabLabel() = context.getString(R.string.app_navigation_menu_item_vault)
+
+    private fun headerWithCollection(
+        name: String,
+        count: Int,
+    ) = context.getString(R.string.app_active_filter_header_with_collection, name, count)
 
     private fun renameSheetTitle() = context.getString(R.string.app_collection_sheet_title_rename)
 

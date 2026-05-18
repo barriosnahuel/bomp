@@ -25,11 +25,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -68,6 +68,7 @@ import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGa
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
+import com.github.barriosnahuel.vossosunboton.ui.home.AppTab
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import kotlinx.coroutines.delay
@@ -161,6 +162,13 @@ internal fun ManageCollectionsScreen(
                         collection = collection,
                         audioCount = collectionsIndex.values.count { it.contains(collection.id) },
                         isHighlighted = highlightedId == collection.id,
+                        onViewClick = {
+                            // Set tab + filter before closing so LandingScreen re-renders against
+                            // both new values in a single composition pass.
+                            viewModel.selectTab(AppTab.MY_SOUNDS)
+                            viewModel.selectMySoundsFilter(collection.id)
+                            onBack()
+                        },
                         onRenameClick = { viewModel.requestRenameCollection(collection.id) },
                         onDeleteClick = { viewModel.requestDeleteConfirmation(collection.id) },
                     )
@@ -200,6 +208,11 @@ internal fun ManageCollectionsScreen(
                         collection = collection,
                         audioCount = collectionsIndex.values.count { it.contains(collection.id) },
                         isHighlighted = highlightedId == collection.id,
+                        onViewClick = {
+                            viewModel.selectTab(AppTab.VAULT)
+                            viewModel.selectVaultFilter(collection.id)
+                            onBack()
+                        },
                         onRenameClick = { viewModel.requestRenameCollection(collection.id) },
                         onDeleteClick = { viewModel.requestDeleteConfirmation(collection.id) },
                     )
@@ -306,6 +319,7 @@ private fun ManageRow(
     collection: Collection,
     audioCount: Int,
     isHighlighted: Boolean,
+    onViewClick: () -> Unit,
     onRenameClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
@@ -367,6 +381,7 @@ private fun ManageRow(
         if (!collection.isSystem) {
             ManageRowOverflow(
                 collectionName = displayName,
+                onViewClick = onViewClick,
                 onRenameClick = onRenameClick,
                 onDeleteClick = onDeleteClick,
             )
@@ -377,6 +392,7 @@ private fun ManageRow(
 @Composable
 private fun ManageRowOverflow(
     collectionName: String,
+    onViewClick: () -> Unit,
     onRenameClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
@@ -393,6 +409,17 @@ private fun ManageRowOverflow(
             expanded = menuExpanded,
             onDismissRequest = { menuExpanded = false },
         ) {
+            // "View collection" sits above Rename — most common positive action; bumping the user
+            // straight to the relevant tab with the filter chip applied is the canonical happy path
+            // from Manage.
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.app_manage_collections_overflow_view)) },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                onClick = {
+                    menuExpanded = false
+                    onViewClick()
+                },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.app_vault_card_overflow_rename)) },
                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },

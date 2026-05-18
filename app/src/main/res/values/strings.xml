@@ -109,6 +109,7 @@
     <string name="app_vault_unprotected_explainer">This device has no fingerprint or screen lock. Your Vault is still saved locally but anyone holding the phone can open it.</string>
     <string name="app_vault_fab_new">New private collection</string>
     <string name="app_vault_card_overflow_description">More options for %1$s</string>
+    <string name="app_manage_collections_overflow_view">View collection</string>
     <string name="app_vault_card_overflow_rename">Rename</string>
     <string name="app_vault_card_overflow_delete">Delete</string>
     <string name="app_vault_card_overflow_delete_system_disabled">My Vault is the heart of this tab — it stays.</string>
