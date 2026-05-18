@@ -6,7 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.feature.collections
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -310,17 +310,21 @@ private fun ManageRow(
 ) {
     val systemFallback = stringResource(R.string.app_vault_baul_name)
     val displayName = if (collection.isSystem) systemFallback else collection.name
-    val targetBackground =
-        if (isHighlighted) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-        } else {
-            Color.Transparent
+    val highlightColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+    // AOSP Settings-style pulse: 3 quick fade-in / fade-out cycles, then settle transparent. The
+    // constant-tint version that preceded this felt heavy and held the eye too long on a passive
+    // surface; the pulse mirrors `HighlightablePreferenceGroupAdapter` (preference:1.2.x).
+    val animatedBackground = remember { Animatable(Color.Transparent) }
+    LaunchedEffect(isHighlighted) {
+        if (!isHighlighted) {
+            animatedBackground.snapTo(Color.Transparent)
+            return@LaunchedEffect
         }
-    val animatedBackground by animateColorAsState(
-        targetValue = targetBackground,
-        animationSpec = tween(durationMillis = HIGHLIGHT_FADE_MS),
-        label = "manage_row_highlight",
-    )
+        repeat(HIGHLIGHT_PULSE_COUNT) {
+            animatedBackground.animateTo(highlightColor, tween(HIGHLIGHT_PULSE_MS))
+            animatedBackground.animateTo(Color.Transparent, tween(HIGHLIGHT_PULSE_MS))
+        }
+    }
 
     // Spec § 3: "Tap en el row completo: no-op". We intentionally do NOT merge the descendants
     // nor add a click action on the Row — the only interactive target is the trailing ⋮ icon
@@ -331,7 +335,7 @@ private fun ManageRow(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
-                .background(animatedBackground)
+                .background(animatedBackground.value)
                 .padding(horizontal = Spacing.LG, vertical = Spacing.XS),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -484,5 +488,9 @@ private fun android.content.Context.findFragmentActivity(): FragmentActivity? {
     return null
 }
 
-private const val HIGHLIGHT_FADE_AFTER_MS = 1500L
-private const val HIGHLIGHT_FADE_MS = 400
+// Total pulse duration ≈ HIGHLIGHT_PULSE_COUNT * 2 * HIGHLIGHT_PULSE_MS. The outer LaunchedEffect
+// keeps `highlightedId` set for slightly longer than that so the pulse animation completes before
+// the row stops being marked as the highlighted one (which would re-trigger the LaunchedEffect).
+private const val HIGHLIGHT_PULSE_MS = 200
+private const val HIGHLIGHT_PULSE_COUNT = 3
+private const val HIGHLIGHT_FADE_AFTER_MS = 1400L
