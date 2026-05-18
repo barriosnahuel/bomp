@@ -135,18 +135,18 @@
     <string name="app_vault_listen_empty_body">Abrí cualquier Bomp desde Mis audios y agregalo a %1$s.</string>
 
     <!-- Sheet de crear / editar colección -->
-    <string name="app_collection_sheet_title_new_public">Nueva colección pública</string>
-    <string name="app_collection_sheet_title_new_private">Nueva colección privada</string>
+    <string name="app_collection_sheet_title_new_public">Nueva colección</string>
+    <string name="app_collection_sheet_title_new_private">Nueva colección del Baúl</string>
     <string name="app_collection_sheet_title_rename">Renombrar colección</string>
     <string name="app_collection_sheet_name_label">Nombre</string>
     <string name="app_collection_sheet_name_placeholder_public">Familia, Trabajo, Recetas…</string>
-    <string name="app_collection_sheet_name_placeholder_private">Caro, Navidad 2024…</string>
+    <string name="app_collection_sheet_name_placeholder_private">la abuela, Navidad 2025…</string>
     <string name="app_collection_sheet_save">Guardar</string>
     <string name="app_collection_sheet_cancel">Cancelar</string>
     <string name="app_collection_sheet_error_name_required">Poné un nombre para la colección.</string>
     <string name="app_collection_sheet_error_name_too_long">Que sean menos de %1$d caracteres.</string>
     <string name="app_collection_sheet_error_name_taken">Ya tenés una colección con ese nombre.</string>
-    <string name="app_collection_sheet_private_disclaimer">Las colecciones privadas se quedan en este teléfono y te piden la huella cada vez que las abrís.</string>
+    <string name="app_collection_sheet_private_disclaimer">Las colecciones del Baúl se quedan en este teléfono y te piden la huella cada vez que las abrís.</string>
 
     <!-- Diálogo de confirmación de borrado -->
     <string name="app_collection_delete_dialog_title">¿Eliminar %1$s?</string>
@@ -156,12 +156,12 @@
     <string name="app_collection_delete_dialog_dismiss">Mantener</string>
     <string name="app_collection_delete_feedback">Colección eliminada</string>
 
-    <!-- Mis audios — chips de filtrado por colección pública -->
+    <!-- Mis audios — chips de filtrado por colección -->
     <string name="app_my_sounds_filter_all">Todo</string>
     <string name="app_my_sounds_filter_chip_description">Filtrar por %1$s</string>
     <string name="app_my_sounds_filter_active_clear_description">Quitar filtro de colección</string>
     <string name="app_my_sounds_filter_chip_new">+ Nueva</string>
-    <string name="app_my_sounds_filter_chip_new_description">Crear una nueva colección pública</string>
+    <string name="app_my_sounds_filter_chip_new_description">Crear una nueva colección</string>
     <string name="app_my_sounds_filter_empty_collection_headline">Acá no hay nada todavía.</string>
     <string name="app_my_sounds_filter_empty_collection_body">Agregá un Bomp a %1$s desde su menú Más.</string>
 
@@ -173,7 +173,7 @@
     <string name="app_assign_collection_sheet_done">Listo</string>
     <string name="app_assign_collection_sheet_empty">Todavía no tenés colecciones. Creá una desde Mis audios o el Baúl primero.</string>
     <string name="app_assign_collection_sheet_private_locked_cta">Mostrar colecciones del Baúl (requiere desbloqueo)</string>
-    <string name="app_assign_collection_sheet_private_locked_subtitle">Desbloqueá el Baúl para agregar este Bomp a una colección privada.</string>
+    <string name="app_assign_collection_sheet_private_locked_subtitle">Desbloqueá el Baúl para agregar este Bomp a una colección del Baúl.</string>
     <string name="app_assign_collection_sheet_row_action_selected">En %1$s, tocá dos veces para quitar</string>
     <string name="app_assign_collection_sheet_row_action_unselected">Agregar a %1$s</string>
 
@@ -191,12 +191,12 @@
     <string name="app_manage_collections_section_vault">Baúl</string>
     <string name="app_manage_collections_system_tag">Del sistema</string>
     <string name="app_manage_collections_row_sounds_count">%1$d audios</string>
-    <string name="app_manage_collections_new_public">Nueva colección pública</string>
-    <string name="app_manage_collections_new_vault">Nueva colección privada</string>
-    <string name="app_manage_collections_empty_public">Todavía no creaste colecciones públicas.</string>
-    <string name="app_manage_collections_empty_vault">Todavía no creaste colecciones privadas.</string>
+    <string name="app_manage_collections_new_public">Nueva colección</string>
+    <string name="app_manage_collections_new_vault">Nueva colección del Baúl</string>
+    <string name="app_manage_collections_empty_public">Todavía no creaste colecciones.</string>
+    <string name="app_manage_collections_empty_vault">Todavía no creaste colecciones en el Baúl.</string>
     <string name="app_manage_collections_vault_locked_title">Baúl bloqueado</string>
-    <string name="app_manage_collections_vault_locked_body">Desbloqueá para gestionar tus colecciones privadas.</string>
+    <string name="app_manage_collections_vault_locked_body">Desbloqueá para gestionar tus colecciones del Baúl.</string>
     <string name="app_manage_collections_vault_locked_cta">Desbloquear</string>
     <string name="app_manage_collections_row_overflow_description">Opciones para %1$s</string>
 
@@ -204,10 +204,10 @@
     <string name="app_addbutton_collections_section_title">Asignar a colecciones</string>
     <string name="app_addbutton_collections_public_label">Mis audios</string>
     <string name="app_addbutton_collections_public_empty">Todavía no creaste colecciones en Mis audios.</string>
-    <string name="app_addbutton_collections_private_label">Privadas</string>
-    <string name="app_addbutton_collections_private_locked_cta">Mostrar colecciones privadas (requiere desbloqueo)</string>
-    <string name="app_addbutton_collections_private_unlocked_cta">Ocultar colecciones privadas</string>
-    <string name="app_addbutton_collections_private_unprotected_hint">Tus colecciones privadas aparecen acá porque este teléfono no tiene huella ni bloqueo de pantalla.</string>
+    <string name="app_addbutton_collections_private_label">Baúl</string>
+    <string name="app_addbutton_collections_private_locked_cta">Mostrar colecciones del Baúl (requiere desbloqueo)</string>
+    <string name="app_addbutton_collections_private_unlocked_cta">Ocultar colecciones del Baúl</string>
+    <string name="app_addbutton_collections_private_unprotected_hint">Tus colecciones del Baúl aparecen acá porque este teléfono no tiene huella ni bloqueo de pantalla.</string>
     <string name="app_addbutton_collections_new_chip">+ Nueva colección</string>
-    <string name="app_addbutton_collections_new_private_chip">+ Nueva privada</string>
+    <string name="app_addbutton_collections_new_private_chip">+ Nueva del Baúl</string>
 </resources>

@@ -141,18 +141,18 @@
     <string name="app_vault_listen_empty_body">Open any Bomp from My Sounds and add it to %1$s.</string>
 
     <!-- Create / edit collection sheet -->
-    <string name="app_collection_sheet_title_new_public">New public collection</string>
-    <string name="app_collection_sheet_title_new_private">New private collection</string>
+    <string name="app_collection_sheet_title_new_public">New collection</string>
+    <string name="app_collection_sheet_title_new_private">New Vault collection</string>
     <string name="app_collection_sheet_title_rename">Rename collection</string>
     <string name="app_collection_sheet_name_label">Name</string>
     <string name="app_collection_sheet_name_placeholder_public">Family, Work, Recipes…</string>
-    <string name="app_collection_sheet_name_placeholder_private">Caro, Christmas 2024…</string>
+    <string name="app_collection_sheet_name_placeholder_private">Grandma, Christmas 2025…</string>
     <string name="app_collection_sheet_save">Save</string>
     <string name="app_collection_sheet_cancel">Cancel</string>
     <string name="app_collection_sheet_error_name_required">Give your collection a name.</string>
     <string name="app_collection_sheet_error_name_too_long">Keep it under %1$d characters.</string>
     <string name="app_collection_sheet_error_name_taken">You already have a collection with that name.</string>
-    <string name="app_collection_sheet_private_disclaimer">Private collections stay on this phone and ask for your fingerprint every time you open them.</string>
+    <string name="app_collection_sheet_private_disclaimer">Vault collections stay on this phone and ask for your fingerprint every time you open them.</string>
 
     <!-- Delete confirmation dialog -->
     <string name="app_collection_delete_dialog_title">Delete %1$s?</string>
@@ -162,12 +162,12 @@
     <string name="app_collection_delete_dialog_dismiss">Keep it</string>
     <string name="app_collection_delete_feedback">Collection deleted</string>
 
-    <!-- My Sounds — public collection filter chips -->
+    <!-- My Sounds — collection filter chips -->
     <string name="app_my_sounds_filter_all">All</string>
     <string name="app_my_sounds_filter_chip_description">Filter by %1$s</string>
     <string name="app_my_sounds_filter_active_clear_description">Clear collection filter</string>
     <string name="app_my_sounds_filter_chip_new">+ New</string>
-    <string name="app_my_sounds_filter_chip_new_description">Create a new public collection</string>
+    <string name="app_my_sounds_filter_chip_new_description">Create a new collection</string>
     <string name="app_my_sounds_filter_empty_collection_headline">Nothing in here yet.</string>
     <string name="app_my_sounds_filter_empty_collection_body">Add a Bomp to %1$s from its More menu.</string>
 
@@ -178,8 +178,8 @@
     <string name="app_assign_collection_sheet_section_private">Vault</string>
     <string name="app_assign_collection_sheet_done">Done</string>
     <string name="app_assign_collection_sheet_empty">No collections yet. Create one from My Sounds or Vault first.</string>
-    <string name="app_assign_collection_sheet_private_locked_cta">Show vault collections (requires unlock)</string>
-    <string name="app_assign_collection_sheet_private_locked_subtitle">Unlock the vault to assign this Bomp to a private collection.</string>
+    <string name="app_assign_collection_sheet_private_locked_cta">Show Vault collections (requires unlock)</string>
+    <string name="app_assign_collection_sheet_private_locked_subtitle">Unlock the Vault to assign this Bomp to a Vault collection.</string>
     <string name="app_assign_collection_sheet_row_action_selected">In %1$s, double-tap to remove</string>
     <string name="app_assign_collection_sheet_row_action_unselected">Add to %1$s</string>
 
@@ -197,12 +197,12 @@
     <string name="app_manage_collections_section_vault">Vault</string>
     <string name="app_manage_collections_system_tag">System</string>
     <string name="app_manage_collections_row_sounds_count">%1$d sounds</string>
-    <string name="app_manage_collections_new_public">New public collection</string>
-    <string name="app_manage_collections_new_vault">New private collection</string>
-    <string name="app_manage_collections_empty_public">No public collections yet.</string>
-    <string name="app_manage_collections_empty_vault">No private collections yet.</string>
+    <string name="app_manage_collections_new_public">New collection</string>
+    <string name="app_manage_collections_new_vault">New Vault collection</string>
+    <string name="app_manage_collections_empty_public">No collections yet.</string>
+    <string name="app_manage_collections_empty_vault">No Vault collections yet.</string>
     <string name="app_manage_collections_vault_locked_title">Vault locked</string>
-    <string name="app_manage_collections_vault_locked_body">Unlock to manage your private collections.</string>
+    <string name="app_manage_collections_vault_locked_body">Unlock to manage your Vault collections.</string>
     <string name="app_manage_collections_vault_locked_cta">Unlock</string>
     <string name="app_manage_collections_row_overflow_description">Options for %1$s</string>
 
@@ -210,10 +210,10 @@
     <string name="app_addbutton_collections_section_title">Assign to collections</string>
     <string name="app_addbutton_collections_public_label">My Sounds</string>
     <string name="app_addbutton_collections_public_empty">No collections in My Sounds yet.</string>
-    <string name="app_addbutton_collections_private_label">Private</string>
-    <string name="app_addbutton_collections_private_locked_cta">Show private collections (requires unlock)</string>
-    <string name="app_addbutton_collections_private_unlocked_cta">Hide private collections</string>
-    <string name="app_addbutton_collections_private_unprotected_hint">Your private collections show up here because this device has no fingerprint or screen lock.</string>
+    <string name="app_addbutton_collections_private_label">Vault</string>
+    <string name="app_addbutton_collections_private_locked_cta">Show Vault collections (requires unlock)</string>
+    <string name="app_addbutton_collections_private_unlocked_cta">Hide Vault collections</string>
+    <string name="app_addbutton_collections_private_unprotected_hint">Your Vault collections show up here because this device has no fingerprint or screen lock.</string>
     <string name="app_addbutton_collections_new_chip">+ New collection</string>
-    <string name="app_addbutton_collections_new_private_chip">+ New private</string>
+    <string name="app_addbutton_collections_new_private_chip">+ New Vault</string>
 </resources>
