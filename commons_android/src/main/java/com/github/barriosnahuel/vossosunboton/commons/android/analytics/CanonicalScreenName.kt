@@ -21,11 +21,8 @@ object CanonicalScreenName {
     /** Vault tab — list of private collections; no audio content shown until per-collection unlock. */
     const val VAULT = "vault"
 
-    /** Per-collection biometric unlock prompt invocation surface (analytics-only marker). */
+    /** Biometric unlock prompt invocation surface (analytics-only marker — the prompt itself is OS). */
     const val VAULT_UNLOCK = "vault_unlock"
-
-    /** Immersive listen view: a single private collection's audios, post-unlock, listen-only. */
-    const val VAULT_COLLECTION_LISTEN = "vault_collection_listen"
 
     /** Create-collection sheet (reachable from Vault FAB or from Add/Edit "+ Nueva" chip). */
     const val COLLECTION_CREATE = "collection_create"
@@ -43,7 +40,6 @@ object CanonicalScreenName {
             EDIT_SOUND,
             VAULT,
             VAULT_UNLOCK,
-            VAULT_COLLECTION_LISTEN,
             COLLECTION_CREATE,
             MANAGE_COLLECTIONS,
         )

@@ -55,6 +55,20 @@ internal fun CollectionSheetHost(viewModel: SoundsViewModel) {
     val activeRequest = request ?: return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
+    // Emit a screen_view the first time this composition sees a non-null request. The sheet is
+    // a self-contained surface for analytics — naming follows CanonicalScreenName.COLLECTION_CREATE
+    // even though the rename mode reuses the same composable (the analytics distinction lives in
+    // CollectionRename / CollectionCreate events, not in the screen name).
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(activeRequest) {
+        com.github.barriosnahuel.vossosunboton.commons.android.analytics
+            .AnalyticsTrackerProvider
+            .get(context.applicationContext)
+            .logScreen(
+                com.github.barriosnahuel.vossosunboton.commons.android.analytics
+                    .CanonicalScreenName.COLLECTION_CREATE,
+            )
+    }
 
     ModalBottomSheet(
         onDismissRequest = { viewModel.dismissCollectionSheet() },

@@ -86,7 +86,6 @@ internal class AnalyticsCoverageMatrixTest {
                 "CollectionFilterApply",
                 "CollectionAudioToggle",
                 "VaultUnlock",
-                "VaultEnterImmersive",
                 "VaultUnprotectedWarningShown",
             )
 
@@ -100,7 +99,6 @@ internal class AnalyticsCoverageMatrixTest {
                 CanonicalScreenName.EDIT_SOUND,
                 CanonicalScreenName.VAULT,
                 CanonicalScreenName.VAULT_UNLOCK,
-                CanonicalScreenName.VAULT_COLLECTION_LISTEN,
                 CanonicalScreenName.COLLECTION_CREATE,
                 CanonicalScreenName.MANAGE_COLLECTIONS,
             )

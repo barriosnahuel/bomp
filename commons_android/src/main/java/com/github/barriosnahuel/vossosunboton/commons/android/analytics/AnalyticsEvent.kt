@@ -265,13 +265,6 @@ sealed class AnalyticsEvent(
     }
 
     /**
-     * User entered the immersive listen view of a Vault collection (post biometric grant). Paired
-     * with [VaultUnlock] (granted = true) but reported separately so dashboards can spot drop-off
-     * between authentication and engagement.
-     */
-    object VaultEnterImmersive : AnalyticsEvent(name = "vault_enter_immersive", hasFirstVariant = true)
-
-    /**
      * Device has no biometric or device-credential lock configured but a private collection
      * exists — the warning chip on the card is showing. Emitted at most once per process via
      * `markFiredOnce("vault_unprotected_warning")` so we don't flood dashboards on scroll.

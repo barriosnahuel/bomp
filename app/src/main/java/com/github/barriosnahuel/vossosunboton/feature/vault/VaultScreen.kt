@@ -136,6 +136,10 @@ private fun requestUnlock(
 ) {
     // Devices without biometric/lock fall through to "open the Vault anyway" — spec § 6 ("No
     // protection: open directly. Warning is visible elsewhere.").
+    tracker.logScreen(
+        com.github.barriosnahuel.vossosunboton.commons.android.analytics
+            .CanonicalScreenName.VAULT_UNLOCK,
+    )
     if (status != BiometricGateStatus.AVAILABLE || gate == null) {
         VaultSessionState.markVaultOpen()
         tracker.log(AnalyticsEvent.VaultUnlock(granted = true))
@@ -340,14 +344,16 @@ private fun VaultEmptyState() {
     val accent = MaterialTheme.colorScheme.primary
     val backgroundColor = MaterialTheme.colorScheme.background
     val zrpBackground =
-        Brush.radialGradient(
-            colorStops =
-                arrayOf(
-                    0.0f to accent.copy(alpha = ZRP_GLOW_CENTER_ALPHA),
-                    0.5f to accent.copy(alpha = ZRP_GLOW_MID_ALPHA),
-                    1.0f to backgroundColor,
-                ),
-        )
+        remember(accent, backgroundColor) {
+            Brush.radialGradient(
+                colorStops =
+                    arrayOf(
+                        0.0f to accent.copy(alpha = ZRP_GLOW_CENTER_ALPHA),
+                        0.5f to accent.copy(alpha = ZRP_GLOW_MID_ALPHA),
+                        1.0f to backgroundColor,
+                    ),
+            )
+        }
     Box(
         modifier =
             Modifier

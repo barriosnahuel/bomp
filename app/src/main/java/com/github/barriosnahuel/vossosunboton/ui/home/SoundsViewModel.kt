@@ -145,14 +145,6 @@ class SoundsViewModel(
     val activeCollectionSheet: StateFlow<CollectionSheetRequest?> = _activeCollectionSheet.asStateFlow()
 
     /**
-     * The Vault collection the user is actively listening to in immersive mode (post biometric).
-     * `null` when no immersive view is active. The id is preferred over the [Collection] because
-     * the underlying collection may be updated (rename, audio added) while immersive is open.
-     */
-    private val _activeImmersiveCollectionId = MutableStateFlow<String?>(null)
-    val activeImmersiveCollectionId: StateFlow<String?> = _activeImmersiveCollectionId.asStateFlow()
-
-    /**
      * Pending delete-confirmation prompt for a non-system collection. Null when no dialog is
      * showing. System collections are guarded earlier (the UI does not offer Delete for them).
      */
@@ -917,16 +909,6 @@ class SoundsViewModel(
 
     fun dismissCollectionSheet() {
         _activeCollectionSheet.value = null
-    }
-
-    /** Opens the immersive listen view for the just-unlocked private collection. */
-    fun openImmersiveView(collectionId: String) {
-        _activeImmersiveCollectionId.value = collectionId
-        tracker.log(AnalyticsEvent.VaultEnterImmersive)
-    }
-
-    fun closeImmersiveView() {
-        _activeImmersiveCollectionId.value = null
     }
 
     fun requestDeleteConfirmation(collectionId: String) {
