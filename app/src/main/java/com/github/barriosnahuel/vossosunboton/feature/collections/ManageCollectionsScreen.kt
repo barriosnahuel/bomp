@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -311,19 +312,21 @@ private fun ManageRow(
     val systemFallback = stringResource(R.string.app_vault_baul_name)
     val displayName = if (collection.isSystem) systemFallback else collection.name
     val highlightColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-    // AOSP Settings-style pulse: 3 quick fade-in / fade-out cycles, then settle transparent. The
-    // constant-tint version that preceded this felt heavy and held the eye too long on a passive
-    // surface; the pulse mirrors `HighlightablePreferenceGroupAdapter` (preference:1.2.x).
+    // Mirror AOSP HighlightablePreferenceGroupAdapter exactly: a fade-in animator with
+    // duration=200ms, repeatMode=REVERSE, repeatCount=4 → 5 alternating phases that end AT the
+    // highlight color (3 perceived peaks), then a separate 500ms fade-out to transparent.
     val animatedBackground = remember { Animatable(Color.Transparent) }
     LaunchedEffect(isHighlighted) {
         if (!isHighlighted) {
             animatedBackground.snapTo(Color.Transparent)
             return@LaunchedEffect
         }
-        repeat(HIGHLIGHT_PULSE_COUNT) {
-            animatedBackground.animateTo(highlightColor, tween(HIGHLIGHT_PULSE_MS))
-            animatedBackground.animateTo(Color.Transparent, tween(HIGHLIGHT_PULSE_MS))
+        repeat(2) {
+            animatedBackground.animateTo(highlightColor, tween(HIGHLIGHT_FADE_IN_MS))
+            animatedBackground.animateTo(Color.Transparent, tween(HIGHLIGHT_FADE_IN_MS))
         }
+        animatedBackground.animateTo(highlightColor, tween(HIGHLIGHT_FADE_IN_MS))
+        animatedBackground.animateTo(Color.Transparent, tween(HIGHLIGHT_FADE_OUT_MS))
     }
 
     // Spec § 3: "Tap en el row completo: no-op". We intentionally do NOT merge the descendants
@@ -488,9 +491,9 @@ private fun android.content.Context.findFragmentActivity(): FragmentActivity? {
     return null
 }
 
-// Total pulse duration ≈ HIGHLIGHT_PULSE_COUNT * 2 * HIGHLIGHT_PULSE_MS. The outer LaunchedEffect
-// keeps `highlightedId` set for slightly longer than that so the pulse animation completes before
-// the row stops being marked as the highlighted one (which would re-trigger the LaunchedEffect).
-private const val HIGHLIGHT_PULSE_MS = 200
-private const val HIGHLIGHT_PULSE_COUNT = 3
-private const val HIGHLIGHT_FADE_AFTER_MS = 1400L
+// AOSP HighlightablePreferenceGroupAdapter constants (frameworks Settings widget). Pulse duration
+// is 5 * 200ms = 1000ms; fade-out adds 500ms, so the outer wipe waits ≥ 1500ms before clearing
+// `highlightedId`.
+private const val HIGHLIGHT_FADE_IN_MS = 200
+private const val HIGHLIGHT_FADE_OUT_MS = 500
+private const val HIGHLIGHT_FADE_AFTER_MS = 1600L
