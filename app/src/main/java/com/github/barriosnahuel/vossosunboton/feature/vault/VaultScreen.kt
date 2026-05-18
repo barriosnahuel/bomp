@@ -346,9 +346,9 @@ private fun VaultEmptyState() {
             Brush.radialGradient(
                 colorStops =
                     arrayOf(
-                        0.0f to accent.copy(alpha = ZRP_GLOW_CENTER_ALPHA),
-                        0.5f to accent.copy(alpha = ZRP_GLOW_MID_ALPHA),
-                        1.0f to backgroundColor,
+                        ZRP_GLOW_STOP_CENTER to accent.copy(alpha = ZRP_GLOW_CENTER_ALPHA),
+                        ZRP_GLOW_STOP_MID to accent.copy(alpha = ZRP_GLOW_MID_ALPHA),
+                        ZRP_GLOW_STOP_EDGE to backgroundColor,
                     ),
             )
         }
@@ -405,6 +405,12 @@ private fun VaultEmptyState() {
 // indirectly — the gradient stays under the bodyMedium text, which still reads against background.
 private const val ZRP_GLOW_CENTER_ALPHA = 0.16f
 private const val ZRP_GLOW_MID_ALPHA = 0.04f
+
+// Radial-gradient stops for the ZRP glow. Center is at the polaroid; mid (50%) keeps a soft halo
+// before fading to the surface background at the edges.
+private const val ZRP_GLOW_STOP_CENTER = 0.0f
+private const val ZRP_GLOW_STOP_MID = 0.5f
+private const val ZRP_GLOW_STOP_EDGE = 1.0f
 
 // Space the LazyColumn reserves at the bottom so the ExtendedFloatingActionButton can sit on top
 // of the last row without clipping it. Computed from the FAB design: 56dp (M3 ExtendedFAB minimum
