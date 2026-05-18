@@ -338,6 +338,7 @@ class SoundsViewModel(
                         }
                     }
                     recomputeVaultAudios()
+                    syncCollectionsUserProperties(list)
                     loadSounds()
                 }
             } catch (e: CancellationException) {
@@ -364,6 +365,21 @@ class SoundsViewModel(
             }
         }
         return index.mapValues { it.value.toList() }
+    }
+
+    /**
+     * Re-emits the three "current_collections_*" user properties whenever the canonical collections
+     * list mutates (create/rename/delete + every membership toggle, since [CollectionsRepository]
+     * snapshots on every write). Excludes system collections so the dashboards reflect *user*
+     * intent — the seeded Baúl row is always there.
+     */
+    private fun syncCollectionsUserProperties(collections: List<Collection>) {
+        val publicCount = collections.count { it.isPublic && !it.isSystem }
+        val privateCount = collections.count { it.isPrivate && !it.isSystem }
+        val audiosInCollections = collections.flatMap { it.audioIds }.toSet().size
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_COLLECTIONS_PUBLIC, publicCount.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_COLLECTIONS_PRIVATE, privateCount.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_AUDIOS_IN_COLLECTIONS, audiosInCollections.toString())
     }
 
     private fun recomputeVaultAudios() {
@@ -765,13 +781,15 @@ class SoundsViewModel(
                     CollectionAccess.PUBLIC -> com.github.barriosnahuel.vossosunboton.model.CollectionProfile.GENERIC_PUBLIC
                     CollectionAccess.PRIVATE -> com.github.barriosnahuel.vossosunboton.model.CollectionProfile.VAULT
                 }
-            collectionsRepo.create(name = name, profile = profile).also { created ->
+            collectionsRepo.create(name = name, profile = profile).also { _ ->
                 tracker.log(
                     AnalyticsEvent.CollectionCreate(
                         scope = if (access == CollectionAccess.PUBLIC) "public" else "private",
                         audios = 0,
                     ),
                 )
+                val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_CREATES)
+                tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_COLLECTION_CREATES, newCount.toString())
             }
         }
 
@@ -877,6 +895,16 @@ class SoundsViewModel(
             outcome.onFailure {
                 Tracker.log("collections.toggle_audio_failed=${it.javaClass.simpleName}")
                 Tracker.track(RuntimeException("Failed to toggle audio in collection", it))
+            }
+            outcome.onSuccess {
+                tracker.log(
+                    AnalyticsEvent.CollectionAudioToggle(
+                        assigned = !alreadyIn,
+                        scope = if (target.isPublic) "public" else "private",
+                    ),
+                )
+                val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS)
+                tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS, newCount.toString())
             }
         }
     }

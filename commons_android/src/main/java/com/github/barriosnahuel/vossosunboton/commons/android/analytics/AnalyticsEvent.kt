@@ -238,6 +238,22 @@ sealed class AnalyticsEvent(
     }
 
     /**
+     * Audio was added to or removed from a collection via the assign-to-collection sheet or the
+     * Add/Edit Bomp chip group. [assigned] = true when the audio just joined, false when it left.
+     * [scope] mirrors [CollectionCreate].
+     */
+    data class CollectionAudioToggle(
+        val assigned: Boolean,
+        val scope: String,
+    ) : AnalyticsEvent(name = "collection_audio_toggle", hasFirstVariant = true) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putBoolean("assigned", assigned)
+                putString("scope", scope)
+            }
+    }
+
+    /**
      * Biometric prompt resolved for a Vault collection. [granted] reflects whether the user
      * authenticated successfully (true) or cancelled / failed (false). No PII — collection id is
      * out of scope; only the cumulative grant/cancel rate matters for product.
