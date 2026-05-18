@@ -196,8 +196,8 @@
     <string name="app_manage_collections_section_vault">Vault</string>
     <string name="app_manage_collections_system_tag">System</string>
     <string name="app_manage_collections_row_sounds_count">%1$d sounds</string>
-    <string name="app_manage_collections_new_public">+ New public collection</string>
-    <string name="app_manage_collections_new_vault">+ New private collection</string>
+    <string name="app_manage_collections_new_public">New public collection</string>
+    <string name="app_manage_collections_new_vault">New private collection</string>
     <string name="app_manage_collections_empty_public">No public collections yet.</string>
     <string name="app_manage_collections_empty_vault">No private collections yet.</string>
     <string name="app_manage_collections_vault_locked_title">Vault locked</string>

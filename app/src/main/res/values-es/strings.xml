@@ -190,8 +190,8 @@
     <string name="app_manage_collections_section_vault">Baúl</string>
     <string name="app_manage_collections_system_tag">Del sistema</string>
     <string name="app_manage_collections_row_sounds_count">%1$d audios</string>
-    <string name="app_manage_collections_new_public">+ Nueva colección pública</string>
-    <string name="app_manage_collections_new_vault">+ Nueva colección privada</string>
+    <string name="app_manage_collections_new_public">Nueva colección pública</string>
+    <string name="app_manage_collections_new_vault">Nueva colección privada</string>
     <string name="app_manage_collections_empty_public">Todavía no creaste colecciones públicas.</string>
     <string name="app_manage_collections_empty_vault">Todavía no creaste colecciones privadas.</string>
     <string name="app_manage_collections_vault_locked_title">Baúl bloqueado</string>
