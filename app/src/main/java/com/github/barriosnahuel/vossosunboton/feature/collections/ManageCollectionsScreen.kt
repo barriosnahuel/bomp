@@ -59,8 +59,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.R
@@ -314,7 +312,6 @@ private fun ManageRow(
 ) {
     val systemFallback = stringResource(R.string.app_vault_baul_name)
     val displayName = if (collection.isSystem) systemFallback else collection.name
-    val rowSemantics = stringResource(R.string.app_manage_collections_row_overflow_description, displayName)
     val targetBackground =
         if (isHighlighted) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
@@ -327,16 +324,17 @@ private fun ManageRow(
         label = "manage_row_highlight",
     )
 
+    // Spec § 3: "Tap en el row completo: no-op". We intentionally do NOT merge the descendants
+    // nor add a click action on the Row — the only interactive target is the trailing ⋮ icon
+    // button. TalkBack steps through the name, the system tag (when present), the audio count,
+    // and finally the overflow button as separate nodes.
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
                 .background(animatedBackground)
-                .padding(horizontal = Spacing.LG, vertical = Spacing.XS)
-                .semantics(mergeDescendants = true) {
-                    contentDescription = rowSemantics
-                },
+                .padding(horizontal = Spacing.LG, vertical = Spacing.XS),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
