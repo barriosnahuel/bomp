@@ -98,7 +98,6 @@ class CollectionsRepository(
     ): Collection {
         val trimmed = name.trim()
         validateName(trimmed)
-        ensureNameAvailable(trimmed, profile.access)
         val collection =
             Collection(
                 id = UUID.randomUUID().toString(),
@@ -107,7 +106,18 @@ class CollectionsRepository(
                 isSystem = false,
                 createdAt = System.currentTimeMillis(),
             )
-        mutate { current -> current + toStored(collection) }
+        val storedScope = toStoredAccess(profile.access)
+        // Re-check the name *inside* the atomic edit so two concurrent create() calls cannot both
+        // pass the availability check and persist a duplicate. The `require` aborts the whole
+        // mutate block on the loser side.
+        mutate { current ->
+            val taken =
+                current.any {
+                    it.access == storedScope && it.name.equals(trimmed, ignoreCase = true)
+                }
+            require(!taken) { "A collection named '$trimmed' already exists in this scope" }
+            current + toStored(collection)
+        }
         return collection
     }
 
@@ -239,16 +249,6 @@ class CollectionsRepository(
                     )
             }
         }
-    }
-
-    private suspend fun ensureNameAvailable(
-        name: String,
-        access: CollectionAccess,
-    ) {
-        val storedScope = toStoredAccess(access)
-        val list = decodeStored()
-        val taken = list.any { it.access == storedScope && it.name.equals(name, ignoreCase = true) }
-        require(!taken) { "A collection named '$name' already exists in this scope" }
     }
 
     private suspend fun decodeStored(): List<StoredCollection> =
