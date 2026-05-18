@@ -170,9 +170,6 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             )
     }
 
-    com.github.barriosnahuel.vossosunboton.feature.vault
-        .VaultRoutingOverlay(viewModel = viewModel)
-
     com.github.barriosnahuel.vossosunboton.feature.collections
         .CollectionSheetHost(viewModel = viewModel)
 
