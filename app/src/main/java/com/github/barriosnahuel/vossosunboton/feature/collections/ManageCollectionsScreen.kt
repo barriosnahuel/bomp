@@ -116,9 +116,10 @@ internal fun ManageCollectionsScreen(
 
     // Highlight state: we copy the deep-link id into a Saveable that the row reads. After a delay
     // we wipe it so the tint fades. Using rememberSaveable lets a rotation while the highlight is
-    // active resume cleanly without retriggering the scroll (LaunchedEffect's key is the original
-    // focusedCollectionId, not the local highlight).
+    // active resume cleanly without retriggering the scroll — the LaunchedEffect below is gated by
+    // `deepLinkConsumed`, also rememberSaveable, so rotation cannot replay the cue.
     var highlightedId by rememberSaveable { mutableStateOf(focusedCollectionId) }
+    var deepLinkConsumed by rememberSaveable { mutableStateOf(false) }
 
     BackHandler { onBack() }
 
@@ -229,8 +230,11 @@ internal fun ManageCollectionsScreen(
 
     // Deep-link behavior: when the user landed here with a focused id, scroll to it and fade the
     // highlight after a short cue. Skipped silently if the id no longer exists (race: deleted by
-    // another flow between ✎ tap and this composition).
+    // another flow between ✎ tap and this composition) or if we already ran the scroll once on this
+    // composition lifetime (rotation re-triggers the LaunchedEffect even though we'd already
+    // pulsed — `deepLinkConsumed` blocks the replay).
     LaunchedEffect(focusedCollectionId, vaultOpen) {
+        if (deepLinkConsumed) return@LaunchedEffect
         val id = focusedCollectionId ?: return@LaunchedEffect
         // For a Vault id, defer the scroll until the section actually renders.
         val targetIsPrivate = collections.firstOrNull { it.id == id }?.isPrivate == true
@@ -240,6 +244,7 @@ internal fun ManageCollectionsScreen(
         if (flatIndex >= 0) {
             lazyListState.animateScrollToItem(flatIndex)
         }
+        deepLinkConsumed = true
         delay(HIGHLIGHT_FADE_AFTER_MS)
         highlightedId = null
     }
