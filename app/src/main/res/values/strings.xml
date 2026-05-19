@@ -101,7 +101,7 @@
     <string name="app_vault_screen_title">Vault</string>
     <string name="app_vault_baul_name">My Vault</string>
     <string name="app_vault_unprotected_warning_chip">Not protected — set a screen lock</string>
-    <string name="app_vault_fab_new">New Vault collection</string>
+    <string name="app_vault_fab_new">New Vault</string>
     <string name="app_vault_card_overflow_description">More options for %1$s</string>
     <string name="app_manage_collections_overflow_view">View collection</string>
     <string name="app_vault_card_overflow_rename">Rename</string>
@@ -123,7 +123,7 @@
 
     <!-- Create / edit collection sheet -->
     <string name="app_collection_sheet_title_new_public">New collection</string>
-    <string name="app_collection_sheet_title_new_private">New Vault collection</string>
+    <string name="app_collection_sheet_title_new_private">New Vault</string>
     <string name="app_collection_sheet_title_rename">Rename collection</string>
     <string name="app_collection_sheet_name_label">Name</string>
     <string name="app_collection_sheet_name_placeholder_public">Family, Work, Recipes…</string>
@@ -191,7 +191,7 @@
         <item quantity="other">%1$d sounds</item>
     </plurals>
     <string name="app_manage_collections_new_public">New collection</string>
-    <string name="app_manage_collections_new_vault">New Vault collection</string>
+    <string name="app_manage_collections_new_vault">New Vault</string>
     <string name="app_manage_collections_empty_public">No collections yet.</string>
     <string name="app_manage_collections_empty_vault">No Vault collections yet.</string>
     <string name="app_manage_collections_vault_locked_title">Vault locked</string>
