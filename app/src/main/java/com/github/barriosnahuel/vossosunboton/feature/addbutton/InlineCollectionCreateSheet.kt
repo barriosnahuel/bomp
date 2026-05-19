@@ -19,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -35,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -73,14 +71,12 @@ internal fun InlineCollectionCreateSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
     val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Auto-focus the field + show the IME once the sheet has finished animating in. Same
-    // staging trick the canonical CollectionSheetHost uses — keying off `sheetState.currentValue`
-    // == Expanded keeps the IME slide-in synced with the sheet's tween instead of firing on
-    // first composition (which made the keyboard appear *before* the sheet was even visible).
-    LaunchedEffect(sheetState.currentValue) {
-        if (sheetState.currentValue != SheetValue.Expanded) return@LaunchedEffect
+    // Mirror AddButtonScreen's pattern: wait one frame for layout, request focus, let the
+    // platform bring up the IME via the focus event. IME and sheet animate in parallel, which
+    // matches the WhatsApp-share → New Bomp entry the user already knows.
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.withFrameNanos { /* wait for first layout pass */ }
         runCatching { focusRequester.requestFocus() }
             .onFailure {
                 com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
@@ -88,7 +84,6 @@ internal fun InlineCollectionCreateSheet(
                 com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
                     .track(RuntimeException("InlineCollectionCreateSheet focus request failed", it))
             }
-        keyboardController?.show()
     }
 
     var name by rememberSaveable { mutableStateOf("") }

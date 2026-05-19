@@ -19,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -35,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -84,7 +82,6 @@ internal fun CollectionSheetHost(viewModel: SoundsViewModel) {
     ) {
         CollectionSheetBody(
             request = activeRequest,
-            sheetExpanded = sheetState.currentValue == SheetValue.Expanded,
             onCancel = {
                 coroutineScope.launch { sheetState.hide() }
                 viewModel.dismissCollectionSheet()
@@ -108,7 +105,6 @@ internal fun CollectionSheetHost(viewModel: SoundsViewModel) {
 @Composable
 private fun CollectionSheetBody(
     request: CollectionSheetRequest,
-    sheetExpanded: Boolean,
     onCancel: () -> Unit,
     onSubmit: suspend (String) -> Result<Unit>,
 ) {
@@ -121,16 +117,11 @@ private fun CollectionSheetBody(
     var errorRes by rememberSaveable { mutableStateOf<Int?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Open the sheet with the field focused and the IME up — but only AFTER the sheet has
-    // finished sliding in. Firing focus + IME on first composition (before `sheetState`
-    // reaches `Expanded`) made the keyboard appear first and the sheet animate over the
-    // top of it, which read as two staggered animations instead of one cohesive entry.
-    // Waiting on `sheetExpanded` lets the bottom-sheet finish its tween, then the IME
-    // slides up under it; the perceived effect is one animation, not two.
-    LaunchedEffect(sheetExpanded) {
-        if (!sheetExpanded) return@LaunchedEffect
+    // Mirror AddButtonScreen's pattern: wait one frame for layout, request focus, let the
+    // platform bring up the IME via the focus event. IME and sheet animate in parallel.
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.withFrameNanos { /* wait for first layout pass */ }
         runCatching { focusRequester.requestFocus() }
             .onFailure {
                 com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
@@ -138,7 +129,6 @@ private fun CollectionSheetBody(
                 com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
                     .track(RuntimeException("CollectionSheet focus request failed", it))
             }
-        keyboardController?.show()
     }
     val isPrivate =
         when (request) {
@@ -270,6 +260,7 @@ private fun CollectionSheetBody(
 // The repo enforces a looser 80-char hard limit as a defensive backstop for seeded / imported
 // data, but the UI never lets a fresh entry exceed this.
 private const val COLLECTION_NAME_MAX = 20
+
 private const val COLLECTION_NAME_MAX_INPUT = COLLECTION_NAME_MAX
 
 // Threshold at which the supporting counter switches to the accent color — gives the user a
