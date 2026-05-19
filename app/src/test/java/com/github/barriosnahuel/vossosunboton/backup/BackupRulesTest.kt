@@ -115,6 +115,7 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
 
         assertThat(allIncludes.none { (_, path) -> path.contains("collections.preferences_pb") }).isTrue()
         assertThat(allIncludes.none { (_, path) -> path.contains("my-sounds-filter.preferences_pb") }).isTrue()
+        assertThat(allIncludes.none { (_, path) -> path.contains("vault-filter.preferences_pb") }).isTrue()
     }
 
     /**

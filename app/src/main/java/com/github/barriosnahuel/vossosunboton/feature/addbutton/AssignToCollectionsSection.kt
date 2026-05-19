@@ -26,8 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateStatus
@@ -186,12 +184,7 @@ private fun PrivateBlock(
     if (!showChips) {
         TextButton(
             onClick = onRequestUnlock,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .semantics {
-                        contentDescription = "biometric unlock cta"
-                    },
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.app_addbutton_collections_private_locked_cta))
         }

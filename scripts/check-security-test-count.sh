@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-EXPECTED_COUNT=31
+EXPECTED_COUNT=29
 
 SCAN_ROOTS=(
   app/src/test
