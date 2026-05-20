@@ -41,8 +41,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.feature.vault.requestUnlock
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
-import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateResult
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateStatus
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.model.Collection
@@ -73,6 +74,7 @@ internal fun AssignCollectionSheet(viewModel: SoundsViewModel) {
     val activity = remember(context) { context.findFragmentActivity() }
     val gate = remember(activity) { activity?.let { BiometricGate(it) } }
     val gateStatus = remember(gate) { gate?.status() ?: BiometricGateStatus.UNAVAILABLE }
+    val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
 
     val publics = remember(collections) { collections.filter { it.isPublic } }
     val privates = remember(collections) { collections.filter { it.isPrivate } }
@@ -89,7 +91,7 @@ internal fun AssignCollectionSheet(viewModel: SoundsViewModel) {
             vaultOpen = vaultOpen,
             gateStatus = gateStatus,
             onUnlockVault = {
-                requestVaultUnlock(context, gate, gateStatus)
+                requestUnlock(context, gate, gateStatus, tracker, source = "assign_sheet")
             },
             onToggle = { collectionId ->
                 viewModel.toggleAudioInCollection(audioId, collectionId)
@@ -256,26 +258,6 @@ private fun VaultLockedRow(onUnlock: () -> Unit) {
             TextButton(onClick = onUnlock) {
                 Text(stringResource(R.string.app_assign_collection_sheet_private_locked_cta))
             }
-        }
-    }
-}
-
-private fun requestVaultUnlock(
-    context: android.content.Context,
-    gate: BiometricGate?,
-    status: BiometricGateStatus,
-) {
-    if (status != BiometricGateStatus.AVAILABLE || gate == null) {
-        VaultSessionState.markVaultOpen()
-        return
-    }
-    gate.requestUnlock(
-        title = context.getString(R.string.app_vault_screen_title),
-        subtitle = context.getString(R.string.app_vault_biometric_prompt_subtitle),
-        negativeButtonText = context.getString(R.string.app_vault_biometric_negative),
-    ) { result ->
-        if (result is BiometricGateResult.Granted) {
-            VaultSessionState.markVaultOpen()
         }
     }
 }

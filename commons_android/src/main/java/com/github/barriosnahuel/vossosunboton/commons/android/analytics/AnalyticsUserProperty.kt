@@ -27,12 +27,23 @@ object AnalyticsUserProperty {
     /** Snapshot — number of audios that belong to at least one user collection. Engagement signal. */
     const val CURRENT_AUDIOS_IN_COLLECTIONS = "current_audios_in_collections"
 
-    /**
-     * Snapshot — number of audios that live ONLY in private (Vault) collections (tagged to a
-     * private collection and zero public ones). Distinct from [CURRENT_AUDIOS_IN_COLLECTIONS]:
-     * this is the true size of the user's Vault, the private-content engagement signal.
-     */
-    const val CURRENT_VAULT_AUDIOS = "current_vault_audios"
+    // Four mutually-exclusive snapshots that classify every user audio by where it lives. They sum
+    // to the total user-created (non-bundled) audio count, so the dashboard reads as a pie of how
+    // people organize. Axes: scope (public / vault) × organization (default / custom). Cross-tagged
+    // audios (in both a public and a private collection) count as public — the public surface
+    // preserves their visibility (spec § 3.1).
+
+    /** Public audios with no collection at all — the raw My Sounds list (the public "default"). */
+    const val CURRENT_PUBLIC_DEFAULT = "current_public_default"
+
+    /** Public audios filed into at least one public collection (includes cross-tagged). */
+    const val CURRENT_PUBLIC_CUSTOM = "current_public_custom"
+
+    /** Private-only audios whose only private collection is the seeded Baúl (the Vault "default"). */
+    const val CURRENT_VAULT_DEFAULT = "current_vault_default"
+
+    /** Private-only audios filed into at least one user-created (non-system) private collection. */
+    const val CURRENT_VAULT_CUSTOM = "current_vault_custom"
 
     /** Monotonic counter — total times the user shared a sound. */
     const val LIFETIME_SHARES = "lifetime_shares"
@@ -62,7 +73,10 @@ object AnalyticsUserProperty {
             CURRENT_COLLECTIONS_PUBLIC,
             CURRENT_COLLECTIONS_PRIVATE,
             CURRENT_AUDIOS_IN_COLLECTIONS,
-            CURRENT_VAULT_AUDIOS,
+            CURRENT_PUBLIC_DEFAULT,
+            CURRENT_PUBLIC_CUSTOM,
+            CURRENT_VAULT_DEFAULT,
+            CURRENT_VAULT_CUSTOM,
             LIFETIME_SHARES,
             LIFETIME_PLAYS,
             LIFETIME_COLLECTION_CREATES,

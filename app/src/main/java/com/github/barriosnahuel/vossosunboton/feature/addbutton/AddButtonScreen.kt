@@ -76,6 +76,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
+import com.github.barriosnahuel.vossosunboton.feature.vault.bumpVaultUnlockCounter
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateResult
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateStatus
@@ -341,7 +342,12 @@ fun AddButtonScreen(
                         onRequestPrivateUnlock = {
                             val gate = biometricGate
                             if (gate == null || biometricStatus != BiometricGateStatus.AVAILABLE) {
+                                // No protection configured: open directly (spec § 6). Still a
+                                // successful unlock for analytics — count it like the gated grant.
+                                VaultSessionState.markVaultOpen()
                                 privateRevealed = true
+                                tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = "add_bomp"))
+                                bumpVaultUnlockCounter(tracker)
                                 return@AssignToCollectionsSection
                             }
                             gate.requestUnlock(
@@ -356,6 +362,8 @@ fun AddButtonScreen(
                                         // process trusts the same flag.
                                         VaultSessionState.markVaultOpen()
                                         privateRevealed = true
+                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = "add_bomp"))
+                                        bumpVaultUnlockCounter(tracker)
                                     }
                                     is BiometricGateResult.Denied -> {
                                         // Stay closed — user can retry by tapping again.

@@ -170,7 +170,7 @@ internal fun requestUnlock(
     }
 }
 
-private fun bumpVaultUnlockCounter(tracker: com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker) {
+internal fun bumpVaultUnlockCounter(tracker: com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker) {
     val newCount =
         tracker.incrementCounter(
             com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty.LIFETIME_VAULT_UNLOCKS,

@@ -80,8 +80,7 @@ internal class CollectionSheetCharCounterTest : AbstractUiTest() {
             .assertIsDisplayed()
     }
 
-    private fun counter(length: Int): String =
-        context.getString(R.string.app_collection_sheet_name_counter, length, COLLECTION_NAME_MAX_UI)
+    private fun counter(length: Int): String = context.getString(R.string.app_collection_sheet_name_counter, length, COLLECTION_NAME_MAX_UI)
 
     private companion object {
         // Mirror of the production COLLECTION_NAME_MAX in CollectionSheetHost.kt. Kept here as a

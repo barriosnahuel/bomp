@@ -401,16 +401,43 @@ class SoundsViewModel(
         val publicCount = collections.count { it.isPublic && !it.isSystem }
         val privateCount = collections.count { it.isPrivate && !it.isSystem }
         val audiosInCollections = collections.flatMap { it.audioIds }.toSet().size
-        // Vault size = audios tagged to a private collection AND to zero public ones (the same
-        // private-only set the Vault/Search visibility rules use). Distinct from
-        // audiosInCollections, which counts every tagged audio regardless of scope.
-        val inPrivate = collections.filter { it.isPrivate }.flatMap { it.audioIds }.toSet()
-        val inPublic = collections.filter { it.isPublic }.flatMap { it.audioIds }.toSet()
-        val vaultAudios = (inPrivate - inPublic).size
         tracker.setUserProperty(AnalyticsUserProperty.CURRENT_COLLECTIONS_PUBLIC, publicCount.toString())
         tracker.setUserProperty(AnalyticsUserProperty.CURRENT_COLLECTIONS_PRIVATE, privateCount.toString())
         tracker.setUserProperty(AnalyticsUserProperty.CURRENT_AUDIOS_IN_COLLECTIONS, audiosInCollections.toString())
-        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_VAULT_AUDIOS, vaultAudios.toString())
+        syncAudioBuckets(collections)
+    }
+
+    /**
+     * Classifies every user audio into one of four mutually-exclusive buckets that sum to the total
+     * user-created (non-bundled) audio count. Membership comes from [collections]; the audio
+     * universe from [allSoundsCache]. Cross-tagged audios (public AND private) count as public — the
+     * public surface preserves visibility (spec § 3.1), so the `when` checks public first.
+     *
+     * Called from BOTH the collections observer (tag changes) and [loadSounds] (audio create/delete)
+     * because the buckets depend on the audio × collection product — either side mutating must
+     * refresh the snapshot.
+     */
+    private fun syncAudioBuckets(collections: List<Collection>) {
+        val inPublic = collections.filter { it.isPublic }.flatMap { it.audioIds }.toSet()
+        val inPrivate = collections.filter { it.isPrivate }.flatMap { it.audioIds }.toSet()
+        val inCustomPrivate = collections.filter { it.isPrivate && !it.isSystem }.flatMap { it.audioIds }.toSet()
+        var publicDefault = 0
+        var publicCustom = 0
+        var vaultDefault = 0
+        var vaultCustom = 0
+        for (sound in allSoundsCache.value) {
+            if (sound.isBundled()) continue
+            when {
+                sound.id in inPublic -> publicCustom++
+                sound.id !in inPrivate -> publicDefault++
+                sound.id in inCustomPrivate -> vaultCustom++
+                else -> vaultDefault++
+            }
+        }
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PUBLIC_DEFAULT, publicDefault.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PUBLIC_CUSTOM, publicCustom.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_VAULT_DEFAULT, vaultDefault.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_VAULT_CUSTOM, vaultCustom.toString())
     }
 
     private fun recomputeVaultAudios() {
@@ -1128,6 +1155,10 @@ class SoundsViewModel(
             val userCreatedCount = allSounds.count { !it.isBundled() }
             tracker.setUserProperty(AnalyticsUserProperty.CURRENT_SOUNDS, userCreatedCount.toString())
             tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PINNED, allSounds.count { it.isPinned }.toString())
+            // Refresh the audio-bucket snapshot: a created/deleted audio shifts the public_default
+            // count even when no collection changed. allSoundsCache was updated earlier in this
+            // function, so the buckets read the fresh universe.
+            syncAudioBuckets(_collections.value)
             AUDIO_MILESTONES.forEach { threshold ->
                 if (userCreatedCount >= threshold && tracker.markFiredOnce("milestone_sounds_$threshold")) {
                     tracker.log(AnalyticsEvent.MilestoneAudios(threshold))

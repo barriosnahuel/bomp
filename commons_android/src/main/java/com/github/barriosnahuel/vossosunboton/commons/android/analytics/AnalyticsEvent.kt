@@ -278,10 +278,10 @@ sealed class AnalyticsEvent(
     /**
      * Biometric prompt resolved for a Vault collection. [granted] reflects whether the user
      * authenticated successfully (true) or cancelled / failed (false). [source] is the entry point
-     * that triggered the prompt — `"vault_tab"`, `"search"` (the "Search your Vault too" CTA), or
-     * `"add_bomp"` (the New/Edit Bomp assign section). The Manage Collections and long-press assign
-     * sheets unlock without emitting this event yet (follow-up). No PII — collection id is out of
-     * scope; only the cumulative grant/cancel rate and which surface drives unlocks matter.
+     * that triggered the prompt — one of `"vault_tab"`, `"search"` (the "Search your Vault too"
+     * CTA), `"add_bomp"` (New/Edit Bomp assign section), `"assign_sheet"` (long-press → assign), or
+     * `"manage"` (Manage Collections' locked-Vault card). No PII — collection id is out of scope;
+     * only the cumulative grant/cancel rate and which surface drives unlocks matter.
      */
     data class VaultUnlock(
         val granted: Boolean,
