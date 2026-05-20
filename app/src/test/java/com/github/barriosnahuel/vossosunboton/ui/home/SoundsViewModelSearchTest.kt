@@ -160,11 +160,6 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     }
 
     /**
-     * Modifier D: once the user has authenticated the Vault during this process
-     * (`VaultSessionState.markVaultOpen`), Search merges private and public results without a
-     * separate gated section — the privacy boundary "this app, this session" is already met.
-     */
-    /**
      * Reactive bridge between [VaultSessionState] and [SoundsViewModel.searchResults]: the user
      * starts searching (sees no private matches), taps the gated "Unlock" CTA on the overlay,
      * authenticates → `VaultSessionState.markVaultOpen()`. Without observing the session flow,
@@ -190,6 +185,11 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         VaultSessionState.clearForTest()
     }
 
+    /**
+     * Modifier D: once the user has authenticated the Vault during this process
+     * (`VaultSessionState.markVaultOpen`), Search merges private and public results without a
+     * separate gated section — the privacy boundary "this app, this session" is already met.
+     */
     @Test
     fun `searchResults includes private-only audios once VaultSessionState marks open`() {
         VaultSessionState.clearForTest()
