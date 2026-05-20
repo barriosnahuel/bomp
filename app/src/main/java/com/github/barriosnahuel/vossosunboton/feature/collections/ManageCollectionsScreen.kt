@@ -165,6 +165,7 @@ internal fun ManageCollectionsScreen(
                         audioCount = collectionsIndex.values.count { it.contains(collection.id) },
                         isHighlighted = highlightedId == collection.id,
                         onViewClick = {
+                            viewModel.trackCollectionView(isPublic = true)
                             // Set tab + filter before closing so LandingScreen re-renders against
                             // both new values in a single composition pass.
                             viewModel.selectTab(AppTab.MY_SOUNDS)
@@ -211,6 +212,7 @@ internal fun ManageCollectionsScreen(
                         audioCount = collectionsIndex.values.count { it.contains(collection.id) },
                         isHighlighted = highlightedId == collection.id,
                         onViewClick = {
+                            viewModel.trackCollectionView(isPublic = false)
                             viewModel.selectTab(AppTab.VAULT)
                             viewModel.selectVaultFilter(collection.id)
                             onBack()

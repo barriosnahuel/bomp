@@ -114,6 +114,7 @@ fun VaultScreen(
                             gate = gate,
                             status = status,
                             tracker = tracker,
+                            source = "vault_tab",
                         )
                     },
                 )
@@ -139,6 +140,7 @@ internal fun requestUnlock(
     gate: BiometricGate?,
     status: BiometricGateStatus,
     tracker: com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker,
+    source: String,
 ) {
     // Devices without biometric/lock fall through to "open the Vault anyway" — spec § 6 ("No
     // protection: open directly. Warning is visible elsewhere.").
@@ -148,7 +150,7 @@ internal fun requestUnlock(
     )
     if (status != BiometricGateStatus.AVAILABLE || gate == null) {
         VaultSessionState.markVaultOpen()
-        tracker.log(AnalyticsEvent.VaultUnlock(granted = true))
+        tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = source))
         bumpVaultUnlockCounter(tracker)
         return
     }
@@ -160,10 +162,10 @@ internal fun requestUnlock(
         when (result) {
             BiometricGateResult.Granted -> {
                 VaultSessionState.markVaultOpen()
-                tracker.log(AnalyticsEvent.VaultUnlock(granted = true))
+                tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = source))
                 bumpVaultUnlockCounter(tracker)
             }
-            is BiometricGateResult.Denied -> tracker.log(AnalyticsEvent.VaultUnlock(granted = false))
+            is BiometricGateResult.Denied -> tracker.log(AnalyticsEvent.VaultUnlock(granted = false, source = source))
         }
     }
 }

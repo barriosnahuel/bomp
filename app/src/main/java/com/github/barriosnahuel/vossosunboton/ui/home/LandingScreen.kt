@@ -63,6 +63,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
@@ -226,6 +227,15 @@ private fun SearchOverlayHost(
         remember(collections) {
             collections.any { it.isPrivate && it.audioIds.isNotEmpty() }
         }
+    val showVaultUnlockCta = hasSearchableVaultContent && !vaultOpen
+    // Impression: fire once per process the first time the CTA is actually shown. markFiredOnce
+    // gates it so re-opening search or recomposition doesn't re-emit. Keyed on the boolean so it
+    // re-checks when the CTA flips visible.
+    LaunchedEffect(showVaultUnlockCta) {
+        if (showVaultUnlockCta && tracker.markFiredOnce("vault_search_cta_shown")) {
+            tracker.log(AnalyticsEvent.VaultSearchUnlockCtaShown)
+        }
+    }
     SearchOverlay(
         query = query,
         results = results,
@@ -243,13 +253,14 @@ private fun SearchOverlayHost(
             viewModel.hideSearch()
             viewModel.deleteSound(sound)
         },
-        showVaultUnlockCta = hasSearchableVaultContent && !vaultOpen,
+        showVaultUnlockCta = showVaultUnlockCta,
         onUnlockVault = {
             requestUnlock(
                 context = context,
                 gate = gate,
                 status = status,
                 tracker = tracker,
+                source = "search",
             )
         },
     )

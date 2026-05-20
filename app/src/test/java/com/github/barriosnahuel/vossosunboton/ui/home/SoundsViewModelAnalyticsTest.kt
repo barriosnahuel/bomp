@@ -472,6 +472,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
         val event = fake.assertEmitted("collection_rename")
         assertThat(event.params["scope"]).isEqualTo("public")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_COLLECTION_RENAMES]).isEqualTo("1")
     }
 
     @Test
@@ -499,6 +500,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         val event = fake.assertEmitted("collection_delete")
         assertThat(event.params["scope"]).isEqualTo("public")
         assertThat(event.params["audios"]).isEqualTo(1)
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_COLLECTION_DELETES]).isEqualTo("1")
     }
 
     @Test
@@ -555,6 +557,83 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
         val event = fake.assertEmitted("collection_audio_toggle")
         assertThat(event.params["assigned"]).isEqualTo(false)
+    }
+
+    @Test
+    fun `selectMySoundsFilter emits collection_filter_apply with scope public`() {
+        val viewModel = givenAViewModel()
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Familia",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+        fake.events.clear()
+
+        viewModel.selectMySoundsFilter(created.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_filter_apply") }
+
+        val event = fake.assertEmitted("collection_filter_apply")
+        assertThat(event.params["scope"]).isEqualTo("public")
+    }
+
+    @Test
+    fun `selectVaultFilter emits collection_filter_apply with scope private`() {
+        val viewModel = givenAViewModel()
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Caro",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PRIVATE,
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+        fake.events.clear()
+
+        viewModel.selectVaultFilter(created.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_filter_apply") }
+
+        val event = fake.assertEmitted("collection_filter_apply")
+        assertThat(event.params["scope"]).isEqualTo("private")
+    }
+
+    @Test
+    fun `tagging an audio only to a private collection sets current_vault_audios`() {
+        val viewModel = givenAViewModel()
+        val sound = testSound("c", "c.mp3")
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
+        }
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Secretos",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PRIVATE,
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+
+        viewModel.toggleAudioInCollection(sound.id, created.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
+        runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.contains(sound.id) } }
+
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_VAULT_AUDIOS]).isEqualTo("1")
+    }
+
+    @Test
+    fun `trackCollectionView emits collection_view with the scope`() {
+        val viewModel = givenAViewModel()
+
+        viewModel.trackCollectionView(isPublic = false)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_view") }
+
+        val event = fake.assertEmitted("collection_view")
+        assertThat(event.params["scope"]).isEqualTo("private")
     }
 
     // endregion

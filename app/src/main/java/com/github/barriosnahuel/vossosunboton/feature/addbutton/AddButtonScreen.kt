@@ -359,7 +359,7 @@ fun AddButtonScreen(
                                     }
                                     is BiometricGateResult.Denied -> {
                                         // Stay closed — user can retry by tapping again.
-                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = false))
+                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = false, source = "add_bomp"))
                                     }
                                 }
                             }

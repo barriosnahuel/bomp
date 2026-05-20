@@ -84,9 +84,11 @@ internal class AnalyticsCoverageMatrixTest {
                 "CollectionDelete",
                 "CollectionRename",
                 "CollectionFilterApply",
+                "CollectionView",
                 "CollectionAudioToggle",
                 "VaultUnlock",
                 "VaultUnprotectedWarningShown",
+                "VaultSearchUnlockCtaShown",
             )
 
         private val SCREEN_VIEWS_WITH_REGRESSION_TEST: Set<String> =
@@ -110,9 +112,12 @@ internal class AnalyticsCoverageMatrixTest {
                 AnalyticsUserProperty.CURRENT_COLLECTIONS_PUBLIC,
                 AnalyticsUserProperty.CURRENT_COLLECTIONS_PRIVATE,
                 AnalyticsUserProperty.CURRENT_AUDIOS_IN_COLLECTIONS,
+                AnalyticsUserProperty.CURRENT_VAULT_AUDIOS,
                 AnalyticsUserProperty.LIFETIME_SHARES,
                 AnalyticsUserProperty.LIFETIME_PLAYS,
                 AnalyticsUserProperty.LIFETIME_COLLECTION_CREATES,
+                AnalyticsUserProperty.LIFETIME_COLLECTION_DELETES,
+                AnalyticsUserProperty.LIFETIME_COLLECTION_RENAMES,
                 AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS,
                 AnalyticsUserProperty.LIFETIME_VAULT_UNLOCKS,
             )

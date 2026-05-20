@@ -401,9 +401,16 @@ class SoundsViewModel(
         val publicCount = collections.count { it.isPublic && !it.isSystem }
         val privateCount = collections.count { it.isPrivate && !it.isSystem }
         val audiosInCollections = collections.flatMap { it.audioIds }.toSet().size
+        // Vault size = audios tagged to a private collection AND to zero public ones (the same
+        // private-only set the Vault/Search visibility rules use). Distinct from
+        // audiosInCollections, which counts every tagged audio regardless of scope.
+        val inPrivate = collections.filter { it.isPrivate }.flatMap { it.audioIds }.toSet()
+        val inPublic = collections.filter { it.isPublic }.flatMap { it.audioIds }.toSet()
+        val vaultAudios = (inPrivate - inPublic).size
         tracker.setUserProperty(AnalyticsUserProperty.CURRENT_COLLECTIONS_PUBLIC, publicCount.toString())
         tracker.setUserProperty(AnalyticsUserProperty.CURRENT_COLLECTIONS_PRIVATE, privateCount.toString())
         tracker.setUserProperty(AnalyticsUserProperty.CURRENT_AUDIOS_IN_COLLECTIONS, audiosInCollections.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_VAULT_AUDIOS, vaultAudios.toString())
     }
 
     private fun recomputeVaultAudios() {
@@ -573,7 +580,7 @@ class SoundsViewModel(
                 }
         }
         if (collectionId != null) {
-            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = _vaultAudios.value.size))
+            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = _vaultAudios.value.size, scope = "private"))
         }
     }
 
@@ -596,7 +603,7 @@ class SoundsViewModel(
         }
         if (collectionId != null) {
             val matches = audiosIn(collectionId).size
-            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = matches))
+            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = matches, scope = "public"))
         }
     }
 
@@ -604,6 +611,15 @@ class SoundsViewModel(
         val target = _collections.value.firstOrNull { it.id == collectionId } ?: return emptyList()
         val ids = target.audioIds.toSet()
         return allSoundsCache.value.filter { it.id in ids }
+    }
+
+    /**
+     * Records that the user opened a collection for viewing from the Manage Collections overflow
+     * ("View collection"). Kept in the VM so all collection analytics live in one place. [isPublic]
+     * maps to the event's `scope` param. Navigation (selectTab + filter) happens at the call-site.
+     */
+    fun trackCollectionView(isPublic: Boolean) {
+        tracker.log(AnalyticsEvent.CollectionView(scope = if (isPublic) "public" else "private"))
     }
 
     /**
@@ -845,6 +861,8 @@ class SoundsViewModel(
                         scope = if (it.isPublic) "public" else "private",
                     ),
                 )
+                val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_RENAMES)
+                tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_COLLECTION_RENAMES, newCount.toString())
             }
         }
 
@@ -866,6 +884,8 @@ class SoundsViewModel(
                     audios = priorCount,
                 ),
             )
+            val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_DELETES)
+            tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_COLLECTION_DELETES, newCount.toString())
         }
 
     /**

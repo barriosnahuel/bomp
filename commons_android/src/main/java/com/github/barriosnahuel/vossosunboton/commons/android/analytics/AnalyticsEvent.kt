@@ -207,11 +207,13 @@ sealed class AnalyticsEvent(
     /**
      * A collection was deleted. [scope] mirrors [CollectionCreate]; [audios] is the count of
      * audios that lost their tag (audio files themselves are not removed from disk).
+     * `hasFirstVariant = true` so dashboards can isolate the first time a user prunes their
+     * organization, distinct from routine cleanup.
      */
     data class CollectionDelete(
         val scope: String,
         val audios: Int,
-    ) : AnalyticsEvent(name = "collection_delete", hasFirstVariant = false) {
+    ) : AnalyticsEvent(name = "collection_delete", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
                 putString("scope", scope)
@@ -219,22 +221,42 @@ sealed class AnalyticsEvent(
             }
     }
 
-    /** A collection was renamed. */
+    /**
+     * A collection was renamed. `hasFirstVariant = true` so the first rename — a signal that the
+     * initial naming did not satisfy — is separable from later touch-ups.
+     */
     data class CollectionRename(
         val scope: String,
-    ) : AnalyticsEvent(name = "collection_rename", hasFirstVariant = false) {
+    ) : AnalyticsEvent(name = "collection_rename", hasFirstVariant = true) {
         override fun params(): Bundle = Bundle().apply { putString("scope", scope) }
     }
 
     /**
-     * A public-collection filter chip was activated on My Sounds. [matches] is the number of
-     * audios that survive the filter; useful for spotting collections users actively manage
-     * vs. empty/abandoned ones.
+     * A collection filter chip was activated. [matches] is the number of audios that survive the
+     * filter (spots actively-managed vs. empty/abandoned collections). [scope] is `"public"` (the
+     * My Sounds filter row) or `"private"` (the Vault filter row) — lets product compare which
+     * surface's filtering users actually lean on.
      */
     data class CollectionFilterApply(
         val matches: Int,
+        val scope: String,
     ) : AnalyticsEvent(name = "collection_filter_apply", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putInt("matches", matches) }
+        override fun params(): Bundle =
+            Bundle().apply {
+                putInt("matches", matches)
+                putString("scope", scope)
+            }
+    }
+
+    /**
+     * A collection was opened for viewing from the Manage Collections overflow ("View collection").
+     * [scope] mirrors [CollectionCreate]. Separates Manage-as-navigation from Manage-as-housekeeping
+     * — do users reach their audios *through* Manage, or only edit metadata there?
+     */
+    data class CollectionView(
+        val scope: String,
+    ) : AnalyticsEvent(name = "collection_view", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putString("scope", scope) }
     }
 
     /**
@@ -255,13 +277,21 @@ sealed class AnalyticsEvent(
 
     /**
      * Biometric prompt resolved for a Vault collection. [granted] reflects whether the user
-     * authenticated successfully (true) or cancelled / failed (false). No PII — collection id is
-     * out of scope; only the cumulative grant/cancel rate matters for product.
+     * authenticated successfully (true) or cancelled / failed (false). [source] is the entry point
+     * that triggered the prompt — `"vault_tab"`, `"search"` (the "Search your Vault too" CTA), or
+     * `"add_bomp"` (the New/Edit Bomp assign section). The Manage Collections and long-press assign
+     * sheets unlock without emitting this event yet (follow-up). No PII — collection id is out of
+     * scope; only the cumulative grant/cancel rate and which surface drives unlocks matter.
      */
     data class VaultUnlock(
         val granted: Boolean,
+        val source: String,
     ) : AnalyticsEvent(name = "vault_unlock", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putBoolean("granted", granted) }
+        override fun params(): Bundle =
+            Bundle().apply {
+                putBoolean("granted", granted)
+                putString("source", source)
+            }
     }
 
     /**
@@ -271,4 +301,13 @@ sealed class AnalyticsEvent(
      */
     object VaultUnprotectedWarningShown :
         AnalyticsEvent(name = "vault_unprotected_warning_shown", hasFirstVariant = false)
+
+    /**
+     * The "Search your Vault too" CTA became visible at the foot of the search overlay (the user
+     * has a non-empty private collection AND the Vault is locked this session). Impression signal
+     * for the new search entry point. Emitted at most once per process via
+     * `markFiredOnce("vault_search_cta_shown")` so re-opening search / recomposition doesn't flood.
+     */
+    object VaultSearchUnlockCtaShown :
+        AnalyticsEvent(name = "vault_search_unlock_cta_shown", hasFirstVariant = false)
 }
