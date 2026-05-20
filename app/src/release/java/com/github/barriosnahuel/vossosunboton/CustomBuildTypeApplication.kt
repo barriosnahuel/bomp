@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton
 
 import android.app.Application
+import android.content.Intent
 import com.github.barriosnahuel.vossosunboton.commons.android.error.ErrorTrackerTree
 import timber.log.Timber
 
@@ -14,5 +15,11 @@ internal abstract class CustomBuildTypeApplication : Application() {
         Timber.plant(ErrorTrackerTree())
 
         super.onCreate()
+    }
+
+    /** No-op in release: seeding sample My Sounds is a debug-only dev convenience. */
+    @Suppress("unused", "UNUSED_PARAMETER")
+    fun seedDebugSoundsIfRequested(intent: Intent) {
+        // Intentionally empty — the debug sourceset seeds; release never does.
     }
 }
