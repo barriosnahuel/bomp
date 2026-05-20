@@ -89,6 +89,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - New CLAUDE.md § *Stateful Composables — `rememberSaveable` is the default for durable state* documents the rule, references `SaveOutcomeSaver` as the Saver template, and adds a Pre-PR checklist line requiring `scenario.recreate()` tests for screens with durable state
 - `AboutScreenFlowTest` back-navigation tests now use the always-present overflow-menu icon as the Landing sentinel instead of the Search FAB, which #1143 gated behind a minimum sound count
 - `FakeAnalyticsTracker.firedFlags` is now backed by a `ConcurrentHashMap` (via `Collections.newSetFromMap`) so its `add` mirrors production `DataStoreFirstFlagStore.consumeFirstTime` (atomic per-key); fixes a flaky `SoundsViewModelAnalyticsTest > loadSounds does not re-emit milestone_sounds_3 once already fired[33]` where two concurrent IO-dispatched coroutines could both observe the flag as absent on the plain `mutableSetOf()` and double-emit the milestone
+- `LandingScreenAnalyticsTest` now joins each `SoundsViewModel`'s scope in `@After` (same pattern as the other four `ui/home` test classes since PR #1130); the missing cleanup let its leaked `repo.sounds.drop(1)` collectors outlive the class and re-emit `milestone_sounds_3` into a later test's `FakeAnalyticsTracker`, surfacing as the residual flake in `SoundsViewModelAnalyticsTest > loadSounds does not re-emit milestone_sounds_3 once already fired[33]` after the `firedFlags` thread-safety fix
 
 ## \[v2.0.0] - 2026-05-07
 

@@ -37,6 +37,7 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
     val composeTestRule = createComposeRule()
 
     private lateinit var fake: FakeAnalyticsTracker
+    private val createdViewModels = mutableListOf<SoundsViewModel>()
 
     @Before
     fun setUp() {
@@ -48,6 +49,11 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
+        // Join every VM scope so the reactive `repo.sounds` collector each VM starts in `init`
+        // cannot outlive this class and re-fire `milestone_sounds_3` (or other one-shot events)
+        // into a later test's `FakeAnalyticsTracker` — see ViewModelTestCleanup.kt.
+        createdViewModels.cancelAndJoinAll()
+        createdViewModels.clear()
         AnalyticsTrackerProvider.setForTest(null)
         unmockkAll()
     }
@@ -126,9 +132,13 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel =
-        SoundsViewModel(
-            ApplicationProvider.getApplicationContext(),
-            ioDispatcher = UnconfinedTestDispatcher(),
-        )
+    private fun givenAViewModel(): SoundsViewModel {
+        val vm =
+            SoundsViewModel(
+                ApplicationProvider.getApplicationContext(),
+                ioDispatcher = UnconfinedTestDispatcher(),
+            )
+        createdViewModels += vm
+        return vm
+    }
 }
