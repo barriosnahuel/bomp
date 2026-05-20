@@ -332,6 +332,18 @@ Neo-Club palette (ink × acid). Source of truth: `AppTheme.kt` (hex values + rol
 - **Components inside always-dark bars** (TopAppBar using `secondary`): use `primaryContainer` (= Acid400 in both modes) for accent elements like cursor, underline, icons — not `primary`, which is AcidDark in light mode and nearly invisible on a dark bar.
 - **Adding a new color:** add the constant to `AppTheme.kt`, map it to an M3 role in both `LightColors` and `DarkColors`, then add a contrast assertion for the relevant pair in `AppThemeContrastTest`.
 
+### Button typology ([ADR 0010](docs/adr/0010-button-typology.md))
+
+Use the smallest tier that fits the action's hierarchy. **Never** `OutlinedButton`, `ElevatedButton`, or stock-colored `FilledTonalButton`.
+
+| Tier | Composable | Color | When |
+|---|---|---|---|
+| Filled primary | `Button` / FAB family | `primaryContainer` / `onPrimaryContainer` | The one main action (Save, screen FAB, Unlock the Vault) |
+| Text | `TextButton` | `primary` (inherited — don't override) | Secondary: "+ New" in lists, Cancel, CTAs. Pair with an 18 dp leading icon |
+| Chip | `FilterChip` / `AssistChip` | chip defaults | Filters; "+ New" only *inside a chip row* (vertical list → Text tier) |
+
+**`secondary`-on-`surface` trap:** `secondary` / `secondaryContainer` = Ink (always-dark bars only). As a control fill/accent on `surface` they collapse to ~1.1–1.3:1 — invisible. Stock `FilledTonalButton` / `OutlinedButton` default to these roles; that's why they're banned. When a text button needs separation from scrolling content, give it a container (`Surface` + `HorizontalDivider` action bar), not a border. Canonical: `SectionCreateButton` (`ManageCollectionsScreen.kt`), `VaultUnlockCta` (`SearchOverlay.kt`).
+
 ## Product & brand context (when relevant)
 
 Sibling backlog repo `../push-me-backlog/` holds product specs, brand language, canonical naming. Consult for user-facing strings, micro-copy, feature/level naming, gamification, social-layer behavior:
