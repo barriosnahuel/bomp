@@ -15,6 +15,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
+import com.github.barriosnahuel.vossosunboton.CustomBuildTypeApplication
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
@@ -36,11 +37,20 @@ class LandingActivity : FragmentActivity() {
             }
         }
         handleDeeplink(intent)
+        maybeSeedDebugSounds(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleDeeplink(intent)
+        maybeSeedDebugSounds(intent)
+    }
+
+    // Debug-only dev convenience (seed sample My Sounds on a clean install). The release
+    // CustomBuildTypeApplication seam is a no-op, and Robolectric's TestApplication is not a
+    // CustomBuildTypeApplication, so this is inert in release builds and unit tests alike.
+    private fun maybeSeedDebugSounds(intent: Intent) {
+        (application as? CustomBuildTypeApplication)?.seedDebugSoundsIfRequested(intent)
     }
 
     private fun handleDeeplink(intent: Intent) {
