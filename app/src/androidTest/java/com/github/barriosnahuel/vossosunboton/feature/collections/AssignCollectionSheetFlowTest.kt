@@ -70,9 +70,9 @@ internal class AssignCollectionSheetFlowTest : AbstractUiTest() {
             composeRule.awaitNodeWithText(addToCollectionLabel()).performClick()
 
             // The sheet title is unique to this surface, so a positive match on it proves the
-            // sheet rendered. Section headers ("My Sounds" / "Vault") deliberately reuse the
-            // bottom-nav tab labels — assertions go through the per-row contentDescription that
-            // disambiguates Familia-the-chip from Familia-the-sheet-row.
+            // sheet rendered. Section headers ("Collections" / "Vault") — assertions go through the
+            // per-row contentDescription that disambiguates Familia-the-chip from
+            // Familia-the-sheet-row.
             composeRule.awaitNodeWithText(sheetTitle()).assertIsDisplayed()
             composeRule.onNodeWithContentDescription(addToActionFor("Familia")).assertIsDisplayed()
             composeRule.onNodeWithContentDescription(addToActionFor(systemBaulLabel())).assertIsDisplayed()

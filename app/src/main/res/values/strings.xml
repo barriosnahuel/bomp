@@ -14,7 +14,7 @@
     <string name="app_addbutton_overlay_subtitle_saved">is now yours</string>
     <string name="app_addbutton_overlay_subtitle_renamed">renamed</string>
 <string name="app_feedback_generic_error_contact_support">Oops! I did it again, please contact support</string>
-    <string name="app_navigation_menu_item_my_sounds">My Sounds</string>
+    <string name="app_navigation_menu_item_my_sounds">My Bomps</string>
     <string name="app_navigation_menu_item_explore_sounds">Explore</string>
     <string name="app_play">Play</string>
     <string name="app_pause">Pause</string>
@@ -162,12 +162,12 @@
     <!-- Sound long-press menu — "Add to collection" entry + bottom-sheet picker -->
     <string name="app_audio_menu_add_to_collection">Add to collection</string>
     <string name="app_assign_collection_sheet_title">Add to a collection</string>
-    <string name="app_assign_collection_sheet_section_public">My Sounds</string>
+    <string name="app_assign_collection_sheet_section_public">Collections</string>
     <string name="app_assign_collection_sheet_section_private">Vault</string>
     <string name="app_assign_collection_sheet_done">Done</string>
-    <string name="app_assign_collection_sheet_empty">No collections yet. Create one from My Sounds or Vault first.</string>
-    <string name="app_assign_collection_sheet_private_locked_cta">Show Vault collections (requires unlock)</string>
-    <string name="app_assign_collection_sheet_private_locked_subtitle">Unlock the Vault to assign this Bomp to a Vault collection.</string>
+    <string name="app_assign_collection_sheet_empty">No collections yet. Create one in Collections or your Vault first.</string>
+    <string name="app_assign_collection_sheet_private_locked_cta">Show your Vault (requires unlock)</string>
+    <string name="app_assign_collection_sheet_private_locked_subtitle">Unlock your Vault to keep this Bomp in it.</string>
     <string name="app_assign_collection_sheet_row_action_selected">In %1$s, double-tap to remove</string>
     <string name="app_assign_collection_sheet_row_action_unselected">Add to %1$s</string>
 
@@ -201,12 +201,15 @@
 
     <!-- Add / Edit Bomp — "Assign to collections" section -->
     <string name="app_addbutton_collections_section_title">Assign to collections</string>
-    <string name="app_addbutton_collections_public_label">My Sounds</string>
-    <string name="app_addbutton_collections_public_empty">No collections in My Sounds yet.</string>
+    <string name="app_addbutton_collections_state_open">Stays in plain view</string>
+    <string name="app_addbutton_collections_state_vault">Tucked into your Vault</string>
+    <string name="app_addbutton_collections_state_crosstag">Also in an open collection, so it stays in plain view.</string>
+    <string name="app_addbutton_collections_public_label">Collections</string>
+    <string name="app_addbutton_collections_public_empty">No open collections yet.</string>
     <string name="app_addbutton_collections_private_label">Vault</string>
-    <string name="app_addbutton_collections_private_locked_cta">Show Vault collections (requires unlock)</string>
-    <string name="app_addbutton_collections_private_unlocked_cta">Hide Vault collections</string>
-    <string name="app_addbutton_collections_private_unprotected_hint">Your Vault collections show up here because this device has no fingerprint or screen lock.</string>
+    <string name="app_addbutton_collections_private_locked_cta">Show your Vault (requires unlock)</string>
+    <string name="app_addbutton_collections_private_unlocked_cta">Hide your Vault</string>
+    <string name="app_addbutton_collections_private_unprotected_hint">Your Vault shows up here because this device has no fingerprint or screen lock.</string>
     <string name="app_addbutton_collections_new_chip">+ New collection</string>
-    <string name="app_addbutton_collections_new_private_chip">+ New Vault</string>
+    <string name="app_addbutton_collections_new_private_chip">+ New in Vault</string>
 </resources>

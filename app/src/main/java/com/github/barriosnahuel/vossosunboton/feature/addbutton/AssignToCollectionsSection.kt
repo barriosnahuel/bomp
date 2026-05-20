@@ -76,6 +76,30 @@ internal fun AssignToCollectionsSection(
             color = MaterialTheme.colorScheme.onSurface,
         )
 
+        // Derived state line: where this Bomp lands given current selections. Public wins over
+        // private (spec § 3.1) — a Bomp in any open collection stays in plain view even if it's
+        // also in the Vault, so we surface the cross-tag hint to explain that.
+        val staysOpen = publicSelection.isNotEmpty() || privateSelection.isEmpty()
+        Text(
+            text =
+                stringResource(
+                    if (staysOpen) {
+                        R.string.app_addbutton_collections_state_open
+                    } else {
+                        R.string.app_addbutton_collections_state_vault
+                    },
+                ),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        if (publicSelection.isNotEmpty() && privateSelection.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.app_addbutton_collections_state_crosstag),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         PublicChipsBlock(
             collections = publicCollections,
             selection = publicSelection,

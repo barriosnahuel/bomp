@@ -14,7 +14,7 @@
     <string name="app_addbutton_overlay_subtitle_saved">ahora es tuyo</string>
     <string name="app_addbutton_overlay_subtitle_renamed">renombrado</string>
     <string name="app_feedback_generic_error_contact_support">Uh! Por favor contactá con soporte</string>
-    <string name="app_navigation_menu_item_my_sounds">Mis audios</string>
+    <string name="app_navigation_menu_item_my_sounds">Mis Bomps</string>
     <string name="app_navigation_menu_item_explore_sounds">Explorar</string>
     <string name="app_play">Reproducir</string>
     <string name="app_pause">Pausar</string>
@@ -156,10 +156,10 @@
     <!-- Long-press de un audio — "Agregar a colección" + sheet selector -->
     <string name="app_audio_menu_add_to_collection">Agregar a colección</string>
     <string name="app_assign_collection_sheet_title">Agregar a una colección</string>
-    <string name="app_assign_collection_sheet_section_public">Mis audios</string>
+    <string name="app_assign_collection_sheet_section_public">Colecciones</string>
     <string name="app_assign_collection_sheet_section_private">Baúl</string>
     <string name="app_assign_collection_sheet_done">Listo</string>
-    <string name="app_assign_collection_sheet_empty">Todavía no tenés colecciones. Creá una desde Mis audios o el Baúl primero.</string>
+    <string name="app_assign_collection_sheet_empty">Todavía no tenés colecciones. Creá una en Colecciones o en tu Baúl primero.</string>
     <string name="app_assign_collection_sheet_private_locked_cta">Mostrar colecciones del Baúl (requiere desbloqueo)</string>
     <string name="app_assign_collection_sheet_private_locked_subtitle">Desbloqueá el Baúl para agregar este Bomp a una colección del Baúl.</string>
     <string name="app_assign_collection_sheet_row_action_selected">En %1$s, tocá dos veces para quitar</string>
@@ -195,8 +195,11 @@
 
     <!-- Add / Edit Bomp — sección "Asignar a colecciones" -->
     <string name="app_addbutton_collections_section_title">Asignar a colecciones</string>
-    <string name="app_addbutton_collections_public_label">Mis audios</string>
-    <string name="app_addbutton_collections_public_empty">Todavía no creaste colecciones en Mis audios.</string>
+    <string name="app_addbutton_collections_state_open">Queda a la vista</string>
+    <string name="app_addbutton_collections_state_vault">Guardado en tu Baúl</string>
+    <string name="app_addbutton_collections_state_crosstag">También está en una colección abierta, así que queda a la vista.</string>
+    <string name="app_addbutton_collections_public_label">Colecciones</string>
+    <string name="app_addbutton_collections_public_empty">Todavía no tenés colecciones abiertas.</string>
     <string name="app_addbutton_collections_private_label">Baúl</string>
     <string name="app_addbutton_collections_private_locked_cta">Mostrar colecciones del Baúl (requiere desbloqueo)</string>
     <string name="app_addbutton_collections_private_unlocked_cta">Ocultar colecciones del Baúl</string>
