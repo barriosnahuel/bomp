@@ -18,6 +18,7 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
+import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -67,9 +68,7 @@ internal class VaultSystemCollectionLocaleTest : AbstractUiTest() {
         val expectedEnglishLabel = englishStringFor(R.string.app_vault_baul_name)
         // Defensive assertion: if the EN resource ever drifts from "My Vault" we want to know
         // here rather than chasing a `assertIsDisplayed` false-negative.
-        assert(expectedEnglishLabel == "My Vault") {
-            "app_vault_baul_name (en) was '$expectedEnglishLabel'; expected 'My Vault'"
-        }
+        assertThat(expectedEnglishLabel).isEqualTo("My Vault")
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             val vaultTab = englishStringFor(R.string.app_navigation_menu_item_vault)
