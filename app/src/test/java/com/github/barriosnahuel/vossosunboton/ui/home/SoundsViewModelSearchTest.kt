@@ -7,6 +7,9 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
+import com.github.barriosnahuel.vossosunboton.model.Collection
+import com.github.barriosnahuel.vossosunboton.model.CollectionProfile
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.google.common.truth.Truth.assertThat
@@ -109,6 +112,101 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         ).isEqualTo("test beta")
     }
 
+    /**
+     * OWASP MASVS-STORAGE-2 / CWE-200 (search overlay must not leak names of audios tagged
+     * exclusively to a private collection while the Vault is locked).
+     *
+     * Without this filter, searching "mama" from the My Sounds search overlay would surface a
+     * Bomp named "Mama secreta" tagged only to a Vault collection — bypassing the biometric gate.
+     */
+    @Test
+    fun `searchResults excludes private-only audios when Vault session is locked`() {
+        VaultSessionState.clearForTest()
+        val viewModel = givenAViewModel()
+        val publicAudio = testSound("Mama publica", file = "pub.mp3")
+        val privateAudio = testSound("Mama secreta", file = "priv.mp3")
+        viewModel.injectAllSounds(listOf(publicAudio, privateAudio))
+        viewModel.injectCollections(
+            listOf(privateCollection("col_priv", "Mi vault", audioIds = listOf(privateAudio.id))),
+        )
+
+        viewModel.onSearchQueryChange("Mama")
+
+        assertThat(viewModel.searchResults.value.map { it.id }).contains(publicAudio.id)
+        assertThat(viewModel.searchResults.value.map { it.id }).doesNotContain(privateAudio.id)
+    }
+
+    /**
+     * Spec § 3.1 "Restricción de cross-preset": an audio tagged to BOTH a public and a private
+     * collection stays visible on public surfaces (My Sounds, Search) — the public scope wins.
+     * This is the carve-out — cross-tagged audios MUST stay searchable even with Vault locked.
+     */
+    @Test
+    fun `searchResults keeps cross-tagged audios visible when Vault is locked`() {
+        VaultSessionState.clearForTest()
+        val viewModel = givenAViewModel()
+        val crossTagged = testSound("Carlos cross", file = "carlos.mp3")
+        viewModel.injectAllSounds(listOf(crossTagged))
+        viewModel.injectCollections(
+            listOf(
+                privateCollection("col_priv", "vault", audioIds = listOf(crossTagged.id)),
+                publicCollection("col_pub", "Trabajo", audioIds = listOf(crossTagged.id)),
+            ),
+        )
+
+        viewModel.onSearchQueryChange("carlos")
+
+        assertThat(viewModel.searchResults.value.map { it.id }).contains(crossTagged.id)
+    }
+
+    /**
+     * Modifier D: once the user has authenticated the Vault during this process
+     * (`VaultSessionState.markVaultOpen`), Search merges private and public results without a
+     * separate gated section — the privacy boundary "this app, this session" is already met.
+     */
+    /**
+     * Reactive bridge between [VaultSessionState] and [SoundsViewModel.searchResults]: the user
+     * starts searching (sees no private matches), taps the gated "Unlock" CTA on the overlay,
+     * authenticates → `VaultSessionState.markVaultOpen()`. Without observing the session flow,
+     * the search results would stay stale and the previously-hidden private matches would only
+     * appear after the user re-types — a clearly broken UX.
+     */
+    @Test
+    fun `searchResults recomputes when VaultSessionState flips to open mid-search`() {
+        VaultSessionState.clearForTest()
+        val viewModel = givenAViewModel()
+        val privateAudio = testSound("Mama secreta", file = "priv.mp3")
+        viewModel.injectAllSounds(listOf(privateAudio))
+        viewModel.injectCollections(
+            listOf(privateCollection("col_priv", "vault", audioIds = listOf(privateAudio.id))),
+        )
+        viewModel.onSearchQueryChange("Mama")
+        // Pre-condition: while locked, the private audio is filtered out.
+        assertThat(viewModel.searchResults.value.map { it.id }).doesNotContain(privateAudio.id)
+
+        VaultSessionState.markVaultOpen()
+
+        assertThat(viewModel.searchResults.value.map { it.id }).contains(privateAudio.id)
+        VaultSessionState.clearForTest()
+    }
+
+    @Test
+    fun `searchResults includes private-only audios once VaultSessionState marks open`() {
+        VaultSessionState.clearForTest()
+        val viewModel = givenAViewModel()
+        val privateAudio = testSound("Mama secreta", file = "priv.mp3")
+        viewModel.injectAllSounds(listOf(privateAudio))
+        viewModel.injectCollections(
+            listOf(privateCollection("col_priv", "vault", audioIds = listOf(privateAudio.id))),
+        )
+
+        VaultSessionState.markVaultOpen()
+        viewModel.onSearchQueryChange("Mama")
+
+        assertThat(viewModel.searchResults.value.map { it.id }).contains(privateAudio.id)
+        VaultSessionState.clearForTest()
+    }
+
     @Test
     fun `hideSearch resets query and clears results`() {
         val viewModel = givenAViewModel()
@@ -143,6 +241,38 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         injectSounds(sounds)
         injectAllSounds(sounds)
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun SoundsViewModel.injectCollections(collections: List<Collection>) {
+        SoundsViewModel::class.java
+            .getDeclaredField("_collections")
+            .also { it.isAccessible = true }
+            .let { (it.get(this) as MutableStateFlow<List<Collection>>).value = collections }
+    }
+
+    private fun privateCollection(
+        id: String,
+        name: String,
+        audioIds: List<String> = emptyList(),
+    ): Collection =
+        Collection(
+            id = id,
+            name = name,
+            profile = CollectionProfile.VAULT,
+            audioIds = audioIds,
+        )
+
+    private fun publicCollection(
+        id: String,
+        name: String,
+        audioIds: List<String> = emptyList(),
+    ): Collection =
+        Collection(
+            id = id,
+            name = name,
+            profile = CollectionProfile.GENERIC_PUBLIC,
+            audioIds = audioIds,
+        )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun givenAViewModel(): SoundsViewModel {

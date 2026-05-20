@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,12 +30,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -50,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -81,6 +87,8 @@ fun SearchOverlay(
     onShareClick: (Sound) -> Unit,
     onPinClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
+    showVaultUnlockCta: Boolean = false,
+    onUnlockVault: () -> Unit = {},
 ) {
     BackHandler { onClose() }
 
@@ -167,6 +175,59 @@ fun SearchOverlay(
                                 )
                         }
                     }
+                    if (showVaultUnlockCta) {
+                        VaultUnlockCta(
+                            onUnlock = onUnlockVault,
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Footer CTA shown at the bottom of the SearchOverlay when:
+ *  - the user has at least one private collection (so the offer is relevant), AND
+ *  - the Vault is locked in this process session.
+ *
+ * Tapping it asks for biometric/credential confirmation; on success, [VaultSessionState] flips and
+ * the parent ViewModel re-emits `searchResults` with the previously-hidden private matches merged
+ * in (no separate gated section — Opción D). Visibility is independent of the current query so it
+ * never acts as an oracle for "is there a match in the Vault for X?".
+ */
+@Composable
+private fun VaultUnlockCta(
+    onUnlock: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Bottom action bar: a `surface`-colored Surface + top divider frames the area as a distinct
+    // "zone of action" over the (possibly scrolling) results, so the affordance comes from the
+    // container, not the button. The button itself is the same TextButton-with-icon typology as
+    // ManageCollectionsScreen's "+ New collection" (color `primary` = AcidDark/Acid400, AA in both
+    // modes). Avoids opening an "outlined" or "tonal" button tier — see ADR 0010.
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.LG, vertical = Spacing.SM),
+                contentAlignment = Alignment.Center,
+            ) {
+                TextButton(onClick = onUnlock) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.XS))
+                    Text(stringResource(R.string.app_search_vault_cta))
                 }
             }
         }

@@ -28,6 +28,7 @@
     <string name="app_search_initial_hint">Esa reliquia tuya está acá. Encontrala.</string>
     <string name="app_search_empty_headline">Silencio absoluto…</string>
     <string name="app_search_empty_subtext">Este sticker aún no existe. Tu colección tiene un vacío que solo vos podés llenar.</string>
+    <string name="app_search_vault_cta">Buscá también en tu Baúl</string>
     <string name="app_edit">Renombrar</string>
     <string name="app_feedback_button_renamed">¡%1$s renombrado!</string>
     <string name="app_pin">Destacar al inicio</string>

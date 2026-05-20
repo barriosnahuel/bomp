@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See LICENSE in the project root for full license information.
  */
+@file:Suppress("TooManyFunctions")
+
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.content.Context
@@ -63,7 +65,12 @@ import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
+import com.github.barriosnahuel.vossosunboton.feature.vault.requestUnlock
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateStatus
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeSticker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
@@ -180,25 +187,72 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         .CollectionDeleteDialog(viewModel = viewModel)
 
     if (isSearchVisible) {
-        SearchOverlay(
+        SearchOverlayHost(
+            viewModel = viewModel,
             query = searchQuery,
             results = searchResults,
             isSearchPending = isSearchPending,
             playbackProgress = playbackProgress,
             pausedProgress = pausedProgress,
             soundDurations = soundDurations,
-            onQueryChange = viewModel::onSearchQueryChange,
-            onClose = viewModel::hideSearch,
-            onPlayClick = viewModel::playOrStop,
-            onSeek = viewModel::seekTo,
-            onShareClick = { sound -> viewModel.share(sound) },
-            onPinClick = viewModel::togglePin,
-            onDelete = { sound ->
-                viewModel.hideSearch()
-                viewModel.deleteSound(sound)
-            },
         )
     }
+}
+
+/**
+ * Owns the SearchOverlay + the biometric plumbing for the "Search your Vault too" CTA. Lives in
+ * `LandingScreen.kt` (next to the overlay's only host) so the biometric gate plumbing — which only
+ * exists in `LandingActivity` (and `AddButtonActivity`) thanks to FragmentActivity migration — has
+ * a single home.
+ */
+@Composable
+private fun SearchOverlayHost(
+    viewModel: SoundsViewModel,
+    query: String,
+    results: List<com.github.barriosnahuel.vossosunboton.model.Sound>,
+    isSearchPending: Boolean,
+    playbackProgress: PlaybackProgress?,
+    pausedProgress: Map<String, PlaybackProgress>,
+    soundDurations: Map<String, Int>,
+) {
+    val context = LocalContext.current
+    val activity = remember(context) { context.findFragmentActivity() }
+    val gate = remember(activity) { activity?.let { BiometricGate(it) } }
+    val status = remember(gate) { gate?.status() ?: BiometricGateStatus.UNAVAILABLE }
+    val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
+    val vaultOpen by VaultSessionState.flow.collectAsState()
+    val collections by viewModel.collections.collectAsState()
+    val hasSearchableVaultContent =
+        remember(collections) {
+            collections.any { it.isPrivate && it.audioIds.isNotEmpty() }
+        }
+    SearchOverlay(
+        query = query,
+        results = results,
+        isSearchPending = isSearchPending,
+        playbackProgress = playbackProgress,
+        pausedProgress = pausedProgress,
+        soundDurations = soundDurations,
+        onQueryChange = viewModel::onSearchQueryChange,
+        onClose = viewModel::hideSearch,
+        onPlayClick = viewModel::playOrStop,
+        onSeek = viewModel::seekTo,
+        onShareClick = { sound -> viewModel.share(sound) },
+        onPinClick = viewModel::togglePin,
+        onDelete = { sound ->
+            viewModel.hideSearch()
+            viewModel.deleteSound(sound)
+        },
+        showVaultUnlockCta = hasSearchableVaultContent && !vaultOpen,
+        onUnlockVault = {
+            requestUnlock(
+                context = context,
+                gate = gate,
+                status = status,
+                tracker = tracker,
+            )
+        },
+    )
 }
 
 /**

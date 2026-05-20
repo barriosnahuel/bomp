@@ -128,7 +128,13 @@ fun VaultScreen(
     }
 }
 
-private fun requestUnlock(
+/**
+ * Top-level helper so both [VaultScreen]'s primary unlock affordance and the SearchOverlay's
+ * "Search your Vault too" CTA share the same biometric flow + analytics. Visibility is `internal`
+ * (not `private`) so `LandingScreen.kt` — the SearchOverlay host — can invoke it without
+ * duplicating the gate + tracker plumbing.
+ */
+internal fun requestUnlock(
     context: android.content.Context,
     gate: BiometricGate?,
     status: BiometricGateStatus,

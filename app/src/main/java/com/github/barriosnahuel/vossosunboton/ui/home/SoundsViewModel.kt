@@ -352,6 +352,27 @@ class SoundsViewModel(
                 Tracker.track(RuntimeException("SoundsViewModel collections observation failed", e))
             }
         }
+        // React to the Vault unlock/lock session flag. Search results are the only consumer whose
+        // visibility set DEPENDS on the session — My Sounds is "public by definition" and Vault is
+        // gated by its own screen. `drop(1)` skips the initial `false` emission; `recomputeSearch`
+        // already runs implicitly via `onSearchQueryChange` so we don't need to seed it here. When
+        // the user taps the "Unlock to search the Vault" CTA and authenticates, this collector
+        // refreshes `_searchResults` so previously-hidden private matches appear without the user
+        // having to re-type the query.
+        viewModelScope.launch {
+            try {
+                com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
+                    .flow
+                    .drop(1)
+                    .collect { recomputeSearchResults() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
+                Tracker.track(RuntimeException("SoundsViewModel vault-session observation failed", e))
+            }
+        }
     }
 
     /**
@@ -465,11 +486,26 @@ class SoundsViewModel(
 
     private fun recomputeSearchResults() {
         val query = _searchQuery.value
+        // Privacy gate: while the Vault session is locked, audios tagged exclusively to a
+        // private collection must NOT surface on the search overlay (it's reachable from public
+        // tabs only — My Sounds + Explore). Cross-tagged (public AND private) audios are excluded
+        // from this filter on purpose, per spec § 3.1 "Restricción de cross-preset": the public
+        // scope preserves visibility. Once the user authenticates the Vault during this process
+        // (`VaultSessionState.markVaultOpen`), the filter relaxes and search merges both scopes.
+        val privateOnlyIds =
+            if (com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
+                    .isVaultOpen()
+            ) {
+                emptySet()
+            } else {
+                collectionsAudioIdsSnapshot()
+            }
         _searchResults.value =
             if (query.isBlank()) {
                 emptyList()
             } else {
                 allSoundsCache.value
+                    .filter { it.id !in privateOnlyIds }
                     .filter { it.name.contains(query, ignoreCase = true) }
                     .sortedWith(compareByDescending<Sound> { it.isPinned }.thenBy { it.name.lowercase() })
             }

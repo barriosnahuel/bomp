@@ -28,6 +28,7 @@
     <string name="app_search_initial_hint">That gem of yours is in here. Go find it.</string>
     <string name="app_search_empty_headline">Absolute silence…</string>
     <string name="app_search_empty_subtext">This sticker doesn\'t exist yet. Your collection has a gap only you can fill.</string>
+    <string name="app_search_vault_cta">Search your Vault too</string>
     <string name="app_edit">Rename</string>
     <string name="app_feedback_button_renamed">%1$s renamed!</string>
     <string name="app_pin">Pin to top</string>
