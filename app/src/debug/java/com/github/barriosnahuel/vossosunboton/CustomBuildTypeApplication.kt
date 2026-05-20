@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton
 
 import android.app.Application
+import android.content.Intent
 import com.github.barriosnahuel.vossosunboton.commons.android.error.ErrorTrackerTree
 import timber.log.Timber
 
@@ -17,5 +18,9 @@ internal abstract class CustomBuildTypeApplication : Application() {
         super.onCreate()
 
         DebugTools.configure(this)
+    }
+
+    fun seedDebugSoundsIfRequested(intent: Intent) {
+        DebugSoundSeeder.seedIfRequested(this, intent)
     }
 }

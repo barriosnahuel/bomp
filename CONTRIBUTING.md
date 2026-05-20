@@ -51,6 +51,15 @@ We use some really useful tools like:
 
 Please refer to their docs for setup & guidelines.
 
+### Seeding sample My Sounds (debug only) 🌱
+A clean debug install starts with an empty "My Sounds" board, so manually re-adding real audios after every reinstall gets tedious. `scripts/install-debug-seeded.sh` installs the debug build and launches it with a debug-only intent flag that copies a few of the bundled Explore samples into "My Sounds" as if you'd saved them yourself:
+
+```bash
+./scripts/install-debug-seeded.sh
+```
+
+Seeding is **idempotent** — re-running never duplicates entries. The audio source is the bundled debug audio (`model/src/debug/res/raw/`), so a checkout without those files seeds nothing. Debug-only by construction: the release `CustomBuildTypeApplication` seam is a no-op, so the flag is ignored entirely in release builds. Implementation: `DebugSoundSeeder` (`app/src/debug/`), reached from `LandingActivity` through the `CustomBuildTypeApplication` debug/release source-set swap — the same pattern used by `StrictModeConfigurator`.
+
 ## Continuous Integration ➿
 We use Circle CI, so if you're gonna change the [config.yml](.circleci/config.yml) file you can check the config using the local CLI.
 - https://circleci.com/docs/2.0/local-cli
