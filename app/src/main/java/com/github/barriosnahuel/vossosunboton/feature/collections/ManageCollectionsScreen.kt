@@ -499,6 +499,7 @@ private fun VaultLockedCard(onUnlock: () -> Unit) {
             )
             Button(
                 onClick = onUnlock,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
                 colors =
                     ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
