@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -207,6 +208,20 @@ internal class ManageCollectionsFlowTest : AbstractUiTest() {
             composeRule
                 .onNodeWithText(vaultSectionLabel(), ignoreCase = true)
                 .assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun systemBackClosesManageCollections() {
+        // Guards the BackHandler → predictiveBackTransition migration for this surface: a completed
+        // system back must still pop Manage Collections back to Landing (the gesture animation is a
+        // progressive enhancement; the result — we land back on the list — is the contract).
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openManageFromOverflow()
+            Espresso.pressBack()
+            // Overflow ⋮ is the Landing sentinel (absent on the Manage screen); its return means the
+            // PredictiveBackHandler completed and popped us back.
+            composeRule.awaitNodeWithContentDescription(overflowLabel()).assertIsDisplayed()
         }
     }
 

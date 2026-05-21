@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -59,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
 private sealed class SearchDisplayState {
@@ -90,8 +90,6 @@ fun SearchOverlay(
     showVaultUnlockCta: Boolean = false,
     onUnlockVault: () -> Unit = {},
 ) {
-    BackHandler { onClose() }
-
     val displayState =
         when {
             query.isBlank() -> SearchDisplayState.Initial
@@ -104,6 +102,7 @@ fun SearchOverlay(
         modifier =
             Modifier
                 .fillMaxSize()
+                .predictiveBackTransition(onBack = onClose)
                 .background(Color.Black.copy(alpha = 0.6f)),
     ) {
         Surface(

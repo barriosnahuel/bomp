@@ -14,7 +14,6 @@ import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.SoundPool
 import android.net.Uri
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
@@ -79,6 +78,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import com.github.barriosnahuel.vossosunboton.util.withDeviceHl
 import kotlinx.coroutines.launch
@@ -125,9 +125,8 @@ fun AboutScreen(onBack: () -> Unit) {
         onDispose { soundPool.release() }
     }
 
-    BackHandler { onBack() }
-
     Scaffold(
+        modifier = Modifier.predictiveBackTransition(onBack = onBack),
         topBar = {
             TopAppBar(
                 title = {},

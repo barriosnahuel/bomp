@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.collections
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -73,6 +72,7 @@ import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.ui.home.AppTab
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
+import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import kotlinx.coroutines.delay
 
@@ -125,10 +125,8 @@ internal fun ManageCollectionsScreen(
     var highlightedId by rememberSaveable { mutableStateOf(focusedCollectionId) }
     var deepLinkConsumed by rememberSaveable { mutableStateOf(false) }
 
-    BackHandler { onBack() }
-
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.predictiveBackTransition(onBack = onBack),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_manage_collections_title)) },
