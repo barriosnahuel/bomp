@@ -617,6 +617,9 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         runBlocking {
             SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
         }
+        // Wait for the saved audio to reach allSoundsCache (via the reactive loadSounds) BEFORE
+        // tagging — syncAudioBuckets iterates that cache, so a not-yet-loaded audio counts as 0.
+        runBlocking { viewModel.library.first { lib -> lib.any { it.id == sound.id } } }
         val created =
             runBlocking {
                 viewModel
@@ -643,6 +646,9 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         runBlocking {
             SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
         }
+        // Wait for the saved audio to reach allSoundsCache (via the reactive loadSounds) BEFORE
+        // tagging — syncAudioBuckets iterates that cache, so a not-yet-loaded audio counts as 0.
+        runBlocking { viewModel.library.first { lib -> lib.any { it.id == sound.id } } }
         runBlocking { viewModel.collections.first { cols -> cols.any { it.isSystem } } }
         val baul = viewModel.collections.value.first { it.isSystem }
 

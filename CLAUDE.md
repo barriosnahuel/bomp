@@ -164,6 +164,10 @@ Test names are descriptive sentences, never opaque identifiers — reports list 
 
 No bare `kotlin.assert(...)` in test sources — see [ADR 0006](docs/adr/0006-no-kotlin-assert-in-tests.md). Grep-enforced by `scripts/check-adr-invariants.sh` + CircleCI `test-assertion-guard`. Use Truth `assertThat(...)`, JUnit `assertEquals`/`assertTrue`/`assertNotNull`, or Compose UI Test API (`assertCountEquals`, `assertIsDisplayed`). Local check command: CONTRIBUTING.md § *Testing → Test assertions*.
 
+## JVM tests — await every async input, not just the one you triggered
+
+Recurring flaky pattern: a value aggregated from **multiple** flows (e.g. a user property folded from `library` + `collections`) is asserted after awaiting only the signal the test fired. The *other* input — typically the reactive `loadSounds` populating `allSoundsCache` — hasn't arrived on a loaded CI machine, so the derived value is computed against empty state and the assertion flakes. Await **each** upstream before the triggering action: after `save`, `vm.library.first { it.has(id) }`; after a tag, `awaitAnalyticsEvent(...)` **and** `collections.first { it.contains(...) }`. Canonical: `SoundsViewModelAnalyticsTest`.
+
 ## Activity smoke tests
 
 Every `Activity` in `app` must have a smoke test in `app/src/test/` (extending `AbstractRobolectricTest`) that reaches `Lifecycle.State.RESUMED` without crashing:
@@ -180,7 +184,7 @@ Mock singleton factories (e.g. `PlayerControllerFactory`) that crash under Robol
 
 Instrumented UI/functional tests live under `app/src/androidTest/`. CircleCI intentionally does not run them — see [ADR 0001](docs/adr/0001-local-ui-test-suite.md). When to run, setup, run commands, report paths: CONTRIBUTING.md § *Testing → Local UI test suite*.
 
-**Always run the suite via `./scripts/run-instrumented-tests.sh`** — never `./gradlew :app:connectedDebugAndroidTest` directly against an already-running emulator. A warm AVD degrades across back-to-back runs (`system_server` watchdog ANRs, skipped frames); the failures masquerade as per-test flakes (`ComposeTimeoutException` / `ComposeNotIdleException`) or escalate to `Process crashed`. The wrapper cold-boots the AVD before each run. If the suite flakes, re-run via the wrapper before suspecting a test or production bug. Rationale: [ADR 0001 § *Cold boot per run*](docs/adr/0001-local-ui-test-suite.md).
+**Always run the suite via `./scripts/run-instrumented-tests.sh`** (cold-boots the AVD), never `./gradlew :app:connectedDebugAndroidTest` against a warm emulator — a degraded AVD makes flakes masquerade as `ComposeTimeoutException` / `Process crashed`. If the suite flakes, re-run via the wrapper before suspecting a test or production bug. Rationale: [ADR 0001 § *Cold boot per run*](docs/adr/0001-local-ui-test-suite.md).
 
 ### Synchronization (avoid bare `waitForIdle()` for state-dependent nodes)
 
