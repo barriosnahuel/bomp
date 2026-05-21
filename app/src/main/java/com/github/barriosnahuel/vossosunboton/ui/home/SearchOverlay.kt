@@ -4,7 +4,6 @@
  * See LICENSE in the project root for full license information.
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
-
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,10 +25,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -51,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -115,7 +111,7 @@ fun SearchOverlay(
                     navigationIcon = {
                         IconButton(onClick = onClose) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                painter = painterResource(R.drawable.app_ic_arrow_back),
                                 contentDescription = stringResource(R.string.app_search_close),
                             )
                         }
@@ -221,7 +217,7 @@ private fun VaultUnlockCta(
             ) {
                 TextButton(onClick = onUnlock) {
                     Icon(
-                        imageVector = Icons.Default.Lock,
+                        painter = painterResource(R.drawable.app_ic_lock),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )
@@ -282,7 +278,7 @@ private fun SearchField(
             if (query.isNotBlank()) {
                 IconButton(onClick = { onQueryChange("") }) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        painter = painterResource(R.drawable.app_ic_close),
                         contentDescription = stringResource(R.string.app_search_clear),
                     )
                 }

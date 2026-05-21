@@ -4,7 +4,6 @@
  * See LICENSE in the project root for full license information.
  */
 package com.github.barriosnahuel.vossosunboton.feature.collections
-
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -22,14 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -57,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -133,7 +125,7 @@ internal fun ManageCollectionsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(R.drawable.app_ic_arrow_back),
                             contentDescription = stringResource(R.string.app_manage_collections_back),
                         )
                     }
@@ -314,7 +306,7 @@ private fun SectionCreateButton(
         modifier = Modifier.padding(horizontal = Spacing.SM),
     ) {
         Icon(
-            imageVector = Icons.Outlined.Add,
+            painter = painterResource(R.drawable.app_ic_add),
             contentDescription = null,
             modifier = Modifier.size(18.dp),
         )
@@ -419,7 +411,7 @@ private fun ManageRowOverflow(
     androidx.compose.foundation.layout.Box {
         IconButton(onClick = { menuExpanded = true }) {
             Icon(
-                imageVector = Icons.Default.MoreVert,
+                painter = painterResource(R.drawable.app_ic_more_vert),
                 contentDescription = description,
             )
         }
@@ -433,7 +425,7 @@ private fun ManageRowOverflow(
             // refused at the repo layer, so they should not appear in the menu.
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.app_manage_collections_overflow_view)) },
-                leadingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                leadingIcon = { Icon(painterResource(R.drawable.app_ic_keyboard_arrow_right), contentDescription = null) },
                 onClick = {
                     menuExpanded = false
                     onViewClick()
@@ -442,7 +434,7 @@ private fun ManageRowOverflow(
             if (!isSystem) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.app_vault_card_overflow_rename)) },
-                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    leadingIcon = { Icon(painterResource(R.drawable.app_ic_edit), contentDescription = null) },
                     onClick = {
                         menuExpanded = false
                         onRenameClick()
@@ -450,7 +442,7 @@ private fun ManageRowOverflow(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.app_vault_card_overflow_delete)) },
-                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                    leadingIcon = { Icon(painterResource(R.drawable.app_ic_delete), contentDescription = null) },
                     onClick = {
                         menuExpanded = false
                         onDeleteClick()
@@ -481,7 +473,7 @@ private fun VaultLockedCard(onUnlock: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Lock,
+                    painter = painterResource(R.drawable.app_ic_lock),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

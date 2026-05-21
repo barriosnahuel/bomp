@@ -6,7 +6,6 @@
 @file:Suppress("TooManyFunctions")
 
 package com.github.barriosnahuel.vossosunboton.ui.home
-
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -24,11 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +54,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
@@ -346,7 +341,7 @@ private fun ScaffoldedLanding(
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        painter = painterResource(R.drawable.app_ic_search),
                         contentDescription = stringResource(R.string.app_search),
                     )
                 }
@@ -474,7 +469,7 @@ private fun AppTopBar(
         actions = {
             IconButton(onClick = { isMenuExpanded = true }) {
                 Icon(
-                    imageVector = Icons.Default.MoreVert,
+                    painter = painterResource(R.drawable.app_ic_more_vert),
                     contentDescription = stringResource(R.string.app_overflow_menu),
                 )
             }
@@ -526,7 +521,12 @@ private fun AppBottomBar(
             colors = itemColors,
             selected = selectedTab == AppTab.MY_SOUNDS,
             onClick = { onTabSelected(AppTab.MY_SOUNDS) },
-            icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.app_navigation_menu_item_my_sounds)) },
+            icon = {
+                Icon(
+                    painterResource(R.drawable.app_ic_home),
+                    contentDescription = stringResource(R.string.app_navigation_menu_item_my_sounds),
+                )
+            },
             label = { Text(stringResource(R.string.app_navigation_menu_item_my_sounds)) },
         )
         NavigationBarItem(
@@ -535,7 +535,7 @@ private fun AppBottomBar(
             onClick = { onTabSelected(AppTab.VAULT) },
             icon = {
                 Icon(
-                    imageVector = Icons.Default.Lock,
+                    painter = painterResource(R.drawable.app_ic_lock),
                     contentDescription = stringResource(R.string.app_navigation_menu_item_vault),
                 )
             },

@@ -32,9 +32,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -133,7 +130,7 @@ fun AboutScreen(onBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(R.drawable.app_ic_arrow_back),
                             contentDescription = stringResource(R.string.app_about_back),
                         )
                     }
@@ -352,7 +349,7 @@ private fun CreditsSection(creditEntries: List<CreditEntry>) {
             style = MaterialTheme.typography.titleMedium,
         )
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            painter = painterResource(R.drawable.app_ic_keyboard_arrow_right),
             contentDescription = null,
             modifier = Modifier.rotate(arrowRotation),
         )

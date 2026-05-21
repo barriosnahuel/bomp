@@ -4,7 +4,6 @@
  * See LICENSE in the project root for full license information.
  */
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
-
 import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.layout.Column
@@ -13,8 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +23,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -192,7 +191,7 @@ internal fun DuplicateNameHint(
             modifier = Modifier.size(48.dp),
         ) {
             Icon(
-                imageVector = if (isPlayingThisMatch) AppIcons.Stop else Icons.Default.PlayArrow,
+                painter = if (isPlayingThisMatch) rememberVectorPainter(AppIcons.Stop) else painterResource(R.drawable.app_ic_play_arrow),
                 contentDescription =
                     stringResource(
                         if (isPlayingThisMatch) {

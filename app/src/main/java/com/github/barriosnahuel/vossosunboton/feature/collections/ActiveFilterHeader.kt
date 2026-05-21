@@ -4,15 +4,12 @@
  * See LICENSE in the project root for full license information.
  */
 package com.github.barriosnahuel.vossosunboton.feature.collections
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -107,7 +105,7 @@ internal fun ActiveFilterHeader(
                     stringResource(R.string.app_active_filter_header_edit_description, displayName!!)
                 IconButton(onClick = onEditClick) {
                     Icon(
-                        imageVector = Icons.Outlined.Edit,
+                        painter = painterResource(R.drawable.app_ic_edit_outlined),
                         contentDescription = description,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
