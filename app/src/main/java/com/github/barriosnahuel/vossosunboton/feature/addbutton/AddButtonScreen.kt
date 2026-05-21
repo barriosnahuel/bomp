@@ -72,6 +72,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
@@ -346,7 +347,7 @@ fun AddButtonScreen(
                                 // successful unlock for analytics — count it like the gated grant.
                                 VaultSessionState.markVaultOpen()
                                 privateRevealed = true
-                                tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = "add_bomp"))
+                                tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = AnalyticsSource.ADD_BOMP))
                                 bumpVaultUnlockCounter(tracker)
                                 return@AssignToCollectionsSection
                             }
@@ -362,12 +363,12 @@ fun AddButtonScreen(
                                         // process trusts the same flag.
                                         VaultSessionState.markVaultOpen()
                                         privateRevealed = true
-                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = "add_bomp"))
+                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = AnalyticsSource.ADD_BOMP))
                                         bumpVaultUnlockCounter(tracker)
                                     }
                                     is BiometricGateResult.Denied -> {
                                         // Stay closed — user can retry by tapping again.
-                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = false, source = "add_bomp"))
+                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = false, source = AnalyticsSource.ADD_BOMP))
                                     }
                                 }
                             }
@@ -395,7 +396,7 @@ fun AddButtonScreen(
     if (scope != null) {
         InlineCollectionCreateSheet(
             scope = scope,
-            source = "add_bomp",
+            source = AnalyticsSource.ADD_BOMP,
             onDismiss = { pendingNewCollectionScope = null },
             onCreated = { created ->
                 // Auto-tag the in-progress audio with the freshly created collection so the user

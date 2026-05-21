@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsScope
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Collection
@@ -117,7 +118,7 @@ internal fun InlineCollectionCreateSheet(
                         .onSuccess { created ->
                             tracker.log(
                                 AnalyticsEvent.CollectionCreate(
-                                    scope = if (created.isPublic) "public" else "private",
+                                    scope = AnalyticsScope.of(created.isPublic),
                                     audios = 0,
                                     source = source,
                                 ),

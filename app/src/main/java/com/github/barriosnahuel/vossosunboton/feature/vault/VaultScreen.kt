@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterChipsRow
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
@@ -114,7 +115,7 @@ fun VaultScreen(
                             gate = gate,
                             status = status,
                             tracker = tracker,
-                            source = "vault_tab",
+                            source = AnalyticsSource.VAULT_TAB,
                         )
                     },
                 )
@@ -276,7 +277,7 @@ private fun VaultBody(
                 activeFilterId = activeFilter,
                 onFilterSelected = { id -> viewModel.selectVaultFilter(id) },
                 onCreateRequested = {
-                    viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = "vault_filter")
+                    viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = AnalyticsSource.VAULT_FILTER)
                 },
             )
             if (showHeader) {
@@ -322,7 +323,7 @@ private fun VaultBody(
         // "+ Nueva" entry point but stays reachable when the list is full.
         val fabContentDescription = stringResource(R.string.app_vault_fab_new)
         ExtendedFloatingActionButton(
-            onClick = { viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = "vault_fab") },
+            onClick = { viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = AnalyticsSource.VAULT_FAB) },
             modifier =
                 Modifier
                     .align(Alignment.BottomEnd)

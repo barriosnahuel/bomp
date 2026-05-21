@@ -63,6 +63,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.feature.vault.requestUnlock
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
@@ -182,7 +183,7 @@ internal fun ManageCollectionsScreen(
             item(key = "new_public") {
                 SectionCreateButton(
                     label = stringResource(R.string.app_manage_collections_new_public),
-                    onClick = { viewModel.requestCreateCollection(CollectionAccess.PUBLIC, source = "manage") },
+                    onClick = { viewModel.requestCreateCollection(CollectionAccess.PUBLIC, source = AnalyticsSource.MANAGE) },
                 )
             }
 
@@ -196,7 +197,7 @@ internal fun ManageCollectionsScreen(
             if (isVaultLocked) {
                 item(key = "vault_locked") {
                     VaultLockedCard(
-                        onUnlock = { requestUnlock(context, gate, gateStatus, tracker, source = "manage") },
+                        onUnlock = { requestUnlock(context, gate, gateStatus, tracker, source = AnalyticsSource.MANAGE) },
                     )
                 }
             } else {
@@ -226,7 +227,7 @@ internal fun ManageCollectionsScreen(
                 item(key = "new_vault") {
                     SectionCreateButton(
                         label = stringResource(R.string.app_manage_collections_new_vault),
-                        onClick = { viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = "manage") },
+                        onClick = { viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = AnalyticsSource.MANAGE) },
                     )
                 }
             }

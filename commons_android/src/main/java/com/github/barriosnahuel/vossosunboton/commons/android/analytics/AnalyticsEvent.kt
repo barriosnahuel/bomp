@@ -33,11 +33,11 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "sound_add", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
-                putString("source", source)
-                putInt("name_length", nameLength)
-                putInt("name_word_count", nameWordCount)
-                putBoolean("name_hit_limit", nameHitLimit)
-                putInt("current_sounds", currentSounds)
+                putString(AnalyticsParam.SOURCE, source)
+                putInt(AnalyticsParam.NAME_LENGTH, nameLength)
+                putInt(AnalyticsParam.NAME_WORD_COUNT, nameWordCount)
+                putBoolean(AnalyticsParam.NAME_HIT_LIMIT, nameHitLimit)
+                putInt(AnalyticsParam.CURRENT_SOUNDS, currentSounds)
             }
     }
 
@@ -50,11 +50,11 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "sound_edit", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
-                putString("field", "name")
-                putInt("name_length", nameLength)
-                putInt("name_word_count", nameWordCount)
-                putBoolean("name_hit_limit", nameHitLimit)
-                putBoolean("name_changed", nameChanged)
+                putString(AnalyticsParam.FIELD, "name")
+                putInt(AnalyticsParam.NAME_LENGTH, nameLength)
+                putInt(AnalyticsParam.NAME_WORD_COUNT, nameWordCount)
+                putBoolean(AnalyticsParam.NAME_HIT_LIMIT, nameHitLimit)
+                putBoolean(AnalyticsParam.NAME_CHANGED, nameChanged)
             }
     }
 
@@ -65,7 +65,7 @@ sealed class AnalyticsEvent(
     data class SoundAddAbandonedAfterError(
         val reason: String,
     ) : AnalyticsEvent(name = "sound_add_abandoned_after_error", hasFirstVariant = false) {
-        override fun params(): Bundle = Bundle().apply { putString("reason", reason) }
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.REASON, reason) }
     }
 
     /** Audio deleted (post-snackbar commit). NOT emitted when the user taps "Undo" before the timeout. */
@@ -78,21 +78,21 @@ sealed class AnalyticsEvent(
     data class SoundPlay(
         val surface: String,
     ) : AnalyticsEvent(name = "sound_play", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putString("surface", surface) }
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
     }
 
     /** Audio pinned/unpinned via swipe. */
     data class PinToggle(
         val pinned: Boolean,
     ) : AnalyticsEvent(name = "pin_toggle", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putBoolean("pinned", pinned) }
+        override fun params(): Bundle = Bundle().apply { putBoolean(AnalyticsParam.PINNED, pinned) }
     }
 
     /** Search returned zero results for a non-blank query. Debounced upstream to avoid keystroke noise. */
     data class SearchZeroResults(
         val queryLength: Int,
     ) : AnalyticsEvent(name = "search_zero_results", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putInt("query_length", queryLength) }
+        override fun params(): Bundle = Bundle().apply { putInt(AnalyticsParam.QUERY_LENGTH, queryLength) }
     }
 
     /**
@@ -102,7 +102,7 @@ sealed class AnalyticsEvent(
     data class Share(
         val surface: String,
     ) : AnalyticsEvent(name = "share", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putString("surface", surface) }
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
     }
 
     /** Credits section expanded inside About. In-screen reveal, not a destination. */
@@ -204,9 +204,9 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "collection_create", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
-                putString("scope", scope)
-                putInt("audios", audios)
-                putString("source", source)
+                putString(AnalyticsParam.SCOPE, scope)
+                putInt(AnalyticsParam.AUDIOS, audios)
+                putString(AnalyticsParam.SOURCE, source)
             }
     }
 
@@ -222,8 +222,8 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "collection_delete", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
-                putString("scope", scope)
-                putInt("audios", audios)
+                putString(AnalyticsParam.SCOPE, scope)
+                putInt(AnalyticsParam.AUDIOS, audios)
             }
     }
 
@@ -234,7 +234,7 @@ sealed class AnalyticsEvent(
     data class CollectionRename(
         val scope: String,
     ) : AnalyticsEvent(name = "collection_rename", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putString("scope", scope) }
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SCOPE, scope) }
     }
 
     /**
@@ -249,8 +249,8 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "collection_filter_apply", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
-                putInt("matches", matches)
-                putString("scope", scope)
+                putInt(AnalyticsParam.MATCHES, matches)
+                putString(AnalyticsParam.SCOPE, scope)
             }
     }
 
@@ -262,7 +262,7 @@ sealed class AnalyticsEvent(
     data class CollectionView(
         val scope: String,
     ) : AnalyticsEvent(name = "collection_view", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putString("scope", scope) }
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SCOPE, scope) }
     }
 
     /**
@@ -276,8 +276,8 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "collection_audio_toggle", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
-                putBoolean("assigned", assigned)
-                putString("scope", scope)
+                putBoolean(AnalyticsParam.ASSIGNED, assigned)
+                putString(AnalyticsParam.SCOPE, scope)
             }
     }
 
@@ -295,8 +295,8 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "vault_unlock", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
-                putBoolean("granted", granted)
-                putString("source", source)
+                putBoolean(AnalyticsParam.GRANTED, granted)
+                putString(AnalyticsParam.SOURCE, source)
             }
     }
 

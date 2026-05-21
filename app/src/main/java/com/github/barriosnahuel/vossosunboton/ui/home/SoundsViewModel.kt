@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsScope
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
@@ -610,7 +611,7 @@ class SoundsViewModel(
                 }
         }
         if (collectionId != null) {
-            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = _vaultAudios.value.size, scope = "private"))
+            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = _vaultAudios.value.size, scope = AnalyticsScope.PRIVATE))
         }
     }
 
@@ -633,7 +634,7 @@ class SoundsViewModel(
         }
         if (collectionId != null) {
             val matches = audiosIn(collectionId).size
-            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = matches, scope = "public"))
+            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = matches, scope = AnalyticsScope.PUBLIC))
         }
     }
 
@@ -649,7 +650,7 @@ class SoundsViewModel(
      * maps to the event's `scope` param. Navigation (selectTab + filter) happens at the call-site.
      */
     fun trackCollectionView(isPublic: Boolean) {
-        tracker.log(AnalyticsEvent.CollectionView(scope = if (isPublic) "public" else "private"))
+        tracker.log(AnalyticsEvent.CollectionView(scope = AnalyticsScope.of(isPublic)))
     }
 
     /**
@@ -870,7 +871,7 @@ class SoundsViewModel(
             collectionsRepo.create(name = name, profile = profile).also { _ ->
                 tracker.log(
                     AnalyticsEvent.CollectionCreate(
-                        scope = if (access == CollectionAccess.PUBLIC) "public" else "private",
+                        scope = AnalyticsScope.of(access == CollectionAccess.PUBLIC),
                         audios = 0,
                         source = source,
                     ),
@@ -890,7 +891,7 @@ class SoundsViewModel(
             before?.let {
                 tracker.log(
                     AnalyticsEvent.CollectionRename(
-                        scope = if (it.isPublic) "public" else "private",
+                        scope = AnalyticsScope.of(it.isPublic),
                     ),
                 )
                 val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_RENAMES)
@@ -912,7 +913,7 @@ class SoundsViewModel(
             collectionsRepo.delete(id)
             tracker.log(
                 AnalyticsEvent.CollectionDelete(
-                    scope = if (target.isPublic) "public" else "private",
+                    scope = AnalyticsScope.of(target.isPublic),
                     audios = priorCount,
                 ),
             )
@@ -998,7 +999,7 @@ class SoundsViewModel(
                 tracker.log(
                     AnalyticsEvent.CollectionAudioToggle(
                         assigned = !alreadyIn,
-                        scope = if (target.isPublic) "public" else "private",
+                        scope = AnalyticsScope.of(target.isPublic),
                     ),
                 )
                 val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS)

@@ -64,6 +64,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
@@ -260,7 +261,7 @@ private fun SearchOverlayHost(
                 gate = gate,
                 status = status,
                 tracker = tracker,
-                source = "search",
+                source = AnalyticsSource.SEARCH,
             )
         },
     )
@@ -739,7 +740,7 @@ private fun MySoundsBody(
                 onCreateRequested = {
                     viewModel.requestCreateCollection(
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
-                        source = "my_sounds_filter",
+                        source = AnalyticsSource.MY_SOUNDS_FILTER,
                     )
                 },
             )

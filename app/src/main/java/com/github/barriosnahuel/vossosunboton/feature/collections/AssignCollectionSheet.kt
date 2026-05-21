@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AssignToCollectionsSection
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.InlineCollectionCreateSheet
@@ -85,7 +86,7 @@ internal fun AssignCollectionSheet(viewModel: SoundsViewModel) {
             privates = privates,
             vaultOpen = vaultOpen,
             gateStatus = gateStatus,
-            onUnlockVault = { requestUnlock(context, gate, gateStatus, tracker, source = "assign_sheet") },
+            onUnlockVault = { requestUnlock(context, gate, gateStatus, tracker, source = AnalyticsSource.ASSIGN_SHEET) },
             onToggle = { collectionId -> viewModel.toggleAudioInCollection(audioId, collectionId) },
             onCreatePublic = { pendingNewCollectionScope = CollectionAccess.PUBLIC },
             onCreatePrivate = { pendingNewCollectionScope = CollectionAccess.PRIVATE },
@@ -99,7 +100,7 @@ internal fun AssignCollectionSheet(viewModel: SoundsViewModel) {
     pendingNewCollectionScope?.let { scope ->
         InlineCollectionCreateSheet(
             scope = scope,
-            source = "assign_sheet",
+            source = AnalyticsSource.ASSIGN_SHEET,
             onDismiss = { pendingNewCollectionScope = null },
             onCreated = { created ->
                 pendingNewCollectionScope = null
