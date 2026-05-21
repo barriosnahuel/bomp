@@ -57,9 +57,15 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     @Test
     fun `Explore nav item is not shown when no bundled sounds are available`() {
         val viewModel = givenAViewModel()
-        viewModel.injectHasBundledSounds(false)
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        // Inject AFTER the first composition + collections-collector cascade so the value
+        // sticks. The `collectionsRepo.collections.collect { ... loadSounds() }` collector in
+        // SoundsViewModel re-runs loadSounds() on its first emission, which overwrites
+        // `_hasBundledSounds` to the repo's real value (true under the debug build's bundled
+        // audios). Injecting after waitForIdle ensures that cascade has already settled.
+        viewModel.injectHasBundledSounds(false)
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Explore").assertDoesNotExist()
@@ -68,9 +74,10 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     @Test
     fun `Explore nav item is shown when bundled sounds are available`() {
         val viewModel = givenAViewModel()
-        viewModel.injectHasBundledSounds(true)
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        viewModel.injectHasBundledSounds(true)
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Explore").assertIsDisplayed()
@@ -79,9 +86,10 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     @Test
     fun `Search FAB is hidden when sound list is empty`() {
         val viewModel = givenAViewModel()
-        viewModel.injectSounds(emptyList())
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        viewModel.injectSounds(emptyList())
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("Search").assertDoesNotExist()
@@ -90,9 +98,10 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     @Test
     fun `Search FAB is hidden when sound list has 6 items`() {
         val viewModel = givenAViewModel()
-        viewModel.injectSounds(stubSounds(count = 6))
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        viewModel.injectSounds(stubSounds(count = 6))
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("Search").assertDoesNotExist()
@@ -101,9 +110,10 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     @Test
     fun `Search FAB is shown when sound list has 7 items`() {
         val viewModel = givenAViewModel()
-        viewModel.injectSounds(stubSounds(count = 7))
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        viewModel.injectSounds(stubSounds(count = 7))
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("Search").assertIsDisplayed()

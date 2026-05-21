@@ -6,6 +6,8 @@ complexity:
     ignoreAnnotated: ['Composable']
   LongMethod:
     ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    ignoreAnnotated: ['Composable']
   TooManyFunctions:
     thresholdInClasses: 15
     ignoreOverridden: true

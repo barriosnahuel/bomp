@@ -131,6 +131,8 @@ internal class AddButtonScreenHapticTest : AbstractRobolectricTest() {
             context: Context,
             name: String,
             uri: String,
+            publicCollectionIds: Set<String>,
+            privateCollectionIds: Set<String>,
         ): Deferred<Int> {
             saveNewCalls += 1
             return CompletableDeferred(saveNewFeedback)

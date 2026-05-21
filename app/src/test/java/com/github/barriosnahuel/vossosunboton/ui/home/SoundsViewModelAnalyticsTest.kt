@@ -45,6 +45,15 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         runBlocking {
             SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
             WelcomeStickerStore(ApplicationProvider.getApplicationContext()).clearForTest()
+            com.github.barriosnahuel.vossosunboton.model.data.manager
+                .CollectionsRepository(ApplicationProvider.getApplicationContext())
+                .clearForTest()
+            com.github.barriosnahuel.vossosunboton.feature.collections
+                .MySoundsFilterStore(ApplicationProvider.getApplicationContext())
+                .clearForTest()
+            com.github.barriosnahuel.vossosunboton.feature.vault
+                .VaultFilterStore(ApplicationProvider.getApplicationContext())
+                .clearForTest()
         }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
@@ -284,7 +293,15 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                 searchDebounceMs = searchDebounceMs,
             )
         createdViewModels += vm
-        runBlocking { vm.isInitialLoadComplete.first { it } }
+        runBlocking {
+            vm.isInitialLoadComplete.first { it }
+            // Same yield pattern as SoundsViewModelTest: let the collections observer's first
+            // (system-Baúl-seed) emission and any auxiliary collectors settle before the test
+            // mutates state via reflection. Without this the observer can fire a `loadSounds()`
+            // mid-test and overwrite user properties (`current_pinned`) the action under test
+            // just set.
+            delay(50)
+        }
         return vm
     }
 
@@ -395,4 +412,294 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
         fake.assertNotEmitted("welcome_sticker_dismissed")
     }
+
+    // region Collections analytics
+
+    @Test
+    fun `creating a public collection emits CollectionCreate with scope and bumps lifetime + snapshot counters`() {
+        val viewModel = givenAViewModel()
+
+        runBlocking {
+            viewModel.createCollection(
+                "Familia",
+                com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                source = "manage",
+            )
+        }
+        runBlocking { awaitAnalyticsEvent(fake, "collection_create") }
+        runBlocking { viewModel.collections.first { col -> col.any { it.name == "Familia" } } }
+
+        val event = fake.assertEmitted("collection_create")
+        assertThat(event.params["scope"]).isEqualTo("public")
+        assertThat(event.params["audios"]).isEqualTo(0)
+        assertThat(event.params["source"]).isEqualTo("manage")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_COLLECTION_CREATES]).isEqualTo("1")
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_COLLECTIONS_PUBLIC]).isEqualTo("1")
+    }
+
+    @Test
+    fun `creating a private collection bumps CURRENT_COLLECTIONS_PRIVATE not PUBLIC`() {
+        val viewModel = givenAViewModel()
+
+        runBlocking {
+            viewModel.createCollection(
+                "Caro",
+                com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PRIVATE,
+                source = "manage",
+            )
+        }
+        runBlocking { awaitAnalyticsEvent(fake, "collection_create") }
+        runBlocking { viewModel.collections.first { col -> col.any { it.name == "Caro" } } }
+
+        val event = fake.assertEmitted("collection_create")
+        assertThat(event.params["scope"]).isEqualTo("private")
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_COLLECTIONS_PRIVATE]).isEqualTo("1")
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_COLLECTIONS_PUBLIC]).isEqualTo("0")
+    }
+
+    @Test
+    fun `renaming a collection emits CollectionRename with scope`() {
+        val viewModel = givenAViewModel()
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Trabajo",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+
+        runBlocking { viewModel.renameCollection(created.id, "Oficina") }
+        runBlocking { awaitAnalyticsEvent(fake, "collection_rename") }
+
+        val event = fake.assertEmitted("collection_rename")
+        assertThat(event.params["scope"]).isEqualTo("public")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_COLLECTION_RENAMES]).isEqualTo("1")
+    }
+
+    @Test
+    fun `deleting a collection emits CollectionDelete with scope and audio count`() {
+        val viewModel = givenAViewModel()
+        val sound = testSound("a", "a.mp3")
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
+        }
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Recetas",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+        viewModel.toggleAudioInCollection(sound.id, created.id)
+        runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.size == 1 } }
+
+        runBlocking { viewModel.deleteCollection(created.id) }
+        runBlocking { awaitAnalyticsEvent(fake, "collection_delete") }
+
+        val event = fake.assertEmitted("collection_delete")
+        assertThat(event.params["scope"]).isEqualTo("public")
+        assertThat(event.params["audios"]).isEqualTo(1)
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_COLLECTION_DELETES]).isEqualTo("1")
+    }
+
+    @Test
+    fun `toggleAudioInCollection assign emits CollectionAudioToggle and bumps lifetime + audios_in_collections`() {
+        val viewModel = givenAViewModel()
+        val sound = testSound("first", "first.mp3")
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
+        }
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Familia",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+
+        viewModel.toggleAudioInCollection(sound.id, created.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
+        runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.contains(sound.id) } }
+
+        val event = fake.assertEmitted("collection_audio_toggle")
+        assertThat(event.params["assigned"]).isEqualTo(true)
+        assertThat(event.params["scope"]).isEqualTo("public")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS]).isEqualTo("1")
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_AUDIOS_IN_COLLECTIONS]).isEqualTo("1")
+    }
+
+    @Test
+    fun `toggleAudioInCollection unassign emits CollectionAudioToggle with assigned false`() {
+        val viewModel = givenAViewModel()
+        val sound = testSound("second", "second.mp3")
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
+        }
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Trabajo",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+        // First toggle: assign. Wait for it to settle so the second toggle reads the right state.
+        viewModel.toggleAudioInCollection(sound.id, created.id)
+        runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.contains(sound.id) } }
+        fake.events.clear()
+
+        viewModel.toggleAudioInCollection(sound.id, created.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
+
+        val event = fake.assertEmitted("collection_audio_toggle")
+        assertThat(event.params["assigned"]).isEqualTo(false)
+    }
+
+    @Test
+    fun `selectMySoundsFilter emits collection_filter_apply with scope public`() {
+        val viewModel = givenAViewModel()
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Familia",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+        fake.events.clear()
+
+        viewModel.selectMySoundsFilter(created.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_filter_apply") }
+
+        val event = fake.assertEmitted("collection_filter_apply")
+        assertThat(event.params["scope"]).isEqualTo("public")
+    }
+
+    @Test
+    fun `selectVaultFilter emits collection_filter_apply with scope private`() {
+        val viewModel = givenAViewModel()
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Caro",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PRIVATE,
+                        source = "manage",
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+        fake.events.clear()
+
+        viewModel.selectVaultFilter(created.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_filter_apply") }
+
+        val event = fake.assertEmitted("collection_filter_apply")
+        assertThat(event.params["scope"]).isEqualTo("private")
+    }
+
+    @Test
+    fun `tagging an audio to a custom private collection counts it as current_vault_custom`() {
+        val viewModel = givenAViewModel()
+        val sound = testSound("c", "c.mp3")
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
+        }
+        // Wait for the saved audio to reach allSoundsCache (via the reactive loadSounds) BEFORE
+        // tagging — syncAudioBuckets iterates that cache, so a not-yet-loaded audio counts as 0.
+        runBlocking { viewModel.library.first { lib -> lib.any { it.id == sound.id } } }
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Secretos",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PRIVATE,
+                        source = "manage",
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+
+        viewModel.toggleAudioInCollection(sound.id, created.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
+        runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.contains(sound.id) } }
+
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_VAULT_CUSTOM]).isEqualTo("1")
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_VAULT_DEFAULT]).isEqualTo("0")
+    }
+
+    @Test
+    fun `tagging an audio only to the system Baul counts it as current_vault_default`() {
+        val viewModel = givenAViewModel()
+        val sound = testSound("c", "c.mp3")
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
+        }
+        // Wait for the saved audio to reach allSoundsCache (via the reactive loadSounds) BEFORE
+        // tagging — syncAudioBuckets iterates that cache, so a not-yet-loaded audio counts as 0.
+        runBlocking { viewModel.library.first { lib -> lib.any { it.id == sound.id } } }
+        runBlocking { viewModel.collections.first { cols -> cols.any { it.isSystem } } }
+        val baul = viewModel.collections.value.first { it.isSystem }
+
+        viewModel.toggleAudioInCollection(sound.id, baul.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
+        runBlocking { viewModel.collections.first { col -> col.first { it.id == baul.id }.audioIds.contains(sound.id) } }
+
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_VAULT_DEFAULT]).isEqualTo("1")
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_VAULT_CUSTOM]).isEqualTo("0")
+    }
+
+    @Test
+    fun `untagged audios count as public_default and publicly-filed ones as public_custom`() {
+        val viewModel = givenAViewModel()
+        val filed = testSound("filed", "filed.mp3")
+        val untagged = testSound("untagged", "untagged.mp3")
+        runBlocking {
+            val repo = SoundsRepository(ApplicationProvider.getApplicationContext())
+            repo.save(filed)
+            repo.save(untagged)
+        }
+        runBlocking { viewModel.library.first { lib -> lib.count { !it.isBundled() } >= 2 } }
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Familia",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+
+        viewModel.toggleAudioInCollection(filed.id, created.id)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
+        runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.contains(filed.id) } }
+
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_PUBLIC_CUSTOM]).isEqualTo("1")
+        assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_PUBLIC_DEFAULT]).isEqualTo("1")
+    }
+
+    @Test
+    fun `trackCollectionView emits collection_view with the scope`() {
+        val viewModel = givenAViewModel()
+
+        viewModel.trackCollectionView(isPublic = false)
+        runBlocking { awaitAnalyticsEvent(fake, "collection_view") }
+
+        val event = fake.assertEmitted("collection_view")
+        assertThat(event.params["scope"]).isEqualTo("private")
+    }
+
+    // endregion
 }

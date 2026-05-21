@@ -10,11 +10,14 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareIntentOutcome
+import com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.google.common.truth.Truth.assertThat
@@ -44,8 +47,12 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     @Before
     fun setUp() {
         runBlocking {
-            SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
-            WelcomeStickerStore(ApplicationProvider.getApplicationContext()).clearForTest()
+            val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+            SoundsRepository(ctx).clearForTest()
+            WelcomeStickerStore(ctx).clearForTest()
+            CollectionsRepository(ctx).clearForTest()
+            MySoundsFilterStore(ctx).clearForTest()
+            VaultFilterStore(ctx).clearForTest()
         }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
@@ -441,7 +448,11 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     fun `sounds list preserves isPlaying state after switching tabs and returning`() =
         runTest {
             val viewModel = givenAViewModelWithCustomSound()
-            val playingSound = viewModel.sounds.value.first()
+            // Pick the saved custom sound explicitly — `sounds.value.first()` would resolve to the
+            // welcome sticker on a fresh install, and the sticker is filtered out of the synchronous
+            // `applyTabFilterFromCache` projection that `selectTab` now uses to bridge the gap to
+            // loadSounds. The contract the test guards is independent of welcome placement.
+            val playingSound = viewModel.sounds.value.single { it.name == "custom" }
 
             viewModel.onPlayerStart(playingSound, durationMs = 1000)
             viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
@@ -566,10 +577,19 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
     @Suppress("UNCHECKED_CAST")
     private fun SoundsViewModel.injectSounds(sounds: List<Sound>) {
+        // `_sounds` is the visible (tab-filtered) list; `allSoundsCache` is the canonical full
+        // catalog that `deleteSound` / `togglePin` resolve identity against. Inject into both so
+        // the test scenario mirrors what `loadSounds` would produce — without `allSoundsCache`
+        // the production code's "audio not found in catalog" early-return path masks the
+        // behavior under test.
         SoundsViewModel::class.java
             .getDeclaredField("_sounds")
             .also { it.isAccessible = true }
             // Safe: _sounds is always MutableStateFlow<List<Sound>> — type parameter erased at runtime
+            .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = sounds }
+        SoundsViewModel::class.java
+            .getDeclaredField("allSoundsCache")
+            .also { it.isAccessible = true }
             .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = sounds }
     }
 
@@ -597,7 +617,18 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
                 shareFeature = shareFeature ?: ShareFeature.instance,
             )
         createdViewModels += vm
-        runBlocking { vm.isInitialLoadComplete.first { it } }
+        runBlocking {
+            vm.isInitialLoadComplete.first { it }
+            // Yield briefly to let init's auxiliary coroutines (collections collector, filter
+            // prime, repo.sounds.drop(1) collector) reach their suspension points before tests
+            // mutate state via reflection. Without this yield, those collectors can race with
+            // the test's `injectSounds(...)` and overwrite `_sounds` / `allSoundsCache` via a
+            // late-arriving loadSounds emission. The previous post-PR-#1130 timing relied on
+            // loadSounds being a single synchronous read; v2.4.0 added a per-load DataStore
+            // round-trip for the private-only filter, widening the window where the test sees
+            // a half-applied projection.
+            kotlinx.coroutines.delay(50)
+        }
         return vm
     }
 

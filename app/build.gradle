@@ -123,6 +123,7 @@ dependencies {
     implementation libs.coroutines.android
     implementation libs.coroutines.core
     implementation libs.androidx.datastore.preferences
+    implementation libs.androidx.biometric
 
     debugImplementation libs.compose.ui.tooling
     debugImplementation libs.compose.ui.test.manifest

@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -70,10 +72,19 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
+import com.github.barriosnahuel.vossosunboton.feature.vault.bumpVaultUnlockCounter
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateResult
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateStatus
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
+import com.github.barriosnahuel.vossosunboton.model.Collection
+import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
+import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performRejectHaptic
 import kotlinx.coroutines.Dispatchers
@@ -152,6 +163,24 @@ fun AddButtonScreen(
         },
     )
 
+    val collectionsState = rememberCollectionsState(context = context, mode = mode)
+    // Start revealed if the session already proved access to the Vault. Avoids forcing a second
+    // biometric prompt inside the same session.
+    var privateRevealed by rememberSaveable { mutableStateOf(VaultSessionState.isVaultOpen()) }
+    // Pending "+ Nueva" sheet request — null when no sheet is open. Holds the scope (PUBLIC vs
+    // PRIVATE) so the sheet renders the right title and so the auto-tag logic knows which set
+    // to grow on success.
+    var pendingNewCollectionScope by rememberSaveable {
+        mutableStateOf<CollectionAccess?>(null)
+    }
+    val activity = remember(context) { context.findFragmentActivity() }
+    val biometricGate = remember(activity) { activity?.let { BiometricGate(it) } }
+    val biometricStatus = remember(biometricGate) { biometricGate?.status() ?: BiometricGateStatus.UNAVAILABLE }
+    val privateUnlockTitle =
+        stringResource(R.string.app_vault_biometric_prompt_title, stringResource(R.string.app_addbutton_collections_section_title))
+    val privateUnlockSubtitle = stringResource(R.string.app_vault_biometric_prompt_subtitle)
+    val privateUnlockNegative = stringResource(R.string.app_vault_biometric_negative)
+
     fun save() {
         if (name.text.isBlank()) {
             nameError = context.getString(R.string.app_addbutton_name_is_required_error)
@@ -166,7 +195,15 @@ fun AddButtonScreen(
             val feature = AddButtonFeatureProvider.get()
             when (val m = mode) {
                 is AddButtonMode.Create -> {
-                    val feedbackId = feature.saveNewButtonAsync(context, trimmedName, m.uri.toString()).await()
+                    val feedbackId =
+                        feature
+                            .saveNewButtonAsync(
+                                context = context,
+                                name = trimmedName,
+                                uri = m.uri.toString(),
+                                publicCollectionIds = collectionsState.publicSelection.value,
+                                privateCollectionIds = collectionsState.privateSelection.value,
+                            ).await()
                     if (feedbackId == R.string.app_addbutton_feedback_saved_ok) {
                         stopActivePreviewPlayback()
                         trackSoundAdd(context, trimmedName, tracker)
@@ -195,6 +232,25 @@ fun AddButtonScreen(
                 }
                 is AddButtonMode.Edit -> {
                     feature.renameButtonAsync(context, m.sound, trimmedName).await()
+                    // Persist tag deltas alongside the rename. Tagging failures don't roll back
+                    // the rename (the audio is renamed, just with stale tags); the non-fatal is
+                    // tracked inside CollectionsRepository's error path.
+                    val collectionsRepo = CollectionsRepository(context, onError = Tracker::track)
+                    runCatching {
+                        collectionsRepo.setAudioCollections(
+                            m.sound.id,
+                            collectionsState.publicSelection.value,
+                            CollectionAccess.PUBLIC,
+                        )
+                        collectionsRepo.setAudioCollections(
+                            m.sound.id,
+                            collectionsState.privateSelection.value,
+                            CollectionAccess.PRIVATE,
+                        )
+                    }.onFailure {
+                        Tracker.log("addbutton.edit_tag_apply_failed=${it.javaClass.simpleName}")
+                        Tracker.track(RuntimeException("Failed to apply tag changes on edit", it))
+                    }
                     stopActivePreviewPlayback()
                     trackSoundEdit(trimmedName, m.sound.name, tracker)
                     saveOutcome = SaveOutcome.Success(trimmedName)
@@ -203,7 +259,15 @@ fun AddButtonScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // imePadding() lives on the outer Box, not the inner content Column. With the modifier
+    // applied inside the Scaffold body the IME inset was only reducing the *content* region —
+    // the SaveButton (pinned to the bottom of that region) would slide up correctly, but on
+    // some devices the scroll container's measured height didn't update fast enough and the
+    // last field appeared to sit under the IME with no overflow to scroll into. Anchoring the
+    // imePadding on the screen root keeps the whole Scaffold above the keyboard, so every
+    // child — top bar, scrollable form, pinned button — shifts together and there is always
+    // either room on screen or visible overflow to scroll.
+    Box(modifier = Modifier.fillMaxSize().imePadding()) {
         Scaffold(
             topBar = { AddButtonTopBar(mode = mode, onNavigateUp = onNavigateUp) },
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -213,48 +277,105 @@ fun AddButtonScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .imePadding()
                         .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             ) {
-                PreviewSlot(context = context, mode = mode, displayedName = name.text)
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { new ->
-                        name = new.copy(text = new.text.take(MAX_NAME_LENGTH))
-                        nameError = null
-                    },
-                    label = {
-                        Text(
-                            stringResource(
-                                if (mode is AddButtonMode.Edit) {
-                                    R.string.app_addbutton_edit_name_label
-                                } else {
-                                    R.string.app_addbutton_name
-                                },
-                            ),
-                        )
-                    },
-                    placeholder = { Text(stringResource(R.string.app_addbutton_placeholder)) },
-                    isError = nameError != null,
-                    supportingText = {
-                        NameFieldSupportingText(
-                            error = nameError,
-                            nameLength = name.text.length,
-                            maxNameLength = MAX_NAME_LENGTH,
-                            duplicateMatch = duplicateMatch,
-                            context = context,
-                            tracker = tracker,
-                        )
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { save() }),
+                // The form content scrolls; the SaveButton stays pinned at the bottom so the
+                // primary action is always reachable even when the device is short / the IME is
+                // up / a long Assign-to-Collections section overflows the viewport.
+                Column(
                     modifier =
                         Modifier
+                            .weight(1f)
                             .fillMaxWidth()
-                            .focusRequester(nameFocusRequester),
-                )
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    PreviewSlot(context = context, mode = mode, displayedName = name.text)
+
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { new ->
+                            name = new.copy(text = new.text.take(MAX_NAME_LENGTH))
+                            nameError = null
+                        },
+                        label = {
+                            Text(
+                                stringResource(
+                                    if (mode is AddButtonMode.Edit) {
+                                        R.string.app_addbutton_edit_name_label
+                                    } else {
+                                        R.string.app_addbutton_name
+                                    },
+                                ),
+                            )
+                        },
+                        placeholder = { Text(stringResource(R.string.app_addbutton_placeholder)) },
+                        isError = nameError != null,
+                        supportingText = {
+                            NameFieldSupportingText(
+                                error = nameError,
+                                nameLength = name.text.length,
+                                maxNameLength = MAX_NAME_LENGTH,
+                                duplicateMatch = duplicateMatch,
+                                context = context,
+                                tracker = tracker,
+                            )
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { save() }),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .focusRequester(nameFocusRequester),
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    AssignToCollectionsSection(
+                        publicCollections = collectionsState.publicCollections.value,
+                        privateCollections = collectionsState.privateCollections.value,
+                        publicSelection = collectionsState.publicSelection.value,
+                        privateSelection = collectionsState.privateSelection.value,
+                        biometricStatus = biometricStatus,
+                        privateRevealed = privateRevealed,
+                        onPublicSelectionChange = { collectionsState.publicSelection.value = it },
+                        onPrivateSelectionChange = { collectionsState.privateSelection.value = it },
+                        onCreatePublicRequested = { pendingNewCollectionScope = CollectionAccess.PUBLIC },
+                        onCreatePrivateRequested = { pendingNewCollectionScope = CollectionAccess.PRIVATE },
+                        onRequestPrivateUnlock = {
+                            val gate = biometricGate
+                            if (gate == null || biometricStatus != BiometricGateStatus.AVAILABLE) {
+                                // No protection configured: open directly (spec § 6). Still a
+                                // successful unlock for analytics — count it like the gated grant.
+                                VaultSessionState.markVaultOpen()
+                                privateRevealed = true
+                                tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = AnalyticsSource.ADD_BOMP))
+                                bumpVaultUnlockCounter(tracker)
+                                return@AssignToCollectionsSection
+                            }
+                            gate.requestUnlock(
+                                title = privateUnlockTitle,
+                                subtitle = privateUnlockSubtitle,
+                                negativeButtonText = privateUnlockNegative,
+                            ) { result ->
+                                when (result) {
+                                    BiometricGateResult.Granted -> {
+                                        // Mark the whole Vault session as open — the user proved
+                                        // ownership here once and any other private surface in this
+                                        // process trusts the same flag.
+                                        VaultSessionState.markVaultOpen()
+                                        privateRevealed = true
+                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = true, source = AnalyticsSource.ADD_BOMP))
+                                        bumpVaultUnlockCounter(tracker)
+                                    }
+                                    is BiometricGateResult.Denied -> {
+                                        // Stay closed — user can retry by tapping again.
+                                        tracker.log(AnalyticsEvent.VaultUnlock(granted = false, source = AnalyticsSource.ADD_BOMP))
+                                    }
+                                }
+                            }
+                        },
+                        onHidePrivate = { privateRevealed = false },
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
                 SaveButton(
                     outcome = saveOutcome,
@@ -268,6 +389,32 @@ fun AddButtonScreen(
             outcome = saveOutcome,
             mode = mode,
             onSaved = onSaved,
+        )
+    }
+
+    val scope = pendingNewCollectionScope
+    if (scope != null) {
+        InlineCollectionCreateSheet(
+            scope = scope,
+            source = AnalyticsSource.ADD_BOMP,
+            onDismiss = { pendingNewCollectionScope = null },
+            onCreated = { created ->
+                // Auto-tag the in-progress audio with the freshly created collection so the user
+                // doesn't have to find it in the chip row and tap it again — the "+ Nueva" intent
+                // is "create AND tag", not just "create".
+                if (created.isPublic) {
+                    collectionsState.publicSelection.value =
+                        collectionsState.publicSelection.value + created.id
+                    collectionsState.publicCollections.value =
+                        collectionsState.publicCollections.value + created
+                } else {
+                    collectionsState.privateSelection.value =
+                        collectionsState.privateSelection.value + created.id
+                    collectionsState.privateCollections.value =
+                        collectionsState.privateCollections.value + created
+                }
+                pendingNewCollectionScope = null
+            },
         )
     }
 }
@@ -498,6 +645,72 @@ private fun SaveButton(
             }
         }
     }
+}
+
+internal class CollectionsScreenState(
+    val publicCollections: androidx.compose.runtime.MutableState<List<Collection>>,
+    val privateCollections: androidx.compose.runtime.MutableState<List<Collection>>,
+    val publicSelection: androidx.compose.runtime.MutableState<Set<String>>,
+    val privateSelection: androidx.compose.runtime.MutableState<Set<String>>,
+)
+
+@Composable
+private fun rememberCollectionsState(
+    context: Context,
+    mode: AddButtonMode,
+): CollectionsScreenState {
+    val publicCollections = remember { mutableStateOf<List<Collection>>(emptyList()) }
+    val privateCollections = remember { mutableStateOf<List<Collection>>(emptyList()) }
+    val publicSelection = rememberSaveable(stateSaver = StringSetSaver) { mutableStateOf(emptySet<String>()) }
+    val privateSelection = rememberSaveable(stateSaver = StringSetSaver) { mutableStateOf(emptySet<String>()) }
+    val editingAudioId = (mode as? AddButtonMode.Edit)?.sound?.id
+
+    LaunchedEffect(editingAudioId) {
+        withContext(Dispatchers.IO) {
+            val repo = CollectionsRepository(context, onError = Tracker::track)
+            val list = repo.collections.first()
+            publicCollections.value = list.filter { it.isPublic }
+            privateCollections.value = list.filter { it.isPrivate }
+            if (editingAudioId != null) {
+                publicSelection.value = list.filter { it.isPublic && editingAudioId in it.audioIds }.map { it.id }.toSet()
+                privateSelection.value = list.filter { it.isPrivate && editingAudioId in it.audioIds }.map { it.id }.toSet()
+            }
+        }
+    }
+
+    return CollectionsScreenState(
+        publicCollections = publicCollections,
+        privateCollections = privateCollections,
+        publicSelection = publicSelection,
+        privateSelection = privateSelection,
+    )
+}
+
+// rememberSaveable(stateSaver) takes a Saver over the VALUE type, not the MutableState wrapper —
+// the harness builds the MutableState around the restored value itself. Typing this as
+// `Saver<MutableState<Set<String>>, ...>` would nest a MutableState inside a MutableState at
+// the call site and the kotlinc type checker rejects it as `MutableState<MutableState<Set<String>>>`.
+private val StringSetSaver: Saver<Set<String>, Any> =
+    Saver(
+        save = { value -> ArrayList(value) },
+        restore = { value ->
+            @Suppress("UNCHECKED_CAST")
+            (value as ArrayList<String>).toSet()
+        },
+    )
+
+/**
+ * Walks the Context wrapper chain to find a [androidx.fragment.app.FragmentActivity]. Compose's
+ * `LocalContext.current` may return a ContextThemeWrapper around the activity; naive `as` casts
+ * fail. Returns null only when the composable is previewed outside an activity (e.g. @Preview).
+ */
+internal fun Context.findFragmentActivity(): androidx.fragment.app.FragmentActivity? {
+    var current: Context? = this
+    while (current is android.content.ContextWrapper) {
+        if (current is androidx.fragment.app.FragmentActivity) return current
+        current = current.baseContext
+    }
+    return null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

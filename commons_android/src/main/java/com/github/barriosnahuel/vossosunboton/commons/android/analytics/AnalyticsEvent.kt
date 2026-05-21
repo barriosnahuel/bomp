@@ -33,11 +33,11 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "sound_add", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
-                putString("source", source)
-                putInt("name_length", nameLength)
-                putInt("name_word_count", nameWordCount)
-                putBoolean("name_hit_limit", nameHitLimit)
-                putInt("current_sounds", currentSounds)
+                putString(AnalyticsParam.SOURCE, source)
+                putInt(AnalyticsParam.NAME_LENGTH, nameLength)
+                putInt(AnalyticsParam.NAME_WORD_COUNT, nameWordCount)
+                putBoolean(AnalyticsParam.NAME_HIT_LIMIT, nameHitLimit)
+                putInt(AnalyticsParam.CURRENT_SOUNDS, currentSounds)
             }
     }
 
@@ -50,11 +50,11 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "sound_edit", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
-                putString("field", "name")
-                putInt("name_length", nameLength)
-                putInt("name_word_count", nameWordCount)
-                putBoolean("name_hit_limit", nameHitLimit)
-                putBoolean("name_changed", nameChanged)
+                putString(AnalyticsParam.FIELD, "name")
+                putInt(AnalyticsParam.NAME_LENGTH, nameLength)
+                putInt(AnalyticsParam.NAME_WORD_COUNT, nameWordCount)
+                putBoolean(AnalyticsParam.NAME_HIT_LIMIT, nameHitLimit)
+                putBoolean(AnalyticsParam.NAME_CHANGED, nameChanged)
             }
     }
 
@@ -65,7 +65,7 @@ sealed class AnalyticsEvent(
     data class SoundAddAbandonedAfterError(
         val reason: String,
     ) : AnalyticsEvent(name = "sound_add_abandoned_after_error", hasFirstVariant = false) {
-        override fun params(): Bundle = Bundle().apply { putString("reason", reason) }
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.REASON, reason) }
     }
 
     /** Audio deleted (post-snackbar commit). NOT emitted when the user taps "Undo" before the timeout. */
@@ -78,21 +78,21 @@ sealed class AnalyticsEvent(
     data class SoundPlay(
         val surface: String,
     ) : AnalyticsEvent(name = "sound_play", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putString("surface", surface) }
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
     }
 
     /** Audio pinned/unpinned via swipe. */
     data class PinToggle(
         val pinned: Boolean,
     ) : AnalyticsEvent(name = "pin_toggle", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putBoolean("pinned", pinned) }
+        override fun params(): Bundle = Bundle().apply { putBoolean(AnalyticsParam.PINNED, pinned) }
     }
 
     /** Search returned zero results for a non-blank query. Debounced upstream to avoid keystroke noise. */
     data class SearchZeroResults(
         val queryLength: Int,
     ) : AnalyticsEvent(name = "search_zero_results", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putInt("query_length", queryLength) }
+        override fun params(): Bundle = Bundle().apply { putInt(AnalyticsParam.QUERY_LENGTH, queryLength) }
     }
 
     /**
@@ -102,7 +102,7 @@ sealed class AnalyticsEvent(
     data class Share(
         val surface: String,
     ) : AnalyticsEvent(name = "share", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putString("surface", surface) }
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
     }
 
     /** Credits section expanded inside About. In-screen reveal, not a destination. */
@@ -188,4 +188,132 @@ sealed class AnalyticsEvent(
      * Bomp before deciding whether to save the duplicate.
      */
     object DuplicateNameHintPlay : AnalyticsEvent(name = "duplicate_name_hint_play", hasFirstVariant = true)
+
+    /**
+     * A new collection was created. [scope] is `"public"` or `"private"`; [audios] is the audio
+     * count at creation (always 0 today but kept for future "create from selection" flows).
+     * [source] is the surface that opened the create flow — `"add_bomp"` (New/Edit Bomp assign),
+     * `"assign_sheet"` (long-press → assign), `"vault_fab"` (Vault tab FAB), `"manage"` (Manage
+     * Collections), or `"my_sounds_filter"` (the My Sounds filter chip row). Tells product which
+     * entry point drives organization.
+     */
+    data class CollectionCreate(
+        val scope: String,
+        val audios: Int,
+        val source: String,
+    ) : AnalyticsEvent(name = "collection_create", hasFirstVariant = true) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString(AnalyticsParam.SCOPE, scope)
+                putInt(AnalyticsParam.AUDIOS, audios)
+                putString(AnalyticsParam.SOURCE, source)
+            }
+    }
+
+    /**
+     * A collection was deleted. [scope] mirrors [CollectionCreate]; [audios] is the count of
+     * audios that lost their tag (audio files themselves are not removed from disk).
+     * `hasFirstVariant = true` so dashboards can isolate the first time a user prunes their
+     * organization, distinct from routine cleanup.
+     */
+    data class CollectionDelete(
+        val scope: String,
+        val audios: Int,
+    ) : AnalyticsEvent(name = "collection_delete", hasFirstVariant = true) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString(AnalyticsParam.SCOPE, scope)
+                putInt(AnalyticsParam.AUDIOS, audios)
+            }
+    }
+
+    /**
+     * A collection was renamed. `hasFirstVariant = true` so the first rename — a signal that the
+     * initial naming did not satisfy — is separable from later touch-ups.
+     */
+    data class CollectionRename(
+        val scope: String,
+    ) : AnalyticsEvent(name = "collection_rename", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SCOPE, scope) }
+    }
+
+    /**
+     * A collection filter chip was activated. [matches] is the number of audios that survive the
+     * filter (spots actively-managed vs. empty/abandoned collections). [scope] is `"public"` (the
+     * My Sounds filter row) or `"private"` (the Vault filter row) — lets product compare which
+     * surface's filtering users actually lean on.
+     */
+    data class CollectionFilterApply(
+        val matches: Int,
+        val scope: String,
+    ) : AnalyticsEvent(name = "collection_filter_apply", hasFirstVariant = true) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putInt(AnalyticsParam.MATCHES, matches)
+                putString(AnalyticsParam.SCOPE, scope)
+            }
+    }
+
+    /**
+     * A collection was opened for viewing from the Manage Collections overflow ("View collection").
+     * [scope] mirrors [CollectionCreate]. Separates Manage-as-navigation from Manage-as-housekeeping
+     * — do users reach their audios *through* Manage, or only edit metadata there?
+     */
+    data class CollectionView(
+        val scope: String,
+    ) : AnalyticsEvent(name = "collection_view", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SCOPE, scope) }
+    }
+
+    /**
+     * Audio was added to or removed from a collection via the assign-to-collection sheet or the
+     * Add/Edit Bomp chip group. [assigned] = true when the audio just joined, false when it left.
+     * [scope] mirrors [CollectionCreate].
+     */
+    data class CollectionAudioToggle(
+        val assigned: Boolean,
+        val scope: String,
+    ) : AnalyticsEvent(name = "collection_audio_toggle", hasFirstVariant = true) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putBoolean(AnalyticsParam.ASSIGNED, assigned)
+                putString(AnalyticsParam.SCOPE, scope)
+            }
+    }
+
+    /**
+     * Biometric prompt resolved for a Vault collection. [granted] reflects whether the user
+     * authenticated successfully (true) or cancelled / failed (false). [source] is the entry point
+     * that triggered the prompt — one of `"vault_tab"`, `"search"` (the "Search your Vault too"
+     * CTA), `"add_bomp"` (New/Edit Bomp assign section), `"assign_sheet"` (long-press → assign), or
+     * `"manage"` (Manage Collections' locked-Vault card). No PII — collection id is out of scope;
+     * only the cumulative grant/cancel rate and which surface drives unlocks matter.
+     */
+    data class VaultUnlock(
+        val granted: Boolean,
+        val source: String,
+    ) : AnalyticsEvent(name = "vault_unlock", hasFirstVariant = true) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putBoolean(AnalyticsParam.GRANTED, granted)
+                putString(AnalyticsParam.SOURCE, source)
+            }
+    }
+
+    /**
+     * Device has no biometric or device-credential lock configured but a private collection
+     * exists — the warning chip on the card is showing. Emitted at most once per process via
+     * `markFiredOnce("vault_unprotected_warning")` so we don't flood dashboards on scroll.
+     */
+    object VaultUnprotectedWarningShown :
+        AnalyticsEvent(name = "vault_unprotected_warning_shown", hasFirstVariant = false)
+
+    /**
+     * The "Search your Vault too" CTA became visible at the foot of the search overlay (the user
+     * has a non-empty private collection AND the Vault is locked this session). Impression signal
+     * for the new search entry point. Emitted at most once per process via
+     * `markFiredOnce("vault_search_cta_shown")` so re-opening search / recomposition doesn't flood.
+     */
+    object VaultSearchUnlockCtaShown :
+        AnalyticsEvent(name = "vault_search_unlock_cta_shown", hasFirstVariant = false)
 }

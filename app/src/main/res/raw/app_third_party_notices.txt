@@ -33,6 +33,13 @@ https://github.com/material-components/material-components-android
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
+AndroidX Biometric
+Copyright (C) The Android Open Source Project
+Apache License, Version 2.0
+https://developer.android.com/jetpack/androidx/releases/biometric
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
 Firebase Android SDK (Analytics, Crashlytics, Performance)
 Copyright (C) Google LLC
 Apache License, Version 2.0 (plus Firebase ToS)

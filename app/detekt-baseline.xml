@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>LongMethod:AddButtonFeature.kt$AddButtonFeatureImpl$override fun saveNewButtonAsync( context: Context, name: String, uri: String, publicCollectionIds: Set&lt;String&gt;, privateCollectionIds: Set&lt;String&gt;, ): Deferred&lt;Int&gt;</ID>
+    <ID>TooManyFunctions:AddButtonScreen.kt$com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonScreen.kt</ID>
+  </CurrentIssues>
+</SmellBaseline>

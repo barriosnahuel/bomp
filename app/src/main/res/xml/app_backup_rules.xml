@@ -4,4 +4,7 @@
     <include domain="file" path="datastore/bomps.preferences_pb" />
     <include domain="file" path="datastore/welcome-sticker.preferences_pb" />
     <include domain="file" path="datastore/analytics-counters.preferences_pb" />
+    <include domain="file" path="datastore/collections.preferences_pb" />
+    <include domain="file" path="datastore/my-sounds-filter.preferences_pb" />
+    <include domain="file" path="datastore/vault-filter.preferences_pb" />
 </full-backup-content>

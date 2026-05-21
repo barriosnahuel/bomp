@@ -90,6 +90,23 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
     }
 
     /**
+     * OWASP MASVS-STORAGE-2 / CWE-359 (collections + Vault preserved across restore).
+     *
+     * Collections + Vault membership is part of the user's archive, so it MUST be backed up —
+     * Auto Backup to Drive covers everything the user owns. The Pro tier is realtime cross-device
+     * sync, NOT cloud backup; backup is the floor for every user. The companion filter prefs ride
+     * along so a restored device lands on the same chip. Regression net: dropping these includes
+     * would silently stop backing up the user's organization.
+     */
+    @Test
+    fun `collections and vault prefs are referenced by every backup include rule`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertIncludedEverywhere(context, "file" to "datastore/collections.preferences_pb")
+        assertIncludedEverywhere(context, "file" to "datastore/my-sounds-filter.preferences_pb")
+        assertIncludedEverywhere(context, "file" to "datastore/vault-filter.preferences_pb")
+    }
+
+    /**
      * OWASP MASVS-PRIVACY-1 / CWE-200 (analytics first_open flags excluded from cross-install backup).
      *
      * `first_*` event flags MUST NOT be backed up. Firebase's user-identity model is per-install

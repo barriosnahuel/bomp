@@ -176,6 +176,8 @@ internal class AddButtonActivityIntentDispatchTest : AbstractRobolectricTest() {
             context: Context,
             name: String,
             uri: String,
+            publicCollectionIds: Set<String>,
+            privateCollectionIds: Set<String>,
         ): Deferred<Int> = CompletableDeferred(0)
 
         override fun renameButtonAsync(

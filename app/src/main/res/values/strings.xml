@@ -14,7 +14,7 @@
     <string name="app_addbutton_overlay_subtitle_saved">is now yours</string>
     <string name="app_addbutton_overlay_subtitle_renamed">renamed</string>
 <string name="app_feedback_generic_error_contact_support">Oops! I did it again, please contact support</string>
-    <string name="app_navigation_menu_item_my_sounds">My Sounds</string>
+    <string name="app_navigation_menu_item_my_sounds">My Bomps</string>
     <string name="app_navigation_menu_item_explore_sounds">Explore</string>
     <string name="app_play">Play</string>
     <string name="app_pause">Pause</string>
@@ -28,6 +28,7 @@
     <string name="app_search_initial_hint">That gem of yours is in here. Go find it.</string>
     <string name="app_search_empty_headline">Absolute silence…</string>
     <string name="app_search_empty_subtext">This sticker doesn\'t exist yet. Your collection has a gap only you can fill.</string>
+    <string name="app_search_vault_cta">Search your Vault too</string>
     <string name="app_edit">Rename</string>
     <string name="app_feedback_button_renamed">%1$s renamed!</string>
     <string name="app_pin">Pin to top</string>
@@ -95,4 +96,110 @@
     <string name="app_welcome_sticker_origin">From the maker</string>
     <string name="app_welcome_sticker_remaining_format">-%1$s</string>
     <string name="app_welcome_sticker_feedback_dismissed">Catch you around!</string>
+
+    <!-- Vault tab (private collections — biometric-gated per collection) -->
+    <string name="app_navigation_menu_item_vault">Vault</string>
+    <string name="app_vault_screen_title">Vault</string>
+    <string name="app_vault_baul_name">My Vault</string>
+    <string name="app_vault_unprotected_warning_chip">Not protected — set a screen lock</string>
+    <string name="app_vault_fab_new">New Vault</string>
+    <string name="app_vault_card_overflow_description">More options for %1$s</string>
+    <string name="app_manage_collections_overflow_view">View collection</string>
+    <string name="app_vault_card_overflow_rename">Rename</string>
+    <string name="app_vault_card_overflow_delete">Delete</string>
+
+    <!-- Vault — inspirational empty state (zero private audios) -->
+    <string name="app_vault_zrp_eyebrow">Vault · open session</string>
+    <string name="app_vault_zrp_placeholder">your first memory</string>
+    <string name="app_vault_zrp_headline_lead">The Vault is waiting for</string>
+    <string name="app_vault_zrp_headline_emphasis">something that matters.</string>
+    <string name="app_vault_zrp_body">A voice you want to keep. A message you don\'t want to lose. It never leaves this device.</string>
+    <string name="app_vault_unlock_cta">Tap to unlock</string>
+    <string name="app_vault_unlock_subtitle">The Vault stays open for the rest of this session.</string>
+
+    <!-- Biometric prompt copy (Vault unlock) -->
+    <string name="app_vault_biometric_prompt_title">Open %1$s</string>
+    <string name="app_vault_biometric_prompt_subtitle">Use your fingerprint or screen lock to listen.</string>
+    <string name="app_vault_biometric_negative">Cancel</string>
+
+    <!-- Create / edit collection sheet -->
+    <string name="app_collection_sheet_title_new_public">New collection</string>
+    <string name="app_collection_sheet_title_new_private">New Vault</string>
+    <string name="app_collection_sheet_title_rename">Rename collection</string>
+    <string name="app_collection_sheet_name_label">Name</string>
+    <string name="app_collection_sheet_name_placeholder_public">Family, Work, Recipes…</string>
+    <string name="app_collection_sheet_name_placeholder_private">Grandma, Christmas 2025…</string>
+    <string name="app_collection_sheet_save">Save</string>
+    <string name="app_collection_sheet_cancel">Cancel</string>
+    <string name="app_collection_sheet_error_name_required">Give your collection a name.</string>
+    <plurals name="app_collection_sheet_error_name_too_long">
+        <item quantity="one">Keep it under %1$d character.</item>
+        <item quantity="other">Keep it under %1$d characters.</item>
+    </plurals>
+    <string name="app_collection_sheet_error_name_taken">You already have a collection with that name.</string>
+    <string name="app_collection_sheet_name_counter">%1$d / %2$d</string>
+    <string name="app_collection_sheet_private_disclaimer">Vault collections stay on this phone and ask for your fingerprint every time you open them.</string>
+
+    <!-- Delete confirmation dialog -->
+    <string name="app_collection_delete_dialog_title">Delete %1$s?</string>
+    <plurals name="app_collection_delete_dialog_body_with_audios">
+        <item quantity="one">%1$d audio will leave this collection. The audio file itself stays where it is — only the collection goes away.</item>
+        <item quantity="other">%1$d audios will leave this collection. The audio files themselves stay where they are — only the collection goes away.</item>
+    </plurals>
+    <string name="app_collection_delete_dialog_body_empty">This collection is empty. Are you sure?</string>
+    <string name="app_collection_delete_dialog_confirm">Delete collection</string>
+    <string name="app_collection_delete_dialog_dismiss">Keep it</string>
+
+    <!-- My Sounds — collection filter chips -->
+    <string name="app_my_sounds_filter_all">All</string>
+    <string name="app_my_sounds_filter_chip_description">Filter by %1$s</string>
+    <string name="app_my_sounds_filter_active_clear_description">Clear collection filter</string>
+    <string name="app_my_sounds_filter_chip_new">+ New</string>
+    <string name="app_my_sounds_filter_chip_new_description">Create a new collection</string>
+    <string name="app_my_sounds_filter_empty_collection_headline">Nothing in here yet.</string>
+    <string name="app_my_sounds_filter_empty_collection_body">Add a Bomp to %1$s from its More menu.</string>
+
+    <!-- Sound long-press menu — "Add to collection" entry + bottom-sheet picker -->
+    <string name="app_audio_menu_add_to_collection">Add to collection</string>
+    <string name="app_assign_collection_sheet_title">Add to a collection</string>
+    <string name="app_assign_collection_sheet_done">Done</string>
+
+    <!-- Active filter header (below the chip row on My Sounds + Vault) -->
+    <string name="app_active_filter_header_all_my_sounds">All sounds · %1$d</string>
+    <string name="app_active_filter_header_all_vault">All vault sounds · %1$d</string>
+    <plurals name="app_active_filter_header_with_collection">
+        <item quantity="one">%1$s · %2$d sound</item>
+        <item quantity="other">%1$s · %2$d sounds</item>
+    </plurals>
+    <string name="app_active_filter_header_edit_description">Edit %1$s</string>
+
+    <!-- Manage collections screen -->
+    <string name="app_manage_collections_menu_item">Manage collections</string>
+    <string name="app_manage_collections_title">Manage collections</string>
+    <string name="app_manage_collections_back">Back</string>
+    <string name="app_manage_collections_section_public">My Sounds</string>
+    <string name="app_manage_collections_section_vault">Vault</string>
+    <string name="app_manage_collections_system_tag">System</string>
+    <plurals name="app_manage_collections_row_sounds_count">
+        <item quantity="one">%1$d sound</item>
+        <item quantity="other">%1$d sounds</item>
+    </plurals>
+    <string name="app_manage_collections_new_public">New collection</string>
+    <string name="app_manage_collections_new_vault">New Vault</string>
+    <string name="app_manage_collections_empty_public">No collections yet.</string>
+    <string name="app_manage_collections_empty_vault">No Vault collections yet.</string>
+    <string name="app_manage_collections_vault_locked_title">Vault locked</string>
+    <string name="app_manage_collections_vault_locked_body">Unlock to manage your Vault collections.</string>
+    <string name="app_manage_collections_vault_locked_cta">Unlock</string>
+
+    <!-- Add / Edit Bomp — "Assign to collections" section -->
+    <string name="app_addbutton_collections_section_title">Assign to collections</string>
+    <string name="app_addbutton_collections_public_label">Collections</string>
+    <string name="app_addbutton_collections_public_empty">No collections yet.</string>
+    <string name="app_addbutton_collections_private_label">Vault</string>
+    <string name="app_addbutton_collections_private_locked_cta">Show your Vault (requires unlock)</string>
+    <string name="app_addbutton_collections_private_unlocked_cta">Hide your Vault</string>
+    <string name="app_addbutton_collections_private_unprotected_hint">Your Vault shows up here because this device has no fingerprint or screen lock.</string>
+    <string name="app_addbutton_collections_new_chip">+ New collection</string>
+    <string name="app_addbutton_collections_new_private_chip">+ New in Vault</string>
 </resources>

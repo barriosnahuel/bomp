@@ -13,10 +13,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsScope
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsUserProperty
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerListener
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
@@ -24,7 +26,10 @@ import com.github.barriosnahuel.vossosunboton.feature.share.ShareIntentOutcome
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeSticker
 import com.github.barriosnahuel.vossosunboton.feature.welcome.welcomeSticker
+import com.github.barriosnahuel.vossosunboton.model.Collection
+import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -43,7 +48,25 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-enum class AppTab { MY_SOUNDS, EXPLORE_SOUNDS }
+enum class AppTab { MY_SOUNDS, VAULT, EXPLORE_SOUNDS }
+
+/**
+ * Request payload for the create/rename collection bottom sheet. A single sealed shape so the
+ * sheet host can match-on-type to derive title, placeholder, and submit semantics.
+ */
+sealed interface CollectionSheetRequest {
+    data class Create(
+        val access: CollectionAccess,
+        // Analytics surface that opened the create sheet — flows into collection_create.source so
+        // product can tell which entry point drives organization. See AnalyticsEvent.CollectionCreate.
+        val source: String,
+    ) : CollectionSheetRequest
+
+    data class Rename(
+        val id: String,
+        val currentName: String,
+    ) : CollectionSheetRequest
+}
 
 data class DeletedSoundEvent(
     val sound: Sound,
@@ -57,13 +80,18 @@ data class PlaybackProgress(
     val fraction: Float get() = if (durationMs > 0) positionMs / durationMs.toFloat() else 0f
 }
 
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 class SoundsViewModel(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val searchDebounceMs: Long = 200L,
     private val welcomeStore: WelcomeStickerStore = WelcomeStickerStore(application),
     private val shareFeature: ShareFeature = ShareFeature.instance,
+    private val collectionsRepo: CollectionsRepository = CollectionsRepository(application, onError = Tracker::track),
+    private val mySoundsFilterStore: MySoundsFilterStore = MySoundsFilterStore(application),
+    private val vaultFilterStore: com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore =
+        com.github.barriosnahuel.vossosunboton.feature.vault
+            .VaultFilterStore(application),
 ) : AndroidViewModel(application),
     PlayerControllerListener {
     private val repo = SoundsRepository(application, onError = Tracker::track)
@@ -83,6 +111,58 @@ class SoundsViewModel(
     private val _hasBundledSounds = MutableStateFlow(false)
     val hasBundledSounds: StateFlow<Boolean> = _hasBundledSounds.asStateFlow()
 
+    /** All collections (public + private) — drives the Vault tab list and the Add/Edit tag chips. */
+    private val _collections = MutableStateFlow<List<Collection>>(emptyList())
+    val collections: StateFlow<List<Collection>> = _collections.asStateFlow()
+
+    /**
+     * Reverse index: `audioId → list of collection ids this audio belongs to`. IDs (not names)
+     * so the UI layer can resolve the user-facing label against `_collections` and substitute
+     * the locale-aware string resource for system collections. Derived from [_collections];
+     * rebuilt on every emission.
+     */
+    private val _audioCollectionsIndex = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+    val audioCollectionsIndex: StateFlow<Map<String, List<String>>> = _audioCollectionsIndex.asStateFlow()
+
+    /** Persisted last-chosen filter on My Sounds. `null` = "All" (unfiltered). */
+    private val _activeMySoundsFilter = MutableStateFlow<String?>(null)
+    val activeMySoundsFilter: StateFlow<String?> = _activeMySoundsFilter.asStateFlow()
+
+    /** Persisted last-chosen filter on the Vault tab. `null` = "All private audios" (unfiltered). */
+    private val _activeVaultFilter = MutableStateFlow<String?>(null)
+    val activeVaultFilter: StateFlow<String?> = _activeVaultFilter.asStateFlow()
+
+    /**
+     * Audios visible in the Vault tab — the union of all audios tagged to any private collection,
+     * optionally narrowed to the active [activeVaultFilter] chip. Drives the Vault list directly
+     * (no separate collection grid); rendering identical to `sounds` (same `SoundItem` cards).
+     */
+    private val _vaultAudios = MutableStateFlow<List<Sound>>(emptyList())
+    val vaultAudios: StateFlow<List<Sound>> = _vaultAudios.asStateFlow()
+
+    /**
+     * Active "create or rename collection" request. `null` when no sheet is open. The single
+     * StateFlow is enough because only one create/rename sheet can be visible at a time across
+     * the whole screen graph.
+     */
+    private val _activeCollectionSheet = MutableStateFlow<CollectionSheetRequest?>(null)
+    val activeCollectionSheet: StateFlow<CollectionSheetRequest?> = _activeCollectionSheet.asStateFlow()
+
+    /**
+     * Pending delete-confirmation prompt for a non-system collection. Null when no dialog is
+     * showing. System collections are guarded earlier (the UI does not offer Delete for them).
+     */
+    private val _pendingCollectionDelete = MutableStateFlow<String?>(null)
+    val pendingCollectionDelete: StateFlow<String?> = _pendingCollectionDelete.asStateFlow()
+
+    /**
+     * `audioId` of the sound the long-press → "Add to collection" sheet is currently editing.
+     * `null` when the sheet is closed. Only one such sheet is reachable at a time (the long-press
+     * menu collapses on selection), so a single Optional is sufficient.
+     */
+    private val _activeAssignAudioId = MutableStateFlow<String?>(null)
+    val activeAssignAudioId: StateFlow<String?> = _activeAssignAudioId.asStateFlow()
+
     private val mutableInitialLoadComplete = MutableStateFlow(false)
 
     /**
@@ -101,6 +181,16 @@ class SoundsViewModel(
     internal val isInitialLoadComplete: StateFlow<Boolean> = mutableInitialLoadComplete.asStateFlow()
 
     private val allSoundsCache = MutableStateFlow<List<Sound>>(emptyList())
+
+    /**
+     * Snapshot of the full catalog (custom + bundled) regardless of the currently selected tab.
+     * Distinct from [sounds], which is the tab-filtered list that powers the visible LazyColumn —
+     * on the Vault tab `sounds` collapses to an empty list (the Vault renders private collection
+     * cards instead of audios). [library] keeps the full set available so detail screens like
+     * `ImmersiveListenScreen` can resolve a collection's `audioIds` to real Sound objects without
+     * caring about which tab the user happens to be on.
+     */
+    val library: StateFlow<List<Sound>> = allSoundsCache.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -201,6 +291,186 @@ class SoundsViewModel(
                 Tracker.track(RuntimeException("SoundsViewModel repo observation failed", e))
             }
         }
+        // Hydrate the last-chosen filter chips. Both filters persist per spec § 7 ("persist last
+        // filter, favors single-context users").
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val mine = mySoundsFilterStore.get()
+                _activeMySoundsFilter.value = mine.takeIf { it != MySoundsFilterStore.ALL_SENTINEL }
+                val vault = vaultFilterStore.get()
+                _activeVaultFilter.value =
+                    vault.takeIf {
+                        it !=
+                            com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore.ALL_SENTINEL
+                    }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
+                Tracker.track(RuntimeException("SoundsViewModel filter prime failed", e))
+            }
+        }
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                // The first emission is the cold-start snapshot — `loadSounds()` from the init
+                // launch above already read this same snapshot via `privateOnlyAudioIds()`, so
+                // a second redundant `loadSounds()` here would just race with that work (and,
+                // in tests, with reflection-based `injectSounds(...)` calls scheduled after
+                // `isInitialLoadComplete`). The non-loadSounds bookkeeping (audio index, stale-
+                // filter cleanup, vault recompute, user property sync) still has to fire on the
+                // first emission because those fields start empty and depend on the snapshot.
+                var firstEmission = true
+                collectionsRepo.collections.collect { list ->
+                    _collections.value = list
+                    _audioCollectionsIndex.value = buildAudioCollectionsIndex(list)
+                    // Drop stale active filters when the underlying collection is deleted so the
+                    // user does not end up looking at a "filtered" but empty list with no chip
+                    // highlighted to clear.
+                    val activeMine = _activeMySoundsFilter.value
+                    if (activeMine != null && list.none { it.id == activeMine }) {
+                        _activeMySoundsFilter.value = null
+                        runCatching { mySoundsFilterStore.set(MySoundsFilterStore.ALL_SENTINEL) }
+                    }
+                    val activeVault = _activeVaultFilter.value
+                    if (activeVault != null && list.none { it.id == activeVault }) {
+                        _activeVaultFilter.value = null
+                        runCatching {
+                            vaultFilterStore.set(
+                                com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore.ALL_SENTINEL,
+                            )
+                        }
+                    }
+                    recomputeVaultAudios()
+                    syncCollectionsUserProperties(list)
+                    if (!firstEmission) {
+                        loadSounds()
+                    }
+                    firstEmission = false
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
+                Tracker.track(RuntimeException("SoundsViewModel collections observation failed", e))
+            }
+        }
+        // React to the Vault unlock/lock session flag. Search results are the only consumer whose
+        // visibility set DEPENDS on the session — My Sounds is "public by definition" and Vault is
+        // gated by its own screen. `drop(1)` skips the initial `false` emission; `recomputeSearch`
+        // already runs implicitly via `onSearchQueryChange` so we don't need to seed it here. When
+        // the user taps the "Unlock to search the Vault" CTA and authenticates, this collector
+        // refreshes `_searchResults` so previously-hidden private matches appear without the user
+        // having to re-type the query.
+        viewModelScope.launch {
+            try {
+                com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
+                    .flow
+                    .drop(1)
+                    .collect { recomputeSearchResults() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
+                Tracker.track(RuntimeException("SoundsViewModel vault-session observation failed", e))
+            }
+        }
+    }
+
+    /**
+     * Recomputes [_vaultAudios] = (audios in any private collection) optionally narrowed to the
+     * active Vault filter chip. Called from the collections observer (so tag changes propagate
+     * automatically) and explicitly after [selectVaultFilter] / loadSounds (so a freshly loaded
+     * catalog also rebuilds the Vault list).
+     */
+    private fun buildAudioCollectionsIndex(collections: List<Collection>): Map<String, List<String>> {
+        val index = mutableMapOf<String, MutableList<String>>()
+        for (collection in collections) {
+            for (audioId in collection.audioIds) {
+                index.getOrPut(audioId) { mutableListOf() } += collection.id
+            }
+        }
+        return index.mapValues { it.value.toList() }
+    }
+
+    /**
+     * Re-emits the three "current_collections_*" user properties whenever the canonical collections
+     * list mutates (create/rename/delete + every membership toggle, since [CollectionsRepository]
+     * snapshots on every write). Excludes system collections so the dashboards reflect *user*
+     * intent — the seeded Baúl row is always there.
+     */
+    private fun syncCollectionsUserProperties(collections: List<Collection>) {
+        val publicCount = collections.count { it.isPublic && !it.isSystem }
+        val privateCount = collections.count { it.isPrivate && !it.isSystem }
+        val audiosInCollections = collections.flatMap { it.audioIds }.toSet().size
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_COLLECTIONS_PUBLIC, publicCount.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_COLLECTIONS_PRIVATE, privateCount.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_AUDIOS_IN_COLLECTIONS, audiosInCollections.toString())
+        syncAudioBuckets(collections)
+    }
+
+    /**
+     * Classifies every user audio into one of four mutually-exclusive buckets that sum to the total
+     * user-created (non-bundled) audio count. Membership comes from [collections]; the audio
+     * universe from [allSoundsCache]. Cross-tagged audios (public AND private) count as public — the
+     * public surface preserves visibility (spec § 3.1), so the `when` checks public first.
+     *
+     * Called from BOTH the collections observer (tag changes) and [loadSounds] (audio create/delete)
+     * because the buckets depend on the audio × collection product — either side mutating must
+     * refresh the snapshot.
+     */
+    private fun syncAudioBuckets(collections: List<Collection>) {
+        val inPublic = collections.filter { it.isPublic }.flatMap { it.audioIds }.toSet()
+        val inPrivate = collections.filter { it.isPrivate }.flatMap { it.audioIds }.toSet()
+        val inCustomPrivate = collections.filter { it.isPrivate && !it.isSystem }.flatMap { it.audioIds }.toSet()
+        var publicDefault = 0
+        var publicCustom = 0
+        var vaultDefault = 0
+        var vaultCustom = 0
+        for (sound in allSoundsCache.value) {
+            if (sound.isBundled()) continue
+            when {
+                sound.id in inPublic -> publicCustom++
+                sound.id !in inPrivate -> publicDefault++
+                sound.id in inCustomPrivate -> vaultCustom++
+                else -> vaultDefault++
+            }
+        }
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PUBLIC_DEFAULT, publicDefault.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PUBLIC_CUSTOM, publicCustom.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_VAULT_DEFAULT, vaultDefault.toString())
+        tracker.setUserProperty(AnalyticsUserProperty.CURRENT_VAULT_CUSTOM, vaultCustom.toString())
+    }
+
+    private fun recomputeVaultAudios() {
+        val collections = _collections.value
+        val activeFilter = _activeVaultFilter.value
+        val privateCollections = collections.filter { it.isPrivate }
+        val targetIds =
+            if (activeFilter != null) {
+                privateCollections
+                    .firstOrNull { it.id == activeFilter }
+                    ?.audioIds
+                    ?.toSet()
+                    .orEmpty()
+            } else {
+                privateCollections.flatMap { it.audioIds }.toSet()
+            }
+        if (targetIds.isEmpty()) {
+            _vaultAudios.value = emptyList()
+            return
+        }
+        val library = allSoundsCache.value
+        _vaultAudios.value =
+            library
+                .filter { it.id in targetIds }
+                .sortedWith(
+                    compareByDescending<Sound> { it.isPinned }
+                        .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
+                        .thenBy { it.name.lowercase() },
+                )
     }
 
     private val tracker get() = AnalyticsTrackerProvider.get(getApplication())
@@ -219,6 +489,7 @@ class SoundsViewModel(
             when {
                 _isSearchVisible.value -> CanonicalScreenName.SEARCH_SOUND
                 _selectedTab.value == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
+                _selectedTab.value == AppTab.VAULT -> CanonicalScreenName.VAULT
                 else -> CanonicalScreenName.EXPLORE_SOUNDS
             }
 
@@ -253,11 +524,26 @@ class SoundsViewModel(
 
     private fun recomputeSearchResults() {
         val query = _searchQuery.value
+        // Privacy gate: while the Vault session is locked, audios tagged exclusively to a
+        // private collection must NOT surface on the search overlay (it's reachable from public
+        // tabs only — My Sounds + Explore). Cross-tagged (public AND private) audios are excluded
+        // from this filter on purpose, per spec § 3.1 "Restricción de cross-preset": the public
+        // scope preserves visibility. Once the user authenticates the Vault during this process
+        // (`VaultSessionState.markVaultOpen`), the filter relaxes and search merges both scopes.
+        val privateOnlyIds =
+            if (com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
+                    .isVaultOpen()
+            ) {
+                emptySet()
+            } else {
+                collectionsAudioIdsSnapshot()
+            }
         _searchResults.value =
             if (query.isBlank()) {
                 emptyList()
             } else {
                 allSoundsCache.value
+                    .filter { it.id !in privateOnlyIds }
                     .filter { it.name.contains(query, ignoreCase = true) }
                     .sortedWith(compareByDescending<Sound> { it.isPinned }.thenBy { it.name.lowercase() })
             }
@@ -268,7 +554,139 @@ class SoundsViewModel(
 
     fun selectTab(tab: AppTab) {
         _selectedTab.value = tab
+        // Optimistically rebuild `_sounds` from the in-memory caches before kicking off the
+        // async loadSounds. Without this, the freshly selected tab renders an empty list (the
+        // previous tab's filtered view) until the IO chain settles — the user sees the empty
+        // state flash for ~150ms on every tab swap.
+        applyTabFilterFromCache()
         viewModelScope.launch(ioDispatcher) { loadSounds() }
+    }
+
+    /**
+     * Synchronous projection of the currently-cached `allSoundsCache` to `_sounds` based on the
+     * active tab. Used to bridge the visual gap between [selectTab] and the loadSounds emission —
+     * keeps the body composable rendering the right list instead of bouncing through the empty
+     * state. Returns whatever `applyCollectionFilter` produces for the active tab + chip.
+     */
+    private fun applyTabFilterFromCache() {
+        val snapshot = allSoundsCache.value
+        if (snapshot.isEmpty()) return
+        // Mirrors the byTab branch in loadSounds. We intentionally avoid `privateOnlyAudioIds`
+        // here (it would do a fresh DataStore read) — the projection is best-effort and the next
+        // loadSounds correction lands within ~50ms.
+        val privateIds = collectionsAudioIdsSnapshot()
+        val byTab =
+            when (_selectedTab.value) {
+                AppTab.MY_SOUNDS -> snapshot.filter { !it.isBundled() && it.id !in privateIds }
+                AppTab.EXPLORE_SOUNDS -> snapshot.filter { it.isBundled() }
+                AppTab.VAULT -> emptyList()
+            }
+        val filtered = applyCollectionFilter(byTab)
+        _sounds.value = filtered
+    }
+
+    private fun collectionsAudioIdsSnapshot(): Set<String> {
+        val list = _collections.value
+        val inPrivate = list.filter { it.isPrivate }.flatMap { it.audioIds }.toSet()
+        if (inPrivate.isEmpty()) return emptySet()
+        val inPublic = list.filter { it.isPublic }.flatMap { it.audioIds }.toSet()
+        return inPrivate - inPublic
+    }
+
+    /**
+     * Activates the Vault filter chip to [collectionId], or to `null` for the "All private audios"
+     * pseudo-chip. Idempotent. Persists the choice so the next cold start lands on the same chip.
+     */
+    fun selectVaultFilter(collectionId: String?) {
+        if (_activeVaultFilter.value == collectionId) return
+        _activeVaultFilter.value = collectionId
+        recomputeVaultAudios()
+        val storeValue =
+            collectionId ?: com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore.ALL_SENTINEL
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { vaultFilterStore.set(storeValue) }
+                .onFailure {
+                    Tracker.log("vault.filter_persist_failed=${it.javaClass.simpleName}")
+                    Tracker.track(RuntimeException("Vault filter persist failed", it))
+                }
+        }
+        if (collectionId != null) {
+            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = _vaultAudios.value.size, scope = AnalyticsScope.PRIVATE))
+        }
+    }
+
+    /**
+     * Activates the My Sounds public-collection filter to [collectionId], or to `null` for the
+     * "All" pseudo-chip. Idempotent. Persists the choice so the next cold start lands on the
+     * same chip — spec § 7 (Preguntas Abiertas → "persist last filter, favorece monocontexto").
+     */
+    fun selectMySoundsFilter(collectionId: String?) {
+        if (_activeMySoundsFilter.value == collectionId) return
+        _activeMySoundsFilter.value = collectionId
+        val storeValue = collectionId ?: MySoundsFilterStore.ALL_SENTINEL
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { mySoundsFilterStore.set(storeValue) }
+                .onFailure {
+                    Tracker.log("collections.filter_persist_failed=${it.javaClass.simpleName}")
+                    Tracker.track(RuntimeException("My Sounds filter persist failed", it))
+                }
+            loadSounds()
+        }
+        if (collectionId != null) {
+            val matches = audiosIn(collectionId).size
+            tracker.log(AnalyticsEvent.CollectionFilterApply(matches = matches, scope = AnalyticsScope.PUBLIC))
+        }
+    }
+
+    private fun audiosIn(collectionId: String): List<Sound> {
+        val target = _collections.value.firstOrNull { it.id == collectionId } ?: return emptyList()
+        val ids = target.audioIds.toSet()
+        return allSoundsCache.value.filter { it.id in ids }
+    }
+
+    /**
+     * Records that the user opened a collection for viewing from the Manage Collections overflow
+     * ("View collection"). Kept in the VM so all collection analytics live in one place. [isPublic]
+     * maps to the event's `scope` param. Navigation (selectTab + filter) happens at the call-site.
+     */
+    fun trackCollectionView(isPublic: Boolean) {
+        tracker.log(AnalyticsEvent.CollectionView(scope = AnalyticsScope.of(isPublic)))
+    }
+
+    /**
+     * Returns the set of audio ids that belong to at least one PRIVATE collection AND zero PUBLIC
+     * collections. Used to hide "Vault-only" audios from My Sounds (spec § 1: those audios are
+     * "preserved inside the app and never come out"). The cross-tagged case (private + public)
+     * is intentionally excluded — spec § 3.1's "Restricción de cross-preset" preserves visibility
+     * from the public surface.
+     */
+    private suspend fun privateOnlyAudioIds(): Set<String> {
+        // Read directly from the repo's freshest snapshot instead of `_collections.value` — the
+        // VM's two init coroutines (welcome-sticker hydration + collections observation) race
+        // against each other and the welcome path can call loadSounds before the collections
+        // observer has populated `_collections`. Asking the repo here makes the filter robust
+        // against that ordering: each loadSounds always sees the post-seed, post-tagging state.
+        val collectionsSnapshot = collectionsRepo.collections.first()
+        val inPrivate = collectionsSnapshot.filter { it.isPrivate }.flatMap { it.audioIds }.toSet()
+        if (inPrivate.isEmpty()) return emptySet()
+        val inPublic = collectionsSnapshot.filter { it.isPublic }.flatMap { it.audioIds }.toSet()
+        return inPrivate - inPublic
+    }
+
+    /**
+     * Filters [tabSounds] by the currently active My Sounds chip. Only applied when MY_SOUNDS is
+     * the selected tab — the Explore and Vault tabs ignore the chip state entirely. When the
+     * active filter id points to a deleted collection (race between deletion and a tab swap)
+     * the predicate matches nothing; the observation coroutine in `init` clears the stale id
+     * before the next `loadSounds` runs, so the empty intermediate state is brief.
+     */
+    private fun applyCollectionFilter(tabSounds: List<Sound>): List<Sound> {
+        val activeId =
+            _activeMySoundsFilter.value.takeIf { _selectedTab.value == AppTab.MY_SOUNDS }
+                ?: return tabSounds
+        val activeCollection = _collections.value.firstOrNull { it.id == activeId }
+        val ids = activeCollection?.audioIds.orEmpty().toSet()
+        return tabSounds.filter { it.id in ids }
     }
 
     fun togglePin(sound: Sound) {
@@ -285,6 +703,7 @@ class SoundsViewModel(
         _sounds.update(sortedList)
         allSoundsCache.update { list -> list.map { if (it.id == sound.id) it.copy(isPinned = nowPinned) else it } }
         recomputeSearchResults()
+        recomputeVaultAudios()
         if (nowPinned) _scrollToTopEvent.trySend(Unit)
         viewModelScope.launch(ioDispatcher) {
             repo.savePin(sound.id, sound.name, nowPinned)
@@ -331,10 +750,16 @@ class SoundsViewModel(
     }
 
     fun deleteSound(sound: Sound) {
-        val currentSounds = _sounds.value.toMutableList()
-        val currentSound = currentSounds.find { it.id == sound.id } ?: return
-        val position = currentSounds.indexOf(currentSound)
         val isWelcome = isWelcomeSticker(sound)
+        // `_sounds.value` only contains the audios visible on the *currently-selected* tab. On
+        // the Vault tab it is empty by design (VaultScreen reads `_vaultAudios` directly), so a
+        // swipe-to-delete from the Vault would have early-returned here and left the dismissed
+        // card in zombie state — the SwipeToDismissBox stuck at EndToStart, snackbar never
+        // firing. Look the sound up in `allSoundsCache` instead so deletion works regardless of
+        // which tab triggered it, and treat the visible-list update as optional bookkeeping.
+        val sourceList = if (isWelcome) _sounds.value else allSoundsCache.value
+        val resolvedSound = sourceList.firstOrNull { it.id == sound.id } ?: return
+        val sourcePosition = sourceList.indexOf(resolvedSound)
 
         // Always ask the controller to forget this sound: it cleans up the saved-position cache
         // and, if this sound is the currently-loaded MediaPlayer target (playing OR paused),
@@ -343,14 +768,19 @@ class SoundsViewModel(
         // controller still holds the data source).
         PlayerControllerFactory.instance.forgetSound(sound)
 
-        currentSounds.removeAt(position)
-        _sounds.value = currentSounds
+        // Drop from the visible list when present. On Vault tab the audio is not in `_sounds` —
+        // `recomputeVaultAudios()` below handles the equivalent update for `_vaultAudios`.
+        val visibleIndex = _sounds.value.indexOfFirst { it.id == sound.id }
+        if (visibleIndex >= 0) {
+            _sounds.value = _sounds.value.toMutableList().also { it.removeAt(visibleIndex) }
+        }
         if (!isWelcome) {
             // Welcome sticker is never in `allSoundsCache` (kept out of search) — skip the update.
             allSoundsCache.update { list -> list.filter { it.id != sound.id } }
             recomputeSearchResults()
+            recomputeVaultAudios()
         }
-        _deletedSoundEvent.value = DeletedSoundEvent(currentSound.copy(isPlaying = false), position)
+        _deletedSoundEvent.value = DeletedSoundEvent(resolvedSound.copy(isPlaying = false), sourcePosition)
         if (isWelcome) {
             _welcomeStickerVisible.value = false
             tracker.log(AnalyticsEvent.WelcomeStickerDismissed)
@@ -360,23 +790,31 @@ class SoundsViewModel(
     fun restoreSound() {
         val event = _deletedSoundEvent.value ?: return
         val isWelcome = isWelcomeSticker(event.sound)
-        val currentSounds = _sounds.value.toMutableList()
-        if (isWelcome) {
-            // Demote to the end of MY_SOUNDS — the prime row 0 spot belongs to the user once
-            // they've shown they want this sticker back rather than letting it consume.
-            currentSounds.add(event.sound)
-        } else {
-            val insertPosition = event.position.coerceAtMost(currentSounds.size)
-            currentSounds.add(insertPosition, event.sound)
+        // Mirror the symmetric guard in `deleteSound`: on the Vault tab the audio is never
+        // directly in `_sounds`, so mutating that list would push a private-only audio into the
+        // My Sounds projection until the next loadSounds wipes it. Keep `_sounds` untouched on
+        // Vault and let `recomputeVaultAudios()` do the user-visible work.
+        val shouldUpdateVisibleSounds = isWelcome || _selectedTab.value != AppTab.VAULT
+        if (shouldUpdateVisibleSounds) {
+            val currentSounds = _sounds.value.toMutableList()
+            if (isWelcome) {
+                // Demote to the end of MY_SOUNDS — the prime row 0 spot belongs to the user once
+                // they've shown they want this sticker back rather than letting it consume.
+                currentSounds.add(event.sound)
+            } else {
+                val insertPosition = event.position.coerceAtMost(currentSounds.size)
+                currentSounds.add(insertPosition, event.sound)
+            }
+            _sounds.value = currentSounds
         }
-        _sounds.value = currentSounds
         if (!isWelcome) {
-            val insertPosition = event.position.coerceAtMost(_sounds.value.size)
+            val insertPosition = event.position.coerceAtMost(allSoundsCache.value.size)
             allSoundsCache.update { list ->
                 val allInsertPosition = insertPosition.coerceAtMost(list.size)
                 list.toMutableList().also { it.add(allInsertPosition, event.sound) }
             }
             recomputeSearchResults()
+            recomputeVaultAudios()
         }
         _deletedSoundEvent.value = null
         if (isWelcome) {
@@ -397,8 +835,203 @@ class SoundsViewModel(
             event == null -> Unit
             isWelcomeSticker(event.sound) -> consumeWelcomeAsync()
             event.sound.isBundled() -> Unit
-            else -> deletePersistedSoundAsync(event.sound)
+            else -> {
+                deletePersistedSoundAsync(event.sound)
+                forgetAudioFromCollectionsAsync(event.sound.id)
+            }
         }
+    }
+
+    private fun forgetAudioFromCollectionsAsync(audioId: String) {
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { collectionsRepo.forgetAudio(audioId) }
+                .onFailure {
+                    Tracker.log("collections.forget_audio_failed=${it.javaClass.simpleName}")
+                    Tracker.track(RuntimeException("Failed to sweep audio from collections", it))
+                }
+        }
+    }
+
+    /**
+     * Creates a new collection of [access] scope. Emits a [AnalyticsEvent.CollectionCreate] event;
+     * caller is responsible for any UI feedback (snackbar, sheet dismissal). Failures (e.g.
+     * duplicate name) surface as [Result.failure] — caller maps to the right field error.
+     */
+    suspend fun createCollection(
+        name: String,
+        access: CollectionAccess,
+        source: String,
+    ): Result<Collection> =
+        runCatching {
+            val profile =
+                when (access) {
+                    CollectionAccess.PUBLIC -> com.github.barriosnahuel.vossosunboton.model.CollectionProfile.GENERIC_PUBLIC
+                    CollectionAccess.PRIVATE -> com.github.barriosnahuel.vossosunboton.model.CollectionProfile.VAULT
+                }
+            collectionsRepo.create(name = name, profile = profile).also { _ ->
+                tracker.log(
+                    AnalyticsEvent.CollectionCreate(
+                        scope = AnalyticsScope.of(access == CollectionAccess.PUBLIC),
+                        audios = 0,
+                        source = source,
+                    ),
+                )
+                val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_CREATES)
+                tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_COLLECTION_CREATES, newCount.toString())
+            }
+        }
+
+    suspend fun renameCollection(
+        id: String,
+        newName: String,
+    ): Result<Unit> =
+        runCatching {
+            val before = _collections.value.firstOrNull { it.id == id }
+            collectionsRepo.rename(id, newName)
+            before?.let {
+                tracker.log(
+                    AnalyticsEvent.CollectionRename(
+                        scope = AnalyticsScope.of(it.isPublic),
+                    ),
+                )
+                val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_RENAMES)
+                tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_COLLECTION_RENAMES, newCount.toString())
+            }
+        }
+
+    /**
+     * Deletes a collection. Refuses to delete system collections (the UI must hide the action,
+     * but we double-check here per CLAUDE.md error-tracking conventions). Audios are NOT deleted.
+     */
+    suspend fun deleteCollection(id: String): Result<Unit> =
+        runCatching {
+            val target =
+                _collections.value.firstOrNull { it.id == id }
+                    ?: return@runCatching
+            require(!target.isSystem) { "Refusing to delete system collection $id" }
+            val priorCount = target.audioIds.size
+            collectionsRepo.delete(id)
+            tracker.log(
+                AnalyticsEvent.CollectionDelete(
+                    scope = AnalyticsScope.of(target.isPublic),
+                    audios = priorCount,
+                ),
+            )
+            val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_DELETES)
+            tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_COLLECTION_DELETES, newCount.toString())
+        }
+
+    /**
+     * Replaces the set of [collectionIds] this audio belongs to inside [scope]. The other access
+     * scope (e.g. private when committing public chips) is untouched — the UI commits public and
+     * private chip groups via two independent calls.
+     */
+    suspend fun setAudioCollections(
+        audioId: String,
+        collectionIds: Set<String>,
+        scope: CollectionAccess,
+    ): Result<Unit> =
+        runCatching {
+            collectionsRepo.setAudioCollections(audioId, collectionIds, scope)
+        }
+
+    /** Removes a single [audioId] from [collectionId] without touching its other tags. */
+    fun removeAudioFromCollection(
+        collectionId: String,
+        audioId: String,
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { collectionsRepo.removeAudio(collectionId, audioId) }
+                .onFailure {
+                    Tracker.log("collections.remove_audio_failed=${it.javaClass.simpleName}")
+                    Tracker.track(RuntimeException("Failed to remove audio from collection", it))
+                }
+        }
+    }
+
+    /**
+     * Opens the create-collection sheet for [access] scope. [source] is the analytics surface that
+     * triggered it (flows into collection_create.source). Triggered from filter row, Vault FAB,
+     * and Manage.
+     */
+    fun requestCreateCollection(
+        access: CollectionAccess,
+        source: String,
+    ) {
+        _activeCollectionSheet.value = CollectionSheetRequest.Create(access, source)
+    }
+
+    /** Opens the long-press → "Add to collection" sheet for [audioId]. */
+    fun requestAssignCollections(audioId: String) {
+        _activeAssignAudioId.value = audioId
+    }
+
+    fun dismissAssignCollections() {
+        _activeAssignAudioId.value = null
+    }
+
+    /**
+     * Toggles whether [audioId] belongs to [collectionId]. Implemented as a single mutation so
+     * the sheet can be optimistic and let the DataStore round-trip catch up. The reverse-index
+     * `audioCollectionNames` re-emits automatically when [collectionsRepo.collections] does.
+     */
+    fun toggleAudioInCollection(
+        audioId: String,
+        collectionId: String,
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            val current = collectionsRepo.collections.first()
+            val target = current.firstOrNull { it.id == collectionId } ?: return@launch
+            val alreadyIn = audioId in target.audioIds
+            val outcome =
+                runCatching {
+                    if (alreadyIn) {
+                        collectionsRepo.removeAudio(collectionId, audioId)
+                    } else {
+                        collectionsRepo.addAudio(collectionId, audioId)
+                    }
+                }
+            outcome.onFailure {
+                Tracker.log("collections.toggle_audio_failed=${it.javaClass.simpleName}")
+                Tracker.track(RuntimeException("Failed to toggle audio in collection", it))
+            }
+            outcome.onSuccess {
+                tracker.log(
+                    AnalyticsEvent.CollectionAudioToggle(
+                        assigned = !alreadyIn,
+                        scope = AnalyticsScope.of(target.isPublic),
+                    ),
+                )
+                val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS)
+                tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS, newCount.toString())
+            }
+        }
+    }
+
+    /** Opens the rename sheet pre-filled with the existing collection. No-op for unknown id. */
+    fun requestRenameCollection(id: String) {
+        val target = _collections.value.firstOrNull { it.id == id } ?: return
+        _activeCollectionSheet.value = CollectionSheetRequest.Rename(id = id, currentName = target.name)
+    }
+
+    fun dismissCollectionSheet() {
+        _activeCollectionSheet.value = null
+    }
+
+    fun requestDeleteConfirmation(collectionId: String) {
+        val target = _collections.value.firstOrNull { it.id == collectionId } ?: return
+        if (target.isSystem) return
+        _pendingCollectionDelete.value = collectionId
+    }
+
+    fun dismissDeleteConfirmation() {
+        _pendingCollectionDelete.value = null
+    }
+
+    fun confirmCollectionDelete() {
+        val target = _pendingCollectionDelete.value ?: return
+        _pendingCollectionDelete.value = null
+        viewModelScope.launch(ioDispatcher) { deleteCollection(target) }
     }
 
     /**
@@ -503,12 +1136,28 @@ class SoundsViewModel(
                     allSounds.map { if (it.id == playingId) it.copy(isPlaying = true) else it }
                 }
             recomputeSearchResults()
+            recomputeVaultAudios()
+            // Snapshot of private-only ids: tagged to at least one private collection and to
+            // ZERO public collections. Spec § 3.1 + § 1 — those audios are meant to stay inside
+            // the Vault and never surface on My Sounds. Cross-tagged (private + public) audios
+            // remain visible on My Sounds because the public surface preserves visibility
+            // (the "Restricción de cross-preset" carve-out). Computed OUTSIDE the _sounds.update
+            // lambda because the helper now reads collectionsRepo.collections.first() (suspend).
+            val privateOnlyIds = privateOnlyAudioIds()
             _sounds.update {
-                val filtered =
+                val byTab =
                     when (_selectedTab.value) {
-                        AppTab.MY_SOUNDS -> allSounds.filter { !it.isBundled() }
+                        AppTab.MY_SOUNDS ->
+                            allSounds.filter { !it.isBundled() && it.id !in privateOnlyIds }
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
+                        // The Vault tab is rendered by its own dedicated screen (VaultScreen) — the
+                        // primary sound list is empty here so the bottom-bar tab swap leaves the
+                        // screen blank while VaultScreen takes over via the overlay path in
+                        // LandingScreen. Returning an empty list also keeps the sound list's empty
+                        // state composable from rendering its "no sounds yet" body for the wrong tab.
+                        AppTab.VAULT -> emptyList()
                     }.filter { it.id != deletedId }
+                val filtered = applyCollectionFilter(byTab)
                 val withWelcome = positionWelcomeIn(filtered, welcomeIsPendingDismissal, welcomeWasRestored)
                 if (playingId == null) {
                     withWelcome
@@ -519,6 +1168,10 @@ class SoundsViewModel(
             val userCreatedCount = allSounds.count { !it.isBundled() }
             tracker.setUserProperty(AnalyticsUserProperty.CURRENT_SOUNDS, userCreatedCount.toString())
             tracker.setUserProperty(AnalyticsUserProperty.CURRENT_PINNED, allSounds.count { it.isPinned }.toString())
+            // Refresh the audio-bucket snapshot: a created/deleted audio shifts the public_default
+            // count even when no collection changed. allSoundsCache was updated earlier in this
+            // function, so the buckets read the fresh universe.
+            syncAudioBuckets(_collections.value)
             AUDIO_MILESTONES.forEach { threshold ->
                 if (userCreatedCount >= threshold && tracker.markFiredOnce("milestone_sounds_$threshold")) {
                     tracker.log(AnalyticsEvent.MilestoneAudios(threshold))
@@ -550,6 +1203,7 @@ class SoundsViewModel(
         _sounds.update { list -> list.map { if (it.id == sound.id) playingSound else it } }
         allSoundsCache.update { list -> list.map { if (it.id == sound.id) playingSound else it } }
         recomputeSearchResults()
+        recomputeVaultAudios()
     }
 
     override fun onPlayerStop(
@@ -564,6 +1218,7 @@ class SoundsViewModel(
         _sounds.update { list -> list.map { if (it.id == sound.id) stoppedSound else it } }
         allSoundsCache.update { list -> list.map { if (it.id == sound.id) stoppedSound else it } }
         recomputeSearchResults()
+        recomputeVaultAudios()
 
         if (completed && isWelcomeSticker(sound)) {
             val position = _sounds.value.indexOfFirst { it.id == sound.id }.coerceAtLeast(0)
@@ -591,6 +1246,7 @@ class SoundsViewModel(
         _sounds.update { list -> list.map { if (it.id == sound.id) pausedSound else it } }
         allSoundsCache.update { list -> list.map { if (it.id == sound.id) pausedSound else it } }
         recomputeSearchResults()
+        recomputeVaultAudios()
     }
 
     override fun onProgressUpdate(positionMs: Int) {

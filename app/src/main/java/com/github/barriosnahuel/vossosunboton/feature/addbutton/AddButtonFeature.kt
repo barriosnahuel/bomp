@@ -14,7 +14,9 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
+import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -33,6 +35,8 @@ interface AddButtonFeature {
         context: @NotNull Context,
         name: String,
         uri: String,
+        publicCollectionIds: Set<String> = emptySet(),
+        privateCollectionIds: Set<String> = emptySet(),
     ): Deferred<Int>
 
     fun renameButtonAsync(
@@ -51,6 +55,8 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         context: Context,
         name: String,
         uri: String,
+        publicCollectionIds: Set<String>,
+        privateCollectionIds: Set<String>,
     ): Deferred<Int> {
         val sanitizedName = name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
         val fileName = "$sanitizedName-${System.currentTimeMillis()}.mp3"
@@ -101,6 +107,20 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                                 }.getOrNull()
                             if (durationMs != null) {
                                 repo.saveDuration(id, name, durationMs)
+                            }
+                            // Apply collection tags now so the audio shows up in the right place
+                            // immediately. Failures don't roll back the save (the audio still
+                            // exists, just untagged) but ARE reported as non-fatal so we can spot
+                            // it in BigQuery. Either set is a no-op when empty.
+                            if (publicCollectionIds.isNotEmpty() || privateCollectionIds.isNotEmpty()) {
+                                val collections = CollectionsRepository(context, onError = Tracker::track)
+                                runCatching {
+                                    collections.setAudioCollections(id, publicCollectionIds, CollectionAccess.PUBLIC)
+                                    collections.setAudioCollections(id, privateCollectionIds, CollectionAccess.PRIVATE)
+                                }.onFailure {
+                                    Tracker.log("addbutton.tag_apply_failed=${it.javaClass.simpleName}")
+                                    Tracker.track(RuntimeException("Failed to tag new audio to collections", it))
+                                }
                             }
 
                             feedbackMessage = R.string.app_addbutton_feedback_saved_ok

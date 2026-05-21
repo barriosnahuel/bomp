@@ -78,10 +78,14 @@ fun SoundItem(
     onDelete: () -> Unit,
     onPinClick: () -> Unit,
     onEditClick: (() -> Unit)? = null,
+    onAddToCollection: (() -> Unit)? = null,
     originLabel: String? = null,
     isWelcomeVariant: Boolean = false,
     borderOverride: BorderStroke? = null,
     trailingLabel: String? = null,
+    collectionLabels: List<String> = emptyList(),
+    showCollectionLabels: Boolean = true,
+    shareEnabled: Boolean = true,
 ) {
     if (isWelcomeVariant) {
         // System anchor: pin and edit are not available, but Delete IS — exposed via swipe-left
@@ -129,10 +133,14 @@ fun SoundItem(
                 onShareClick = onShareClick,
                 onPinClick = null,
                 onEditClick = null,
+                onAddToCollection = null,
                 onDelete = onDelete,
                 originLabel = originLabel,
                 borderOverride = borderOverride,
                 trailingLabel = trailingLabel,
+                collectionLabels = collectionLabels,
+                showCollectionLabels = showCollectionLabels,
+                shareEnabled = shareEnabled,
             )
         }
         return
@@ -185,9 +193,13 @@ fun SoundItem(
                     onShareClick = onShareClick,
                     onPinClick = onPinClick,
                     onEditClick = null,
+                    onAddToCollection = null,
                     onDelete = null,
                     onLongClick = { performRejectHaptic(view) },
                     originLabel = originLabel,
+                    collectionLabels = collectionLabels,
+                    showCollectionLabels = showCollectionLabels,
+                    shareEnabled = shareEnabled,
                 )
             }
         }
@@ -241,8 +253,12 @@ fun SoundItem(
             onShareClick = onShareClick,
             onPinClick = onPinClick,
             onEditClick = onEditClick,
+            onAddToCollection = onAddToCollection,
             onDelete = onDelete,
             originLabel = originLabel,
+            collectionLabels = collectionLabels,
+            showCollectionLabels = showCollectionLabels,
+            shareEnabled = shareEnabled,
         )
     }
 }
@@ -294,11 +310,15 @@ private fun SoundCard(
     onShareClick: () -> Unit,
     onPinClick: (() -> Unit)?,
     onEditClick: (() -> Unit)?,
+    onAddToCollection: (() -> Unit)?,
     onDelete: (() -> Unit)?,
     onLongClick: (() -> Unit)? = null,
     originLabel: String? = null,
     borderOverride: BorderStroke? = null,
     trailingLabel: String? = null,
+    collectionLabels: List<String> = emptyList(),
+    showCollectionLabels: Boolean = true,
+    shareEnabled: Boolean = true,
 ) {
     var sliderPosition by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
@@ -310,7 +330,7 @@ private fun SoundCard(
         }
     }
 
-    val hasMenuItems = onEditClick != null || onDelete != null
+    val hasMenuItems = onEditClick != null || onDelete != null || onAddToCollection != null
     Card(
         modifier =
             Modifier
@@ -348,7 +368,9 @@ private fun SoundCard(
                 onPinClick = onPinClick,
                 onShareClick = onShareClick,
                 onEditClick = onEditClick,
+                onAddToCollection = onAddToCollection,
                 onDeleteClick = onDelete,
+                shareEnabled = shareEnabled,
             )
 
             Row(
@@ -410,6 +432,7 @@ private fun SoundCard(
                         playbackProgress = playbackProgress,
                         durationMs = durationMs,
                         trailingLabel = trailingLabel,
+                        collectionLabels = if (showCollectionLabels) collectionLabels else emptyList(),
                     )
                 }
             }
@@ -423,6 +446,7 @@ private fun SoundCardMetaRow(
     playbackProgress: PlaybackProgress?,
     durationMs: Int?,
     trailingLabel: String?,
+    collectionLabels: List<String> = emptyList(),
 ) {
     Row(modifier = Modifier.fillMaxWidth()) {
         // `playbackProgress` is non-null while playing AND while paused (the caller passes the
@@ -443,10 +467,18 @@ private fun SoundCardMetaRow(
         if (trailingLabel != null) {
             Text(text = trailingLabel, style = MaterialTheme.typography.labelSmall)
         } else {
-            val dateAdded = sound.dateAdded
-            if (dateAdded != null) {
+            // Right-aligned compact line: "[collection, collection · today]". Collections render
+            // first so the eye sees taxonomy before recency; "·" separator follows the existing
+            // typographic convention (see `originLabel` divider above the title row).
+            val dateText = sound.dateAdded?.let { formatRelativeDate(it) }
+            val parts =
+                buildList {
+                    if (collectionLabels.isNotEmpty()) add(collectionLabels.joinToString(", "))
+                    if (dateText != null) add(dateText)
+                }
+            if (parts.isNotEmpty()) {
                 Text(
-                    text = formatRelativeDate(dateAdded),
+                    text = parts.joinToString(" · "),
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
@@ -463,7 +495,9 @@ private fun SoundCardHeader(
     onPinClick: (() -> Unit)?,
     onShareClick: () -> Unit,
     onEditClick: (() -> Unit)?,
+    onAddToCollection: (() -> Unit)?,
     onDeleteClick: (() -> Unit)?,
+    shareEnabled: Boolean = true,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -492,18 +526,30 @@ private fun SoundCardHeader(
                 )
             }
         }
-        IconButton(onClick = onShareClick) {
-            Icon(
-                imageVector = Icons.Default.Share,
-                contentDescription = stringResource(R.string.app_share_chooser_title),
-            )
+        if (shareEnabled) {
+            IconButton(onClick = onShareClick) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = stringResource(R.string.app_share_chooser_title),
+                )
+            }
         }
-        if (onEditClick != null || onDeleteClick != null) {
+        if (onEditClick != null || onDeleteClick != null || onAddToCollection != null) {
             Box {
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = onMenuDismiss,
                 ) {
+                    if (onAddToCollection != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.app_audio_menu_add_to_collection)) },
+                            leadingIcon = { Icon(AppIcons.Add, contentDescription = null) },
+                            onClick = {
+                                onMenuDismiss()
+                                onAddToCollection()
+                            },
+                        )
+                    }
                     if (onEditClick != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.app_edit)) },
