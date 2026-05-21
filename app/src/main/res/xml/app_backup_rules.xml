@@ -1,21 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<full-backup-content xmlns:tools="http://schemas.android.com/tools">
+<full-backup-content>
     <include domain="external" path="Music" />
     <include domain="file" path="datastore/bomps.preferences_pb" />
     <include domain="file" path="datastore/welcome-sticker.preferences_pb" />
     <include domain="file" path="datastore/analytics-counters.preferences_pb" />
-    <!--
-        Collections + Vault metadata is local-only per spec v2.4.0 § 5 (Out of Scope:
-        "Sincronización del Vault a la nube" + "Sincronización de colecciones públicas entre
-        dispositivos. Igual que arriba: local-first en v2.4.0."). The explicit exclude documents
-        intent so a future include rule reviewer sees the spec coupling.
-
-        FullBackupContent lint suppression: the default of `<full-backup-content>` is opt-in by
-        include, so the excludes below are redundant for behavior — they exist as documentation
-        so a future contributor who adds a broader `<include path="datastore/" />` cannot
-        accidentally start backing up Vault state without seeing this list first.
-    -->
-    <exclude domain="file" path="datastore/collections.preferences_pb" tools:ignore="FullBackupContent" />
-    <exclude domain="file" path="datastore/my-sounds-filter.preferences_pb" tools:ignore="FullBackupContent" />
-    <exclude domain="file" path="datastore/vault-filter.preferences_pb" tools:ignore="FullBackupContent" />
+    <include domain="file" path="datastore/collections.preferences_pb" />
+    <include domain="file" path="datastore/my-sounds-filter.preferences_pb" />
+    <include domain="file" path="datastore/vault-filter.preferences_pb" />
 </full-backup-content>

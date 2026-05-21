@@ -90,32 +90,20 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
     }
 
     /**
-     * OWASP MASVS-STORAGE-2 / CWE-359 (Vault contents must not leave the device via cloud backup).
+     * OWASP MASVS-STORAGE-2 / CWE-359 (collections + Vault preserved across restore).
      *
-     * Collections + Vault metadata are local-only per spec v2.4.0 § 5 ("Sincronización del Vault
-     * a la nube" + "Sincronización de colecciones públicas entre dispositivos" both Out of Scope).
-     * Cloud backup uploading them would silently lift the local-only promise to "lives in your
-     * Drive too" — the regression net for this guarantee.
+     * Collections + Vault membership is part of the user's archive, so it MUST be backed up —
+     * Auto Backup to Drive covers everything the user owns. The Pro tier is realtime cross-device
+     * sync, NOT cloud backup; backup is the floor for every user. The companion filter prefs ride
+     * along so a restored device lands on the same chip. Regression net: dropping these includes
+     * would silently stop backing up the user's organization.
      */
     @Test
-    fun `collections datastore is NOT referenced by any include rule`() {
+    fun `collections and vault prefs are referenced by every backup include rule`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val backupIncludes = parseIncludes(context.resources.getXml(R.xml.app_backup_rules))
-        val cloudIncludes =
-            parseIncludes(
-                context.resources.getXml(R.xml.app_data_extraction_rules),
-                parentTag = "cloud-backup",
-            )
-        val transferIncludes =
-            parseIncludes(
-                context.resources.getXml(R.xml.app_data_extraction_rules),
-                parentTag = "device-transfer",
-            )
-        val allIncludes = backupIncludes + cloudIncludes + transferIncludes
-
-        assertThat(allIncludes.none { (_, path) -> path.contains("collections.preferences_pb") }).isTrue()
-        assertThat(allIncludes.none { (_, path) -> path.contains("my-sounds-filter.preferences_pb") }).isTrue()
-        assertThat(allIncludes.none { (_, path) -> path.contains("vault-filter.preferences_pb") }).isTrue()
+        assertIncludedEverywhere(context, "file" to "datastore/collections.preferences_pb")
+        assertIncludedEverywhere(context, "file" to "datastore/my-sounds-filter.preferences_pb")
+        assertIncludedEverywhere(context, "file" to "datastore/vault-filter.preferences_pb")
     }
 
     /**

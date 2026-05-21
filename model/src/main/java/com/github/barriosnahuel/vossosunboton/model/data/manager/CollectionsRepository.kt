@@ -45,10 +45,12 @@ import java.util.UUID
  * Single source of truth for [Collection] metadata + audio↔collection links. Backed by a
  * dedicated Jetpack DataStore Preferences file (`collections.preferences_pb`), JSON-encoded.
  *
- * **Backup posture**: this file is intentionally excluded from `app_backup_rules.xml` and
- * `app_data_extraction_rules.xml`. Spec v2.4.0 § 5 declares both public and private collections
- * local-only, and the Vault (private collections) is sensitive content (CLAUDE.md § Security
- * boundaries → Backup hygiene). When sync ships in a later Pro spec, the exclude can be revisited.
+ * **Backup posture**: this file is *included* in `app_backup_rules.xml` and
+ * `app_data_extraction_rules.xml`. Collections + Vault are part of the user's archive, so Auto
+ * Backup to Drive preserves them across restore — backup is the floor for every user. The Pro tier
+ * is realtime cross-device *sync*, a separate concern, not cloud backup. Nothing here is sensitive
+ * enough to exclude today (CLAUDE.md § Security boundaries → Backup hygiene); revisit only if a
+ * future field stores secrets.
  *
  * **System seed**: the first read after install lazily seeds the "Baúl" private system collection
  * via [ensureSystemBaul]. The seed is idempotent — once persisted, it is recognized by its stable

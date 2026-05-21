@@ -81,11 +81,12 @@ closes the original Smart Collections open question (1:1 vs 1:N → N:M).
   public and a private collection stays shareable from the public surface; the
   `listen-only` property operates at the playback site (immersive view), not at
   the audio entity level. Spec § 3.1 closes this as well.
-- **One file to back up (or exclude) — instead of two.** Spec § 5 declares both
-  scopes local-only in v2.4.0, so `collections.preferences_pb` is excluded from
-  the backup XMLs. When sync ships in a future Pro spec, the exclusion can flip
-  per-collection-access without touching the model. `BackupRulesTest` enforces
-  the exclusion as a regression net.
+- **One file to back up — instead of two.** Both scopes live in
+  `collections.preferences_pb`, which is *included* in the backup XMLs: backup to
+  Drive is the floor for every user and covers the whole archive (Collections +
+  Vault). The Pro tier is realtime cross-device *sync*, not cloud backup — a
+  separate concern that can ship later without touching the model.
+  `BackupRulesTest` enforces the inclusion as a regression net.
 - **The Kitchen Mode and auto-categorization paths stay decoupled from MVP risk.**
   The data model already supports them, so adding them later is an additive change.
 
@@ -95,9 +96,10 @@ closes the original Smart Collections open question (1:1 vs 1:N → N:M).
   needs streaming-large keyword indices, the inline `audioIds` list inside the
   collection record might pair badly with frequent appends. Revisit by splitting
   off the audio↔keyword links into their own DataStore.
-- **Cloud sync ships.** Cloud sync was explicitly deferred (spec § 5); a future
-  Pro spec will need to flip the backup XML exclusion to a conditional
-  include/exclude. The model itself does not need to change.
+- **Cloud sync ships.** Realtime cross-device sync (the Pro tier) was explicitly
+  deferred (spec § 5); backup to Drive already ships for everyone. A future Pro
+  spec adds sync on top of the existing backup posture — the model itself does
+  not need to change.
 - **A collection profile axis fails to compose with another.** Today all five
   axes are orthogonal in code. If a future preset requires a combination that
   isn't expressible (e.g. "playbackUI=immersive but shareability=bompeable")
@@ -108,9 +110,9 @@ closes the original Smart Collections open question (1:1 vs 1:N → N:M).
 1. **Keep the two original specs.** Two repos, two tagging UIs, two analytics
    surfaces, more migration debt as features evolve.
 2. **Split public + private into two repositories** (and two DataStore files).
-   Tempting because the backup posture differs per scope. Rejected because the
+   Tempting if the backup posture ever differs per scope. Rejected because the
    sound↔collection relation crosses both scopes (an audio can live in both a
    public and a private collection), and splitting forces double bookkeeping
-   that is easier to break. The backup XML excludes the whole file because
-   v2.4.0 keeps both scopes local; when the scopes diverge in backup policy a
-   second file may make sense.
+   that is easier to break. The single file is *included* in the backup XMLs
+   (both scopes are part of the user's archive); if a future scope needs a
+   different backup policy, a second file may make sense.

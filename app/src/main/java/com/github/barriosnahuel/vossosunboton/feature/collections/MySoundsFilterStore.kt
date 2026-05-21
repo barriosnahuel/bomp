@@ -28,7 +28,8 @@ import kotlinx.coroutines.withContext
  * collapses to [ALL_SENTINEL] so a fresh install lands on the unfiltered list.
  *
  * Implementation mirrors [com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore]:
- * own DataStore Preferences file, in-memory cache + async write-back. Backup-excluded per spec § 5.
+ * own DataStore Preferences file, in-memory cache + async write-back. Backed up (see
+ * `app_backup_rules.xml`) so a restored device lands on the same filter chip.
  */
 class MySoundsFilterStore(
     context: Context,

@@ -24,8 +24,8 @@ import kotlinx.coroutines.withContext
  * an in-memory cache plus a DataStore write-back. The persisted value is either the canonical
  * collection id of a private collection or [ALL_SENTINEL] for the unfiltered view.
  *
- * Excluded from backup (see `app_backup_rules.xml`): the filter mirrors local app state and the
- * Vault scope is local-only per v2.4.0 § 5.
+ * Backed up (see `app_backup_rules.xml`) so a restored device lands on the same Vault filter chip,
+ * matching the rest of the user's archive.
  */
 class VaultFilterStore(
     context: Context,
