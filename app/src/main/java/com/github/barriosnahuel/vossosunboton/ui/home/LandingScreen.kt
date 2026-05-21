@@ -61,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
@@ -141,41 +142,55 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val collectionsByAudio by viewModel.audioCollectionsIndex.collectAsState()
     val privateCollections = remember(collections) { collections.filter { it.isPrivate } }
 
+    // My Sounds is the always-composed base layer; About / Manage Collections render as opaque
+    // full-screen overlays stacked on top of it (the same layering SearchOverlay uses below).
+    // Keeping the list composed behind is what lets predictiveBackTransition reveal the live
+    // My Sounds as the user swipes those screens away — an exclusive `when` (the prior shape)
+    // exposed the bare window background instead. The overlays' Scaffold Surface is opaque: it
+    // blocks touch propagation and covers the list at rest, so there is no visual or input change
+    // until a back gesture is in progress. When the nav3 migration (backlog 08) lands, About/Manage
+    // become real destinations and this manual layering is removed.
+    //
+    // While a sub-screen is open the occluded list is cleared from the semantics tree, so TalkBack
+    // and UI tests neither reach nor double-match nodes hidden behind the opaque overlay (e.g. a
+    // collection name shown both in the chip row and in the Manage list). Drawing is untouched, so
+    // the gesture still reveals the live list visually.
+    val subScreenOpen = isAboutVisible || manageRequest != null
+    ScaffoldedLanding(
+        modifier = if (subScreenOpen) Modifier.clearAndSetSemantics {} else Modifier,
+        viewModel = viewModel,
+        sounds = sounds,
+        selectedTab = selectedTab,
+        hasBundledSounds = hasBundledSounds,
+        playbackProgress = playbackProgress,
+        pausedProgress = pausedProgress,
+        soundDurations = soundDurations,
+        snackbarHostState = snackbarHostState,
+        listState = listState,
+        coroutineScope = coroutineScope,
+        context = context,
+        tabBackStack = tabBackStack,
+        collections = collections,
+        activeFilter = activeFilter,
+        publicCollections = publicCollections,
+        collectionsByAudio = collectionsByAudio,
+        privateCollections = privateCollections,
+        onAboutClick = { isAboutVisible = true },
+        onManageCollectionsClick = { manageRequest = ManageRequest.Generic },
+        onActiveFilterEditClick = { collectionId ->
+            manageRequest = ManageRequest.Focused(collectionId)
+        },
+    )
+
+    // Exactly one sub-screen overlays the list at a time (About wins over Manage, preserving the
+    // prior priority); neither branch removes the base layer.
     when {
-        isAboutVisible -> {
-            AboutScreen(onBack = { isAboutVisible = false })
-        }
-        manageRequest != null -> {
+        isAboutVisible -> AboutScreen(onBack = { isAboutVisible = false })
+        manageRequest != null ->
             com.github.barriosnahuel.vossosunboton.feature.collections.ManageCollectionsScreen(
                 viewModel = viewModel,
                 focusedCollectionId = (manageRequest as? ManageRequest.Focused)?.collectionId,
                 onBack = { manageRequest = null },
-            )
-        }
-        else ->
-            ScaffoldedLanding(
-                viewModel = viewModel,
-                sounds = sounds,
-                selectedTab = selectedTab,
-                hasBundledSounds = hasBundledSounds,
-                playbackProgress = playbackProgress,
-                pausedProgress = pausedProgress,
-                soundDurations = soundDurations,
-                snackbarHostState = snackbarHostState,
-                listState = listState,
-                coroutineScope = coroutineScope,
-                context = context,
-                tabBackStack = tabBackStack,
-                collections = collections,
-                activeFilter = activeFilter,
-                publicCollections = publicCollections,
-                collectionsByAudio = collectionsByAudio,
-                privateCollections = privateCollections,
-                onAboutClick = { isAboutVisible = true },
-                onManageCollectionsClick = { manageRequest = ManageRequest.Generic },
-                onActiveFilterEditClick = { collectionId ->
-                    manageRequest = ManageRequest.Focused(collectionId)
-                },
             )
     }
 
@@ -275,6 +290,7 @@ private fun SearchOverlayHost(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScaffoldedLanding(
+    modifier: Modifier = Modifier,
     viewModel: SoundsViewModel,
     sounds: List<Sound>,
     selectedTab: AppTab,
@@ -297,6 +313,7 @@ private fun ScaffoldedLanding(
     onActiveFilterEditClick: (String) -> Unit,
 ) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             AppTopBar(
                 onAboutClick = onAboutClick,
