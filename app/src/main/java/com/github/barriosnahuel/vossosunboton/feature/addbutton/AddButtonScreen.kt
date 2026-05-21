@@ -395,6 +395,7 @@ fun AddButtonScreen(
     if (scope != null) {
         InlineCollectionCreateSheet(
             scope = scope,
+            source = "add_bomp",
             onDismiss = { pendingNewCollectionScope = null },
             onCreated = { created ->
                 // Auto-tag the in-progress audio with the freshly created collection so the user

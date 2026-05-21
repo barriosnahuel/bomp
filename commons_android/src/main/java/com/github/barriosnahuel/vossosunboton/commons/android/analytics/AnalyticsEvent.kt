@@ -192,15 +192,21 @@ sealed class AnalyticsEvent(
     /**
      * A new collection was created. [scope] is `"public"` or `"private"`; [audios] is the audio
      * count at creation (always 0 today but kept for future "create from selection" flows).
+     * [source] is the surface that opened the create flow — `"add_bomp"` (New/Edit Bomp assign),
+     * `"assign_sheet"` (long-press → assign), `"vault_fab"` (Vault tab FAB), `"manage"` (Manage
+     * Collections), or `"my_sounds_filter"` (the My Sounds filter chip row). Tells product which
+     * entry point drives organization.
      */
     data class CollectionCreate(
         val scope: String,
         val audios: Int,
+        val source: String,
     ) : AnalyticsEvent(name = "collection_create", hasFirstVariant = true) {
         override fun params(): Bundle =
             Bundle().apply {
                 putString("scope", scope)
                 putInt("audios", audios)
+                putString("source", source)
             }
     }
 

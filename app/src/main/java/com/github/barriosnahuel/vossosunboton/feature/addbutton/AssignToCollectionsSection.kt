@@ -68,35 +68,18 @@ internal fun AssignToCollectionsSection(
     onRequestPrivateUnlock: () -> Unit,
     onHidePrivate: () -> Unit,
     modifier: Modifier = Modifier,
+    // Hosts that provide their own header (e.g. the long-press sheet) pass false. Hosts where the
+    // private reveal is session-wide (not a local toggle) pass showHidePrivate = false, since a
+    // "Hide" affordance that can't re-lock the session would be misleading.
+    showTitle: Boolean = true,
+    showHidePrivate: Boolean = true,
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.SM)) {
-        Text(
-            text = stringResource(R.string.app_addbutton_collections_section_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        // Derived state line: where this Bomp lands given current selections. Public wins over
-        // private (spec § 3.1) — a Bomp in any open collection stays in plain view even if it's
-        // also in the Vault, so we surface the cross-tag hint to explain that.
-        val staysOpen = publicSelection.isNotEmpty() || privateSelection.isEmpty()
-        Text(
-            text =
-                stringResource(
-                    if (staysOpen) {
-                        R.string.app_addbutton_collections_state_open
-                    } else {
-                        R.string.app_addbutton_collections_state_vault
-                    },
-                ),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        if (publicSelection.isNotEmpty() && privateSelection.isNotEmpty()) {
+        if (showTitle) {
             Text(
-                text = stringResource(R.string.app_addbutton_collections_state_crosstag),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = stringResource(R.string.app_addbutton_collections_section_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
@@ -114,6 +97,7 @@ internal fun AssignToCollectionsSection(
             selection = privateSelection,
             biometricStatus = biometricStatus,
             revealed = privateRevealed,
+            showHide = showHidePrivate,
             onSelectionChange = onPrivateSelectionChange,
             onCreateRequested = onCreatePrivateRequested,
             onRequestUnlock = onRequestPrivateUnlock,
@@ -181,6 +165,7 @@ private fun PrivateBlock(
     selection: Set<String>,
     biometricStatus: BiometricGateStatus,
     revealed: Boolean,
+    showHide: Boolean,
     onSelectionChange: (Set<String>) -> Unit,
     onCreateRequested: () -> Unit,
     onRequestUnlock: () -> Unit,
@@ -247,6 +232,9 @@ private fun PrivateBlock(
                     FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        // Ink leading icon on the acid fill — without this the Lock glyph keeps its
+                        // default light tint and drops below 3:1 on Acid400 (WCAG 1.4.11).
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     ),
             )
         }
@@ -255,7 +243,7 @@ private fun PrivateBlock(
             label = { Text(stringResource(R.string.app_addbutton_collections_new_private_chip)) },
         )
     }
-    if (revealed && !isUnprotected) {
+    if (revealed && !isUnprotected && showHide) {
         TextButton(onClick = onHide) {
             Text(stringResource(R.string.app_addbutton_collections_private_unlocked_cta))
         }

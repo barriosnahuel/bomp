@@ -56,6 +56,9 @@ enum class AppTab { MY_SOUNDS, VAULT, EXPLORE_SOUNDS }
 sealed interface CollectionSheetRequest {
     data class Create(
         val access: CollectionAccess,
+        // Analytics surface that opened the create sheet — flows into collection_create.source so
+        // product can tell which entry point drives organization. See AnalyticsEvent.CollectionCreate.
+        val source: String,
     ) : CollectionSheetRequest
 
     data class Rename(
@@ -856,6 +859,7 @@ class SoundsViewModel(
     suspend fun createCollection(
         name: String,
         access: CollectionAccess,
+        source: String,
     ): Result<Collection> =
         runCatching {
             val profile =
@@ -868,6 +872,7 @@ class SoundsViewModel(
                     AnalyticsEvent.CollectionCreate(
                         scope = if (access == CollectionAccess.PUBLIC) "public" else "private",
                         audios = 0,
+                        source = source,
                     ),
                 )
                 val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_CREATES)
@@ -943,9 +948,16 @@ class SoundsViewModel(
         }
     }
 
-    /** Opens the create-collection sheet for [access] scope. Triggered from filter row and Vault FAB. */
-    fun requestCreateCollection(access: CollectionAccess) {
-        _activeCollectionSheet.value = CollectionSheetRequest.Create(access)
+    /**
+     * Opens the create-collection sheet for [access] scope. [source] is the analytics surface that
+     * triggered it (flows into collection_create.source). Triggered from filter row, Vault FAB,
+     * and Manage.
+     */
+    fun requestCreateCollection(
+        access: CollectionAccess,
+        source: String,
+    ) {
+        _activeCollectionSheet.value = CollectionSheetRequest.Create(access, source)
     }
 
     /** Opens the long-press → "Add to collection" sheet for [audioId]. */

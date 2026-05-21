@@ -739,6 +739,7 @@ private fun MySoundsBody(
                 onCreateRequested = {
                     viewModel.requestCreateCollection(
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "my_sounds_filter",
                     )
                 },
             )

@@ -5,62 +5,54 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.collections
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.AssignToCollectionsSection
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.InlineCollectionCreateSheet
 import com.github.barriosnahuel.vossosunboton.feature.vault.requestUnlock
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateStatus
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.model.Collection
+import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 /**
- * Modal bottom sheet that lets the user assign or unassign an audio to/from any collection,
- * grouped public first then private. Triggered from the long-press → "Add to collection" menu
- * item inside [com.github.barriosnahuel.vossosunboton.ui.home.SoundItem]; hosted by
- * [com.github.barriosnahuel.vossosunboton.ui.home.LandingScreen] so a single instance survives
- * tab switches.
+ * Modal bottom sheet that assigns / unassigns an audio to/from any collection. Triggered from the
+ * long-press → "Add to collection" menu.
  *
- * Vault collections are gated by the same per-session unlock used by the Vault tab itself —
- * an audio already in private collections still shows them collapsed behind an "unlock to
- * reveal" affordance when the session is closed.
+ * Shares the exact chip UI + create flow with the New Bomp assign section by reusing
+ * [AssignToCollectionsSection]. Two surface-specific behaviors: changes apply immediately (no save
+ * step — each chip toggle commits right away), and creating a collection from "+ Nueva" auto-tags
+ * the long-pressed audio (parity with New Bomp). Vault collections sit behind the same per-session
+ * unlock used by the Vault tab.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +71,9 @@ internal fun AssignCollectionSheet(viewModel: SoundsViewModel) {
     val publics = remember(collections) { collections.filter { it.isPublic } }
     val privates = remember(collections) { collections.filter { it.isPrivate } }
 
+    // Non-null = the create-with-auto-tag sheet is open for that scope.
+    var pendingNewCollectionScope by remember { mutableStateOf<CollectionAccess?>(null) }
+
     ModalBottomSheet(
         onDismissRequest = { viewModel.dismissAssignCollections() },
         sheetState = sheetState,
@@ -90,18 +85,30 @@ internal fun AssignCollectionSheet(viewModel: SoundsViewModel) {
             privates = privates,
             vaultOpen = vaultOpen,
             gateStatus = gateStatus,
-            onUnlockVault = {
-                requestUnlock(context, gate, gateStatus, tracker, source = "assign_sheet")
-            },
-            onToggle = { collectionId ->
-                viewModel.toggleAudioInCollection(audioId, collectionId)
-            },
+            onUnlockVault = { requestUnlock(context, gate, gateStatus, tracker, source = "assign_sheet") },
+            onToggle = { collectionId -> viewModel.toggleAudioInCollection(audioId, collectionId) },
+            onCreatePublic = { pendingNewCollectionScope = CollectionAccess.PUBLIC },
+            onCreatePrivate = { pendingNewCollectionScope = CollectionAccess.PRIVATE },
             onDone = {
                 coroutineScope.launch { sheetState.hide() }
                 viewModel.dismissAssignCollections()
             },
         )
     }
+
+    pendingNewCollectionScope?.let { scope ->
+        InlineCollectionCreateSheet(
+            scope = scope,
+            source = "assign_sheet",
+            onDismiss = { pendingNewCollectionScope = null },
+            onCreated = { created ->
+                pendingNewCollectionScope = null
+                // "+ Nueva" means "create AND tag" — auto-tag the long-pressed audio, matching New Bomp.
+                viewModel.toggleAudioInCollection(audioId, created.id)
+            },
+        )
+    }
+
     LaunchedEffect(Unit) { sheetState.show() }
 }
 
@@ -114,8 +121,14 @@ private fun AssignCollectionSheetBody(
     gateStatus: BiometricGateStatus,
     onUnlockVault: () -> Unit,
     onToggle: (String) -> Unit,
+    onCreatePublic: () -> Unit,
+    onCreatePrivate: () -> Unit,
     onDone: () -> Unit,
 ) {
+    val publicSelection =
+        remember(publics, audioId) { publics.filter { audioId in it.audioIds }.map { it.id }.toSet() }
+    val privateSelection =
+        remember(privates, audioId) { privates.filter { audioId in it.audioIds }.map { it.id }.toSet() }
     Column(
         modifier =
             Modifier
@@ -128,56 +141,22 @@ private fun AssignCollectionSheetBody(
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        if (publics.isEmpty() && privates.isEmpty()) {
-            Text(
-                text = stringResource(R.string.app_assign_collection_sheet_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.XS),
-            ) {
-                if (publics.isNotEmpty()) {
-                    item(key = "header_public") {
-                        SectionHeader(stringResource(R.string.app_assign_collection_sheet_section_public))
-                    }
-                    items(publics, key = { it.id }) { collection ->
-                        CollectionRow(
-                            collection = collection,
-                            checked = audioId in collection.audioIds,
-                            onToggle = { onToggle(collection.id) },
-                        )
-                    }
-                }
-                if (privates.isNotEmpty()) {
-                    item(key = "divider_private") {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = Spacing.SM),
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                        )
-                    }
-                    item(key = "header_private") {
-                        SectionHeader(stringResource(R.string.app_assign_collection_sheet_section_private))
-                    }
-                    val privateLockedByBiometric = !vaultOpen && gateStatus == BiometricGateStatus.AVAILABLE
-                    if (privateLockedByBiometric) {
-                        item(key = "private_locked") {
-                            VaultLockedRow(onUnlock = onUnlockVault)
-                        }
-                    } else {
-                        items(privates, key = { it.id }) { collection ->
-                            CollectionRow(
-                                collection = collection,
-                                checked = audioId in collection.audioIds,
-                                onToggle = { onToggle(collection.id) },
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        AssignToCollectionsSection(
+            publicCollections = publics,
+            privateCollections = privates,
+            publicSelection = publicSelection,
+            privateSelection = privateSelection,
+            biometricStatus = gateStatus,
+            privateRevealed = vaultOpen,
+            onPublicSelectionChange = { next -> applyImmediateToggles(publicSelection, next, onToggle) },
+            onPrivateSelectionChange = { next -> applyImmediateToggles(privateSelection, next, onToggle) },
+            onCreatePublicRequested = onCreatePublic,
+            onCreatePrivateRequested = onCreatePrivate,
+            onRequestPrivateUnlock = onUnlockVault,
+            onHidePrivate = {},
+            showTitle = false,
+            showHidePrivate = false,
+        )
         Spacer(modifier = Modifier.height(Spacing.SM))
         Button(
             onClick = onDone,
@@ -193,73 +172,16 @@ private fun AssignCollectionSheetBody(
     }
 }
 
-@Composable
-private fun SectionHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = Spacing.XS, bottom = Spacing.XS),
-    )
-}
-
-@Composable
-private fun CollectionRow(
-    collection: Collection,
-    checked: Boolean,
-    onToggle: () -> Unit,
+/**
+ * The chip component reports the full intended selection; this long-press surface commits each
+ * change immediately, so apply exactly the ids that flipped versus the current set.
+ */
+private fun applyImmediateToggles(
+    current: Set<String>,
+    next: Set<String>,
+    onToggle: (String) -> Unit,
 ) {
-    val labelRes = if (collection.isSystem) R.string.app_vault_baul_name else null
-    val resolvedName = labelRes?.let { stringResource(it) } ?: collection.name
-    // Action-oriented description: TalkBack reads "Add to Familia" (or, when already in,
-    // "In Familia, double-tap to remove") instead of the raw "Familia, Checkbox, …" assembly.
-    // It also gives instrumented tests a unique semantic anchor — the same collection name
-    // appears in the My Sounds filter chip row, so disambiguating by text alone is unreliable.
-    val rowDescription =
-        if (checked) {
-            stringResource(R.string.app_assign_collection_sheet_row_action_selected, resolvedName)
-        } else {
-            stringResource(R.string.app_assign_collection_sheet_row_action_unselected, resolvedName)
-        }
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics(mergeDescendants = true) {
-                    contentDescription = rowDescription
-                }.clickable(onClick = onToggle)
-                .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(checked = checked, onCheckedChange = { onToggle() })
-        Spacer(modifier = Modifier.padding(start = Spacing.SM))
-        Text(
-            text = resolvedName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
-
-@Composable
-private fun VaultLockedRow(onUnlock: () -> Unit) {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = Spacing.SM),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.XS)) {
-            Text(
-                text = stringResource(R.string.app_assign_collection_sheet_private_locked_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            TextButton(onClick = onUnlock) {
-                Text(stringResource(R.string.app_assign_collection_sheet_private_locked_cta))
-            }
-        }
-    }
+    ((next - current) + (current - next)).forEach(onToggle)
 }
 
 private fun android.content.Context.findFragmentActivity(): FragmentActivity? {

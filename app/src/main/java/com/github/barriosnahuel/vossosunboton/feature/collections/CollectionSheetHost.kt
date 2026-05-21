@@ -89,7 +89,7 @@ internal fun CollectionSheetHost(viewModel: SoundsViewModel) {
             onSubmit = { name ->
                 val result =
                     when (val r = activeRequest) {
-                        is CollectionSheetRequest.Create -> viewModel.createCollection(name, r.access).map { Unit }
+                        is CollectionSheetRequest.Create -> viewModel.createCollection(name, r.access, r.source).map { Unit }
                         is CollectionSheetRequest.Rename -> viewModel.renameCollection(r.id, name)
                     }
                 if (result.isSuccess) {

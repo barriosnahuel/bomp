@@ -182,7 +182,7 @@ internal fun ManageCollectionsScreen(
             item(key = "new_public") {
                 SectionCreateButton(
                     label = stringResource(R.string.app_manage_collections_new_public),
-                    onClick = { viewModel.requestCreateCollection(CollectionAccess.PUBLIC) },
+                    onClick = { viewModel.requestCreateCollection(CollectionAccess.PUBLIC, source = "manage") },
                 )
             }
 
@@ -226,7 +226,7 @@ internal fun ManageCollectionsScreen(
                 item(key = "new_vault") {
                     SectionCreateButton(
                         label = stringResource(R.string.app_manage_collections_new_vault),
-                        onClick = { viewModel.requestCreateCollection(CollectionAccess.PRIVATE) },
+                        onClick = { viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = "manage") },
                     )
                 }
             }

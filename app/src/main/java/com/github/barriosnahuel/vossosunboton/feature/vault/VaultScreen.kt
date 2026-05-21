@@ -276,7 +276,7 @@ private fun VaultBody(
                 activeFilterId = activeFilter,
                 onFilterSelected = { id -> viewModel.selectVaultFilter(id) },
                 onCreateRequested = {
-                    viewModel.requestCreateCollection(CollectionAccess.PRIVATE)
+                    viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = "vault_filter")
                 },
             )
             if (showHeader) {
@@ -322,7 +322,7 @@ private fun VaultBody(
         // "+ Nueva" entry point but stays reachable when the list is full.
         val fabContentDescription = stringResource(R.string.app_vault_fab_new)
         ExtendedFloatingActionButton(
-            onClick = { viewModel.requestCreateCollection(CollectionAccess.PRIVATE) },
+            onClick = { viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = "vault_fab") },
             modifier =
                 Modifier
                     .align(Alignment.BottomEnd)

@@ -423,6 +423,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
             viewModel.createCollection(
                 "Familia",
                 com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                source = "manage",
             )
         }
         runBlocking { awaitAnalyticsEvent(fake, "collection_create") }
@@ -431,6 +432,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         val event = fake.assertEmitted("collection_create")
         assertThat(event.params["scope"]).isEqualTo("public")
         assertThat(event.params["audios"]).isEqualTo(0)
+        assertThat(event.params["source"]).isEqualTo("manage")
         assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_COLLECTION_CREATES]).isEqualTo("1")
         assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_COLLECTIONS_PUBLIC]).isEqualTo("1")
     }
@@ -443,6 +445,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
             viewModel.createCollection(
                 "Caro",
                 com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PRIVATE,
+                source = "manage",
             )
         }
         runBlocking { awaitAnalyticsEvent(fake, "collection_create") }
@@ -463,6 +466,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                     .createCollection(
                         "Trabajo",
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
                     ).getOrThrow()
             }
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
@@ -488,6 +492,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                     .createCollection(
                         "Recetas",
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
                     ).getOrThrow()
             }
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
@@ -516,6 +521,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                     .createCollection(
                         "Familia",
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
                     ).getOrThrow()
             }
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
@@ -544,6 +550,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                     .createCollection(
                         "Trabajo",
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
                     ).getOrThrow()
             }
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
@@ -568,6 +575,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                     .createCollection(
                         "Familia",
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
                     ).getOrThrow()
             }
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
@@ -589,6 +597,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                     .createCollection(
                         "Caro",
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PRIVATE,
+                        source = "manage",
                     ).getOrThrow()
             }
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
@@ -614,6 +623,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                     .createCollection(
                         "Secretos",
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PRIVATE,
+                        source = "manage",
                     ).getOrThrow()
             }
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
@@ -661,6 +671,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
                     .createCollection(
                         "Familia",
                         com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
                     ).getOrThrow()
             }
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }

@@ -63,6 +63,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun InlineCollectionCreateSheet(
     scope: CollectionAccess,
+    source: String,
     onDismiss: () -> Unit,
     onCreated: (Collection) -> Unit,
 ) {
@@ -118,6 +119,7 @@ internal fun InlineCollectionCreateSheet(
                                 AnalyticsEvent.CollectionCreate(
                                     scope = if (created.isPublic) "public" else "private",
                                     audios = 0,
+                                    source = source,
                                 ),
                             )
                             sheetState.hide()

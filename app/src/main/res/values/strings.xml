@@ -162,14 +162,7 @@
     <!-- Sound long-press menu — "Add to collection" entry + bottom-sheet picker -->
     <string name="app_audio_menu_add_to_collection">Add to collection</string>
     <string name="app_assign_collection_sheet_title">Add to a collection</string>
-    <string name="app_assign_collection_sheet_section_public">Collections</string>
-    <string name="app_assign_collection_sheet_section_private">Vault</string>
     <string name="app_assign_collection_sheet_done">Done</string>
-    <string name="app_assign_collection_sheet_empty">No collections yet. Create one in Collections or your Vault first.</string>
-    <string name="app_assign_collection_sheet_private_locked_cta">Show your Vault (requires unlock)</string>
-    <string name="app_assign_collection_sheet_private_locked_subtitle">Unlock your Vault to keep this Bomp in it.</string>
-    <string name="app_assign_collection_sheet_row_action_selected">In %1$s, double-tap to remove</string>
-    <string name="app_assign_collection_sheet_row_action_unselected">Add to %1$s</string>
 
     <!-- Active filter header (below the chip row on My Sounds + Vault) -->
     <string name="app_active_filter_header_all_my_sounds">All sounds · %1$d</string>
@@ -201,11 +194,8 @@
 
     <!-- Add / Edit Bomp — "Assign to collections" section -->
     <string name="app_addbutton_collections_section_title">Assign to collections</string>
-    <string name="app_addbutton_collections_state_open">Stays in plain view</string>
-    <string name="app_addbutton_collections_state_vault">Tucked into your Vault</string>
-    <string name="app_addbutton_collections_state_crosstag">Also in an open collection, so it stays in plain view.</string>
     <string name="app_addbutton_collections_public_label">Collections</string>
-    <string name="app_addbutton_collections_public_empty">No open collections yet.</string>
+    <string name="app_addbutton_collections_public_empty">No collections yet.</string>
     <string name="app_addbutton_collections_private_label">Vault</string>
     <string name="app_addbutton_collections_private_locked_cta">Show your Vault (requires unlock)</string>
     <string name="app_addbutton_collections_private_unlocked_cta">Hide your Vault</string>

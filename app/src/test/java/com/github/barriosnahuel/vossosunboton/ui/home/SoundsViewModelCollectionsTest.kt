@@ -409,7 +409,7 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         val vm = givenAViewModel()
         runBlocking { vm.collections.first { it.isNotEmpty() } }
         val outcome =
-            runBlocking { vm.createCollection("Caro", CollectionAccess.PRIVATE) }
+            runBlocking { vm.createCollection("Caro", CollectionAccess.PRIVATE, source = "manage") }
         assertThat(outcome.isSuccess).isTrue()
         val created = outcome.getOrThrow()
         assertThat(created.isPrivate).isTrue()
