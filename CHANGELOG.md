@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Tapping Save on the new-Bomp form without a name now plays a "reject" haptic alongside the existing error message, matching the tactile feedback used elsewhere for rejected actions
 - Search empty-state hint moved away from teaching the obvious "type to filter" toward a warmer brand-voice line ("That gem of yours is in here. Go find it." / "Esa reliquia tuya está acá. Encontrala.")
 - Tapping a Bomp while it plays now pauses it (and resumes from the same position on the next tap) instead of restarting from the beginning, matching the Add Audio preview behavior. The progress bar stays at the paused position instead of snapping to zero, so a pause reads as a pause. Positions survive rotation; they are reset when a Bomp finishes naturally, is deleted, or after the app is killed
+- The back gesture now previews where it leads on the Search, About, and Manage collections screens: as you swipe back the screen slides and fades to reveal what is behind, and you can release mid-swipe to cancel and stay — honoring the system "Remove animations" setting, with the instant back kept on older devices
 
 ### For nerds 🤓
 
