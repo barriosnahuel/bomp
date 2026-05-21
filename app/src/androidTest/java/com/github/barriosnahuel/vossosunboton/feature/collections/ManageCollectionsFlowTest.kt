@@ -225,6 +225,18 @@ internal class ManageCollectionsFlowTest : AbstractUiTest() {
         }
     }
 
+    @Test
+    fun manageCollectionsHidesTheUnderlyingListFromSemantics() {
+        // Layering invariant (ADR 0011): My Sounds is composed behind Manage so predictive back can
+        // reveal it, but its semantics are cleared while Manage is open. The My Sounds overflow ⋮ is
+        // a base-layer-only sentinel — it must be absent while Manage is open, or collection names
+        // would double-match (chip row behind + Manage rows) and TalkBack would reach hidden nodes.
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openManageFromOverflow()
+            composeRule.onNodeWithContentDescription(overflowLabel()).assertDoesNotExist()
+        }
+    }
+
     private fun openManageFromOverflow() {
         // The overflow ⋮ is an IconButton — surfaced via contentDescription, not Text.
         composeRule.awaitNodeWithContentDescription(overflowLabel()).performClick()

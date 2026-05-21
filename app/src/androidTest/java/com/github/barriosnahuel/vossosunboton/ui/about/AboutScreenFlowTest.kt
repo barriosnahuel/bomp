@@ -68,6 +68,18 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
     }
 
     @Test
+    fun aboutScreenHidesTheUnderlyingLandingFromSemantics() {
+        // Layering invariant (ADR 0011): Landing is composed behind About so predictive back can
+        // reveal it, but its semantics are cleared while About is open. The Landing overflow ⋮ is a
+        // base-layer-only sentinel (About has only a back arrow) — it must be absent from the tree
+        // while About is open, or TalkBack/tests would reach nodes hidden behind the opaque overlay.
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openAbout()
+            composeRule.onNodeWithContentDescription(context.getString(R.string.app_overflow_menu)).assertDoesNotExist()
+        }
+    }
+
+    @Test
     fun playBrandingAudioButtonIsClickable() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
