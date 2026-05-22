@@ -323,6 +323,26 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         }
     }
 
+    /**
+     * Polls [fake] every 25 ms until user property [name] equals [expected], 5-second cap. Use this
+     * instead of awaiting a *proxy* (the collections StateFlow, the toggle event) when the assertion
+     * reads a bucket user property: the collections observer sets `_collections.value` BEFORE it runs
+     * `syncAudioBuckets` (which writes the bucket properties) in the same pass, so a test awaiting the
+     * collection update can resume — under `UnconfinedTestDispatcher` — and race ahead of the property
+     * write. Awaiting the asserted value itself closes that gap (CLAUDE.md § JVM tests).
+     */
+    private suspend fun awaitUserProperty(
+        fake: FakeAnalyticsTracker,
+        name: String,
+        expected: String,
+    ) {
+        withTimeout(5_000L) {
+            while (fake.userProperties[name] != expected) {
+                delay(25L)
+            }
+        }
+    }
+
     @Test
     fun `welcome_sticker_shown is logged once on first VM init when flag is active`() {
         givenAViewModel()
@@ -632,8 +652,10 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
 
         viewModel.toggleAudioInCollection(sound.id, created.id)
-        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
-        runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.contains(sound.id) } }
+        // Await the asserted property itself, not a proxy: `syncAudioBuckets` writes it AFTER the
+        // `_collections` emit in the same observer pass, so awaiting the collection update would
+        // race ahead of the write under UnconfinedTestDispatcher.
+        runBlocking { awaitUserProperty(fake, AnalyticsUserProperty.CURRENT_VAULT_CUSTOM, "1") }
 
         assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_VAULT_CUSTOM]).isEqualTo("1")
         assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_VAULT_DEFAULT]).isEqualTo("0")
@@ -653,8 +675,10 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         val baul = viewModel.collections.value.first { it.isSystem }
 
         viewModel.toggleAudioInCollection(sound.id, baul.id)
-        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
-        runBlocking { viewModel.collections.first { col -> col.first { it.id == baul.id }.audioIds.contains(sound.id) } }
+        // Await the asserted property itself, not a proxy: `syncAudioBuckets` writes it AFTER the
+        // `_collections` emit in the same observer pass, so awaiting the collection update would
+        // race ahead of the write under UnconfinedTestDispatcher.
+        runBlocking { awaitUserProperty(fake, AnalyticsUserProperty.CURRENT_VAULT_DEFAULT, "1") }
 
         assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_VAULT_DEFAULT]).isEqualTo("1")
         assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_VAULT_CUSTOM]).isEqualTo("0")
@@ -683,8 +707,10 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
 
         viewModel.toggleAudioInCollection(filed.id, created.id)
-        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
-        runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.contains(filed.id) } }
+        // Await the asserted property itself, not a proxy: `syncAudioBuckets` writes it AFTER the
+        // `_collections` emit in the same observer pass, so awaiting the collection update would
+        // race ahead of the write under UnconfinedTestDispatcher.
+        runBlocking { awaitUserProperty(fake, AnalyticsUserProperty.CURRENT_PUBLIC_CUSTOM, "1") }
 
         assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_PUBLIC_CUSTOM]).isEqualTo("1")
         assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_PUBLIC_DEFAULT]).isEqualTo("1")
