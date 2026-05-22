@@ -4,17 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What goes in this file
 
-This file is loaded into every agent's context window. Hard limit: **40K chars** — Claude Code performance degrades above this (enforced by `scripts/check-adr-invariants.sh`). Target ≤ 35K to leave headroom for the next invariant.
-
-Before adding content here, ask: **does the agent need this while typing the next line of code?**
+Loaded into every agent's context window. Hard limit **40K chars** — Claude Code degrades above it (CI-enforced by `scripts/check-adr-invariants.sh`); target ≤ 35K for headroom. Before adding content, ask: **does the agent need this while typing the next line of code?**
 
 - **Yes** — invariants, hard nos, project-specific overrides on platform docs → here.
-- **No, it's a procedure or run command** → `CONTRIBUTING.md`.
-- **No, it's a decision + rationale + revisit criteria** → `docs/adr/*.md`.
+- **No, a procedure or run command** → `CONTRIBUTING.md`.
+- **No, a decision + rationale + revisit criteria** → `docs/adr/*.md`.
 
-Small canonical snippets (≤ 5 lines) may duplicate across CLAUDE.md and CONTRIBUTING.md when the agent needs them at write-time *and* the human at reference-time. Bash blocks, setup procedures, operator workflows should not — link to CONTRIBUTING.md.
-
-Run `/claude-md-audit` when this file approaches 40K or feels bloated.
+Small canonical snippets (≤ 5 lines) may live in both files when needed at write-time *and* reference-time; bash blocks, setup procedures, and operator workflows must not — link to CONTRIBUTING.md instead. Run `/claude-md-audit` when this file approaches 40K or feels bloated.
 
 ## Commands
 
@@ -33,12 +29,12 @@ Release-only commands (`app:lintVitalRelease`, `app:bundle`) in CONTRIBUTING.md 
 
 ## Module Architecture
 
-Push Me is an Android soundboard app with 4 Gradle modules:
+Push Me is an Android soundboard app with 4 Gradle modules (per-module detail in CONTRIBUTING.md § *Directory structure*):
 
-- **`app`** — Activities, Fragments, RecyclerView adapters, feature layer (playback, share, permissions, add-button). Entry: `LandingActivity`. Add Button flow: `feature/addbutton/`.
-- **`model`** — Business logic: `Sound` data model, data managers, persistence. No Android UI dependencies.
-- **`commons_android`** — Foundation library: Firebase init, Timber logging setup, annotations.
-- **`commons_file`** — File handling utilities (audio I/O).
+- **`app`** — Activities, Fragments, feature layer (playback, share, permissions, add-button). Entry: `LandingActivity`; Add Button flow: `feature/addbutton/`.
+- **`model`** — business logic: `Sound`, data managers, persistence. No Android UI dependencies.
+- **`commons_android`** — foundation: Firebase init, Timber setup, annotations.
+- **`commons_file`** — file handling (audio I/O).
 
 Dependency direction: `app` → `model`, `commons_android`, `commons_file`. No dynamic features today.
 
@@ -46,24 +42,7 @@ Dependency direction: `app` → `model`, `commons_android`, `commons_file`. No d
 
 For non-trivial decisions, consult the authoritative source first (WebFetch or linked skill) and cite it. Don't answer from training memory in version-sensitive areas — the platform moves. Unreachable source → say so, mark answer as heuristic.
 
-| Area | Authoritative source |
-|---|---|
-| Jetpack Compose: state, recomposition, side-effects, performance, lifecycle | https://developer.android.com/develop/ui/compose |
-| Navigation in Compose | Linked skill `navigation-3` |
-| XML view → Compose migration | Linked skill `migrate-xml-views-to-jetpack-compose` |
-| Edge-to-edge / system bars / insets | Linked skill `edge-to-edge` |
-| Coroutines, Flow, StateFlow, dispatchers, `runTest` | https://kotlinlang.org/docs/coroutines-guide.html + https://developer.android.com/kotlin/coroutines |
-| Lifecycle: `repeatOnLifecycle`, `collectAsStateWithLifecycle` | https://developer.android.com/topic/libraries/architecture/lifecycle |
-| App architecture (UI/domain/data, UDF, ViewModel + UI state, UI events) | https://developer.android.com/topic/architecture + .../ui-layer/events |
-| DataStore (Preferences/Proto), migration from SharedPreferences | https://developer.android.com/topic/libraries/architecture/datastore |
-| Background work, WorkManager, foreground services, exact alarms | https://developer.android.com/develop/background-work |
-| Permissions / runtime permissions / scoped storage | https://developer.android.com/training/permissions |
-| Accessibility in Compose (semantics, click labels, custom actions, large text) | https://developer.android.com/develop/ui/compose/accessibility — pairs with WCAG 2.2 AA (§ Accessibility) |
-| AGP 9 migration | Linked skill `agp-9-upgrade` |
-| R8 keep rules audit | Linked skill `r8-analyzer` |
-| Play Billing | Linked skill `play-billing-library-version-upgrade` |
-| Kotlin idioms, conventions, KEEP proposals | https://kotlinlang.org/docs/coding-conventions.html + KEEP at https://github.com/Kotlin/KEEP |
-| Project-specific architectural decisions | `docs/adr/*.md` — read the relevant ADR before changing that area |
+The **area → authoritative source** routing table — Compose; coroutines/Flow/dispatchers; lifecycle; app architecture; DataStore; background work; permissions; accessibility; Kotlin idioms, plus the linked skills `navigation-3`, `migrate-xml-views-to-jetpack-compose`, `edge-to-edge`, `agp-9-upgrade`, `r8-analyzer`, `play-billing-library-version-upgrade` — is in CONTRIBUTING.md § *Sources of truth for platform decisions*. **Project-specific architectural decisions: `docs/adr/*.md` — read the relevant ADR before changing that area.**
 
 ## Project-specific overrides (read before changing platform-touching code)
 
@@ -90,7 +69,7 @@ Things the current codebase does that are *not* the recommended pattern. New cod
 
 `remember { mutableStateOf(...) }` is for transient gesture state. Durable progress (typed text, opened overlay/sheet/sub-screen, in-flight error) uses `rememberSaveable` so an Activity recreate (rotation, theme, system kill) doesn't silently rewind the user. Non-autosaveable types need an explicit `Saver` next to the Composable; canonical: `SaveOutcomeSaver` in `AddButtonScreen.kt`.
 
-`LaunchedEffect` calling `FocusRequester.requestFocus()` on first composition: wait for the first frame, then guard: `withFrameNanos { } ; runCatching { requestFocus() }.onFailure { Tracker.log(...) ; Tracker.track(RuntimeException("static title", it)) }`. Bare call no-ops silently if the node isn't yet attached (user loses the IME on the primary input). Reference: `AddButtonScreen.kt`, `SearchOverlay.kt`.
+`LaunchedEffect` calling `FocusRequester.requestFocus()` on first composition must wait for the first frame (`withFrameNanos { }`) then guard the call with `runCatching { … }` (track failures via `Tracker`) — a bare call no-ops silently if the node isn't attached yet and the user loses the IME on the primary input. Canonical incantation: `AddButtonScreen.kt`, `SearchOverlay.kt`.
 
 ## Persistence
 
@@ -102,15 +81,12 @@ For synchronous reads on top of DataStore (e.g. analytics before nav to a choose
 
 ## Worktree setup
 
-Invariants:
+Two write-time invariants below; the full procedure (Firebase projects, signing files, bundled audio, fresh-clone swap, safe dummy-edit sequence) is in CONTRIBUTING.md § *Firebase config file* / § *Creating a new worktree*.
 
-- Worktrees live as **siblings of the primary worktree** (`../push-me-<topic>`), never nested under `.claude/` — a nested worktree gets indexed by the IDE as a separate project in the same window, cluttering navigation. A committed `WorktreeCreate` hook (`.claude/hooks/create-sibling-worktree.sh`, registered in `.claude/settings.json`) applies the same layout to worktrees the agent harness or its subagents create.
-- Scrubbed dummy `google-services.json` at `app/src/{debug,release}/` (real `project_id`/`project_number`/`package_name`, fake `mobilesdk_app_id`/`api_key`) is committed so CI compiles. Real values live only in the working tree via `git update-index --skip-worktree` — **never** unmark + `git add` without first stashing the real file.
-- Two Firebase projects: `bomp-prod` (release, `com.github.barriosnahuel.vossosunboton`) + `bomp-debug` (debug, `...vossosunboton.debug`). Google Services plugin auto-resolves per-variant JSON by `package_name`.
-- Release signing requires `nahuelbarrios.keystore-appbundle.pkcs12` + `secure.properties` (`key.alias`, `key.password`, `store.password`) at project root — not committed. Debug uses the included debug keystore.
-- Bundled debug audio (`model/src/debug/res/raw/*.{mp3,ogg}`) not committed — without them Explore tab is empty.
+- Worktrees live as **siblings of the primary worktree** (`../push-me-<topic>`), never nested under `.claude/` — a nested worktree gets indexed by the IDE as a separate project, cluttering navigation. The committed `WorktreeCreate` hook (`.claude/hooks/create-sibling-worktree.sh`) applies this layout to harness/subagent worktrees automatically.
+- Real `google-services.json` lives only in the working tree via `git update-index --skip-worktree` (the committed copies are scrubbed dummies so CI compiles) — **never** unmark + `git add` without first stashing the real file, or you leak real keys.
 
-After creating a worktree by hand, run `./scripts/setup-worktree.sh` from its root — it copies the real google-services configs + bundled debug audio from the primary worktree and re-arms skip-worktree. Idempotent. The `WorktreeCreate` hook above invokes it automatically. Fresh-clone swap and safe edit sequence in CONTRIBUTING.md § *Firebase config file*.
+After creating a worktree by hand, run `./scripts/setup-worktree.sh` from its root (idempotent; the `WorktreeCreate` hook invokes it automatically) — it copies the real google-services configs + bundled debug audio and re-arms skip-worktree.
 
 ## Android resources naming
 
@@ -127,15 +103,7 @@ Sub-areas inside `:app` (e.g. `feature/addbutton/`) use a secondary prefix: `app
 
 ## Copyright headers
 
-Every `.kt` source file must start with the AGPLv3 copyright block (enforced by Spotless; `./gradlew spotlessApply` to auto-fix):
-
-```
-/*
- * Copyright (c) 2016-2026 Nahuel Barrios. All rights reserved.
- * SPDX-License-Identifier: AGPL-3.0-only
- * See LICENSE in the project root for full license information.
- */
-```
+Every `.kt` source file must start with the AGPLv3 copyright block (`SPDX-License-Identifier: AGPL-3.0-only`, © 2016-2026 Nahuel Barrios). Enforced by Spotless — `./gradlew spotlessApply` applies the exact header to new files (or copy it from any existing `.kt`).
 
 **Do not remove or hide the About screen.** It's the "Appropriate Legal Notices" mechanism required by AGPLv3 §0 (paired with the headers above). Entry: TopAppBar overflow menu in `LandingScreen.kt`.
 
@@ -151,14 +119,8 @@ Before writing production code, agree on minimum scenarios: happy path, failure 
 
 Test names are descriptive sentences, never opaque identifiers — reports list them verbatim.
 
-- **JVM tests** (`src/test/`): backtick-quoted strings, sentence-case, no trailing period.
-  ```kotlin
-  @Test fun `searchResults emits empty list when query is blank`() { ... }
-  ```
-- **Instrumented tests** (`src/androidTest/`): camelCase. Backticks need DEX 040, not emitted by AGP/D8 at `minSdk` 23 — migrate to backticks when that boundary moves.
-  ```kotlin
-  @Test fun swipeRightPinsACustomSound() { ... }
-  ```
+- **JVM tests** (`src/test/`): backtick-quoted, sentence-case, no trailing period — `` @Test fun `searchResults emits empty list when query is blank`() ``.
+- **Instrumented tests** (`src/androidTest/`): camelCase — `@Test fun swipeRightPinsACustomSound()`. Backticks need DEX 040, not emitted by AGP/D8 at `minSdk` 23; migrate when that boundary moves.
 
 ## Test assertions
 
@@ -166,19 +128,11 @@ No bare `kotlin.assert(...)` in test sources — see [ADR 0006](docs/adr/0006-no
 
 ## JVM tests — await every async input, not just the one you triggered
 
-Recurring flaky pattern: a value aggregated from **multiple** flows (e.g. a user property folded from `library` + `collections`) is asserted after awaiting only the signal the test fired. The *other* input — typically the reactive `loadSounds` populating `allSoundsCache` — hasn't arrived on a loaded CI machine, so the derived value is computed against empty state and the assertion flakes. Await **each** upstream before the triggering action: after `save`, `vm.library.first { it.has(id) }`; after a tag, `awaitAnalyticsEvent(...)` **and** `collections.first { it.contains(...) }`. Canonical: `SoundsViewModelAnalyticsTest`.
+For a value aggregated from **multiple** flows, await **each** upstream before the triggering action — not just the signal the test fired. The other input (typically the reactive `loadSounds` populating `allSoundsCache`) hasn't arrived on a loaded CI machine, so the derived value is computed against empty state and the assertion flakes. Worked example + canonical `SoundsViewModelAnalyticsTest`: CONTRIBUTING.md § *Testing → Awaiting multiple async inputs*.
 
 ## Activity smoke tests
 
-Every `Activity` in `app` must have a smoke test in `app/src/test/` (extending `AbstractRobolectricTest`) that reaches `Lifecycle.State.RESUMED` without crashing:
-
-```kotlin
-ActivityScenario.launch(MyActivity::class.java).use { scenario ->
-    assertThat(scenario.state).isEqualTo(Lifecycle.State.RESUMED)
-}
-```
-
-Mock singleton factories (e.g. `PlayerControllerFactory`) that crash under Robolectric — canonical: `LandingActivityTest`. Full-screen Composables with business logic (PackageManager calls, raw resources, significant state) need a `createComposeRule()` smoke test — canonical: `AboutScreenTest`.
+Every `Activity` in `app` must have a smoke test in `app/src/test/` (extending `AbstractRobolectricTest`) that reaches `Lifecycle.State.RESUMED` without crashing — mock singleton factories (e.g. `PlayerControllerFactory`) that crash under Robolectric. Full-screen Composables with business logic (PackageManager calls, raw resources, significant state) need a `createComposeRule()` smoke test. The `ActivityScenario.launch(...).use { … }` snippet + canonical `LandingActivityTest` / `AboutScreenTest`: CONTRIBUTING.md § *Testing → Activity smoke tests*.
 
 ## Local UI test suite
 
@@ -188,15 +142,7 @@ Instrumented UI/functional tests live under `app/src/androidTest/`. CircleCI int
 
 ### Synchronization (avoid bare `waitForIdle()` for state-dependent nodes)
 
-`waitForIdle()` only flushes Compose recompositions — not the `DataStore → StateFlow → render` chain (canonical race, PR #1111). For nodes whose existence depends on ViewModel/DataStore state, use `awaitNode*` helpers in `app/src/androidTest/.../ComposeTestExtensions.kt` (rationale in KDoc):
-
-```kotlin
-composeRule.awaitNodeWithContentDescription(pinLabel()).performClick()
-composeRule.awaitNodeWithText(homeTabLabel()).assertIsDisplayed()
-composeRule.awaitNode(hasSetTextAction()).performTextInput(name)
-```
-
-Bare `waitForIdle()` / `waitUntil { onAllNodes(...).isNotEmpty() }` is still correct after deterministic actions (`performClick`, `pressBack`), before negative assertions (`assertCountEquals(0)`), before `.onFirst()` chains, and when the matcher would multi-match (the helpers' terminal `onNode*` throws on multi-match).
+`waitForIdle()` only flushes Compose recompositions — not the `DataStore → StateFlow → render` chain (canonical race, PR #1111). For nodes whose existence depends on ViewModel/DataStore state, use the `awaitNode*` helpers in `app/src/androidTest/.../ComposeTestExtensions.kt`. Bare `waitForIdle()` / `waitUntil { … }` stays correct after deterministic actions (`performClick`, `pressBack`), before negative assertions, before `.onFirst()` chains, and when a matcher would multi-match. Examples + the full when-which list: CONTRIBUTING.md § *Testing → Local UI test suite → Synchronization*.
 
 ## Pre-PR and pre-push checklists
 
@@ -208,7 +154,7 @@ Full checklists: CONTRIBUTING.md § *Testing → Pre-PR checklist* / *Pre-push c
 
 ## Analytics events
 
-Firebase Analytics goes through the `AnalyticsTracker` wrapper at `commons_android/.../analytics/`. Three sibling files are the catalogue: `AnalyticsEvent` (sealed class, one subclass per custom event), `CanonicalScreenName` (every `screen_view` literal), `AnalyticsUserProperty` (user property names + lifetime counter keys).
+Firebase Analytics goes through the `AnalyticsTracker` wrapper (`commons_android/.../analytics/`); the catalogue is three sibling files — `AnalyticsEvent` (one subclass per custom event), `CanonicalScreenName` (every `screen_view` literal), `AnalyticsUserProperty` (user-property names + lifetime counter keys).
 
 Hard rules:
 
@@ -233,28 +179,17 @@ Hard rules:
 - **`Timber.e(throwable, msg)` does NOT surface a non-fatal.** `ErrorTrackerTree` forwards only the formatted message via `Tracker.log(...)`; the throwable is silently dropped. `Timber.e` / `Timber.w` are fine for logcat-only dev diagnostics.
 - **Wrapper message MUST be static.** Dynamic interpolation makes Crashlytics titles flicker between events and breaks BigQuery searches by message. Attach per-event context as a breadcrumb via `Tracker.log("module.field=value")` **immediately before** `Tracker.track(...)`. Module = stable feature/surface concept matching `CanonicalScreenName` when one exists (`addbutton` ↔ `ADD_SOUND`, `about` ↔ `ABOUT`, `search` ↔ `SEARCH_SOUND`) — not a source directory if it's a shifting layout grouping (`SearchOverlay.kt` lives under `ui/home/` but its module is `search`). Multiple breadcrumbs allowed, one `Tracker.log` per key.
 - **Don't say "button" for a Sound/Bomp in error or log messages.** Use neutral "audio" so the brand doesn't leak into ops/BigQuery. Framework/code identifiers (`addbutton/`, `AddButtonFeature`, Material `Button`) are out of scope.
-- For caught exceptions, follow the established pattern (see `PlayerControllerImpl.kt`): wrap the cause in a `RuntimeException` with a **static** message describing the operation, then `Tracker.track(...)`. The wrapper message becomes the Crashlytics title; original throwable preserved as `cause`.
-  ```kotlin
-  } catch (e: ActivityNotFoundException) {
-      Tracker.log("about.url=$url")
-      Tracker.track(RuntimeException("Could not launch ACTION_VIEW", e))
-      // ...recovery UI (snackbar, fallback) goes here
-  }
-  ```
+- For caught exceptions, follow the established pattern (see `PlayerControllerImpl.kt`): `Tracker.log("module.field=value")` then `Tracker.track(RuntimeException("static operation description", e))` — the static wrapper message becomes the Crashlytics title, the original throwable is preserved as `cause`, recovery UI (snackbar, fallback) follows.
 - Expected and recoverable exceptions (e.g. user dismissed a chooser) don't need `Tracker.track`. Reserve it for things you want to investigate.
-- In tests, `AbstractRobolectricTest` mocks `Tracker.track`/`Tracker.log` to no-ops in `@Before` — **don't re-mock**. Subclasses just `verify(exactly = 1) { Tracker.track(any()) }` (and `verify(atLeast = 1) { Tracker.log(any()) }` for breadcrumb sites). Don't assert exact breadcrumb text (overspecification). Override the global stub only to capture the throwable: `every { Tracker.track(capture(slot)) } answers { nothing }`.
+- In tests, `AbstractRobolectricTest` already mocks `Tracker.track`/`Tracker.log` to no-ops — **don't re-mock**; subclasses just `verify { Tracker.track(any()) }`. Capturing the throwable / breadcrumb-assertion detail: CONTRIBUTING.md § *Error tracking*.
 
 SQL post-mortem on crash history: CONTRIBUTING.md § *BigQuery export*. Releases-only — `bomp-prod` exports Crashlytics/Analytics/Performance to BigQuery (`us`, daily). `bomp-debug` does not export.
 
 ## StrictMode debug audit
 
-Source of truth: `app/src/debug/.../StrictModeConfigurator.kt` (debug-only, never reaches release). Unknown violations crash debug + instrumented runs by design — `Tracker.track(StrictModeException(violation))` with wrapper `"StrictMode: <ViolationClassName>"`. Filter logcat: `adb logcat | grep StrictMode` (operator workflow: CONTRIBUTING.md § *Terminal: StrictMode violations*).
+Source of truth: `app/src/debug/.../StrictModeConfigurator.kt` (debug-only, never reaches release). Unknown violations crash debug + instrumented runs by design — `Tracker.track(StrictModeException(violation))` with a static wrapper `"StrictMode: <ViolationClassName>"`.
 
-When a new violation surfaces, choose in this order:
-
-1. **Top app-code frame is ours** (`com.github.barriosnahuel.vossosunboton.*`): fix the production code. Don't filter.
-2. **Scopable to a known-OK call-site we own** (e.g. SDK init that legitimately reads disk on first call): wrap with `StrictMode.allowThreadDiskReads()` + `try/finally` at the call-site. Canonical: `AnalyticsTrackerProvider.createTracker`. Don't add a matcher.
-3. **Third-party class running its own code** (Compose, Espresso, GMS, framework finalizers): add a `KnownThirdPartyViolation` with a comment naming the library + upstream issue (when public). Use `methodNameContains` when the class prefix would over-match (`android.os.StrictMode` itself does); use `fileNameContains` when classes are obfuscated and unstable (GMS Dynamite ships as `m7.*` etc.).
+When a new violation surfaces, the fix order is: **(1)** top app-code frame is ours (`com.github.barriosnahuel.vossosunboton.*`) → fix the production code, don't filter; **(2)** scopable to a known-OK call-site we own → wrap with `StrictMode.allowThreadDiskReads()` + `try/finally` at the call-site (canonical: `AnalyticsTrackerProvider.createTracker`), don't add a matcher; **(3)** third-party class running its own code → add a `KnownThirdPartyViolation`. Logcat filter, and the full triage tree with `methodNameContains` vs `fileNameContains` guidance: CONTRIBUTING.md § *Terminal: StrictMode violations*.
 
 ## Security boundaries
 
@@ -285,7 +220,7 @@ New `Activity`/`Service`/`Receiver` in `AndroidManifest.xml` defaults `android:e
 
 ### Security test tagging (OWASP MASVS / CWE)
 
-Tests that exercise a security boundary defined in this section **MUST** cite their OWASP MASVS control and (when applicable) CWE in a one-line KDoc directly above `@Test`:
+Tests that exercise a security boundary defined in this section **MUST** cite their OWASP MASVS control and (when applicable) CWE in a one-line KDoc directly above `@Test`. Map to the **primary** boundary the production code enforces (secondary controls comma-separated in the same KDoc, e.g. `MASVS-CODE-4, MASVS-RESILIENCE-2`); boundary verifications only, not implementation-detail tests (ordering, performance).
 
 ```kotlin
 /** OWASP MASVS-PLATFORM-1 / CWE-441 (Confused Deputy — untrusted IPC URI scheme). */
@@ -293,9 +228,7 @@ Tests that exercise a security boundary defined in this section **MUST** cite th
 fun httpSchemeUriShowsRejectionSnackbar() { ... }
 ```
 
-Grep contract: the marker is `OWASP MASVS-` (literal). The `scripts/check-security-test-count.sh` job (CircleCI `security-test-count-guard`) counts occurrences across `app/src/test`, `app/src/androidTest`, `commons_android/src`, `commons_file/src`, `model/src` and fails the build if the count drops below `EXPECTED_COUNT`. A drop signals an accidentally-removed security test — restore it or, for a deliberate removal, update `EXPECTED_COUNT` and explain in the PR.
-
-Map a test to the **primary** boundary the production code enforces; secondary controls go in the same KDoc separated by commas if the boundary is overlapping (e.g. `MASVS-CODE-4, MASVS-RESILIENCE-2`). Implementation-detail tests (ordering, performance) are not in scope — only boundary verifications.
+The literal marker `OWASP MASVS-` is counted by `scripts/check-security-test-count.sh` (CircleCI `security-test-count-guard`); dropping below `EXPECTED_COUNT` fails the build. Count scope + how to adjust `EXPECTED_COUNT` on a deliberate removal: CONTRIBUTING.md § *Security test tagging*.
 
 ## Accessibility (WCAG 2.2 AA)
 
@@ -316,18 +249,7 @@ Neo-Club palette (ink × acid). Source of truth: `AppTheme.kt` (hex values + rol
 
 ### Semantic role → intent mapping
 
-| Role | Light | Dark | Used for |
-|---|---|---|---|
-| `primary` | AcidDark | Acid400 | Nav text, active labels |
-| `primaryContainer` | Acid400 | Acid400 | FAB, buttons, swipe-pin bg, search accent |
-| `onPrimaryContainer` | Ink1000 | Ink1000 | Text/icons on acid fills |
-| `secondary` | Ink1000 | Ink900 | Top-bar backgrounds (always dark) |
-| `onSecondary` | Paper | Paper | Top-bar title and icons |
-| `surfaceVariant` | Ink50 | Ink900 | Card backgrounds, bottom-nav background |
-| `onSurfaceVariant` | Ink500 | Ink300 | Card muted text, unselected nav icons |
-| `inverseSurface` | Ink800 | Paper | Snackbar background |
-| `inversePrimary` | Acid400 | AcidDark | Snackbar action button text |
-| `error` / `errorContainer` | Blood scale | Blood scale | Swipe-delete background, error states |
+`AppTheme.kt` (`LightColors` / `DarkColors`) is the source of truth for the per-mode token behind each M3 role. Quick map for picking a role: `primaryContainer` → FAB/buttons/swipe-pin/search accent; `primary` → nav text & active labels; `secondary`/`onSecondary` → always-dark top bars; `surfaceVariant`/`onSurfaceVariant` → cards & bottom-nav; `inverseSurface`/`inversePrimary` → snackbar; `error`/`errorContainer` → swipe-delete & error states. Full role × Light × Dark table: CONTRIBUTING.md § *Resources*.
 
 ### Rules for component authors
 
@@ -364,21 +286,18 @@ Contributor-facing files (README, CONTRIBUTING, CHANGELOG, CODE_OF_CONDUCT, ADRs
 
 ## Copy & localization
 
-User-facing copy in any locale (in-app strings, store listings, push notifs, changelogs, emails) must read **native to the target locale**, not as a literal translation — and must not contradict brand DNA or published legal policies.
+User-facing copy in any locale (in-app strings, store listings, push notifs, changelogs, emails) must read **native to the target locale**, not a literal translation — and must not contradict brand DNA or published legal policies.
 
-Sources of truth: `../push-me-backlog/docs/brand-dna.md` (canonical terms, anti-positioning bans), `../push-me-backlog/CLAUDE.md` (Product Language glossary + reserved terms), `../push-me-ghpages/privacy-policy.html`, `../push-me-ghpages/data-safety.html`. Missing path → flag the gap and proceed with in-repo strings as authoritative.
+Sources of truth: `../push-me-backlog/docs/brand-dna.md` (canonical terms, anti-positioning bans), `../push-me-backlog/CLAUDE.md` (Product Language glossary + reserved terms), `../push-me-ghpages/privacy-policy.html`, `../push-me-ghpages/data-safety.html`. Missing path → flag the gap, proceed with in-repo strings as authoritative. **Default locale:** `values/strings.xml` is the **English** master; Spanish-AR lives in `values-es/strings.xml`.
 
-**Default locale.** `app/src/main/res/values/strings.xml` is the **English** master; Spanish-AR copy lives in `values-es/strings.xml`.
+Hard rules (calque examples, reserved-term list with ✓/❌, read-aloud detail → CONTRIBUTING.md § *Copy guide*):
 
-Hard rules:
-
-- **No calque; locale-aware register.** Phrases natural in source can be wrong in target. US English marketing → contractions, short sentences, imperatives, concrete nouns. Spanish-AR → voseo and warmth. Verify with a native speaker or current idiom reference, not Google Translate. Calque examples + en-US listing post-mortem: CONTRIBUTING.md § *Copy guide*.
-- **ASO awareness for store-listing copy.** Integrate high-volume target-market queries organically, without breaching brand-DNA bans (`soundboard`, `audio sticker`, `panel`, `viralizá`, `share with friends/followers` as CTA). Those are positioning bans, not vocabulary bans — `voice notes` is fine because it names the input, not the brand position.
-- **Brand-DNA invariants.** Proper nouns Bomp / Bomper / Bompear / Bompeable NEVER translate. The manifesto closing ("Un audio de los tuyos no es un mensaje, es un abrazo que se escucha." or locale-equivalent preserving meaning) is invariant across surfaces and locales.
-- **Reserved-term check.** Verify no term from `brand-dna.md` / Product Language glossary is reserved for a non-shipped feature or specific state. Reserved today: `Inmortal`/`immortal` (Saved-Games-synced Bompión — Pro, **not shipped**); `Bompardo` and `Bompión` (Escala Richter levels 4/5, gated by share milestones — not for a generic Bomp); `Bomptástico` (internal telemetry only). ❌ "Tus Bomps son inmortales" overstates Auto Backup. ✓ "Tus Bomps quedan respaldados en tu Google Drive".
-- **Policy-contradiction check (no overclaims).** Before any absolute claim (`imborrable`, `permanent`, `forever`, `never lost`, `100% private`, `always`, `nunca se pierde`, `we never see your data`) open `privacy-policy.html` and `data-safety.html` and check the claim doesn't contradict a published statement or strip a user right. Invariants: user can delete Bomps one-by-one or by uninstall (ARCO §05); Auto Backup is OS-controllable (PP §02); Firebase collects pseudonymous crash logs, performance, aggregated interactions (DS §01) — copy can't claim "no data ever leaves the device".
-- **Read-aloud check.** Read aloud as a native speaker before ship. Stumbles, false friends, weird tense block submission.
-- **Cross-surface consistency.** Headers and body copy use the same verbs ("give it a name", not "give it a label"). Cross-reference title, short, full, screenshots, feature graphic, video script before shipping.
+- **No calque; locale-aware register.** US-EN marketing → contractions, short imperatives, concrete nouns; es-AR → voseo + warmth. Verify with a native speaker, not Google Translate.
+- **ASO without breaching brand-DNA positioning bans** (`soundboard`, `audio sticker`, `panel`, `viralizá`, `share with friends/followers` as CTA). Positioning bans, not vocabulary bans — `voice notes` is fine (names the input, not the position).
+- **Brand-DNA invariants.** Proper nouns Bomp / Bomper / Bompear / Bompeable NEVER translate. The manifesto closing ("Un audio de los tuyos no es un mensaje, es un abrazo que se escucha." or a meaning-preserving locale equivalent) is invariant across surfaces and locales.
+- **Reserved-term check.** Don't use a term reserved for a non-shipped feature/state — `Inmortal`/`immortal` (Pro, not shipped), `Bompardo` / `Bompión` (Escala Richter levels 4/5), `Bomptástico` (telemetry only).
+- **Policy-contradiction check.** Before any absolute claim (`imborrable`, `permanent`, `forever`, `never lost`, `100% private`, `nunca se pierde`, `we never see your data`) check `privacy-policy.html` + `data-safety.html`: the claim can't strip a user right or contradict a published statement — Bomps are deletable (ARCO §05), Auto Backup is OS-controllable (PP §02), Firebase collects pseudonymous data (DS §01).
+- **Read aloud as a native speaker before ship; keep verbs consistent across title / short / full / screenshots.**
 
 ## Store listing asset generation
 
@@ -386,47 +305,14 @@ Store listing PNGs (icon, feature graphic) render from SVG masters under `store-
 
 ## Labels and milestone
 
-Apply exactly **one type label** (`a:*` or `an:*`) + **zero or more concern labels** (`c:*`) to every PR before merging. Don't call `gh label list` — use the tables below.
+Apply exactly **one type label** (`a:*` or `an:*`) + **zero or more concern labels** (`c:*`) to every PR before merging. Don't call `gh label list`. For the milestone, read the `## [unreleased]` line in `CHANGELOG.md` — the version in parentheses is the milestone (e.g. `(v2.0.0)` → milestone `v2.0.0`); don't call the milestones API.
 
-For the milestone, read the `## [unreleased]` line in `CHANGELOG.md` — the version in parentheses is the milestone (e.g. `(v2.0.0)` → milestone `v2.0.0`). Don't call `gh api repos/.../milestones`.
+- **Type — user-facing** (appear in CHANGELOG `### Added/Changed/Fixed/Removed`): `a:feature`, `a:fix`, `an:enhancement`.
+- **Type — internal** (under `### For nerds 🤓` or omitted): `a:refactor`, `a:test`, `a:build`, `a:docs`.
+- **Concern — cross-cutting** (stackable): `c:accessibility`, `c:performance`, `c:security`, `c:i18n`, `c:observability`, `c:dependencies`.
+- **Issues/lifecycle:** `a:bug`, `a:feature-request`, `stale`.
 
-### Type — user-facing (appear under `### Added/Changed/Fixed/Removed` in CHANGELOG)
-
-| Label | When to use |
-|---|---|
-| `a:feature` | Adds new user-facing functionality |
-| `a:fix` | Corrects a user-visible bug |
-| `an:enhancement` | Improves existing user-facing functionality (UX polish, copy, behavior) — strictly user-facing, not a catch-all |
-
-### Type — internal (appear under `### For nerds 🤓` or omitted)
-
-| Label | When to use |
-|---|---|
-| `a:refactor` | Restructures code without changing observable behavior |
-| `a:test` | Test infrastructure, flaky-test fixes, new test suites or helpers |
-| `a:build` | CI, Gradle, linters, repo tooling, dependency bumps |
-| `a:docs` | Contributor-facing docs: CLAUDE.md, ADRs, README, CONTRIBUTING, `.github/` templates |
-
-### Concern — cross-cutting (orthogonal, stackable, also apply to issues)
-
-| Label | When to use |
-|---|---|
-| `c:accessibility` | WCAG: contrast, content descriptions, touch targets, screen reader |
-| `c:performance` | User-perceivable performance (cold start, scroll, app size, frame budget) |
-| `c:security` | Security boundaries: input validation, exported components, backup hygiene |
-| `c:i18n` | Localization: translations, store listings per locale, locale-aware copy |
-| `c:observability` | Analytics instrumentation, Crashlytics, logging, BigQuery |
-| `c:dependencies` | Library / plugin / Gradle-wrapper version bumps (auto-applied by Dependabot with `a:build`) |
-
-### Issues and lifecycle
-
-| Label | When to use |
-|---|---|
-| `a:bug` | Issue reporting something broken |
-| `a:feature-request` | Issue requesting functionality not yet implemented |
-| `stale` | No recent activity — candidate for closing |
-
-Worked examples of valid combinations: CONTRIBUTING.md § *Labels & milestone examples*.
+Full "when to use" per label + worked combinations: CONTRIBUTING.md § *Labels & milestone examples*.
 
 ## Third-party notices
 

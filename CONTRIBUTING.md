@@ -9,6 +9,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Directory structure](#directory-structure-)
 - [Debugging tools](#debugging-tools-)
 - [Continuous integration](#continuous-integration-)
+- [Sources of truth for platform decisions](#sources-of-truth-for-platform-decisions-)
 - [Testing](#testing-)
 - [Gradle upgrade](#gradle-upgrade)
 - [Firebase config file](#firebase-config-file-)
@@ -69,6 +70,29 @@ We use Circle CI, so if you're gonna change the [config.yml](.circleci/config.ym
 ### Instrumented UI tests are local-only
 The instrumented suite under `app/src/androidTest/` is **intentionally not run on CircleCI**. It needs a booted emulator and is meant to replace manual end-to-end QA on the contributor's machine. Setup, run commands, and synchronization helpers live in [Testing → Local UI test suite](#testing-); rationale lives in [ADR 0001](docs/adr/0001-local-ui-test-suite.md).
 
+## Sources of truth for platform decisions 📚
+
+CLAUDE.md § *Sources of truth for Android / Kotlin / Compose decisions* has the invariant — consult the authoritative source first and cite it, don't answer from training memory in version-sensitive areas, mark heuristic if the source is unreachable. The routing table:
+
+| Area | Authoritative source |
+|---|---|
+| Jetpack Compose: state, recomposition, side-effects, performance, lifecycle | https://developer.android.com/develop/ui/compose |
+| Navigation in Compose | Linked skill `navigation-3` |
+| XML view → Compose migration | Linked skill `migrate-xml-views-to-jetpack-compose` |
+| Edge-to-edge / system bars / insets | Linked skill `edge-to-edge` |
+| Coroutines, Flow, StateFlow, dispatchers, `runTest` | https://kotlinlang.org/docs/coroutines-guide.html + https://developer.android.com/kotlin/coroutines |
+| Lifecycle: `repeatOnLifecycle`, `collectAsStateWithLifecycle` | https://developer.android.com/topic/libraries/architecture/lifecycle |
+| App architecture (UI/domain/data, UDF, ViewModel + UI state, UI events) | https://developer.android.com/topic/architecture + .../ui-layer/events |
+| DataStore (Preferences/Proto), migration from SharedPreferences | https://developer.android.com/topic/libraries/architecture/datastore |
+| Background work, WorkManager, foreground services, exact alarms | https://developer.android.com/develop/background-work |
+| Permissions / runtime permissions / scoped storage | https://developer.android.com/training/permissions |
+| Accessibility in Compose (semantics, click labels, custom actions, large text) | https://developer.android.com/develop/ui/compose/accessibility — pairs with WCAG 2.2 AA (CLAUDE.md § Accessibility) |
+| AGP 9 migration | Linked skill `agp-9-upgrade` |
+| R8 keep rules audit | Linked skill `r8-analyzer` |
+| Play Billing | Linked skill `play-billing-library-version-upgrade` |
+| Kotlin idioms, conventions, KEEP proposals | https://kotlinlang.org/docs/coding-conventions.html + KEEP at https://github.com/Kotlin/KEEP |
+| Project-specific architectural decisions | `docs/adr/*.md` — read the relevant ADR before changing that area |
+
 ## Testing 🧪
 
 Testing rules and invariants live in `CLAUDE.md` (§ *Bug fixes — TDD workflow*, § *Features — test coverage workflow*, § *Test naming convention*, § *Activity smoke tests*, § *Pre-PR and pre-push checklists*). This section covers the *operational* side: setup, run commands, conventions you need at the keyboard — plus the full Pre-PR / Pre-push checklists themselves.
@@ -96,6 +120,18 @@ The trigger lives in CLAUDE.md § *Features — test coverage workflow*. The min
 Implement tests **alongside** the feature, not after. Any scenario not listed before starting is out of scope for the current PR — note in the PR description.
 
 Skip a scenario only when it lives exclusively in platform wiring not exercisable by unit / Robolectric tests. Note why.
+
+### Activity smoke tests
+
+The rule (every `Activity` needs one; what to mock; when a full-screen Composable needs a `createComposeRule()` smoke test) lives in CLAUDE.md § *Activity smoke tests*. The Activity snippet:
+
+```kotlin
+ActivityScenario.launch(MyActivity::class.java).use { scenario ->
+    assertThat(scenario.state).isEqualTo(Lifecycle.State.RESUMED)
+}
+```
+
+Canonical: `LandingActivityTest` (mocks `PlayerControllerFactory`, which crashes under Robolectric), `AboutScreenTest` (full-screen Composable with PackageManager + raw-resource access).
 
 ### Pre-PR checklist
 
@@ -135,6 +171,17 @@ grep -rnE '(^|[^[:alnum:]_])assert[[:space:]]*\(' --include='*.kt' \
 ```
 
 Empty output = clean. Any hit is a hard failure — fix the call-site, do not add an exclusion.
+
+### Security test tagging (OWASP MASVS)
+
+The write-time rule — which tests must carry an `OWASP MASVS-…` KDoc and how to pick the control — lives in CLAUDE.md § *Security boundaries → Security test tagging*. Guard mechanics:
+
+- `scripts/check-security-test-count.sh` (CircleCI `security-test-count-guard`) counts the literal marker `OWASP MASVS-` across `app/src/test`, `app/src/androidTest`, `commons_android/src`, `commons_file/src`, `model/src`.
+- It fails the build when the count drops below `EXPECTED_COUNT` — a drop signals an accidentally-removed security test. Restore it, or for a deliberate removal bump `EXPECTED_COUNT` in the script and explain why in the PR.
+
+### Awaiting multiple async inputs
+
+The write-time invariant — await *every* upstream a value is folded from, not just the signal you triggered — lives in CLAUDE.md § *JVM tests — await every async input*. Worked example: a user property folded from `library` + `collections`, asserted after awaiting only the signal the test fired, flakes because the reactive `loadSounds` populating `allSoundsCache` hasn't arrived on a loaded CI machine. Await each upstream before the triggering action — after `save`, `vm.library.first { it.has(id) }`; after a tag, `awaitAnalyticsEvent(...)` **and** `collections.first { it.contains(...) }`. Canonical: `SoundsViewModelAnalyticsTest`.
 
 ### Test fixtures: `clearForTest()`
 
@@ -187,7 +234,15 @@ Any extra arguments are passed straight through to Gradle:
 
 #### Synchronization
 
-The synchronization rule (when to use `awaitNode*` helpers vs. bare `waitForIdle()`) lives in `CLAUDE.md` § *Local UI test suite*. The `awaitNode*` helpers themselves live in `app/src/androidTest/.../ComposeTestExtensions.kt` (rationale in KDoc).
+`waitForIdle()` only flushes Compose recompositions — not the `DataStore → StateFlow → render` chain (canonical race, PR #1111). For nodes whose existence depends on ViewModel/DataStore state, use the `awaitNode*` helpers in `app/src/androidTest/.../ComposeTestExtensions.kt` (rationale in KDoc):
+
+```kotlin
+composeRule.awaitNodeWithContentDescription(pinLabel()).performClick()
+composeRule.awaitNodeWithText(homeTabLabel()).assertIsDisplayed()
+composeRule.awaitNode(hasSetTextAction()).performTextInput(name)
+```
+
+Bare `waitForIdle()` / `waitUntil { onAllNodes(...).isNotEmpty() }` is still correct after deterministic actions (`performClick`, `pressBack`), before negative assertions (`assertCountEquals(0)`), before `.onFirst()` chains, and when the matcher would multi-match (the helpers' terminal `onNode*` throws on multi-match). The one-line rule also lives in `CLAUDE.md` § *Local UI test suite*.
 
 ## Platform upgrades
 ### API Level
@@ -338,18 +393,39 @@ If you also want to scope by tag (cuts unrelated `Tracker.track` non-fatals from
 adb logcat -d -s Tracker:E | grep StrictMode
 ```
 
-Empty output means every detected violation matched a `KnownThirdPartyViolation` entry — none reached Crashlytics either. Anything that does show up either has a top frame in our package (`com.github.barriosnahuel.vossosunboton.*`) and needs fixing, or comes from a new SDK / framework version that should be added to the matcher list. The decision tree is in `CLAUDE.md` § "StrictMode debug audit".
+Empty output means every detected violation matched a `KnownThirdPartyViolation` entry — none reached Crashlytics either. When one does show up, triage in this order (the order CLAUDE.md § *StrictMode debug audit* summarizes):
+
+1. **Top app-code frame is ours** (`com.github.barriosnahuel.vossosunboton.*`): fix the production code. Don't filter.
+2. **Scopable to a known-OK call-site we own** (e.g. SDK init that legitimately reads disk on first call): wrap with `StrictMode.allowThreadDiskReads()` + `try/finally` at the call-site. Canonical: `AnalyticsTrackerProvider.createTracker`. Don't add a matcher.
+3. **Third-party class running its own code** (Compose, Espresso, GMS, framework finalizers): add a `KnownThirdPartyViolation` with a comment naming the library + upstream issue (when public). Use `methodNameContains` when the class prefix would over-match (`android.os.StrictMode` itself does); use `fileNameContains` when classes are obfuscated and unstable (GMS Dynamite ships as `m7.*` etc.).
 
 ## Resources 🎨
 - **Color palette:** Neo-Club (ink × acid), a custom palette designed for Bomp. Single source of truth is [`app/src/main/java/com/github/barriosnahuel/vossosunboton/ui/theme/AppTheme.kt`](app/src/main/java/com/github/barriosnahuel/vossosunboton/ui/theme/AppTheme.kt) — see `CLAUDE.md` § "Design system" for the role mapping and contrast guarantees.
 - **Launcher icon:** rendered from the SVG masters under [`store-listing/brand/`](store-listing/brand/) (`launcher-fallback.svg` for Android < 8; the adaptive vector at [`app/src/main/res/mipmap-anydpi-v26/app_ic_launcher.xml`](app/src/main/res/mipmap-anydpi-v26/app_ic_launcher.xml) for Android 8+). Export pipeline (`rsvg-convert`) is documented in `CLAUDE.md` § "Store listing asset generation".
 - In-App icons using: [Material Symbols](https://fonts.google.com/icons)
 
+**Semantic role → intent mapping** — the full table CLAUDE.md § *Design system* points to. `AppTheme.kt` (`LightColors` / `DarkColors`) is the source of truth for the per-mode token; this is the reach-for-it reference:
+
+| Role | Light | Dark | Used for |
+|---|---|---|---|
+| `primary` | AcidDark | Acid400 | Nav text, active labels |
+| `primaryContainer` | Acid400 | Acid400 | FAB, buttons, swipe-pin bg, search accent |
+| `onPrimaryContainer` | Ink1000 | Ink1000 | Text/icons on acid fills |
+| `secondary` | Ink1000 | Ink900 | Top-bar backgrounds (always dark) |
+| `onSecondary` | Paper | Paper | Top-bar title and icons |
+| `surfaceVariant` | Ink50 | Ink900 | Card backgrounds, bottom-nav background |
+| `onSurfaceVariant` | Ink500 | Ink300 | Card muted text, unselected nav icons |
+| `inverseSurface` | Ink800 | Paper | Snackbar background |
+| `inversePrimary` | Acid400 | AcidDark | Snackbar action button text |
+| `error` / `errorContainer` | Blood scale | Blood scale | Swipe-delete background, error states |
+
 ## Signing 🔑
 
-The following files must be located into the root dir:
+The following files must be located into the root dir (neither is committed):
 - `nahuelbarrios.keystore-appbundle.pkcs12`
-- `secure.properties`
+- `secure.properties` — holds `key.alias`, `key.password`, `store.password`
+
+Debug builds use the included debug keystore, so no signing setup is needed for them.
 
 ## Release builds 📦
 
@@ -484,7 +560,7 @@ TL;DR for human contributors:
   `Tracker.log("module.field=value")`. Module is the feature directory (`share`, `addbutton`, `playback`, `about`, …). Use as many breadcrumbs as needed — one per key.
 - Don't say "button" in messages or comments. These are "audio" internally, "Bomp" in user-facing copy.
 - Verify locally with `adb logcat | grep -E "Tracker|FirebaseCrashlytics"` — the `log(...)` call should appear immediately before the `recordException(...)` line. Crashlytics DebugView surfaces the breadcrumb under the event detail panel.
-- In unit tests that exercise a site that emits a breadcrumb, mock both methods (`every { Tracker.log(any()) } answers { nothing }`) and assert the contract with `verify(atLeast = 1) { Tracker.log(any()) }` alongside the existing track assertion.
+- In unit tests that exercise a site that emits a breadcrumb, mock both methods (`every { Tracker.log(any()) } answers { nothing }`) and assert the contract with `verify(atLeast = 1) { Tracker.log(any()) }` alongside the existing track assertion. Don't assert exact breadcrumb text (overspecification). To capture the throwable for inspection, override the global stub: `every { Tracker.track(capture(slot)) } answers { nothing }`.
 
 ## Analytics events 📊
 
@@ -611,7 +687,45 @@ The Console is still right for: real-time DebugView, alert configuration, single
 
 ## Labels & milestone examples 🏷️
 
-The label / milestone *rules* (which label means what; how to derive the milestone from the CHANGELOG) live in CLAUDE.md § *Labels and milestone*. The combinations below illustrate the rules in practice:
+The *rule* (one type label + optional concern labels; how to derive the milestone from the CHANGELOG) and the bare label names live in CLAUDE.md § *Labels and milestone*. Full "when to use" per label, then worked combinations:
+
+### Type — user-facing (appear under `### Added/Changed/Fixed/Removed` in CHANGELOG)
+
+| Label | When to use |
+|---|---|
+| `a:feature` | Adds new user-facing functionality |
+| `a:fix` | Corrects a user-visible bug |
+| `an:enhancement` | Improves existing user-facing functionality (UX polish, copy, behavior) — strictly user-facing, not a catch-all |
+
+### Type — internal (appear under `### For nerds 🤓` or omitted)
+
+| Label | When to use |
+|---|---|
+| `a:refactor` | Restructures code without changing observable behavior |
+| `a:test` | Test infrastructure, flaky-test fixes, new test suites or helpers |
+| `a:build` | CI, Gradle, linters, repo tooling, dependency bumps |
+| `a:docs` | Contributor-facing docs: CLAUDE.md, ADRs, README, CONTRIBUTING, `.github/` templates |
+
+### Concern — cross-cutting (orthogonal, stackable, also apply to issues)
+
+| Label | When to use |
+|---|---|
+| `c:accessibility` | WCAG: contrast, content descriptions, touch targets, screen reader |
+| `c:performance` | User-perceivable performance (cold start, scroll, app size, frame budget) |
+| `c:security` | Security boundaries: input validation, exported components, backup hygiene |
+| `c:i18n` | Localization: translations, store listings per locale, locale-aware copy |
+| `c:observability` | Analytics instrumentation, Crashlytics, logging, BigQuery |
+| `c:dependencies` | Library / plugin / Gradle-wrapper version bumps (auto-applied by Dependabot with `a:build`) |
+
+### Issues and lifecycle
+
+| Label | When to use |
+|---|---|
+| `a:bug` | Issue reporting something broken |
+| `a:feature-request` | Issue requesting functionality not yet implemented |
+| `stale` | No recent activity — candidate for closing |
+
+### Worked combinations
 
 - WCAG contrast fix: `a:fix` + `c:accessibility`
 - New screen with localized copy: `a:feature` + `c:i18n`
