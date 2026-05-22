@@ -254,7 +254,7 @@ Neo-Club palette (ink × acid). Source of truth: `AppTheme.kt` (hex values + rol
 ### Rules for component authors
 
 - **Never add `isSystemInDarkTheme()` / `isDark` in component files.** If the same semantic role needs to look different per mode, the role mapping in `AppTheme.kt` is wrong — fix the theme, not the component.
-- **Never hardcode a color literal in a component** (e.g. `Color(0xFF2E7D32)`). Use the closest semantic role from `AppTheme.kt`.
+- **Never hardcode a color literal in a component** (e.g. `Color(0xFF2E7D32)`), and never inline a magic `.copy(alpha = 0.NN)`. Use the closest semantic role from `AppTheme.kt`; for a genuinely-needed translucent overlay, use a named alpha (shared in `ui/theme/Alpha.kt`, or a `private const val` next to the Composable). Both are grep-enforced by `scripts/check-adr-invariants.sh` (escape hatch: a justified trailing `// alpha-ok`).
 - **Components inside always-dark bars** (TopAppBar using `secondary`): use `primaryContainer` (= Acid400 in both modes) for accent elements like cursor, underline, icons — not `primary`, which is AcidDark in light mode and nearly invisible on a dark bar.
 - **Adding a new color:** add the constant to `AppTheme.kt`, map it to an M3 role in both `LightColors` and `DarkColors`, then add a contrast assertion for the relevant pair in `AppThemeContrastTest`.
 

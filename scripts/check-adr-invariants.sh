@@ -111,6 +111,37 @@ if grep -nE 'associateBy \{ it\.name|filterNot \{ it\.name ==|firstOrNull \{ it\
 fi
 
 # ============================================================================
+# Design system — no raw color literals or magic alpha values in component code
+# (CLAUDE.md § Design system → "Rules for component authors"). An inline
+# Color(0x...) hex or a bare numeric .copy(alpha = N) is a magic number: not a
+# semantic role from AppTheme.kt, not greppable, contrast never reviewed. This
+# pattern recurred across three handoffs — the guard stops it at CI. ui/theme/
+# is exempt (it *defines* the palette and the shared named alphas). Escape hatch
+# for a justified one-off: a trailing `// alpha-ok` comment on the line.
+# ============================================================================
+COLOR_DIRS="app/src/main/java/com/github/barriosnahuel/vossosunboton/feature app/src/main/java/com/github/barriosnahuel/vossosunboton/ui"
+
+bad_hex=$(
+    grep -rnE --include="*.kt" 'Color\(0x' $COLOR_DIRS 2>/dev/null \
+        | grep -v '/ui/theme/' | grep -vF '// alpha-ok' || true
+)
+if [ -n "$bad_hex" ]; then
+    fail "Design system: raw Color(0x...) hex literal in component code:
+$bad_hex
+Use a semantic role from AppTheme.kt (CLAUDE.md § Design system). ui/theme/ defines the palette."
+fi
+
+bad_alpha=$(
+    grep -rnE --include="*.kt" '\.copy\(alpha = [0-9.]' $COLOR_DIRS 2>/dev/null \
+        | grep -v '/ui/theme/' | grep -vF '// alpha-ok' || true
+)
+if [ -n "$bad_alpha" ]; then
+    fail "Design system: magic numeric .copy(alpha = N) in component code:
+$bad_alpha
+Name the alpha (shared: ui/theme/Alpha.kt; one-off: a private const next to the Composable) or justify inline with a trailing // alpha-ok. See CLAUDE.md § Design system."
+fi
+
+# ============================================================================
 # CLAUDE.md size budget — see CLAUDE.md § "What goes in this file"
 # Loaded into every Claude Code context window; performance degrades above 40K.
 # Measured in bytes (wc -c): portable and deterministic, and a conservative
