@@ -55,6 +55,7 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
+import com.github.barriosnahuel.vossosunboton.ui.theme.MUTED_TEXT_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
 private sealed class SearchDisplayState {
@@ -99,7 +100,7 @@ fun SearchOverlay(
             Modifier
                 .fillMaxSize()
                 .predictiveBackTransition(onBack = onClose)
-                .background(Color.Black.copy(alpha = 0.6f)),
+                .background(Color.Black.copy(alpha = SCRIM_ALPHA)),
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -144,7 +145,7 @@ fun SearchOverlay(
                                     Text(
                                         text = stringResource(R.string.app_search_initial_hint),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = HINT_TEXT_ALPHA),
                                         textAlign = TextAlign.Center,
                                         modifier = Modifier.padding(horizontal = Spacing.XXL),
                                     )
@@ -251,7 +252,7 @@ private fun SearchZeroResultsContent(
             Text(
                 text = subtext,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = MUTED_TEXT_ALPHA),
                 textAlign = TextAlign.Center,
             )
         }
@@ -295,8 +296,8 @@ private fun SearchField(
                 focusedTextColor = contentColor,
                 unfocusedTextColor = contentColor,
                 cursorColor = MaterialTheme.colorScheme.primaryContainer,
-                focusedPlaceholderColor = contentColor.copy(alpha = 0.6f),
-                unfocusedPlaceholderColor = contentColor.copy(alpha = 0.6f),
+                focusedPlaceholderColor = contentColor.copy(alpha = MUTED_TEXT_ALPHA),
+                unfocusedPlaceholderColor = contentColor.copy(alpha = MUTED_TEXT_ALPHA),
                 focusedTrailingIconColor = MaterialTheme.colorScheme.primaryContainer,
                 unfocusedTrailingIconColor = contentColor,
             ),
@@ -344,3 +345,10 @@ private fun SearchResultsList(
         }
     }
 }
+
+// Dim level of the full-screen scrim behind the search surface (over Color.Black). A named alpha,
+// not a magic literal — see ui/theme/Alpha.kt for the shared ones and the rationale.
+private const val SCRIM_ALPHA = 0.6f
+
+// Faintest instructional / empty-state hint text on the search surface.
+private const val HINT_TEXT_ALPHA = 0.4f

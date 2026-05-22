@@ -60,6 +60,9 @@ import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performConfirmHaptic
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performRejectHaptic
+import com.github.barriosnahuel.vossosunboton.ui.theme.DISABLED_TRACK_ALPHA
+import com.github.barriosnahuel.vossosunboton.ui.theme.MUTED_TEXT_ALPHA
+import com.github.barriosnahuel.vossosunboton.ui.theme.PLAYING_TINT_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -379,7 +382,7 @@ private fun SoundCard(
                     modifier =
                         Modifier
                             .background(
-                                color = if (sound.isPlaying) playContainerColor.copy(alpha = 0.18f) else Color.Transparent,
+                                color = if (sound.isPlaying) playContainerColor.copy(alpha = PLAYING_TINT_ALPHA) else Color.Transparent,
                                 shape = CircleShape,
                             ).padding(6.dp),
                 ) {
@@ -422,9 +425,9 @@ private fun SoundCard(
                         enabled = sound.isPlaying,
                         colors =
                             SliderDefaults.colors(
-                                inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
-                                disabledInactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
-                                disabledThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
+                                inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_TRACK_ALPHA),
+                                disabledInactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_TRACK_ALPHA),
+                                disabledThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_TRACK_ALPHA),
                                 disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
                             ),
                         modifier = Modifier.fillMaxWidth(),
@@ -516,7 +519,7 @@ private fun SoundCardHeader(
                 Text(
                     text = originLabel,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = MUTED_TEXT_ALPHA),
                 )
             }
         }

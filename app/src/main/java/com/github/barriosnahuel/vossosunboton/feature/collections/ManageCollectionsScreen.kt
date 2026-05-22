@@ -326,7 +326,7 @@ private fun ManageRow(
 ) {
     val systemFallback = stringResource(R.string.app_vault_baul_name)
     val displayName = if (collection.isSystem) systemFallback else collection.name
-    val highlightColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+    val highlightColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = DEEP_LINK_HIGHLIGHT_ALPHA)
     // Mirror AOSP HighlightablePreferenceGroupAdapter exactly: a fade-in animator with
     // duration=200ms, repeatMode=REVERSE, repeatCount=4 → 5 alternating phases that end AT the
     // highlight color (3 perceived peaks), then a separate 500ms fade-out to transparent.
@@ -518,3 +518,7 @@ private fun android.content.Context.findFragmentActivity(): FragmentActivity? {
 private const val HIGHLIGHT_FADE_IN_MS = 200
 private const val HIGHLIGHT_FADE_OUT_MS = 500
 private const val HIGHLIGHT_FADE_AFTER_MS = 1600L
+
+// Peak alpha of the deep-link row-highlight pulse (a tint over primaryContainer, animated
+// transparent → this → transparent). A named alpha, not a magic literal — see ui/theme/Alpha.kt.
+private const val DEEP_LINK_HIGHLIGHT_ALPHA = 0.6f

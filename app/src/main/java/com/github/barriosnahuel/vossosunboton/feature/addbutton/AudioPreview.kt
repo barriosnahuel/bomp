@@ -48,6 +48,8 @@ import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerF
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
+import com.github.barriosnahuel.vossosunboton.ui.theme.DISABLED_TRACK_ALPHA
+import com.github.barriosnahuel.vossosunboton.ui.theme.PLAYING_TINT_ALPHA
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -150,7 +152,7 @@ internal fun AudioPreview(
                         modifier =
                             Modifier
                                 .background(
-                                    color = if (isPlaying) playContainerColor.copy(alpha = 0.18f) else Color.Transparent,
+                                    color = if (isPlaying) playContainerColor.copy(alpha = PLAYING_TINT_ALPHA) else Color.Transparent,
                                     shape = CircleShape,
                                 ).padding(6.dp),
                     ) {
@@ -191,9 +193,12 @@ internal fun AudioPreview(
                             enabled = isPlaying,
                             colors =
                                 SliderDefaults.colors(
-                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
-                                    disabledInactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
-                                    disabledThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.24f),
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_TRACK_ALPHA),
+                                    disabledInactiveTrackColor =
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = DISABLED_TRACK_ALPHA,
+                                        ),
+                                    disabledThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_TRACK_ALPHA),
                                     disabledActiveTrackColor = MaterialTheme.colorScheme.primary,
                                 ),
                             modifier = Modifier.fillMaxWidth(),
