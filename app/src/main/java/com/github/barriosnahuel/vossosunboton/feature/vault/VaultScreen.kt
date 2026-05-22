@@ -20,10 +20,14 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -37,6 +41,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
@@ -45,6 +52,7 @@ import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilter
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateResult
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateStatus
+import com.github.barriosnahuel.vossosunboton.feature.vault.security.ScreenLockSettings
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
@@ -78,7 +86,24 @@ fun VaultScreen(
     val context = LocalContext.current
     val activity = remember(context) { context.findFragmentActivity() }
     val gate = remember(activity) { activity?.let { BiometricGate(it) } }
-    val status = remember(gate) { gate?.status() ?: BiometricGateStatus.UNAVAILABLE }
+    // Re-read the gate status on every ON_RESUME (not just first composition): when the user taps the
+    // "set up screen lock" shortcut, leaves to Settings, enrolls a lock and returns, the snapshot must
+    // flip from unprotected to AVAILABLE so the warning + shortcut disappear instead of going stale.
+    var status by remember(gate) { mutableStateOf(gate?.status() ?: BiometricGateStatus.UNAVAILABLE) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, gate) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    status = gate?.status() ?: BiometricGateStatus.UNAVAILABLE
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // The set-screen-lock intent's resolvability does not change at runtime, so cache it once. The
+    // status snapshot above is what flips the affordance off once a lock exists.
+    val screenLockShortcutAvailable = remember(context) { ScreenLockSettings.isAvailable(context) }
     val vaultOpen by VaultSessionState.flow.collectAsState()
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
     val unprotectedWarning = stringResource(R.string.app_vault_unprotected_warning_chip)
@@ -103,6 +128,7 @@ fun VaultScreen(
                 UnlockGate(
                     status = status,
                     unprotectedWarning = unprotectedWarning,
+                    showScreenLockShortcut = screenLockShortcutAvailable,
                     onUnlock = {
                         requestUnlock(
                             context = context,
@@ -112,6 +138,7 @@ fun VaultScreen(
                             source = AnalyticsSource.VAULT_TAB,
                         )
                     },
+                    onSetUpScreenLock = { ScreenLockSettings.open(context) },
                 )
             else ->
                 VaultBody(
@@ -180,7 +207,9 @@ internal fun bumpVaultUnlockCounter(tracker: com.github.barriosnahuel.vossosunbo
 private fun UnlockGate(
     status: BiometricGateStatus,
     unprotectedWarning: String,
+    showScreenLockShortcut: Boolean,
     onUnlock: () -> Unit,
+    onSetUpScreenLock: () -> Unit,
 ) {
     Column(
         modifier =
@@ -235,6 +264,23 @@ private fun UnlockGate(
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
             )
+            // Secondary remediation affordance: a text-tier button (ADR 0010 — `primary` inherited,
+            // never an outlined/tonal tier) that deep-links straight to the system set-screen-lock
+            // flow. Only rendered when the intent actually resolves on this device, so it can never
+            // be a dead button. Below the primary "unlock" CTA on purpose — it's the fallback path,
+            // not the main action.
+            if (showScreenLockShortcut) {
+                Spacer(modifier = Modifier.height(Spacing.SM))
+                TextButton(onClick = onSetUpScreenLock) {
+                    Icon(
+                        painter = painterResource(R.drawable.app_ic_lock),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.size(Spacing.XS))
+                    Text(stringResource(R.string.app_vault_unprotected_setup_screenlock_cta))
+                }
+            }
         }
     }
 }

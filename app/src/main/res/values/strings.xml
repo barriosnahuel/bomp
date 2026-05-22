@@ -102,6 +102,7 @@
     <string name="app_vault_screen_title">Vault</string>
     <string name="app_vault_baul_name">My Vault</string>
     <string name="app_vault_unprotected_warning_chip">Not protected — set a screen lock</string>
+    <string name="app_vault_unprotected_setup_screenlock_cta">Set up screen lock</string>
     <string name="app_vault_fab_new">New Vault</string>
     <string name="app_vault_card_overflow_description">More options for %1$s</string>
     <string name="app_manage_collections_overflow_view">View collection</string>

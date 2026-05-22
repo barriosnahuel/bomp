@@ -35,6 +35,8 @@ import org.junit.runner.RunWith
  * - `unlockingVaultRevealsInspirationalZeroResultState`: same flow as above but pre-seeds the
  *   session state so we land directly on the ZRP body. Belt + suspenders for the empty-state
  *   message; failing it means either the chip row, the FAB, or the ZRP text changed unexpectedly.
+ * - `unprotectedDeviceGateOffersScreenLockShortcut`: on the (unprotected) AVD the gate must surface
+ *   the secondary "set up screen lock" shortcut, since the system Settings resolves the deep link.
  */
 @RunWith(AndroidJUnit4::class)
 internal class VaultTabFlowTest : AbstractUiTest() {
@@ -50,6 +52,18 @@ internal class VaultTabFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithText(vaultLabel()).performClick()
             composeRule.awaitNodeWithText(unlockCta()).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun unprotectedDeviceGateOffersScreenLockShortcut() {
+        // The CI AVD cold-boots with no screen lock, so the gate takes its unprotected branch and the
+        // system Settings resolves ACTION_SET_NEW_PASSWORD — both conditions for the secondary
+        // "set up screen lock" shortcut. Asserts the real device-resolution path the Robolectric test
+        // can only simulate.
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithText(vaultLabel()).performClick()
+            composeRule.awaitNodeWithText(setupScreenLockCta()).assertIsDisplayed()
         }
     }
 
@@ -70,6 +84,8 @@ internal class VaultTabFlowTest : AbstractUiTest() {
     private fun vaultLabel() = context.getString(R.string.app_navigation_menu_item_vault)
 
     private fun unlockCta() = context.getString(R.string.app_vault_unlock_cta)
+
+    private fun setupScreenLockCta() = context.getString(R.string.app_vault_unprotected_setup_screenlock_cta)
 
     private fun zrpHeadlineLead() = context.getString(R.string.app_vault_zrp_headline_lead)
 
