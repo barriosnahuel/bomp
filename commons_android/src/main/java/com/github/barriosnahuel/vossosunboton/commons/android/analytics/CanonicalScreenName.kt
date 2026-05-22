@@ -21,6 +21,9 @@ object CanonicalScreenName {
     /** Vault tab — list of private collections; no audio content shown until per-collection unlock. */
     const val VAULT = "vault"
 
+    /** Immersive listen-only player opened by tapping play on a Vault audio (listen mode). */
+    const val VAULT_LISTEN = "vault_listen"
+
     /** Biometric unlock prompt invocation surface (analytics-only marker — the prompt itself is OS). */
     const val VAULT_UNLOCK = "vault_unlock"
 
@@ -39,6 +42,7 @@ object CanonicalScreenName {
             ADD_SOUND,
             EDIT_SOUND,
             VAULT,
+            VAULT_LISTEN,
             VAULT_UNLOCK,
             COLLECTION_CREATE,
             MANAGE_COLLECTIONS,

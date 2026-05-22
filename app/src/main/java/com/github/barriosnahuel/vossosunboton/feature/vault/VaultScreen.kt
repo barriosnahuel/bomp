@@ -56,6 +56,7 @@ import com.github.barriosnahuel.vossosunboton.feature.vault.security.ScreenLockS
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
+import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsList
@@ -81,6 +82,7 @@ fun VaultScreen(
     viewModel: SoundsViewModel,
     listState: LazyListState,
     onActiveFilterEditClick: (String) -> Unit,
+    onImmersivePlay: (Sound) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -146,6 +148,7 @@ fun VaultScreen(
                     viewModel = viewModel,
                     listState = listState,
                     onActiveFilterEditClick = onActiveFilterEditClick,
+                    onImmersivePlay = onImmersivePlay,
                 )
         }
     }
@@ -291,6 +294,7 @@ private fun VaultBody(
     viewModel: SoundsViewModel,
     listState: LazyListState,
     onActiveFilterEditClick: (String) -> Unit,
+    onImmersivePlay: (Sound) -> Unit,
 ) {
     val vaultAudios by viewModel.vaultAudios.collectAsState()
     val activeFilter by viewModel.activeVaultFilter.collectAsState()
@@ -347,7 +351,9 @@ private fun VaultBody(
                     // can scroll fully into view instead of sitting under the FAB. Default FAB
                     // height (56dp) + Spacing.LG margin + Spacing.MD breathing room.
                     bottomContentPadding = VAULT_FAB_CLEARANCE,
-                    onPlayClick = { sound -> viewModel.playOrStop(sound) },
+                    // Vault audios use the immersive listen-mode player (CollectionPlaybackUI.IMMERSIVE)
+                    // instead of the inline card transport: tapping play opens the full-screen screen.
+                    onPlayClick = { sound -> onImmersivePlay(sound) },
                     onSeek = { positionMs -> viewModel.seekTo(positionMs) },
                     onShareClick = { sound -> viewModel.share(sound) },
                     onDelete = { sound -> viewModel.deleteSound(sound) },

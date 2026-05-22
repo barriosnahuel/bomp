@@ -100,6 +100,7 @@ internal class AnalyticsCoverageMatrixTest {
                 CanonicalScreenName.ADD_SOUND,
                 CanonicalScreenName.EDIT_SOUND,
                 CanonicalScreenName.VAULT,
+                CanonicalScreenName.VAULT_LISTEN,
                 CanonicalScreenName.VAULT_UNLOCK,
                 CanonicalScreenName.COLLECTION_CREATE,
                 CanonicalScreenName.MANAGE_COLLECTIONS,

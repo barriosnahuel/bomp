@@ -121,6 +121,11 @@
     <string name="app_vault_biometric_prompt_subtitle">Use your fingerprint or screen lock to listen.</string>
     <string name="app_vault_biometric_negative">Cancel</string>
 
+    <!-- Immersive listen mode (Vault audio player) -->
+    <string name="app_vault_immersive_mode_label">Listen mode</string>
+    <string name="app_vault_immersive_listen_only_label">Not shared · Listen only</string>
+    <string name="app_vault_immersive_back">Back</string>
+
     <!-- Create / edit collection sheet -->
     <string name="app_collection_sheet_title_new_public">New collection</string>
     <string name="app_collection_sheet_title_new_private">New Vault</string>
