@@ -109,11 +109,9 @@
     <string name="app_vault_card_overflow_delete">Delete</string>
 
     <!-- Vault — inspirational empty state (zero private audios) -->
-    <string name="app_vault_zrp_eyebrow">Vault · open session</string>
-    <string name="app_vault_zrp_placeholder">your first memory</string>
-    <string name="app_vault_zrp_headline_lead">The Vault is waiting for</string>
+    <string name="app_vault_zrp_headline_lead">Your Vault is waiting for</string>
     <string name="app_vault_zrp_headline_emphasis">something that matters.</string>
-    <string name="app_vault_zrp_body">A voice you want to keep. A message you don\'t want to lose. It never leaves this device.</string>
+    <string name="app_vault_zrp_body">A voice you want to keep. A message you don\'t want to lose.</string>
     <string name="app_vault_unlock_cta">Tap to unlock</string>
     <string name="app_vault_unlock_subtitle">The Vault stays open for the rest of this session.</string>
 

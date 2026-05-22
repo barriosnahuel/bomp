@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.vault
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -28,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -370,15 +367,16 @@ private fun VaultEmptyState() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            // Eyebrow tracker line, mimics the Claude Design "VAULT · SESIÓN ABIERTA" marker.
-            Text(
-                text = stringResource(R.string.app_vault_zrp_eyebrow).uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+            // Soft outline heart — a muted accent, not a focal element; the headline carries the
+            // message. No photo/polaroid frame, eyebrow, or caption: the Vault stores neither images
+            // nor contact assignments, and a tall stack of lines would overflow (scroll) the empty
+            // state on large accessibility font scales.
+            Icon(
+                painter = painterResource(R.drawable.app_ic_favorite_border),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = HEART_ALPHA),
+                modifier = Modifier.size(56.dp),
             )
-            Spacer(modifier = Modifier.height(Spacing.LG))
-            PolaroidPlaceholder()
             Spacer(modifier = Modifier.height(Spacing.XL))
             Text(
                 text = stringResource(R.string.app_vault_zrp_headline_lead),
@@ -407,12 +405,12 @@ private fun VaultEmptyState() {
 }
 
 // Alpha values for the ZRP radial gradient. Low-on-purpose: the goal is an emotional warmth, not
-// a chip-color competing with the polaroid for attention. Verified against AppThemeContrastTest
+// a chip-color competing with the placeholder for attention. Verified against AppThemeContrastTest
 // indirectly — the gradient stays under the bodyMedium text, which still reads against background.
 private const val ZRP_GLOW_CENTER_ALPHA = 0.16f
 private const val ZRP_GLOW_MID_ALPHA = 0.04f
 
-// Radial-gradient stops for the ZRP glow. Center is at the polaroid; mid (50%) keeps a soft halo
+// Radial-gradient stops for the ZRP glow. Center is at the placeholder; mid (50%) keeps a soft halo
 // before fading to the surface background at the edges.
 private const val ZRP_GLOW_STOP_CENTER = 0.0f
 private const val ZRP_GLOW_STOP_MID = 0.5f
@@ -424,37 +422,8 @@ private const val ZRP_GLOW_STOP_EDGE = 1.0f
 // to match the 8dp grid.
 private val VAULT_FAB_CLEARANCE = 88.dp
 
-@Composable
-private fun PolaroidPlaceholder() {
-    Box(
-        modifier =
-            Modifier
-                .size(width = 200.dp, height = 220.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    shape = RoundedCornerShape(4.dp),
-                ).background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                painter = painterResource(R.drawable.app_ic_favorite),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.size(56.dp),
-            )
-            Spacer(modifier = Modifier.height(Spacing.MD))
-            Text(
-                text = stringResource(R.string.app_vault_zrp_placeholder),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontStyle = FontStyle.Italic,
-            )
-        }
-    }
-}
+// The heart is a soft accent, not a focal element — kept muted so the headline carries the message.
+private const val HEART_ALPHA = 0.5f
 
 @Composable
 private fun FilteredEmptyState(collectionName: String) {

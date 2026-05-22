@@ -103,11 +103,9 @@
     <string name="app_vault_card_overflow_delete">Eliminar</string>
 
     <!-- Vault — ZRP inspiracional (sin audios privados) -->
-    <string name="app_vault_zrp_eyebrow">Vault · sesión abierta</string>
-    <string name="app_vault_zrp_placeholder">tu primer recuerdo</string>
-    <string name="app_vault_zrp_headline_lead">El Baúl está esperando</string>
+    <string name="app_vault_zrp_headline_lead">Tu Baúl está esperando</string>
     <string name="app_vault_zrp_headline_emphasis">algo que importe.</string>
-    <string name="app_vault_zrp_body">Una voz que te quieras guardar. Un mensaje que no quieras perder. Nunca sale del dispositivo.</string>
+    <string name="app_vault_zrp_body">Una voz que te quieras guardar. Un mensaje que no quieras perder.</string>
     <string name="app_vault_unlock_cta">Tocá para desbloquear</string>
     <string name="app_vault_unlock_subtitle">El Baúl queda abierto durante esta sesión.</string>
 
