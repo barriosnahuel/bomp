@@ -115,6 +115,11 @@
     <string name="app_vault_biometric_prompt_subtitle">Usá tu huella o el bloqueo del teléfono para escuchar.</string>
     <string name="app_vault_biometric_negative">Cancelar</string>
 
+    <!-- Modo escucha inmersivo (reproductor de audios del Baúl) -->
+    <string name="app_vault_immersive_mode_label">Modo escucha</string>
+    <string name="app_vault_immersive_listen_only_label">No se comparte · Solo escucha</string>
+    <string name="app_vault_immersive_back">Volver</string>
+
     <!-- Sheet de crear / editar colección -->
     <string name="app_collection_sheet_title_new_public">Nueva colección</string>
     <string name="app_collection_sheet_title_new_private">Nuevo Baúl</string>

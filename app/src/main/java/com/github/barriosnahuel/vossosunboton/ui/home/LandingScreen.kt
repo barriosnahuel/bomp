@@ -102,6 +102,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     var manageRequest by rememberSaveable(stateSaver = ManageRequest.Saver) {
         mutableStateOf<ManageRequest?>(null)
     }
+    // Id of the Vault audio whose immersive listen-mode player is open, or null. Saveable so the
+    // overlay survives an Activity recreate (rotation, theme, system kill); the host re-resolves
+    // the Sound from `library` on the way back.
+    var immersiveListenSoundId by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible) {
         val name =
@@ -119,7 +123,9 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         }
     }
 
-    BackHandler(enabled = !isAboutVisible && manageRequest == null && tabBackStack.isNotEmpty()) {
+    BackHandler(
+        enabled = !isAboutVisible && manageRequest == null && immersiveListenSoundId == null && tabBackStack.isNotEmpty(),
+    ) {
         viewModel.selectTab(tabBackStack.removeAt(tabBackStack.lastIndex))
     }
 
@@ -150,7 +156,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // and UI tests neither reach nor double-match nodes hidden behind the opaque overlay (e.g. a
     // collection name shown both in the chip row and in the Manage list). Drawing is untouched, so
     // the gesture still reveals the live list visually.
-    val subScreenOpen = isAboutVisible || manageRequest != null
+    val subScreenOpen = isAboutVisible || manageRequest != null || immersiveListenSoundId != null
     ScaffoldedLanding(
         modifier = if (subScreenOpen) Modifier.clearAndSetSemantics {} else Modifier,
         viewModel = viewModel,
@@ -175,6 +181,11 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         onActiveFilterEditClick = { collectionId ->
             manageRequest = ManageRequest.Focused(collectionId)
         },
+        onImmersivePlay = { sound ->
+            // Vault play opens immersive listen mode and starts playback (unless already playing).
+            immersiveListenSoundId = sound.id
+            if (!sound.isPlaying) viewModel.playOrStop(sound)
+        },
     )
 
     // Exactly one sub-screen overlays the list at a time (About wins over Manage, preserving the
@@ -187,6 +198,22 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                 focusedCollectionId = (manageRequest as? ManageRequest.Focused)?.collectionId,
                 onBack = { manageRequest = null },
             )
+    }
+
+    // Immersive listen mode for a Vault audio — layers above everything (it covers the top bar, so
+    // About/Manage are unreachable while it is open). Back pauses playback (position retained) so no
+    // audio keeps playing headless behind the Vault list, then closes the overlay.
+    immersiveListenSoundId?.let { listeningId ->
+        com.github.barriosnahuel.vossosunboton.feature.vault.ImmersiveListenHost(
+            viewModel = viewModel,
+            soundId = listeningId,
+            onBack = {
+                viewModel.playingSound.value
+                    ?.takeIf { it.id == listeningId }
+                    ?.let { viewModel.playOrStop(it) }
+                immersiveListenSoundId = null
+            },
+        )
     }
 
     com.github.barriosnahuel.vossosunboton.feature.collections
@@ -306,6 +333,7 @@ private fun ScaffoldedLanding(
     onAboutClick: () -> Unit,
     onManageCollectionsClick: () -> Unit,
     onActiveFilterEditClick: (String) -> Unit,
+    onImmersivePlay: (Sound) -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
@@ -355,6 +383,7 @@ private fun ScaffoldedLanding(
                     viewModel = viewModel,
                     listState = listState,
                     onActiveFilterEditClick = onActiveFilterEditClick,
+                    onImmersivePlay = onImmersivePlay,
                     modifier = Modifier.padding(innerPadding),
                 )
             else -> {

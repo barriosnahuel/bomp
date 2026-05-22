@@ -13,6 +13,7 @@ import com.github.barriosnahuel.vossosunboton.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 fun formatDuration(ms: Int): String {
@@ -53,6 +54,21 @@ fun formatRelativeDate(epochMs: Long): String {
         else -> SimpleDateFormat("d MMM", LocalLocale.current.platformLocale).format(Date(epochMs))
     }
 }
+
+/**
+ * Absolute "day month year" date for the immersive listen header — e.g. `24 DIC 2024` (es) /
+ * `24 DEC 2024` (en). Unlike [formatRelativeDate] (which collapses recent dates to "today" /
+ * "3 days ago") the listen mode always shows the full memory date, uppercased to read as a
+ * mono-style eyebrow above the title. Pure over an explicit [locale] so it is unit-testable
+ * without a Compose tree.
+ */
+fun fullDate(
+    epochMs: Long,
+    locale: Locale,
+): String = SimpleDateFormat("d MMM yyyy", locale).format(Date(epochMs)).uppercase(locale)
+
+@Composable
+fun formatFullDate(epochMs: Long): String = fullDate(epochMs, LocalLocale.current.platformLocale)
 
 internal const val RELATIVE_DATE_MAX_DAYS = 7L
 private const val SECONDS_PER_MINUTE = 60L
