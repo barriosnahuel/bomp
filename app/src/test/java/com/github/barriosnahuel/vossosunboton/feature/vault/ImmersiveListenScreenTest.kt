@@ -80,6 +80,7 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
                     durationMs = durationMs,
                     isPlaying = isPlaying,
                     progressFraction = 0.42f,
+                    peaks = null,
                     onPlayPause = onPlayPause,
                     onBack = onBack,
                 )

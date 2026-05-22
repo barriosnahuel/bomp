@@ -112,3 +112,19 @@ fun AppTheme(
         content = content,
     )
 }
+
+/**
+ * Forces the dark scheme regardless of the system theme — for full-bleed "lights-down" surfaces
+ * (the Vault immersive listen player). Two reasons it must be dark in both modes:
+ *  1. The app sets a non-adaptive light-icon status bar (`enableEdgeToEdge(SystemBarStyle.dark)`),
+ *     legible only over a dark top region. Every other screen tops out in an always-dark `secondary`
+ *     bar; this full-bleed player has no such bar, so a light (Paper) background would leave the
+ *     status-bar icons unreadable (non-text contrast, WCAG 1.4.11).
+ *  2. It matches the design's dark, immersive intent.
+ * The dark role pairs are already AA-verified by `AppThemeContrastTest`, so no new contrast risk.
+ * Living in the theme package (not the component) keeps `isSystemInDarkTheme()` out of UI files.
+ */
+@Composable
+fun ImmersiveListenTheme(content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = DarkColors, content = content)
+}

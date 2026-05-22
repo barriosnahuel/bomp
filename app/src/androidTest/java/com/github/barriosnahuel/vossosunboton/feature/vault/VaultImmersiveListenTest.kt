@@ -5,7 +5,10 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.vault
 
+import android.view.WindowInsets
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -15,6 +18,7 @@ import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
+import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -78,6 +82,38 @@ internal class VaultImmersiveListenTest : AbstractUiTest() {
         }
     }
 
+    @Test
+    fun immersiveListenTopBarClearsTheStatusBar() {
+        seedVaultAudio()
+
+        ActivityScenario.launch(LandingActivity::class.java).use { scenario ->
+            composeRule.awaitNodeWithText(vaultLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(playLabel()).performClick()
+            composeRule.awaitNodeWithText(listenModeLabel()).assertIsDisplayed()
+
+            // Read the real status-bar inset from the window rather than hard-coding a height.
+            var statusBarTopPx = 0
+            var density = 1f
+            scenario.onActivity { activity ->
+                statusBarTopPx =
+                    activity.window.decorView.rootWindowInsets
+                        .getInsets(WindowInsets.Type.statusBars())
+                        .top
+                density = activity.resources.displayMetrics.density
+            }
+            val statusBarTopDp = statusBarTopPx / density
+
+            // The back button (top of the bar) must sit at or below the status bar — under
+            // edge-to-edge the gradient bleeds behind it, but the control must stay tappable/legible.
+            val backTopDp =
+                composeRule
+                    .onNodeWithContentDescription(backLabel())
+                    .getUnclippedBoundsInRoot()
+                    .top.value
+            assertThat(backTopDp).isAtLeast(statusBarTopDp - INSET_TOLERANCE_DP)
+        }
+    }
+
     private fun seedVaultAudio() {
         val (audio) = TestData.seedCustomSounds(context, count = 1)
         TestData.seedPrivateCollection(context, name = "Caro", audioIds = listOf(audio.id))
@@ -95,5 +131,8 @@ internal class VaultImmersiveListenTest : AbstractUiTest() {
     private companion object {
         // seedCustomSounds names sounds custom_1, custom_2, ... — count = 1 yields custom_1.
         const val AUDIO_NAME = "custom_1"
+
+        // Rounding slack between the px→dp inset conversion and Compose's dp bounds.
+        const val INSET_TOLERANCE_DP = 1f
     }
 }
