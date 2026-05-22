@@ -4,7 +4,6 @@
  * See LICENSE in the project root for full license information.
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
-
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -18,11 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -52,10 +46,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -286,7 +282,7 @@ private fun SwipeActionBackground(
         } else {
             MaterialTheme.colorScheme.onErrorContainer
         }
-    val icon = if (isPinAction) AppIcons.PushPin else Icons.Default.Delete
+    val icon = if (isPinAction) rememberVectorPainter(AppIcons.PushPin) else painterResource(R.drawable.app_ic_delete)
     val alignment = if (isPinAction) Alignment.CenterStart else Alignment.CenterEnd
     Box(
         modifier =
@@ -296,7 +292,7 @@ private fun SwipeActionBackground(
                 .padding(horizontal = Spacing.LG),
         contentAlignment = alignment,
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = iconTint)
+        Icon(painter = icon, contentDescription = null, tint = iconTint)
     }
 }
 
@@ -397,7 +393,14 @@ private fun SoundCard(
                             ),
                     ) {
                         Icon(
-                            imageVector = if (sound.isPlaying) AppIcons.Pause else Icons.Default.PlayArrow,
+                            painter =
+                                if (sound.isPlaying) {
+                                    rememberVectorPainter(
+                                        AppIcons.Pause,
+                                    )
+                                } else {
+                                    painterResource(R.drawable.app_ic_play_arrow)
+                                },
                             contentDescription = stringResource(if (sound.isPlaying) R.string.app_pause else R.string.app_play),
                         )
                     }
@@ -529,7 +532,7 @@ private fun SoundCardHeader(
         if (shareEnabled) {
             IconButton(onClick = onShareClick) {
                 Icon(
-                    imageVector = Icons.Default.Share,
+                    painter = painterResource(R.drawable.app_ic_share),
                     contentDescription = stringResource(R.string.app_share_chooser_title),
                 )
             }
@@ -553,7 +556,7 @@ private fun SoundCardHeader(
                     if (onEditClick != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.app_edit)) },
-                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                            leadingIcon = { Icon(painterResource(R.drawable.app_ic_edit), contentDescription = null) },
                             onClick = {
                                 onMenuDismiss()
                                 onEditClick()
@@ -563,7 +566,7 @@ private fun SoundCardHeader(
                     if (onDeleteClick != null) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.app_delete)) },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                            leadingIcon = { Icon(painterResource(R.drawable.app_ic_delete), contentDescription = null) },
                             onClick = {
                                 onMenuDismiss()
                                 onDeleteClick()

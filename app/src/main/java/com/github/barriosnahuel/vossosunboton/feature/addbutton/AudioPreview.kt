@@ -4,7 +4,6 @@
  * See LICENSE in the project root for full license information.
  */
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
-
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -18,8 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledIconButton
@@ -39,6 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -171,7 +170,14 @@ internal fun AudioPreview(
                                 ),
                         ) {
                             Icon(
-                                imageVector = if (isPlaying) AppIcons.Pause else Icons.Default.PlayArrow,
+                                painter =
+                                    if (isPlaying) {
+                                        rememberVectorPainter(
+                                            AppIcons.Pause,
+                                        )
+                                    } else {
+                                        painterResource(R.drawable.app_ic_play_arrow)
+                                    },
                                 contentDescription = stringResource(R.string.app_addbutton_preview_audio),
                             )
                         }
