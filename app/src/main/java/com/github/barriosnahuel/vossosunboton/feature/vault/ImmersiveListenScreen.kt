@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,8 +62,8 @@ import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.home.formatFullDate
 import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
+import com.github.barriosnahuel.vossosunboton.ui.theme.ImmersiveListenTheme
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
-import kotlin.math.sin
 
 /**
  * Listen mode — the full-screen, listen-only player for a single Vault audio. Reached by tapping
@@ -109,9 +112,19 @@ internal fun ImmersiveListenHost(
         // Library not hydrated yet (cold start / process recreate). Hold an opaque backdrop that
         // still honours back instead of flashing the Vault list behind it.
         ImmersiveBackdrop(modifier = Modifier.predictiveBackTransition(onBack = onBack)) {
-            Column { ImmersiveTopBar(collectionLabel = "", onBack = onBack) }
+            Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+                ImmersiveTopBar(collectionLabel = "", onBack = onBack)
+            }
         }
         return
+    }
+
+    // Real amplitude envelope — instant if already decoded this session, otherwise decoded off the
+    // main thread (the screen shows a neutral placeholder until it arrives). Kept in-memory only;
+    // see the PR discussion on why persisting this derived data is not worth it yet.
+    var peaks by remember(sound.id) { mutableStateOf(WaveformExtractor.cached(sound.id)) }
+    LaunchedEffect(sound.id) {
+        if (peaks == null) peaks = WaveformExtractor.extract(context, sound, WAVEFORM_BARS)
     }
 
     val isThisPlaying = playingSound?.id == soundId
@@ -130,6 +143,7 @@ internal fun ImmersiveListenHost(
         durationMs = durationMs,
         isPlaying = isThisPlaying,
         progressFraction = fraction,
+        peaks = peaks,
         onPlayPause = { viewModel.playOrStop(sound.copy(isPlaying = isThisPlaying)) },
         onBack = onBack,
     )
@@ -164,12 +178,15 @@ internal fun ImmersiveListenScreen(
     durationMs: Int?,
     isPlaying: Boolean,
     progressFraction: Float,
+    peaks: FloatArray?,
     onPlayPause: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     ImmersiveBackdrop(modifier = modifier.predictiveBackTransition(onBack = onBack)) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // safeDrawingPadding keeps the content clear of the status/navigation bars while the
+        // backdrop gradient still bleeds full-screen behind them (edge-to-edge).
+        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             ImmersiveTopBar(collectionLabel = collectionLabel, onBack = onBack)
             // `heightIn(min = maxHeight)` + `verticalScroll` keeps the spread layout (hero up top,
             // transport pinned low) when the content fits, but lets it scroll instead of clipping on
@@ -197,6 +214,7 @@ internal fun ImmersiveListenScreen(
                         durationMs = durationMs,
                         isPlaying = isPlaying,
                         progressFraction = progressFraction,
+                        peaks = peaks,
                         onPlayPause = onPlayPause,
                     )
                 }
@@ -210,29 +228,32 @@ private fun ImmersiveBackdrop(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    // Warm-mood wash adapted to the palette: the accent role at low alpha gives an emotional glow
-    // without a one-off color token. Same approach as VaultEmptyState; theme-aware in both modes.
-    val accent = MaterialTheme.colorScheme.primary
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val wash =
-        remember(accent, backgroundColor) {
-            Brush.radialGradient(
-                colorStops =
-                    arrayOf(
-                        GLOW_STOP_CENTER to accent.copy(alpha = GLOW_CENTER_ALPHA),
-                        GLOW_STOP_MID to accent.copy(alpha = GLOW_MID_ALPHA),
-                        GLOW_STOP_EDGE to backgroundColor,
-                    ),
-            )
+    // Always-dark "lights-down" surface (see ImmersiveListenTheme): legible status-bar icons in both
+    // modes + matches the design. The acid wash at low alpha gives an emotional glow without a
+    // one-off color token (same approach as VaultEmptyState).
+    ImmersiveListenTheme {
+        val accent = MaterialTheme.colorScheme.primary
+        val backgroundColor = MaterialTheme.colorScheme.background
+        val wash =
+            remember(accent, backgroundColor) {
+                Brush.radialGradient(
+                    colorStops =
+                        arrayOf(
+                            GLOW_STOP_CENTER to accent.copy(alpha = GLOW_CENTER_ALPHA),
+                            GLOW_STOP_MID to accent.copy(alpha = GLOW_MID_ALPHA),
+                            GLOW_STOP_EDGE to backgroundColor,
+                        ),
+                )
+            }
+        Box(
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .background(backgroundColor)
+                    .background(wash),
+        ) {
+            content()
         }
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(backgroundColor)
-                .background(wash),
-    ) {
-        content()
     }
 }
 
@@ -333,6 +354,7 @@ private fun ImmersiveTransport(
     durationMs: Int?,
     isPlaying: Boolean,
     progressFraction: Float,
+    peaks: FloatArray?,
     onPlayPause: () -> Unit,
 ) {
     Column(
@@ -342,6 +364,7 @@ private fun ImmersiveTransport(
     ) {
         ImmersiveWaveform(
             progressFraction = progressFraction,
+            peaks = peaks,
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -393,25 +416,26 @@ private fun ImmersiveTransport(
 }
 
 @Composable
-@Suppress("MagicNumber")
 private fun ImmersiveWaveform(
     progressFraction: Float,
+    peaks: FloatArray?,
     modifier: Modifier = Modifier,
 ) {
-    // Synthetic, deterministic bars: the player exposes position/duration, not amplitude samples,
-    // so (like the mock) heights come from a fixed sin seed. No animation — keeps the screen idle
-    // for `waitForIdle()`-based tests. Played portion uses the accent role; the rest is muted.
+    // Real amplitude envelope from [WaveformExtractor]. Until it arrives (or if decoding failed)
+    // `peaks` is null and we draw a neutral flat baseline — never a fake-looking wave. No animation,
+    // so the screen stays idle for `waitForIdle()`-based tests. Played bars use the accent role.
     val playedColor = MaterialTheme.colorScheme.primary
-    val unplayedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f)
+    val unplayedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = WAVEFORM_UNPLAYED_ALPHA)
+    val barCount = peaks?.size ?: WAVEFORM_BARS
     Canvas(modifier = modifier) {
-        val slot = size.width / WAVEFORM_BARS
+        val slot = size.width / barCount
         val barWidth = slot * WAVEFORM_BAR_FILL
         val centerY = size.height / 2f
         val corner = CornerRadius(barWidth / 2f, barWidth / 2f)
-        for (i in 0 until WAVEFORM_BARS) {
-            val seed = sin(i * 0.7) * 0.4 + sin(i * 0.23) * 0.35 + 0.5
-            val barHeight = seed.coerceIn(WAVEFORM_MIN_FRACTION.toDouble(), 1.0).toFloat() * size.height
-            val played = i.toFloat() / WAVEFORM_BARS < progressFraction
+        for (i in 0 until barCount) {
+            val amplitude = peaks?.getOrNull(i) ?: WAVEFORM_PLACEHOLDER_FRACTION
+            val barHeight = amplitude.coerceIn(WAVEFORM_MIN_FRACTION, 1f) * size.height
+            val played = i.toFloat() / barCount < progressFraction
             val x = i * slot + (slot - barWidth) / 2f
             drawRoundRect(
                 color = if (played) playedColor else unplayedColor,
@@ -423,9 +447,12 @@ private fun ImmersiveWaveform(
     }
 }
 
+// Bar count used for the placeholder + as the extractor's target resolution.
 private const val WAVEFORM_BARS = 56
 private const val WAVEFORM_BAR_FILL = 0.45f
-private const val WAVEFORM_MIN_FRACTION = 0.10f
+private const val WAVEFORM_MIN_FRACTION = 0.06f
+private const val WAVEFORM_PLACEHOLDER_FRACTION = 0.12f
+private const val WAVEFORM_UNPLAYED_ALPHA = 0.30f
 private val WAVEFORM_HEIGHT = 96.dp
 private val MEMORY_TILE_SIZE = 188.dp
 private const val MEMORY_TILE_TILT = -3f
