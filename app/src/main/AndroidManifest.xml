@@ -2,6 +2,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+        Package visibility (Android 11+ / API 30+): declaring the SET_NEW_PASSWORD intent makes the
+        system Settings activity that handles it visible to resolveActivity(), so the Vault's "set up
+        screen lock" shortcut (ScreenLockSettings) can verify the deep link resolves before offering
+        it. Without this, resolveActivity() returns null on API 30+ and the affordance never appears.
+        https://developer.android.com/training/package-visibility
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.app.action.SET_NEW_PASSWORD" />
+        </intent>
+    </queries>
+
     <application
         android:name=".MainApplication"
         android:allowBackup="true"

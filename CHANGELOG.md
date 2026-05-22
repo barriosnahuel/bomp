@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### Added
 - New **Vault** tab in the bottom navigation, grouping your private collections behind your fingerprint or screen lock. The "Baúl" lives there by default and you can create more private collections for specific people, moments, or memories. Audios tagged to a private collection only play from there, in an immersive listen view with no share button
+- On devices with no screen lock set, the Vault stays usable and its unlock screen now offers a one-tap shortcut to Android's screen-lock setup so you can protect it
 - Public **collections** for organizing your Bomps by context (Family, Work, Recipes…). A filter chip row at the top of My Sounds lets you narrow the list to one collection at a time — the last chip you used persists across cold starts
 - New "Assign to collections" section in New Bomp and Rename Bomp. Public collections show up as multi-select chips; private collections appear behind a "Show private collections (requires unlock)" CTA that asks for your fingerprint before revealing them
 - Terms of Service link in the About screen's "Legal & Privacy" section, opening the published page with `?hl=` matched to the device locale (es-AR, es-419, es-ES, en, pt-BR)
