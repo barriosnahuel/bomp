@@ -68,7 +68,7 @@
     <string name="app_addbutton_activity_label">Guardar</string>
     <string name="app_addbutton_name">Elegí un nombre para tu Bomp</string>
     <string name="app_addbutton_edit_name_label">Actualizar el nombre</string>
-    <string name="app_addbutton_placeholder">Vos, yo, champagne… all the night</string>
+    <string name="app_addbutton_placeholder">Risa de mi vieja, La frase del jefe…</string>
     <string name="app_addbutton_save">Guardar</string>
     <string name="app_addbutton_save_changes">Guardar cambios</string>
     <string name="app_addbutton_preview_audio">Vista previa del audio</string>
