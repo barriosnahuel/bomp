@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
@@ -442,6 +443,91 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         viewModel.selectTab(AppTab.MY_SOUNDS)
 
         assertThat(viewModel.sounds.value.none { it.name == sound.name }).isTrue()
+    }
+
+    @Test
+    fun `deleting several sounds in a row persists every deletion, not just the last`() {
+        // Regression: each delete shows an undo snackbar; a new delete replaces the previous one
+        // (cancelling its LaunchedEffect) before the previous deletion is confirmed. With a single
+        // pending-deletion slot, only the LAST deletion was ever persisted — the earlier ones were
+        // dropped from the in-memory list but left on disk, so the next repo re-emit (triggered when
+        // the last deletion is finally confirmed) repopulated them and they reappeared. The user
+        // saw: delete 4-5 in a row → empty Vault → last snackbar fades → the deleted Bomps return.
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val repo = SoundsRepository(context)
+        val files = listOf("one.mp3", "two.mp3", "three.mp3")
+        runBlocking {
+            files.forEach { name ->
+                // `repo.delete` only removes a sound from the store when its backing file is actually
+                // deleted from disk, so the persistence assertion below needs real files to delete.
+                getFile(context, name).apply {
+                    parentFile?.mkdirs()
+                    createNewFile()
+                }
+                repo.save(testSound(name.removeSuffix(".mp3"), file = name))
+            }
+        }
+        val viewModel = givenAViewModel()
+        val names = setOf("one", "two", "three")
+        val toDelete = viewModel.sounds.value.filter { it.name in names }
+        assertThat(toDelete).hasSize(names.size)
+
+        // Rapid deletes — no undo, no per-delete confirm between them.
+        toDelete.forEach { viewModel.deleteSound(it) }
+        // Only the last deletion's snackbar survives to be dismissed.
+        viewModel.confirmDelete()
+
+        runBlocking {
+            // Every deletion must reach persistence (the async DataStore writes settle slightly after
+            // the calls return). With the bug, "one"/"two" never get a confirm and stay on disk
+            // forever, so the poll times out and the assertion still sees them — exactly what the
+            // repo re-emit would resurrect on screen.
+            val persisted =
+                withTimeoutOrNull(3_000) {
+                    var remaining = repo.sounds.first().filter { it.name in names }
+                    while (remaining.isNotEmpty()) {
+                        kotlinx.coroutines.delay(20)
+                        remaining = repo.sounds.first().filter { it.name in names }
+                    }
+                    remaining
+                } ?: repo.sounds.first().filter { it.name in names }
+            assertThat(persisted).isEmpty()
+        }
+    }
+
+    @Test
+    fun `a concurrent repo write while a delete is pending does not resurrect the sound`() {
+        // Companion to the fix above. fix #1's flush persists the previous deletion, and that write
+        // fires the reactive `repo.sounds` collector, which re-runs loadSounds. loadSounds must keep
+        // the pending soft-deletion out of `allSoundsCache` (rebuilt from persistence, which still
+        // holds the pending sound) — otherwise the just-dismissed sound resurfaces in the views that
+        // read the cache (search, Vault). This drives that real re-emit path via a concurrent write.
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking { SoundsRepository(context).save(testSound("solo", file = "solo.mp3")) }
+        val viewModel =
+            SoundsViewModel(
+                context,
+                ioDispatcher = UnconfinedTestDispatcher(),
+                searchDebounceMs = 0L,
+            )
+        createdViewModels += viewModel
+        runBlocking {
+            viewModel.isInitialLoadComplete.first { it }
+            kotlinx.coroutines.delay(50)
+        }
+        val sound = viewModel.sounds.value.single { it.name == "solo" }
+
+        viewModel.deleteSound(sound)
+        // A concurrent repo write fires the reactive collector → loadSounds rebuilds the cache from
+        // persistence (which still has `solo`, its delete being unconfirmed).
+        runBlocking {
+            SoundsRepository(context).save(testSound("other", file = "other.mp3"))
+            kotlinx.coroutines.delay(200)
+        }
+        viewModel.showSearch()
+        viewModel.onSearchQueryChange("solo")
+
+        assertThat(viewModel.searchResults.value.none { it.name == "solo" }).isTrue()
     }
 
     @Test

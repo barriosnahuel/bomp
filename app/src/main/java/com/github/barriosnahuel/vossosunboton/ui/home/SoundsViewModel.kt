@@ -780,6 +780,14 @@ class SoundsViewModel(
             recomputeSearchResults()
             recomputeVaultAudios()
         }
+        // A new deletion supersedes the previous undo window (that snackbar is already gone), so
+        // commit the previous pending deletion now. Without this, rapid back-to-back deletes overwrite
+        // the single pending slot and only the LAST one is ever persisted; the earlier sounds are
+        // dropped from the in-memory list but left on disk, and the next repo re-emit resurrects them
+        // (the "delete several Bomps → they reappear when the last snackbar fades" bug).
+        if (_deletedSoundEvent.value != null) {
+            confirmDelete()
+        }
         _deletedSoundEvent.value = DeletedSoundEvent(resolvedSound.copy(isPlaying = false), sourcePosition)
         if (isWelcome) {
             _welcomeStickerVisible.value = false
@@ -1129,11 +1137,16 @@ class SoundsViewModel(
             val deletedSound = _deletedSoundEvent.value?.sound
             val deletedId = deletedSound?.id
             val welcomeIsPendingDismissal = deletedSound != null && isWelcomeSticker(deletedSound)
+            // Exclude the pending soft-deletion so a repo re-emit during the undo window can't
+            // resurrect it in the cache-derived views (search, Vault). `_sounds` already filters
+            // `deletedId` below; this keeps `allSoundsCache` consistent with it. `filterNot` over a
+            // possibly-null id is a no-op when nothing is pending (ids are never null).
+            val undeleted = allSounds.filterNot { it.id == deletedId }
             allSoundsCache.value =
                 if (playingId == null) {
-                    allSounds
+                    undeleted
                 } else {
-                    allSounds.map { if (it.id == playingId) it.copy(isPlaying = true) else it }
+                    undeleted.map { if (it.id == playingId) it.copy(isPlaying = true) else it }
                 }
             recomputeSearchResults()
             recomputeVaultAudios()
