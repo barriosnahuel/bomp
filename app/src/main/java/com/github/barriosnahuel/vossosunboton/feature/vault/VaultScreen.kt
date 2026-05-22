@@ -323,6 +323,11 @@ private fun VaultBody(
                     .align(Alignment.BottomEnd)
                     .padding(Spacing.LG)
                     .semantics { contentDescription = fabContentDescription },
+            // Collapse to icon-only while the list is actively scrolling (less content covered),
+            // expand back to icon+text once it settles — the Material 3 ExtendedFAB idiom. The
+            // accessible name is unaffected: contentDescription lives on the modifier above, not the
+            // text slot, so it persists across both states.
+            expanded = !listState.isScrollInProgress,
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             icon = {
