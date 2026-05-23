@@ -267,6 +267,7 @@ private fun SearchOverlayHost(
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
     val vaultOpen by VaultSessionState.flow.collectAsState()
     val collections by viewModel.collections.collectAsState()
+    val collectionsByAudio by viewModel.audioCollectionsIndex.collectAsState()
     val hasSearchableVaultContent =
         remember(collections) {
             collections.any { it.isPrivate && it.audioIds.isNotEmpty() }
@@ -307,6 +308,8 @@ private fun SearchOverlayHost(
                 source = AnalyticsSource.SEARCH,
             )
         },
+        collectionsByAudio = collectionsByAudio,
+        allCollections = collections,
     )
 }
 

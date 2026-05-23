@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
 import com.github.barriosnahuel.vossosunboton.ui.theme.MUTED_TEXT_ALPHA
@@ -86,6 +87,11 @@ fun SearchOverlay(
     onDelete: (Sound) -> Unit,
     showVaultUnlockCta: Boolean = false,
     onUnlockVault: () -> Unit = {},
+    // Per-audio reverse index of collection IDs, resolved against [allCollections] so each result
+    // shows where it lives (collection name, the Vault's localized name, or "Explore" for bundled
+    // audios). Default empty keeps the overlay renderable from previews/tests that don't wire it.
+    collectionsByAudio: Map<String, List<String>> = emptyMap(),
+    allCollections: List<Collection> = emptyList(),
 ) {
     val displayState =
         when {
@@ -163,6 +169,8 @@ fun SearchOverlay(
                                     playbackProgress = playbackProgress,
                                     pausedProgress = pausedProgress,
                                     soundDurations = soundDurations,
+                                    collectionsByAudio = collectionsByAudio,
+                                    allCollections = allCollections,
                                     onPlayClick = onPlayClick,
                                     onSeek = onSeek,
                                     onShareClick = onShareClick,
@@ -324,12 +332,17 @@ private fun SearchResultsList(
     playbackProgress: PlaybackProgress?,
     pausedProgress: Map<String, PlaybackProgress>,
     soundDurations: Map<String, Int>,
+    collectionsByAudio: Map<String, List<String>>,
+    allCollections: List<Collection>,
     onPlayClick: (Sound) -> Unit,
     onSeek: (Int) -> Unit,
     onShareClick: (Sound) -> Unit,
     onPinClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
 ) {
+    val collectionsById = remember(allCollections) { allCollections.associateBy { it.id } }
+    val systemCollectionLabel = stringResource(R.string.app_vault_baul_name)
+    val exploreLabel = stringResource(R.string.app_search_origin_explore)
     LazyColumn(contentPadding = PaddingValues(vertical = Spacing.SM)) {
         items(results, key = { it.id }) { sound ->
             SoundItem(
@@ -341,10 +354,46 @@ private fun SearchResultsList(
                 onShareClick = { onShareClick(sound) },
                 onDelete = { onDelete(sound) },
                 onPinClick = { onPinClick(sound) },
+                collectionLabels =
+                    searchResultCollectionLabels(
+                        sound = sound,
+                        collectionsByAudio = collectionsByAudio,
+                        collectionsById = collectionsById,
+                        systemCollectionLabel = systemCollectionLabel,
+                        exploreLabel = exploreLabel,
+                    ),
             )
         }
     }
 }
+
+/**
+ * Origin tags shown on a search result, since search spans every surface and a result on its own
+ * gives no hint of where it lives. A bundled audio belongs to the read-only Explore catalog, so it
+ * carries the single [exploreLabel]. Any other audio resolves its collection memberships the same
+ * way My Sounds does — the Vault's system collection substitutes its localized [systemCollectionLabel]
+ * for the stored literal — and an audio in no collection gets no tag. Pure so it can be unit-tested
+ * without composing the overlay.
+ */
+internal fun searchResultCollectionLabels(
+    sound: Sound,
+    collectionsByAudio: Map<String, List<String>>,
+    collectionsById: Map<String, Collection>,
+    systemCollectionLabel: String,
+    exploreLabel: String,
+): List<String> =
+    if (sound.isBundled()) {
+        listOf(exploreLabel)
+    } else {
+        collectionsByAudio[sound.id].orEmpty().mapNotNull { id ->
+            val collection = collectionsById[id]
+            when {
+                collection == null -> null
+                collection.isSystem -> systemCollectionLabel
+                else -> collection.name
+            }
+        }
+    }
 
 // Dim level of the full-screen scrim behind the search surface (over Color.Black). A named alpha,
 // not a magic literal — see ui/theme/Alpha.kt for the shared ones and the rationale.
