@@ -359,7 +359,7 @@ private fun ImmersiveControls(
         // prominent filled control.
         IconButton(onClick = onRestart, modifier = Modifier.size(RESTART_BUTTON_SIZE)) {
             Icon(
-                painter = rememberVectorPainter(AppIcons.SkipPrevious),
+                painter = painterResource(R.drawable.app_ic_skip_previous),
                 contentDescription = stringResource(R.string.app_vault_immersive_restart),
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(RESTART_ICON_SIZE),
