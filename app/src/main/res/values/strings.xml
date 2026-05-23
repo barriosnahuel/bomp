@@ -29,6 +29,9 @@
     <string name="app_search_empty_headline">Absolute silence…</string>
     <string name="app_search_empty_subtext">This sticker doesn\'t exist yet. Your collection has a gap only you can fill.</string>
     <string name="app_search_vault_cta">Search your Vault too</string>
+    <!-- Origin tag on a search result that comes from the read-only Explore catalog (bundled audios).
+         Keep in sync with the Explore tab label (app_navigation_menu_item_explore_sounds). -->
+    <string name="app_search_origin_explore">Explore</string>
     <string name="app_edit">Rename</string>
     <string name="app_feedback_button_renamed">%1$s renamed!</string>
     <string name="app_pin">Pin to top</string>

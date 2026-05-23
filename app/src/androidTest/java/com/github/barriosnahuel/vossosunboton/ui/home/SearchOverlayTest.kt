@@ -50,6 +50,24 @@ internal class SearchOverlayTest : AbstractUiTest() {
     }
 
     @Test
+    fun searchResultsCarryTheirCollectionOriginTag() {
+        // Search spans every surface, so a result on its own gives no hint of where it lives — it
+        // now carries an origin tag. A *private* collection name is the unambiguous probe: it is
+        // never a My Sounds filter chip and its audio is hidden from My Sounds, so the name can only
+        // surface on the search result's tag (proving the result wiring, not the underlying list).
+        val sounds = TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB + 1)
+        val privateAudio = sounds.last()
+        TestData.seedPrivateCollection(context, name = PRIVATE_COLLECTION, audioIds = listOf(privateAudio.id))
+        TestData.markVaultOpen()
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
+            composeRule.awaitNode(hasSetTextAction()).performTextInput(privateAudio.name)
+            composeRule.awaitNode(hasText(PRIVATE_COLLECTION, substring = true)).assertIsDisplayed()
+        }
+    }
+
+    @Test
     fun fabOpensSearchOverlay() {
         TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
 
@@ -166,5 +184,9 @@ internal class SearchOverlayTest : AbstractUiTest() {
         // Below the threshold for the My Sounds tab on its own — the FAB only appears because the
         // global library (these + the bundled Explore catalog) crosses SEARCH_FAB_MIN_SOUNDS.
         const val SOUNDS_BELOW_TAB_THRESHOLD = 2
+
+        // A private collection name: never a My Sounds filter chip, so it can only appear on a
+        // search result's origin tag — the unambiguous probe for the collection-tag wiring.
+        const val PRIVATE_COLLECTION = "Secrets"
     }
 }
