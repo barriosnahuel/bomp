@@ -113,7 +113,13 @@ Bug fixes follow TDD: failing test reproducing the bug → minimum production fi
 
 ## Features — test coverage workflow
 
-Before writing production code, agree on minimum scenarios: happy path, failure modes at boundaries (audio I/O, MediaPlayer errors, permissions denied, Play feature delivery), smoke test (§ *Activity smoke tests*). Implement tests **alongside** the feature, not after — anything not listed up-front is out of scope; note in the PR. Skip a scenario only when it's exclusively platform wiring not exercisable by tests; note why. Full procedure: CONTRIBUTING.md § *Testing → Features — test coverage procedure*.
+Before code, the plan enumerates three axes — skip it and bugs leak to manual testing. Worked template + the bug each prevents: CONTRIBUTING.md § *Testing → Features — test coverage procedure*.
+
+- **(a) Platform surfaces + gotcha.** List each Android surface touched; read its ADR/skill first (ADRs are read-on-demand — § *Sources of truth*). E.g. `resolveActivity`→manifest `<queries>` (API 30+); `singleTask`/exported→`onNewIntent`; full-screen→`edge-to-edge` skill.
+- **(b) State & transition model.** Enumerate every state/transition of a new control — rapid-repeat, new intent over an open screen, playback state mid-transition, what's behind a dismiss gesture. Check each against § *Stateful Composables*. **One test per transition**; agree scenarios up front (+ smoke test, § *Activity smoke tests*), implement **alongside** the feature; unlisted = out of scope.
+- **(c) Device-only checks — route to the existing guardrail first.** Palette contrast is covered (`AppThemeContrastTest` + the color/alpha grep, § *Design system*) — don't re-check by hand. Flag only the residue: inset overlap, system-bar legibility, animation/scrub visuals, a fill on a non-bar surface. Make it an instrumented assertion if feasible, else a named manual check.
+
+**Acceptance is concrete** for generated/derived content (e.g. a real waveform, not a synthetic stub). Skip an axis item only when it's pure platform wiring not exercisable by tests; note why.
 
 ## Test naming convention
 
