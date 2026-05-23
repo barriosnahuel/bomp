@@ -23,11 +23,32 @@ import com.github.barriosnahuel.vossosunboton.WAIT_TIMEOUT_MS
 import com.github.barriosnahuel.vossosunboton.awaitNode
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
+import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 internal class SearchOverlayTest : AbstractUiTest() {
+    @Test
+    fun searchFabShowsOnMySoundsWhenOnlyTheGlobalCatalogCrossesTheThreshold() {
+        // Regression: the FAB used to gate on the *currently visible tab's* filtered list, so My
+        // Sounds with only a couple of custom sounds hid it — even though search is global and the
+        // bundled Explore catalog (always ≥ SEARCH_FAB_MIN_SOUNDS in debug) is searchable from here.
+        // Seed two custom sounds: My Sounds shows two (below the threshold on its own) while the
+        // global library is well above it. The FAB must be present on My Sounds.
+        assumeTrue(
+            "Needs a bundled catalog large enough that the global library crosses the FAB threshold " +
+                "while My Sounds stays sparse (bundled raw audio is a best-effort, uncommitted copy).",
+            SOUNDS_BELOW_TAB_THRESHOLD + PackagedAudios.get(context).size >= SOUNDS_FOR_VISIBLE_FAB,
+        )
+        TestData.seedCustomSounds(context, count = SOUNDS_BELOW_TAB_THRESHOLD)
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithContentDescription(searchLabel()).assertIsDisplayed()
+        }
+    }
+
     @Test
     fun fabOpensSearchOverlay() {
         TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
@@ -137,8 +158,13 @@ internal class SearchOverlayTest : AbstractUiTest() {
     private fun clearSearchLabel() = context.getString(R.string.app_search_clear)
 
     private companion object {
-        // Matches SEARCH_FAB_MIN_SOUNDS in LandingScreen.kt — the FAB stays hidden below this
-        // threshold, so any test that needs to tap it must seed at least this many sounds.
+        // Matches SEARCH_FAB_MIN_SOUNDS in LandingScreen.kt — the FAB stays hidden until the global
+        // library crosses this threshold, so any test that needs to tap it must seed at least this
+        // many sounds (or rely on the always-present bundled catalog).
         const val SOUNDS_FOR_VISIBLE_FAB = 7
+
+        // Below the threshold for the My Sounds tab on its own — the FAB only appears because the
+        // global library (these + the bundled Explore catalog) crosses SEARCH_FAB_MIN_SOUNDS.
+        const val SOUNDS_BELOW_TAB_THRESHOLD = 2
     }
 }
