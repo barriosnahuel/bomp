@@ -117,7 +117,6 @@
 
     <!-- Modo escucha inmersivo (reproductor de audios del Baúl) -->
     <string name="app_vault_immersive_mode_label">Modo escucha</string>
-    <string name="app_vault_immersive_listen_only_label">No se comparte · Solo escucha</string>
     <string name="app_vault_immersive_back">Volver</string>
     <string name="app_vault_immersive_restart">Volver al inicio</string>
     <string name="app_vault_immersive_waveform">Posición de reproducción</string>
