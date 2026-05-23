@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,11 +64,11 @@ internal fun GratitudeSection(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.SM),
             ) {
                 if (showCafecito) {
-                    FilledTonalButton(
+                    Button(
                         onClick = onCafecitoClick,
                         modifier = Modifier.weight(1f),
                         colors =
-                            ButtonDefaults.filledTonalButtonColors(
+                            ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             ),
@@ -76,11 +76,11 @@ internal fun GratitudeSection(
                         Text(stringResource(R.string.app_about_gratitude_cafecito_button))
                     }
                 }
-                FilledTonalButton(
+                Button(
                     onClick = onKofiClick,
                     modifier = Modifier.weight(1f),
                     colors =
-                        ButtonDefaults.filledTonalButtonColors(
+                        ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         ),

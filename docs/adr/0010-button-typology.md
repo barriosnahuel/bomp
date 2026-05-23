@@ -81,11 +81,9 @@ action's hierarchy:
 The **FAB family** (`FloatingActionButton`, `ExtendedFloatingActionButton`) is
 filled-primary specialized for the screen's floating action.
 
-**Forbidden:** `OutlinedButton`, `ElevatedButton`, and `FilledTonalButton` with
-its stock (`secondary`) colors. If a filled button is needed, use `Button` with
-`primaryContainer` colors. (`GratitudeSection.kt` currently uses
-`FilledTonalButton` *explicitly recolored* to `primaryContainer` — functionally
-filled-primary, no contrast bug; migrate to `Button` when next touched.)
+**Forbidden:** `OutlinedButton`, `ElevatedButton`, and `FilledTonalButton` — the
+last regardless of colors, because the typology's filled-primary tier is `Button`.
+If a filled button is needed, use `Button` with `primaryContainer` colors.
 
 **The `secondary`-on-`surface` rule:** never use the `secondary` /
 `secondaryContainer` roles as the fill or accent of a control rendered on
@@ -101,13 +99,15 @@ not a border or a tonal fill.
   (`VaultUnlockCta`).
 - Future authors have a table to pick from and an explicit "don't reach for
   outlined/tonal" so the trap can't silently reappear.
-- `GratitudeSection.kt` is known, documented debt (tonal recolored to primary);
-  not a contrast bug, low priority.
-- This is a guideline ADR, **not grep-enforced** — there's no honest regex for
-  "tonal button with stock colors" that wouldn't false-positive on the
-  legitimately-recolored case. Enforcement is code review + this ADR + the
-  `CLAUDE.md` § *Design system* table. `AppThemeContrastTest` still guards the
-  role *pairs*; it cannot guard *which role a component picked*.
+- `GratitudeSection.kt` migrated to `Button` (same `primaryContainer` colors),
+  clearing the one recolored-tonal exception so the name-ban has no false positives.
+- **Grep-enforced** by `scripts/check-adr-invariants.sh` (CI job `adr-invariants`):
+  a name-ban on `OutlinedButton` / `ElevatedButton` / `FilledTonalButton` in the
+  component dirs (`feature/`, `ui/`; `ui/theme/` exempt; escape hatch `// button-ok`).
+  The earlier "no honest regex" objection assumed a *recolored* tonal button had to
+  stay legal; migrating `GratitudeSection.kt` to `Button` removed that case, so the
+  simple name-ban is honest. `AppThemeContrastTest` still guards the role *pairs*;
+  the name-ban guards *which composable* an author reaches for.
 
 ## Cross-references
 
