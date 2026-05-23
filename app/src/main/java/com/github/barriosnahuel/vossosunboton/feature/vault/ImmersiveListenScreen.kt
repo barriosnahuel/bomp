@@ -214,14 +214,6 @@ internal fun ImmersiveListenScreen(
                     }
                 }
                 ImmersiveControls(isPlaying = isPlaying, onRestart = onRestart, onPlayPause = onPlayPause)
-                Spacer(modifier = Modifier.height(Spacing.MD))
-                Text(
-                    text = stringResource(R.string.app_vault_immersive_listen_only_label).uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = EYEBROW_LETTER_SPACING,
-                    textAlign = TextAlign.Center,
-                )
                 Spacer(modifier = Modifier.height(Spacing.LG))
             }
         }

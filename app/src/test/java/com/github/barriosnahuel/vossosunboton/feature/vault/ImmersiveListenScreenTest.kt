@@ -106,13 +106,10 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `renders the listen mode eyebrow and the listen-only footer`() {
+    fun `renders the listen mode eyebrow`() {
         launchScreen()
         composeTestRule
             .onNodeWithText(context.getString(R.string.app_vault_immersive_mode_label).uppercase())
-            .assertIsDisplayed()
-        composeTestRule
-            .onNodeWithText(context.getString(R.string.app_vault_immersive_listen_only_label).uppercase())
             .assertIsDisplayed()
     }
 
