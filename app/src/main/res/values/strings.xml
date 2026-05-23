@@ -172,7 +172,7 @@
     <!-- "Visible in My Bomps" toggle (ADR 0012) — explicit per-Bomp My Bomps presence -->
     <string name="app_assign_visible_label">Visible in My Bomps</string>
     <string name="app_assign_visible_caption_off">Only in the Vault.</string>
-    <string name="app_assign_visible_off_blocked">Add it to a Vault collection first to take it out of My Bomps.</string>
+    <string name="app_assign_visible_off_blocked">Add it to a collection first to take it out of My Bomps.</string>
     <!-- Dual-home coach (first time) + "moved to Vault" undo snackbar (ADR 0012) -->
     <string name="app_assign_dual_home_coach_title">You\'ll find it in both places.</string>
     <string name="app_assign_dual_home_coach_sub">It stays in My Bomps.</string>

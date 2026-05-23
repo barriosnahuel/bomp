@@ -166,7 +166,7 @@
     <!-- Toggle "Visible en Mis Bomps" (ADR 0012) — presencia explícita en Mis Bomps -->
     <string name="app_assign_visible_label">Visible en Mis Bomps</string>
     <string name="app_assign_visible_caption_off">Solo lo encontrás en el Baúl.</string>
-    <string name="app_assign_visible_off_blocked">Primero ponelo en una colección del Baúl para sacarlo de Mis Bomps.</string>
+    <string name="app_assign_visible_off_blocked">Primero ponelo en alguna colección para sacarlo de Mis Bomps.</string>
     <!-- Coach dual-home (primera vez) + snackbar "lo moviste al Baúl" (ADR 0012) -->
     <string name="app_assign_dual_home_coach_title">Lo vas a encontrar en los dos lados.</string>
     <string name="app_assign_dual_home_coach_sub">Sigue en Mis Bomps.</string>

@@ -84,6 +84,18 @@ data class MovedToVaultEvent(
     val name: String,
 )
 
+/**
+ * Anti-orphan predicate (ADR 0012): an audio may be hidden from My Bomps only if it is reachable
+ * **elsewhere** — i.e. it belongs to at least one collection, **public OR private**. A public
+ * member is reachable via that collection's filter chip; a Vault member via the Vault. With zero
+ * collections, hiding it would strand it (not in "Todo", not in any chip, not in the Vault), so the
+ * switch can't be turned off (UI gate) and `applyAssignment` coerces it back to visible (safety net).
+ */
+internal fun isReachableOutsideMySounds(
+    publicCollectionIds: Set<String>,
+    privateCollectionIds: Set<String>,
+): Boolean = publicCollectionIds.isNotEmpty() || privateCollectionIds.isNotEmpty()
+
 data class PlaybackProgress(
     val positionMs: Int,
     val durationMs: Int,
@@ -1067,11 +1079,15 @@ class SoundsViewModel(
                 Tracker.track(RuntimeException("Failed to apply collection assignment", it))
             }
 
+            // Anti-orphan safety net: never persist hidden for an audio that lives in NO collection
+            // (public or private) — it'd be reachable from nowhere. The UI gate prevents reaching
+            // this, but the invariant is enforced here too.
+            val safeVisible = isVisibleInMySounds || !isReachableOutsideMySounds(publicCollectionIds, privateCollectionIds)
             val currentVisible = allSoundsCache.value.firstOrNull { it.id == audioId }?.isVisibleInMySounds ?: true
-            if (isVisibleInMySounds != currentVisible) {
+            if (safeVisible != currentVisible) {
                 // Updates the cache synchronously + persists + logs visibility_toggle. The sync cache
                 // update is what evaluateAssignCloseEffects below reads for the final visibility.
-                setAudioVisibleInMySounds(audioId, name, isVisibleInMySounds)
+                setAudioVisibleInMySounds(audioId, name, safeVisible)
             }
             evaluateAssignCloseEffects(audioId)
         }

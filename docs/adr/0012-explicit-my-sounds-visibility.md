@@ -43,10 +43,13 @@ shown in "Todo"  ⟺  isVisibleInMySounds == true   (and not bundled)
   them in one transaction on "Listo"; **backing out discards** everything. The coach / "moved to
   Vault" feedback fire on apply, not on close. This mirrors the New Bomp assign section (which
   stages and commits at Save) and makes "Listo" a real confirmation rather than a live free-for-all.
-- **Anti-orphan:** turning the switch OFF requires the Bomp to be (staged) in ≥1 private collection.
-  The switch stays **always enabled** (no confusing disabled-but-on state); an invalid turn-off is
-  rejected with a reject haptic + a transient inline hint — taught at the moment of intent, not as a
-  permanent caption — so a Bomp can never end up reachable from nowhere.
+- **Anti-orphan:** turning the switch OFF requires the Bomp to be (staged) in ≥1 collection —
+  **public OR private** (`isReachableOutsideMySounds`). A public member is reachable via its filter
+  chip; a Vault member via the Vault. "Reachable somewhere", NOT "in the Vault" — a Bomp filed only
+  publicly can be hidden from "Todo" and still found via its chip. Enforced twice: a UI gate (switch
+  stays **always enabled**; an invalid turn-off is rejected with a reject haptic + a transient inline
+  hint, taught at the moment of intent) and a safety net in `applyAssignment` (coerces visible back
+  on if the audio is in zero collections), so a Bomp can never end up reachable from nowhere.
 
 ### Public-collection chips are an independent axis
 

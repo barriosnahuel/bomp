@@ -51,6 +51,7 @@ import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performRejectHaptic
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
+import com.github.barriosnahuel.vossosunboton.ui.home.isReachableOutsideMySounds
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -188,10 +189,10 @@ private fun AssignCollectionSheetBody(
         )
         VisibleInMySoundsRow(
             isVisible = stagedVisible,
-            // Anti-orphan: only allow turning visibility OFF when the audio is staged into ≥1 private
-            // collection, so it never ends up reachable from nowhere. Uses the STAGED set so the user
-            // can stage a Vault tag then hide, all before "Listo".
-            canToggleOff = stagedPrivate.isNotEmpty(),
+            // Anti-orphan: allow turning visibility OFF only when the audio is staged into ≥1
+            // collection — public OR private — so it stays reachable somewhere (its chip or the
+            // Vault). Uses the STAGED sets so the user can tag then hide, all before "Listo".
+            canToggleOff = isReachableOutsideMySounds(stagedPublic, stagedPrivate),
             onVisibleChange = onVisibleChange,
         )
         AssignToCollectionsSection(

@@ -240,6 +240,77 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         assertThat(coach).isNull()
     }
 
+    @Test
+    fun `removal from My Bomps is allowed when the audio is in ANY collection, public or private`() {
+        // The anti-orphan gate keys off "reachable somewhere", not "in the Vault".
+        assertThat(isReachableOutsideMySounds(publicCollectionIds = setOf("recetas"), privateCollectionIds = emptySet())).isTrue()
+        assertThat(isReachableOutsideMySounds(publicCollectionIds = emptySet(), privateCollectionIds = setOf("baul"))).isTrue()
+        assertThat(isReachableOutsideMySounds(publicCollectionIds = setOf("recetas"), privateCollectionIds = setOf("baul"))).isTrue()
+        assertThat(isReachableOutsideMySounds(publicCollectionIds = emptySet(), privateCollectionIds = emptySet())).isFalse()
+    }
+
+    @Test
+    fun `applyAssignment can hide an audio that lives only in a public collection`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            SoundsRepository(context).save(testSound("pubonly", file = "p.mp3"))
+            CollectionsRepository(context).create("Recetas", CollectionProfile.GENERIC_PUBLIC)
+        }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.any { c -> c.name == "Recetas" } } }
+        val recetas = vm.collections.value.first { it.name == "Recetas" }
+
+        // Hide it while only in a public collection — allowed (reachable via its chip, not orphaned).
+        vm.applyAssignment(
+            audioId = "custom:pubonly",
+            name = "pubonly",
+            publicCollectionIds = setOf(recetas.id),
+            privateCollectionIds = emptySet(),
+            isVisibleInMySounds = false,
+        )
+        runBlocking { vm.sounds.first { list -> list.none { it.name == "pubonly" } } }
+        assertThat(
+            vm.library.value
+                .first { it.id == "custom:pubonly" }
+                .isVisibleInMySounds,
+        ).isFalse()
+
+        // ...still surfaced by its public chip.
+        vm.selectMySoundsFilter(recetas.id)
+        runBlocking { vm.sounds.first { list -> list.any { it.name == "pubonly" } } }
+        assertThat(vm.sounds.value.map { it.name }).containsExactly("pubonly")
+    }
+
+    @Test
+    fun `applyAssignment never orphans an audio with no collections — keeps it visible`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking { SoundsRepository(context).save(testSound("orphan", file = "o.mp3")) }
+        val vm = givenAViewModel()
+        runBlocking { vm.collections.first { it.isNotEmpty() } }
+
+        // Attempt to hide with NO collections → coerced back to visible (anti-orphan safety net).
+        vm.applyAssignment(
+            audioId = "custom:orphan",
+            name = "orphan",
+            publicCollectionIds = emptySet(),
+            privateCollectionIds = emptySet(),
+            isVisibleInMySounds = false,
+        )
+        val becameHidden =
+            runBlocking {
+                withTimeoutOrNull(SHORT_TIMEOUT_MS) {
+                    vm.library.first { lib -> lib.firstOrNull { it.id == "custom:orphan" }?.isVisibleInMySounds == false }
+                }
+            }
+
+        assertThat(becameHidden).isNull()
+        assertThat(
+            vm.library.value
+                .first { it.id == "custom:orphan" }
+                .isVisibleInMySounds,
+        ).isTrue()
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun givenAViewModel(): SoundsViewModel {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
