@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.os.Looper
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
@@ -22,6 +23,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.robolectric.Shadows.shadowOf
 
 internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     private val createdViewModels = mutableListOf<SoundsViewModel>()
@@ -180,6 +182,12 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         assertThat(viewModel.searchResults.value.map { it.id }).doesNotContain(privateAudio.id)
 
         VaultSessionState.markVaultOpen()
+        // The session-flip recompute runs on the VM's `viewModelScope` collector (Dispatchers.Main,
+        // SoundsViewModel.kt). Robolectric's main looper is PAUSED, so that resumption is queued and
+        // hasn't run when we read searchResults.value synchronously — it flakes on the slower SDK 23
+        // run under CI load. Flush the looper so the recompute lands first. (A `first {}` await would
+        // deadlock here: runBlocking does not pump the Android looper the collector is parked on.)
+        shadowOf(Looper.getMainLooper()).idle()
 
         assertThat(viewModel.searchResults.value.map { it.id }).contains(privateAudio.id)
         VaultSessionState.clearForTest()
