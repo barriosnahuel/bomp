@@ -253,4 +253,83 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
             assertThat(recordedErrors).hasSize(1)
             assertThat(recordedErrors.single().message).contains("Malformed sounds_json")
         }
+
+    // ── isVisibleInMySounds (ADR 0012) ──────────────────────────────────────────────────────
+
+    @Test
+    fun `a new custom sound defaults to visible in My Sounds`() =
+        runTest {
+            repo.save(testSound("bell", "bell.mp3"))
+
+            assertThat(
+                repo.sounds
+                    .first()
+                    .first { it.id == "custom:bell" }
+                    .isVisibleInMySounds,
+            ).isTrue()
+        }
+
+    @Test
+    fun `saveVisibility toggles the My Sounds visibility flag`() =
+        runTest {
+            repo.save(testSound("bell", "bell.mp3"))
+
+            repo.saveVisibility("custom:bell", "bell", isVisibleInMySounds = false)
+
+            assertThat(
+                repo.sounds
+                    .first()
+                    .first { it.id == "custom:bell" }
+                    .isVisibleInMySounds,
+            ).isFalse()
+        }
+
+    @Test
+    fun `save does not reset a previously hidden audio back to visible`() =
+        runTest {
+            repo.save(testSound("bell", "bell.mp3"))
+            repo.saveVisibility("custom:bell", "bell", isVisibleInMySounds = false)
+
+            // A generic re-save must not clobber the visibility owned by saveVisibility.
+            repo.save(testSound("bell", "bell.mp3"))
+
+            assertThat(
+                repo.sounds
+                    .first()
+                    .first { it.id == "custom:bell" }
+                    .isVisibleInMySounds,
+            ).isFalse()
+        }
+
+    @Test
+    fun `migrateVisibilityIfNeeded hides only the private-only ids`() =
+        runTest {
+            repo.save(testSound("pub", "pub.mp3"))
+            repo.save(testSound("priv", "priv.mp3"))
+
+            repo.migrateVisibilityIfNeeded(privateOnlyIds = setOf("custom:priv"))
+
+            val byId = repo.sounds.first().associateBy { it.id }
+            assertThat(byId.getValue("custom:priv").isVisibleInMySounds).isFalse()
+            assertThat(byId.getValue("custom:pub").isVisibleInMySounds).isTrue()
+        }
+
+    @Test
+    fun `migrateVisibilityIfNeeded runs at most once so a re-shown audio is not re-hidden`() =
+        runTest {
+            repo.save(testSound("priv", "priv.mp3"))
+            repo.migrateVisibilityIfNeeded(privateOnlyIds = setOf("custom:priv"))
+            // User later chooses to show it in My Sounds again.
+            repo.saveVisibility("custom:priv", "priv", isVisibleInMySounds = true)
+
+            // A second migration pass (next launch) must NOT re-hide it — the one-shot guard wins.
+            repo.migrateVisibilityIfNeeded(privateOnlyIds = setOf("custom:priv"))
+
+            assertThat(
+                repo.sounds
+                    .first()
+                    .first { it.id == "custom:priv" }
+                    .isVisibleInMySounds,
+            ).isTrue()
+        }
 }

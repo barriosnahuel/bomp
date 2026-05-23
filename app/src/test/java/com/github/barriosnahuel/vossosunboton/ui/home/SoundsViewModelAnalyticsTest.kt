@@ -54,6 +54,9 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
             com.github.barriosnahuel.vossosunboton.feature.vault
                 .VaultFilterStore(ApplicationProvider.getApplicationContext())
                 .clearForTest()
+            com.github.barriosnahuel.vossosunboton.feature.collections
+                .DualHomeCoachStore(ApplicationProvider.getApplicationContext())
+                .clearForTest()
         }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
@@ -86,6 +89,18 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
         val event = fake.assertEmitted("pin_toggle")
         assertThat(event.params["pinned"]).isEqualTo(true)
+    }
+
+    @Test
+    fun `setAudioVisibleInMySounds emits visibility_toggle with the resulting state`() {
+        val viewModel = givenAViewModel()
+        val sound = testSound("test", file = "test.mp3")
+        viewModel.injectSounds(listOf(sound))
+
+        viewModel.setAudioVisibleInMySounds(sound.id, sound.name, visible = false)
+
+        val event = fake.assertEmitted("visibility_toggle")
+        assertThat(event.params["visible"]).isEqualTo(false)
     }
 
     @Test
@@ -595,6 +610,41 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
         val event = fake.assertEmitted("collection_audio_toggle")
         assertThat(event.params["assigned"]).isEqualTo(false)
+    }
+
+    @Test
+    fun `applyAssignment emits CollectionAudioToggle for a staged add and bumps lifetime`() {
+        val viewModel = givenAViewModel()
+        val sound = testSound("filed", "filed.mp3")
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
+        }
+        val created =
+            runBlocking {
+                viewModel
+                    .createCollection(
+                        "Recetas",
+                        com.github.barriosnahuel.vossosunboton.model.CollectionAccess.PUBLIC,
+                        source = "manage",
+                    ).getOrThrow()
+            }
+        runBlocking { viewModel.collections.first { col -> col.any { it.id == created.id } } }
+
+        // Transactional commit ("Listo") with one staged public tag.
+        viewModel.applyAssignment(
+            audioId = sound.id,
+            name = sound.name,
+            publicCollectionIds = setOf(created.id),
+            privateCollectionIds = emptySet(),
+            isVisibleInMySounds = true,
+        )
+        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
+        runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.contains(sound.id) } }
+
+        val event = fake.assertEmitted("collection_audio_toggle")
+        assertThat(event.params["assigned"]).isEqualTo(true)
+        assertThat(event.params["scope"]).isEqualTo("public")
+        assertThat(fake.userProperties[AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS]).isEqualTo("1")
     }
 
     @Test

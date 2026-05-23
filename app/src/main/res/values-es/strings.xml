@@ -137,7 +137,7 @@
     </plurals>
     <string name="app_collection_sheet_error_name_taken">Ya tenés una colección con ese nombre.</string>
     <string name="app_collection_sheet_name_counter">%1$d / %2$d</string>
-    <string name="app_collection_sheet_private_disclaimer">Las colecciones del Baúl se quedan en este teléfono y te piden la huella cada vez que las abrís.</string>
+    <string name="app_collection_sheet_private_disclaimer">Las colecciones del Baúl te piden la huella cada vez que las abrís.</string>
 
     <!-- Diálogo de confirmación de borrado -->
     <string name="app_collection_delete_dialog_title">¿Eliminar %1$s?</string>
@@ -158,10 +158,20 @@
     <string name="app_my_sounds_filter_empty_collection_headline">Acá no hay nada todavía.</string>
     <string name="app_my_sounds_filter_empty_collection_body">Agregá un Bomp a %1$s desde su menú Más.</string>
 
-    <!-- Long-press de un audio — "Agregar a colección" + sheet selector -->
-    <string name="app_audio_menu_add_to_collection">Agregar a colección</string>
-    <string name="app_assign_collection_sheet_title">Agregar a una colección</string>
+    <!-- Long-press de un audio — etiqueta única neutral (agregar/quitar/visibilidad) + sheet -->
+    <string name="app_audio_menu_add_to_collection">Asignar a colecciones</string>
+    <string name="app_assign_collection_sheet_title_named">Asignar «%1$s»</string>
+    <string name="app_assign_collection_sheet_subtitle">Puede vivir en varios lugares a la vez.</string>
     <string name="app_assign_collection_sheet_done">Listo</string>
+    <!-- Toggle "Visible en Mis Bomps" (ADR 0012) — presencia explícita en Mis Bomps -->
+    <string name="app_assign_visible_label">Visible en Mis Bomps</string>
+    <string name="app_assign_visible_caption_off">Solo lo encontrás en el Baúl.</string>
+    <string name="app_assign_visible_off_blocked">Primero ponelo en una colección del Baúl para sacarlo de Mis Bomps.</string>
+    <!-- Coach dual-home (primera vez) + snackbar "lo moviste al Baúl" (ADR 0012) -->
+    <string name="app_assign_dual_home_coach_title">Lo vas a encontrar en los dos lados.</string>
+    <string name="app_assign_dual_home_coach_sub">Sigue en Mis Bomps.</string>
+    <string name="app_assign_dual_home_coach_action">Entendí</string>
+    <string name="app_assign_moved_to_vault_message">Lo moviste al Baúl.</string>
 
     <!-- Header del filtro activo (debajo de los chips en Mis audios y Baúl) -->
     <string name="app_active_filter_header_all_my_sounds">Todos los audios · %1$d</string>

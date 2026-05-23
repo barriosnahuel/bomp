@@ -24,6 +24,7 @@ object AnalyticsParam {
     const val GRANTED = "granted"
     const val ASSIGNED = "assigned"
     const val PINNED = "pinned"
+    const val VISIBLE = "visible"
     const val SURFACE = "surface"
     const val QUERY_LENGTH = "query_length"
     const val FIELD = "field"
