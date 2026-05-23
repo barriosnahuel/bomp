@@ -142,6 +142,25 @@ Name the alpha (shared: ui/theme/Alpha.kt; one-off: a private const next to the 
 fi
 
 # ============================================================================
+# ADR 0010 — docs/adr/0010-button-typology.md
+# Name-ban on banned button composables in component code: OutlinedButton,
+# ElevatedButton, FilledTonalButton. They default to the secondary* roles, which
+# collapse to ~1.1-1.3:1 on `surface` (the #1170 dark-mode CTA bug). Filled-primary
+# is `Button` (primaryContainer); secondary is `TextButton` (primary). Honest as a
+# name-ban now that GratitudeSection migrated off its recolored FilledTonalButton.
+# Reuses $COLOR_DIRS (feature/ + ui/); ui/theme/ exempt; escape hatch `// button-ok`.
+# ============================================================================
+bad_button=$(
+    grep -rnE --include="*.kt" '(OutlinedButton|ElevatedButton|FilledTonalButton)\(' $COLOR_DIRS 2>/dev/null \
+        | grep -v '/ui/theme/' | grep -vF '// button-ok' || true
+)
+if [ -n "$bad_button" ]; then
+    fail "ADR 0010 broken: banned button composable in component code:
+$bad_button
+Use Button (filled-primary, primaryContainer) or TextButton (secondary, primary) per the typology. OutlinedButton/ElevatedButton/FilledTonalButton default to secondary* roles that collapse to ~1:1 on surface. Supersede ADR 0010, or justify a one-off with a trailing // button-ok. See CLAUDE.md § Design system → Button typology."
+fi
+
+# ============================================================================
 # CLAUDE.md size budget — see CLAUDE.md § "What goes in this file"
 # Loaded into every Claude Code context window; performance degrades above 40K.
 # Measured in bytes (wc -c): portable and deterministic, and a conservative
