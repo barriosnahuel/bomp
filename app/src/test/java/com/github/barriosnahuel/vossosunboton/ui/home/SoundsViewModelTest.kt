@@ -224,6 +224,36 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `seekTo with soundId moves the player and updates live progress while playing`() {
+        every { PlayerControllerFactory.instance.seekTo(any()) } answers { nothing }
+        val viewModel = givenAViewModel()
+        val sound = testSound("test", rawRes = 1)
+        viewModel.onPlayerStart(sound, durationMs = 10_000)
+
+        viewModel.seekTo(5_000, sound.id)
+
+        verify { PlayerControllerFactory.instance.seekTo(5_000) }
+        assertThat(viewModel.playbackProgress.value?.positionMs).isEqualTo(5_000)
+    }
+
+    @Test
+    fun `seekTo with soundId updates the retained position while paused (back-to-start)`() {
+        every { PlayerControllerFactory.instance.seekTo(any()) } answers { nothing }
+        val viewModel = givenAViewModel()
+        val sound = testSound("test", rawRes = 1)
+        viewModel.onPlayerStart(sound, durationMs = 10_000)
+        viewModel.onPlayerPause(sound, positionMs = 3_500, durationMs = 10_000)
+
+        viewModel.seekTo(0, sound.id)
+
+        verify { PlayerControllerFactory.instance.seekTo(0) }
+        // Paused, so live progress stays null; the retained position (which the wave + a later
+        // resume read) moves to the start.
+        assertThat(viewModel.playbackProgress.value).isNull()
+        assertThat(viewModel.pausedProgress.value[sound.id]?.positionMs).isEqualTo(0)
+    }
+
+    @Test
     fun `playOrStop when sound is not playing calls startPlayingSound`() {
         every { PlayerControllerFactory.instance.startPlayingSound(any(), any()) } answers { nothing }
         val viewModel = givenAViewModel()
