@@ -7,23 +7,19 @@ package com.github.barriosnahuel.vossosunboton.feature.vault
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,16 +34,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -70,16 +70,11 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
  * play on any audio in the Vault tab (`CollectionPlaybackUI.IMMERSIVE`); the Vault list itself is
  * unchanged (same `SoundsList` cards as My Sounds).
  *
- * Renders only the four facts a Vault audio actually carries — name, date, duration and the private
- * collection it belongs to. The Claude Design mock additionally shows a hand-written caption, an
- * event eyebrow and a free-text subtitle; the Vault stores none of those, so they are deliberately
- * omitted (mirroring `VaultEmptyState`, which dropped the polaroid for the same reason). The hero
- * photo is replaced by a decorative gradient tile, and the waveform is synthetic (the player exposes
- * position/duration, not amplitude samples) — both follow the design's own synthetic approach.
- *
- * Colors stay on the ink × acid `AppTheme` roles (no warm literals, no `isSystemInDarkTheme`),
- * matching the Vault-list decision to render against the real theme: dark mode reads like the mock,
- * light mode follows the theme. Always-dark, if wanted, is a follow-up theming choice.
+ * Layout: the three facts a Vault audio carries — collection, date, name — are grouped in the top
+ * half; the audio's real waveform sits in the bottom half; the transport (back-to-start + play)
+ * pins to the very bottom. Colors stay on the always-dark [ImmersiveListenTheme] (status-bar icon
+ * legibility + design intent). The Claude Design mock additionally shows a polaroid, a caption and
+ * a subtitle; the Vault stores none of those, so they are omitted.
  */
 @Composable
 internal fun ImmersiveListenHost(
@@ -113,7 +108,7 @@ internal fun ImmersiveListenHost(
         // still honours back instead of flashing the Vault list behind it.
         ImmersiveBackdrop(modifier = Modifier.predictiveBackTransition(onBack = onBack)) {
             Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-                ImmersiveTopBar(collectionLabel = "", onBack = onBack)
+                ImmersiveTopBar(onBack = onBack)
             }
         }
         return
@@ -145,12 +140,14 @@ internal fun ImmersiveListenHost(
         progressFraction = fraction,
         peaks = peaks,
         onPlayPause = { viewModel.playOrStop(sound.copy(isPlaying = isThisPlaying)) },
+        onRestart = { viewModel.seekTo(0, soundId) },
+        onSeek = { f -> durationMs?.let { d -> viewModel.seekTo((f * d).toInt(), soundId) } },
         onBack = onBack,
     )
 }
 
 /**
- * Resolves the private-collection label for the top bar. Prefers the active Vault filter chip when
+ * Resolves the private-collection label for the header. Prefers the active Vault filter chip when
  * the audio belongs to it; otherwise the first private collection the audio is in (an audio can be
  * tagged to several). System "Baúl" resolves to its locale-aware label.
  */
@@ -170,6 +167,7 @@ internal fun resolveListenCollectionLabel(
 }
 
 @Composable
+@Suppress("LongParameterList")
 internal fun ImmersiveListenScreen(
     title: String,
     collectionLabel: String,
@@ -180,6 +178,8 @@ internal fun ImmersiveListenScreen(
     progressFraction: Float,
     peaks: FloatArray?,
     onPlayPause: () -> Unit,
+    onRestart: () -> Unit,
+    onSeek: (Float) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -187,37 +187,42 @@ internal fun ImmersiveListenScreen(
         // safeDrawingPadding keeps the content clear of the status/navigation bars while the
         // backdrop gradient still bleeds full-screen behind them (edge-to-edge).
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-            ImmersiveTopBar(collectionLabel = collectionLabel, onBack = onBack)
-            // `heightIn(min = maxHeight)` + `verticalScroll` keeps the spread layout (hero up top,
-            // transport pinned low) when the content fits, but lets it scroll instead of clipping on
-            // short screens or at large accessibility font scales.
-            BoxWithConstraints(
+            ImmersiveTopBar(onBack = onBack)
+            Column(
                 modifier =
                     Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.XL),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = maxHeight)
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = Spacing.XL, vertical = Spacing.LG),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    MemoryTile()
-                    ImmersiveTitleBlock(title = title, dateLabel = dateLabel)
-                    ImmersiveTransport(
-                        positionMs = positionMs,
-                        durationMs = durationMs,
-                        isPlaying = isPlaying,
-                        progressFraction = progressFraction,
-                        peaks = peaks,
-                        onPlayPause = onPlayPause,
-                    )
+                // Top half: collection · date · name, grouped close together.
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    ImmersiveFields(collectionLabel = collectionLabel, dateLabel = dateLabel, title = title)
                 }
+                // Bottom half: the real waveform (scrubbable) + the position / duration readout.
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        ImmersiveWaveform(
+                            progressFraction = progressFraction,
+                            peaks = peaks,
+                            onSeek = onSeek,
+                            modifier = Modifier.fillMaxWidth().height(WAVEFORM_HEIGHT),
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.SM))
+                        TimeReadout(positionMs = positionMs, durationMs = durationMs)
+                    }
+                }
+                ImmersiveControls(isPlaying = isPlaying, onRestart = onRestart, onPlayPause = onPlayPause)
+                Spacer(modifier = Modifier.height(Spacing.MD))
+                Text(
+                    text = stringResource(R.string.app_vault_immersive_listen_only_label).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = EYEBROW_LETTER_SPACING,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(Spacing.LG))
             }
         }
     }
@@ -258,10 +263,7 @@ private fun ImmersiveBackdrop(
 }
 
 @Composable
-private fun ImmersiveTopBar(
-    collectionLabel: String,
-    onBack: () -> Unit,
-) {
+private fun ImmersiveTopBar(onBack: () -> Unit) {
     Row(
         modifier =
             Modifier
@@ -277,58 +279,38 @@ private fun ImmersiveTopBar(
                 tint = MaterialTheme.colorScheme.onBackground,
             )
         }
-        Column(
-            modifier = Modifier.weight(1f),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             Text(
                 text = stringResource(R.string.app_vault_immersive_mode_label).uppercase(),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 letterSpacing = EYEBROW_LETTER_SPACING,
             )
-            if (collectionLabel.isNotEmpty()) {
-                Text(
-                    text = collectionLabel.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = EYEBROW_LETTER_SPACING,
-                )
-            }
         }
-        // Balances the back button so the title column stays centered. No overflow menu: listen
-        // mode is listen-only and exposes no per-audio actions (share is forbidden in the Vault).
+        // Balances the back button so the title stays centered. No overflow menu: listen mode is
+        // listen-only and exposes no per-audio actions (share is forbidden in the Vault).
         Spacer(modifier = Modifier.width(TOP_BAR_ICON_SLOT))
     }
 }
 
 @Composable
-private fun MemoryTile() {
-    // Decorative hero standing in for the mock's polaroid. The Vault stores no images, so this is a
-    // palette gradient, not a (fake) photo — and carries no caption. Purely decorative => no
-    // contentDescription.
-    val accent = MaterialTheme.colorScheme.primary
-    val surface = MaterialTheme.colorScheme.surfaceVariant
-    val tileBrush =
-        remember(accent, surface) {
-            Brush.linearGradient(listOf(accent.copy(alpha = TILE_ACCENT_ALPHA), surface))
-        }
-    Box(
-        modifier =
-            Modifier
-                .rotate(MEMORY_TILE_TILT)
-                .size(MEMORY_TILE_SIZE)
-                .clip(RoundedCornerShape(Spacing.MD))
-                .background(tileBrush),
-    )
-}
-
-@Composable
-private fun ImmersiveTitleBlock(
-    title: String,
+private fun ImmersiveFields(
+    collectionLabel: String,
     dateLabel: String?,
+    title: String,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.SM),
+    ) {
+        if (collectionLabel.isNotEmpty()) {
+            Text(
+                text = collectionLabel.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = EYEBROW_LETTER_SPACING,
+            )
+        }
         if (dateLabel != null) {
             Text(
                 text = dateLabel,
@@ -336,7 +318,6 @@ private fun ImmersiveTitleBlock(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = EYEBROW_LETTER_SPACING,
             )
-            Spacer(modifier = Modifier.height(Spacing.SM))
         }
         Text(
             text = title,
@@ -349,40 +330,47 @@ private fun ImmersiveTitleBlock(
 }
 
 @Composable
-private fun ImmersiveTransport(
+private fun TimeReadout(
     positionMs: Int,
     durationMs: Int?,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = formatDuration(positionMs),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = formatDuration(durationMs ?: 0),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun ImmersiveControls(
     isPlaying: Boolean,
-    progressFraction: Float,
-    peaks: FloatArray?,
+    onRestart: () -> Unit,
     onPlayPause: () -> Unit,
 ) {
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.LG),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.XL, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        ImmersiveWaveform(
-            progressFraction = progressFraction,
-            peaks = peaks,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(WAVEFORM_HEIGHT),
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = formatDuration(positionMs),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = formatDuration(durationMs ?: 0),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // Skip-to-start on the LEFT — the universal transport convention (music/podcast players),
+        // not a square "stop" on the right. Secondary action: plain icon button, play stays the
+        // prominent filled control.
+        IconButton(onClick = onRestart, modifier = Modifier.size(RESTART_BUTTON_SIZE)) {
+            Icon(
+                painter = rememberVectorPainter(AppIcons.SkipPrevious),
+                contentDescription = stringResource(R.string.app_vault_immersive_restart),
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(RESTART_ICON_SIZE),
             )
         }
         FilledIconButton(
@@ -405,13 +393,6 @@ private fun ImmersiveTransport(
                 modifier = Modifier.size(TRANSPORT_ICON_SIZE),
             )
         }
-        Text(
-            text = stringResource(R.string.app_vault_immersive_listen_only_label).uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            letterSpacing = EYEBROW_LETTER_SPACING,
-            textAlign = TextAlign.Center,
-        )
     }
 }
 
@@ -419,15 +400,43 @@ private fun ImmersiveTransport(
 private fun ImmersiveWaveform(
     progressFraction: Float,
     peaks: FloatArray?,
+    onSeek: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Real amplitude envelope from [WaveformExtractor]. Until it arrives (or if decoding failed)
-    // `peaks` is null and we draw a neutral flat baseline — never a fake-looking wave. No animation,
-    // so the screen stays idle for `waitForIdle()`-based tests. Played bars use the accent role.
+    // `peaks` is null and we draw a neutral flat baseline — never a fake-looking wave. Dragging
+    // horizontally scrubs: the fill follows the finger and `onSeek` fires the fraction on release.
     val playedColor = MaterialTheme.colorScheme.primary
     val unplayedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = WAVEFORM_UNPLAYED_ALPHA)
     val barCount = peaks?.size ?: WAVEFORM_BARS
-    Canvas(modifier = modifier) {
+    val scrubberLabel = stringResource(R.string.app_vault_immersive_waveform)
+    var scrub by remember { mutableStateOf<Float?>(null) }
+    val displayFraction = (scrub ?: progressFraction).coerceIn(0f, 1f)
+    Canvas(
+        modifier =
+            modifier
+                .semantics {
+                    contentDescription = scrubberLabel
+                    progressBarRangeInfo = ProgressBarRangeInfo(displayFraction, 0f..1f)
+                    setProgress { target ->
+                        onSeek(target.coerceIn(0f, 1f))
+                        true
+                    }
+                }.pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { offset -> scrub = (offset.x / size.width.toFloat()).coerceIn(0f, 1f) },
+                        onHorizontalDrag = { change, _ ->
+                            change.consume()
+                            scrub = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        },
+                        onDragEnd = {
+                            scrub?.let(onSeek)
+                            scrub = null
+                        },
+                        onDragCancel = { scrub = null },
+                    )
+                },
+    ) {
         val slot = size.width / barCount
         val barWidth = slot * WAVEFORM_BAR_FILL
         val centerY = size.height / 2f
@@ -435,7 +444,7 @@ private fun ImmersiveWaveform(
         for (i in 0 until barCount) {
             val amplitude = peaks?.getOrNull(i) ?: WAVEFORM_PLACEHOLDER_FRACTION
             val barHeight = amplitude.coerceIn(WAVEFORM_MIN_FRACTION, 1f) * size.height
-            val played = i.toFloat() / barCount < progressFraction
+            val played = i.toFloat() / barCount < displayFraction
             val x = i * slot + (slot - barWidth) / 2f
             drawRoundRect(
                 color = if (played) playedColor else unplayedColor,
@@ -453,14 +462,13 @@ private const val WAVEFORM_BAR_FILL = 0.45f
 private const val WAVEFORM_MIN_FRACTION = 0.06f
 private const val WAVEFORM_PLACEHOLDER_FRACTION = 0.12f
 private const val WAVEFORM_UNPLAYED_ALPHA = 0.30f
-private val WAVEFORM_HEIGHT = 96.dp
-private val MEMORY_TILE_SIZE = 188.dp
-private const val MEMORY_TILE_TILT = -3f
-private const val TILE_ACCENT_ALPHA = 0.55f
+private val WAVEFORM_HEIGHT = 120.dp
 private val TOP_BAR_HEIGHT = 64.dp
 private val TOP_BAR_ICON_SLOT = 48.dp
 private val TRANSPORT_BUTTON_SIZE = 80.dp
 private val TRANSPORT_ICON_SIZE = 36.dp
+private val RESTART_BUTTON_SIZE = 56.dp
+private val RESTART_ICON_SIZE = 30.dp
 private val EYEBROW_LETTER_SPACING = 2.sp
 
 // Radial-glow stops + alphas — mirror VaultEmptyState's emotional wash (low on purpose).

@@ -90,6 +90,34 @@ public object AppIcons {
             }.build()
     }
 
+    /**
+     * Material "skip_previous" (⏮): a left bar + a left-pointing triangle. Bundled like [Pause]/[Stop]
+     * because material-icons-extended isn't a dependency. Used as the "back to start" transport
+     * control in immersive listen mode.
+     */
+    val SkipPrevious: ImageVector by lazy {
+        ImageVector
+            .Builder(
+                name = "SkipPrevious",
+                defaultWidth = 24.dp,
+                defaultHeight = 24.dp,
+                viewportWidth = 24f,
+                viewportHeight = 24f,
+            ).apply {
+                path(fill = SolidColor(Color.Black)) {
+                    moveTo(6f, 6f)
+                    horizontalLineToRelative(2f)
+                    verticalLineToRelative(12f)
+                    horizontalLineToRelative(-2f)
+                    close()
+                    moveTo(18f, 6f)
+                    lineTo(9.5f, 12f)
+                    lineTo(18f, 18f)
+                    close()
+                }
+            }.build()
+    }
+
     val PushPin: ImageVector by lazy {
         ImageVector
             .Builder(

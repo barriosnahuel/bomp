@@ -12,7 +12,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeRight
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -23,6 +24,7 @@ import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerF
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.home.cancelAndJoinAll
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
+import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
@@ -68,6 +70,8 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
         durationMs: Int? = 98_000,
         isPlaying: Boolean = false,
         onPlayPause: () -> Unit = {},
+        onRestart: () -> Unit = {},
+        onSeek: (Float) -> Unit = {},
         onBack: () -> Unit = {},
     ) {
         composeTestRule.setContent {
@@ -82,6 +86,8 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
                     progressFraction = 0.42f,
                     peaks = null,
                     onPlayPause = onPlayPause,
+                    onRestart = onRestart,
+                    onSeek = onSeek,
                     onBack = onBack,
                 )
             }
@@ -91,13 +97,12 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
     @Test
     fun `renders the four facts a vault audio carries`() {
         launchScreen()
-        // Collection sits in the fixed top bar; name/date/duration are in the scrollable body, so
-        // scroll to them (a no-op when the screen already fits) before asserting.
+        // Collection · date · name grouped up top; position / duration in the readout below the wave.
         composeTestRule.onNodeWithText("CARO").assertIsDisplayed()
-        composeTestRule.onNodeWithText("La risa de la abuela").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText("24 DEC 2024").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText("0:42").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText("1:38").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("La risa de la abuela").assertIsDisplayed()
+        composeTestRule.onNodeWithText("24 DEC 2024").assertIsDisplayed()
+        composeTestRule.onNodeWithText("0:42").assertIsDisplayed()
+        composeTestRule.onNodeWithText("1:38").assertIsDisplayed()
     }
 
     @Test
@@ -108,7 +113,6 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
             .assertIsDisplayed()
         composeTestRule
             .onNodeWithText(context.getString(R.string.app_vault_immersive_listen_only_label).uppercase())
-            .performScrollTo()
             .assertIsDisplayed()
     }
 
@@ -122,30 +126,51 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `transport shows pause while playing and play while paused`() {
+    fun `transport shows pause while playing`() {
         launchScreen(isPlaying = true)
-        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_pause)).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_pause)).assertIsDisplayed()
     }
 
     @Test
     fun `transport shows play while not playing`() {
         launchScreen(isPlaying = false)
-        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_play)).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_play)).assertIsDisplayed()
     }
 
     @Test
     fun `tapping the transport invokes onPlayPause`() {
         var tapped = false
         launchScreen(onPlayPause = { tapped = true })
-        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_play)).performScrollTo().performClick()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_play)).performClick()
         assertTrue(tapped)
+    }
+
+    @Test
+    fun `tapping back to start invokes onRestart`() {
+        var restarted = false
+        launchScreen(onRestart = { restarted = true })
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_vault_immersive_restart)).performClick()
+        assertTrue(restarted)
+    }
+
+    @Test
+    fun `dragging the waveform seeks on release`() {
+        var seeked: Float? = null
+        launchScreen(onSeek = { seeked = it })
+        composeTestRule
+            .onNodeWithContentDescription(context.getString(R.string.app_vault_immersive_waveform))
+            .performTouchInput { swipeRight() }
+        composeTestRule.waitForIdle()
+        // Released near the right edge → a fraction well into the second half of the clip.
+        assertThat(seeked).isNotNull()
+        assertThat(seeked!!).isAtLeast(0.5f)
+        assertThat(seeked!!).isAtMost(1f)
     }
 
     @Test
     fun `tapping back invokes onBack`() {
         var backed = false
         launchScreen(onBack = { backed = true })
-        // Back lives in the fixed top bar (not the scrollable body), so no scroll needed.
         composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_vault_immersive_back)).performClick()
         assertTrue(backed)
     }
@@ -153,7 +178,7 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
     @Test
     fun `renders without a date when dateLabel is null`() {
         launchScreen(dateLabel = null)
-        composeTestRule.onNodeWithText("La risa de la abuela").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("La risa de la abuela").assertIsDisplayed()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

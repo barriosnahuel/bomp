@@ -738,6 +738,23 @@ class SoundsViewModel(
         _playbackProgress.update { it?.copy(positionMs = positionMs) }
     }
 
+    /**
+     * Seek used by the immersive listen player (waveform scrub + "back to start"). Unlike the
+     * single-arg [seekTo] — which only the playing card uses — this also keeps a *paused* audio's
+     * retained position in sync ([pausedProgress]) so the wave and time reflect the new spot. The
+     * MediaPlayer head moves either way, so a later resume (or preempt) continues from there.
+     */
+    fun seekTo(
+        positionMs: Int,
+        soundId: String,
+    ) {
+        PlayerControllerFactory.instance.seekTo(positionMs)
+        _playbackProgress.update { it?.copy(positionMs = positionMs) }
+        _pausedProgress.update { current ->
+            current[soundId]?.let { current + (soundId to it.copy(positionMs = positionMs)) } ?: current
+        }
+    }
+
     fun share(sound: Sound) {
         viewModelScope.launch {
             // applicationContext (via getApplication()) is enough: file resolution + FileProvider

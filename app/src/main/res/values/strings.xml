@@ -125,6 +125,8 @@
     <string name="app_vault_immersive_mode_label">Listen mode</string>
     <string name="app_vault_immersive_listen_only_label">Not shared · Listen only</string>
     <string name="app_vault_immersive_back">Back</string>
+    <string name="app_vault_immersive_restart">Back to start</string>
+    <string name="app_vault_immersive_waveform">Playback position</string>
 
     <!-- Create / edit collection sheet -->
     <string name="app_collection_sheet_title_new_public">New collection</string>
