@@ -111,15 +111,35 @@ For **production bugs reported by users** (not local-repro), scope frequency, af
 
 ### Features — test coverage procedure
 
-The trigger lives in CLAUDE.md § *Features — test coverage workflow*. The minimum scenario set you agree on before writing production code:
+The trigger and the three-axis gate live in CLAUDE.md § *Features — test coverage workflow*. This is the worked template — produce all three axes before writing production code. They cover the bug classes a pre-PR checklist structurally can't: state-model gaps and device-only gaps surface in manual testing precisely because they were never enumerated in the plan.
 
-1. **Happy path** — works as intended under normal conditions.
-2. **Failure modes at system boundaries** — audio I/O, MediaPlayer errors, permissions denied, Play feature delivery failures.
-3. **Smoke test** — see CLAUDE.md § *Activity smoke tests*.
+**(a) Platform surfaces touched.** For each Android surface the feature hits, name the known gotcha and read the relevant ADR/skill first (ADRs are read-on-demand — nothing auto-loads them):
 
-Implement tests **alongside** the feature, not after. Any scenario not listed before starting is out of scope for the current PR — note in the PR description.
+| Surface | Gotcha | Source |
+|---|---|---|
+| `resolveActivity()` / implicit intent | API 30+ package visibility needs a manifest `<queries>` entry, or it returns null and the affordance silently never appears | — |
+| `singleTask` / exported Activity | a new intent on the live instance needs `onNewIntent`, or the screen shows the previous intent's stale data | — |
+| full-screen / immersive UI | content draws under the status/nav bars; system-bar icon legibility over your own background | `edge-to-edge` skill |
+| new color role / control fill | must map to a semantic role from `AppTheme.kt`; contrast | § *Design system*, ADR 0010 |
 
-Skip a scenario only when it lives exclusively in platform wiring not exercisable by unit / Robolectric tests. Note why.
+**(b) State & transition model.** Enumerate every state a new user-facing control can be in and every transition between them, then derive one test per transition. The transitions that have bitten us:
+
+- **Rapid-repeat of an action** — deleting several items before the undo snackbar fades; only the last stuck (#1174).
+- **A new intent while the screen is open** — a share arriving over an open Edit screen showed stale data (#1165).
+- **Resource state mid-transition** — preview audio still playing when the save-success morph appeared (#1183 / `bbaa669`).
+- **Concurrent reactive re-emit** — a DataStore write re-ran `loadSounds` and repopulated a cache just mutated (#1174).
+- **What's rendered/seekable behind a dismiss gesture** — predictive-back revealed a bare window because the base wasn't composed behind (#1171 / `5404b7a`).
+
+Check each state against CLAUDE.md § *Stateful Composables* (durable state → `rememberSaveable`; the focus incantation). Agree the minimum scenarios up front (happy path + these boundaries + smoke test, § *Activity smoke tests*); implement tests **alongside** the feature, not after. Anything unlisted is out of scope — note in the PR.
+
+**(c) Device-only verification — route to the existing guardrail first.** Don't hand-check what tooling already covers:
+
+- **Palette contrast** is covered by `AppThemeContrastTest` (critical role pairs, both modes) + the `Color(0x…)` / magic-alpha grep in `check-adr-invariants.sh`. Adding a *new* designed role pair → add its assertion to `AppThemeContrastTest`; don't re-verify existing ones by hand.
+- **Residue those can't see** → flag it: inset overlap, system-bar icon legibility over a gradient (forced-dark fix, #1183), animation/scrub visual behavior (the scrubber visually reset though seek worked, #1183), a control fill on a non-bar surface collapsing to invisible (dark-mode CTA, #1170 → ADR 0010). Convert to an instrumented assertion where feasible (#1183 added a status-bar-inset guard); else record a named manual check — interactive: a pre-merge checklist item; overnight: a *manual verification suggested* line in the PR's `### Code review tips`.
+
+**Acceptance criteria are concrete** for any generated or derived content, so a plausible-looking stub doesn't pass self-review — e.g. the immersive waveform shipped synthetic before the real amplitude envelope was specified (#1183). Define "done" in the plan.
+
+Skip an axis item only when it lives exclusively in platform wiring not exercisable by unit / Robolectric tests. Note why.
 
 ### Activity smoke tests
 

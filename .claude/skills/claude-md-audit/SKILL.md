@@ -26,6 +26,7 @@ Flag and stop if proposed changes touch these — they are pure write-time invar
 
 - § Sources of truth
 - § Project-specific overrides
+- § Features — test coverage workflow (the three-axis planning gate is a write-time forcing rule; trimming it reopens the manual-testing leak)
 - § Security boundaries
 - § Accessibility (WCAG 2.2 AA)
 - § Design system (role → intent table)
