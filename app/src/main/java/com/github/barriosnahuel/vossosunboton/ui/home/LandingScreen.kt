@@ -81,6 +81,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun LandingScreen(viewModel: SoundsViewModel) {
     val sounds by viewModel.sounds.collectAsState()
+    // Full catalog across every surface (custom + bundled), independent of the visible tab — the
+    // Search FAB gates on this because search itself is global. `sounds` is the tab-filtered list
+    // and would wrongly hide the FAB on a sparse tab (e.g. My Sounds with a couple of audios) while
+    // the rest of the library is searchable.
+    val library by viewModel.library.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     val hasBundledSounds by viewModel.hasBundledSounds.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
@@ -161,6 +166,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         modifier = if (subScreenOpen) Modifier.clearAndSetSemantics {} else Modifier,
         viewModel = viewModel,
         sounds = sounds,
+        librarySize = library.size,
         selectedTab = selectedTab,
         hasBundledSounds = hasBundledSounds,
         playbackProgress = playbackProgress,
@@ -315,6 +321,7 @@ private fun ScaffoldedLanding(
     modifier: Modifier = Modifier,
     viewModel: SoundsViewModel,
     sounds: List<Sound>,
+    librarySize: Int,
     selectedTab: AppTab,
     hasBundledSounds: Boolean,
     playbackProgress: PlaybackProgress?,
@@ -361,8 +368,10 @@ private fun ScaffoldedLanding(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            // Search FAB only renders on the sound-list tabs; Vault has its own FAB.
-            if (selectedTab != AppTab.VAULT && sounds.size >= SEARCH_FAB_MIN_SOUNDS) {
+            // Search FAB only renders on the sound-list tabs; Vault has its own FAB. Gated on the
+            // global library size (not the tab-filtered `sounds`) because search spans every
+            // surface — a sparse current tab must not hide a FAB that searches the whole catalog.
+            if (selectedTab != AppTab.VAULT && librarySize >= SEARCH_FAB_MIN_SOUNDS) {
                 FloatingActionButton(
                     onClick = { viewModel.showSearch() },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
