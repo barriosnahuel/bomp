@@ -188,9 +188,20 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     fun `togglePin updates current_pinned user property to the count of pinned sounds`() {
         val viewModel = givenAViewModel()
         val sound = testSound("test", file = "test.mp3")
-        viewModel.injectSounds(listOf(sound))
+        // Persist + await the audio reaching allSoundsCache via the reactive loadSounds BEFORE
+        // toggling. togglePin derives current_pinned from allSoundsCache (SoundsViewModel.kt); a
+        // not-yet-arrived loadSounds on a loaded CI machine resets that cache to the empty repo, so
+        // the toggle counts 0 and the assertion flakes (CLAUDE.md § JVM tests — await every async
+        // input). Mirrors the Vault-bucket tests below; replaces the reflection-injection race.
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext()).save(sound)
+            viewModel.library.first { lib -> lib.any { it.id == sound.id } }
+        }
 
         viewModel.togglePin(sound)
+        // Await the asserted property itself, not a proxy: savePin re-emits through the reactive
+        // collector and recomputes current_pinned, converging on "1" once the toggle is committed.
+        runBlocking { awaitUserProperty(fake, AnalyticsUserProperty.CURRENT_PINNED, "1") }
 
         assertThat(fake.userProperties[AnalyticsUserProperty.CURRENT_PINNED]).isEqualTo("1")
     }
