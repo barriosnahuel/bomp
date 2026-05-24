@@ -84,36 +84,39 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `Search FAB is hidden when sound list is empty`() {
+    fun `Search FAB is hidden when the global library is empty`() {
         val viewModel = givenAViewModel()
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
-        viewModel.injectSounds(emptyList())
+        viewModel.injectLibrary(emptyList())
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("Search").assertDoesNotExist()
     }
 
     @Test
-    fun `Search FAB is hidden when sound list has 6 items`() {
+    fun `Search FAB is hidden when the global library has 6 sounds`() {
         val viewModel = givenAViewModel()
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
-        viewModel.injectSounds(stubSounds(count = 6))
+        viewModel.injectLibrary(stubSounds(count = 6))
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("Search").assertDoesNotExist()
     }
 
     @Test
-    fun `Search FAB is shown when sound list has 7 items`() {
+    fun `Search FAB is shown when the global library has 7 sounds`() {
         val viewModel = givenAViewModel()
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
-        viewModel.injectSounds(stubSounds(count = 7))
+        // `_sounds` (the My Sounds tab list) stays empty here — nothing custom is seeded — so this
+        // also pins the headline behaviour: the FAB shows on an otherwise-empty My Sounds tab once
+        // the *global* library crosses the threshold, which the old per-tab gate would have hidden.
+        viewModel.injectLibrary(stubSounds(count = 7))
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("Search").assertIsDisplayed()
@@ -142,11 +145,15 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
             .let { (it.get(this) as MutableStateFlow<Boolean>).value = value }
     }
 
-    private fun SoundsViewModel.injectSounds(value: List<Sound>) {
+    // The Search FAB gates on the global library (allSoundsCache), not the tab-filtered `_sounds` —
+    // search spans every surface. The debug build's loadSounds primes allSoundsCache with the
+    // bundled catalog, so injecting AFTER waitForIdle (once that cascade settles, same reasoning as
+    // injectHasBundledSounds) is the only way to drive the count below the threshold.
+    private fun SoundsViewModel.injectLibrary(value: List<Sound>) {
         SoundsViewModel::class.java
-            .getDeclaredField("_sounds")
+            .getDeclaredField("allSoundsCache")
             .also { it.isAccessible = true }
-            // Safe: _sounds is always MutableStateFlow<List<Sound>> — type parameter erased at runtime
+            // Safe: allSoundsCache is always MutableStateFlow<List<Sound>> — type parameter erased at runtime
             .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = value }
     }
 

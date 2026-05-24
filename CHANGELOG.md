@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - New Bomp screen now flags when you already have a Bomp with the same name and lets you tap an inline play/stop toggle to hear that one before deciding — case-insensitive, trimmed; tap again while playing to stop and reset. Non-blocking: you can still save the duplicate (two Bomps can legitimately share a name)
 
 ### Fixed
+- The two gratitude buttons in the About screen now center their label when it wraps to a second line (e.g. "Invitame un cafecito", or any label at larger font sizes), instead of left-aligning the wrapped line
 - Audio preview card in Rename Bomp now advances the seek bar in real time during playback (was static)
 - Starting a preview while a Bomp from the Home list was playing would leave both audio sources playing at once; now starting a new preview cleanly stops the list playback (and vice versa)
 - Sharing a Bomp whose audio path can't be resolved by the FileProvider no longer crashes the app; the failure is reported to the user with a Snackbar and tracked as a non-fatal so it can be investigated
@@ -32,6 +33,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Audio preview no longer bleeds into the success confirmation when you save a new Bomp (or save a rename) while the preview is playing — the audio now stops the moment the confirmation appears
 - Sharing an audio into Bomp while a rename was left open in the background no longer drops you back into that unsaved rename screen with the wrong audio's data; the share now correctly opens the new-Bomp form for the incoming audio (anything you had typed in the unsaved rename is discarded since it was never saved)
 - Deleting several Bomps in a row (in My Sounds or the Vault) now removes all of them; previously only the most recent deletion stuck and the rest reappeared when the last undo snackbar faded or the list reloaded
+- Search results now carry an origin tag — the Bomp's collection, your Vault, or Explore for the bundled catalog — so matches that look alike across tabs are finally distinguishable (the tag had been announced but never appeared)
+- A Bomp's private collection name no longer appears on My Sounds or in search while the Vault is locked — private collection tags stay hidden until you unlock the Vault
 
 
 ### Changed
@@ -48,6 +51,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### For nerds 🤓
 
 #### Added
+- Enforce ADR 0010 button typology via `check-adr-invariants.sh` (CI job `adr-invariants`): a name-ban on `OutlinedButton`/`ElevatedButton`/`FilledTonalButton` in component code — they default to `secondary*` roles that collapse to ~1:1 contrast on `surface` (the dark-mode CTA bug, #1170). `GratitudeSection` migrated off its recolored `FilledTonalButton` to `Button` (same `primaryContainer` colors), clearing the one exception that previously blocked enforcement; `ui/theme/` exempt, `// button-ok` escape hatch
 - A **planning gate** for feature work — CLAUDE.md § *Features — test coverage workflow* now requires enumerating three axes before writing code: platform surfaces touched (+ the ADR/skill to read), the state/transition model (one test per transition), and device-only checks routed to existing guardrails first. Codifies the prevention for the bug classes that kept surfacing only in manual testing — stale-intent, rapid-repeat deletions, mid-transition playback, inset/legibility — across both ad-hoc and `/overnight-work` sessions; the `/claude-md-audit` skill now protects the section from being trimmed
 - `CollectionsRepository` + `Collection` model in `:model` (DataStore Preferences, JSON-encoded, in-memory cache, `ReplaceFileCorruptionHandler`). Mirrors `SoundsRepository` shape so the audit guards already in place (`adr-invariants`) keep applying. The `collections.preferences_pb`, `my-sounds-filter.preferences_pb` and `vault-filter.preferences_pb` stores are included in `app_backup_rules.xml` and `app_data_extraction_rules.xml` so the user's whole archive (Collections + Vault) survives an Auto Backup or device transfer; a new `BackupRulesTest` asserts the inclusion to catch silent regressions
 - Explicit `Sound.isVisibleInMySounds` flag ([ADR 0012](docs/adr/0012-explicit-my-sounds-visibility.md)) replaces the derived `inPrivate - inPublic` rule as the sole input to the My Sounds "Todo" projection (`SoundsViewModel.mySoundsProjection`). The search-with-Vault-locked gate and the Vault tab stay membership-based — visibility is "shown in the botonera", not "is private", so a cross-tagged Bomp never leaks into locked search. One-time guarded migration (`migrateVisibilityIfNeeded`, `encodeDefaults = false`) seeds existing Vault-only audios to hidden. New `DualHomeCoachStore` (backed up, asserted by `BackupRulesTest`) + `visibility_toggle` analytics event

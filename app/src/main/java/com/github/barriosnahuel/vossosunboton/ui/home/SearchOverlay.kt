@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
 import com.github.barriosnahuel.vossosunboton.ui.theme.MUTED_TEXT_ALPHA
@@ -86,6 +87,15 @@ fun SearchOverlay(
     onDelete: (Sound) -> Unit,
     showVaultUnlockCta: Boolean = false,
     onUnlockVault: () -> Unit = {},
+    // Per-audio reverse index of collection IDs, resolved against [allCollections] so each result
+    // shows where it lives (collection name, the Vault's localized name, or "Explore" for bundled
+    // audios). Default empty keeps the overlay renderable from previews/tests that don't wire it.
+    collectionsByAudio: Map<String, List<String>> = emptyMap(),
+    allCollections: List<Collection> = emptyList(),
+    // While the Vault session is locked, private-collection tags are suppressed so a cross-tagged
+    // result never leaks a private collection's name without authentication. Default false = safe
+    // (hide private) for callers that don't wire it.
+    vaultOpen: Boolean = false,
 ) {
     val displayState =
         when {
@@ -163,6 +173,9 @@ fun SearchOverlay(
                                     playbackProgress = playbackProgress,
                                     pausedProgress = pausedProgress,
                                     soundDurations = soundDurations,
+                                    collectionsByAudio = collectionsByAudio,
+                                    allCollections = allCollections,
+                                    vaultOpen = vaultOpen,
                                     onPlayClick = onPlayClick,
                                     onSeek = onSeek,
                                     onShareClick = onShareClick,
@@ -324,12 +337,18 @@ private fun SearchResultsList(
     playbackProgress: PlaybackProgress?,
     pausedProgress: Map<String, PlaybackProgress>,
     soundDurations: Map<String, Int>,
+    collectionsByAudio: Map<String, List<String>>,
+    allCollections: List<Collection>,
+    vaultOpen: Boolean,
     onPlayClick: (Sound) -> Unit,
     onSeek: (Int) -> Unit,
     onShareClick: (Sound) -> Unit,
     onPinClick: (Sound) -> Unit,
     onDelete: (Sound) -> Unit,
 ) {
+    val collectionsById = remember(allCollections) { allCollections.associateBy { it.id } }
+    val systemCollectionLabel = stringResource(R.string.app_vault_baul_name)
+    val exploreLabel = stringResource(R.string.app_search_origin_explore)
     LazyColumn(contentPadding = PaddingValues(vertical = Spacing.SM)) {
         items(results, key = { it.id }) { sound ->
             SoundItem(
@@ -341,10 +360,39 @@ private fun SearchResultsList(
                 onShareClick = { onShareClick(sound) },
                 onDelete = { onDelete(sound) },
                 onPinClick = { onPinClick(sound) },
+                collectionLabels =
+                    searchResultCollectionLabels(
+                        sound = sound,
+                        collectionsByAudio = collectionsByAudio,
+                        collectionsById = collectionsById,
+                        systemCollectionLabel = systemCollectionLabel,
+                        exploreLabel = exploreLabel,
+                        vaultOpen = vaultOpen,
+                    ),
             )
         }
     }
 }
+
+/**
+ * Origin tags for a search result. A bundled audio belongs to the read-only Explore catalog, so it
+ * carries the single [exploreLabel]; any other audio defers to the shared [collectionOriginLabels]
+ * — same lock-aware rule used by My Sounds and the Vault list, so a private collection's name never
+ * leaks on a locked search surface.
+ */
+internal fun searchResultCollectionLabels(
+    sound: Sound,
+    collectionsByAudio: Map<String, List<String>>,
+    collectionsById: Map<String, Collection>,
+    systemCollectionLabel: String,
+    exploreLabel: String,
+    vaultOpen: Boolean,
+): List<String> =
+    if (sound.isBundled()) {
+        listOf(exploreLabel)
+    } else {
+        collectionOriginLabels(sound.id, collectionsByAudio, collectionsById, systemCollectionLabel, vaultOpen)
+    }
 
 // Dim level of the full-screen scrim behind the search surface (over Color.Black). A named alpha,
 // not a magic literal — see ui/theme/Alpha.kt for the shared ones and the rationale.

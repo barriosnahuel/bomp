@@ -81,6 +81,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun LandingScreen(viewModel: SoundsViewModel) {
     val sounds by viewModel.sounds.collectAsState()
+    // Full catalog across every surface (custom + bundled), independent of the visible tab — the
+    // Search FAB gates on this because search itself is global. `sounds` is the tab-filtered list
+    // and would wrongly hide the FAB on a sparse tab (e.g. My Sounds with a couple of audios) while
+    // the rest of the library is searchable.
+    val library by viewModel.library.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     val hasBundledSounds by viewModel.hasBundledSounds.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
@@ -161,6 +166,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         modifier = if (subScreenOpen) Modifier.clearAndSetSemantics {} else Modifier,
         viewModel = viewModel,
         sounds = sounds,
+        librarySize = library.size,
         selectedTab = selectedTab,
         hasBundledSounds = hasBundledSounds,
         playbackProgress = playbackProgress,
@@ -261,6 +267,7 @@ private fun SearchOverlayHost(
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
     val vaultOpen by VaultSessionState.flow.collectAsState()
     val collections by viewModel.collections.collectAsState()
+    val collectionsByAudio by viewModel.audioCollectionsIndex.collectAsState()
     val hasSearchableVaultContent =
         remember(collections) {
             collections.any { it.isPrivate && it.audioIds.isNotEmpty() }
@@ -301,6 +308,9 @@ private fun SearchOverlayHost(
                 source = AnalyticsSource.SEARCH,
             )
         },
+        collectionsByAudio = collectionsByAudio,
+        allCollections = collections,
+        vaultOpen = vaultOpen,
     )
 }
 
@@ -315,6 +325,7 @@ private fun ScaffoldedLanding(
     modifier: Modifier = Modifier,
     viewModel: SoundsViewModel,
     sounds: List<Sound>,
+    librarySize: Int,
     selectedTab: AppTab,
     hasBundledSounds: Boolean,
     playbackProgress: PlaybackProgress?,
@@ -361,8 +372,10 @@ private fun ScaffoldedLanding(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            // Search FAB only renders on the sound-list tabs; Vault has its own FAB.
-            if (selectedTab != AppTab.VAULT && sounds.size >= SEARCH_FAB_MIN_SOUNDS) {
+            // Search FAB only renders on the sound-list tabs; Vault has its own FAB. Gated on the
+            // global library size (not the tab-filtered `sounds`) because search spans every
+            // surface — a sparse current tab must not hide a FAB that searches the whole catalog.
+            if (selectedTab != AppTab.VAULT && librarySize >= SEARCH_FAB_MIN_SOUNDS) {
                 FloatingActionButton(
                     onClick = { viewModel.showSearch() },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -674,6 +687,11 @@ internal fun SoundsList(
     // `mapNotNull` lambda.
     val systemCollectionLabel = stringResource(R.string.app_vault_baul_name)
     val collectionsById = remember(allCollections) { allCollections.associateBy { it.id } }
+    // Live Vault lock state, read directly here the same way SearchOverlayHost / VaultScreen do —
+    // private-collection tags are suppressed while locked so a cross-tagged audio shown on My Sounds
+    // never leaks a private collection's name. On the Vault tab this is always open (the tab only
+    // renders unlocked), so private tags show there as expected.
+    val vaultOpen by VaultSessionState.flow.collectAsState()
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -726,14 +744,7 @@ internal fun SoundsList(
                         if (isWelcome) {
                             emptyList()
                         } else {
-                            collectionsByAudio[sound.id].orEmpty().mapNotNull { id ->
-                                val collection = collectionsById[id]
-                                when {
-                                    collection == null -> null
-                                    collection.isSystem -> systemCollectionLabel
-                                    else -> collection.name
-                                }
-                            }
+                            collectionOriginLabels(sound.id, collectionsByAudio, collectionsById, systemCollectionLabel, vaultOpen)
                         }
                     SoundItem(
                         sound = sound,
