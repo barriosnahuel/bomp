@@ -107,6 +107,21 @@ internal class BackupRulesTest : AbstractRobolectricTest() {
     }
 
     /**
+     * OWASP MASVS-STORAGE-2 (dual-home coach mark preserved across restore).
+     *
+     * The dual-home coach (ADR 0012) teaches the additive My-Sounds-and-Vault model exactly once.
+     * Its "seen" flag MUST be backed up so a restored device does not re-teach a coach the user
+     * already dismissed — same UX rationale as the welcome-sticker flag.
+     */
+    @Test
+    fun `dual-home coach prefs are referenced by every backup include rule`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val expectedInclude = "file" to "datastore/dual-home-coach.preferences_pb"
+
+        assertIncludedEverywhere(context, expectedInclude)
+    }
+
+    /**
      * OWASP MASVS-PRIVACY-1 / CWE-200 (analytics first_open flags excluded from cross-install backup).
      *
      * `first_*` event flags MUST NOT be backed up. Firebase's user-identity model is per-install

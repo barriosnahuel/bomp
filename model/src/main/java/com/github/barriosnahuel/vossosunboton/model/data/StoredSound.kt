@@ -15,4 +15,8 @@ internal data class StoredSound(
     val isFavorite: Boolean = false,
     val isPinned: Boolean = false,
     val durationMs: Int? = null,
+    // ADR 0012. `encodeDefaults = false` (see SoundsRepository.json) keeps the `true` default off
+    // disk, so payloads written before this field decode as `true` — the desired post-update state
+    // for every already-visible audio. The one-time migration flips private-only audios to `false`.
+    val isVisibleInMySounds: Boolean = true,
 )

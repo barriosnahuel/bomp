@@ -449,6 +449,12 @@ private fun SnackbarEffects(
     val undoLabel = stringResource(R.string.app_undo)
     val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
     val shareDismissLabel = stringResource(R.string.app_snackbar_action_dismiss)
+    // ADR 0012 — dual-home coach (title + reassurance on one snackbar) and the "moved to Vault" undo.
+    val dualHomeCoachMessage =
+        stringResource(R.string.app_assign_dual_home_coach_title) +
+            " " + stringResource(R.string.app_assign_dual_home_coach_sub)
+    val dualHomeCoachAction = stringResource(R.string.app_assign_dual_home_coach_action)
+    val movedToVaultMessage = stringResource(R.string.app_assign_moved_to_vault_message)
     val activityContext = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -475,6 +481,34 @@ private fun SnackbarEffects(
     LaunchedEffect(Unit) {
         viewModel.shareErrorEvent.collect { errorRes ->
             showShareErrorSnackbar(snackbarHostState, activityContext, errorRes, shareDismissLabel)
+        }
+    }
+
+    // ADR 0012 — one-time coach: teaches that a Bomp can live in My Sounds AND the Vault. Action
+    // just dismisses (no VM call); the VM already marked it seen before emitting.
+    LaunchedEffect(Unit) {
+        viewModel.dualHomeCoachEvent.collect {
+            snackbarHostState.showSnackbar(
+                message = dualHomeCoachMessage,
+                actionLabel = dualHomeCoachAction,
+                duration = SnackbarDuration.Long,
+            )
+        }
+    }
+
+    // ADR 0012 — "moved to Vault" feedback: the user turned visibility OFF while it stays in a
+    // private collection. Undo re-enables visibility (the toggle already persisted false).
+    LaunchedEffect(Unit) {
+        viewModel.movedToVaultEvent.collect { event ->
+            val result =
+                snackbarHostState.showSnackbar(
+                    message = movedToVaultMessage,
+                    actionLabel = undoLabel,
+                    duration = SnackbarDuration.Long,
+                )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.setAudioVisibleInMySounds(event.audioId, event.name, visible = true)
+            }
         }
     }
 

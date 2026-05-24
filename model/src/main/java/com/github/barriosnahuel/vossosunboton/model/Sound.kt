@@ -28,6 +28,13 @@ data class Sound(
     val isFavorite: Boolean = false,
     val dateAdded: Long? = null,
     val isPinned: Boolean = false,
+    /**
+     * Whether this sound appears in the My Sounds "Todo" botonera. Explicit per-sound state
+     * (ADR 0012): the only input to that surface's visibility. Independent of collection membership
+     * — a sound can be visible here *and* live in a private Vault collection at the same time.
+     * Defaults to `true`; a sound created straight into the Vault flow is the only born-`false` case.
+     */
+    val isVisibleInMySounds: Boolean = true,
 ) : Parcelable {
     constructor(id: String, name: String, file: String?) : this(id, name, file, 0, false, false)
     constructor(

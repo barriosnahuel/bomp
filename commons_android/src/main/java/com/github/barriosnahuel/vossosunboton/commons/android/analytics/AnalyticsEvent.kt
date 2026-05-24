@@ -88,6 +88,13 @@ sealed class AnalyticsEvent(
         override fun params(): Bundle = Bundle().apply { putBoolean(AnalyticsParam.PINNED, pinned) }
     }
 
+    /** "Visible en Mis Sonidos" toggled from the assign sheet (ADR 0012). */
+    data class VisibilityToggle(
+        val visible: Boolean,
+    ) : AnalyticsEvent(name = "visibility_toggle", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putBoolean(AnalyticsParam.VISIBLE, visible) }
+    }
+
     /** Search returned zero results for a non-blank query. Debounced upstream to avoid keystroke noise. */
     data class SearchZeroResults(
         val queryLength: Int,

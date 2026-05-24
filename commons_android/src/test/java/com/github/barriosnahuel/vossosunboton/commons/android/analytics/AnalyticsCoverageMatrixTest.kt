@@ -61,6 +61,7 @@ internal class AnalyticsCoverageMatrixTest {
                 "SoundDeleteUndone",
                 "SoundPlay",
                 "PinToggle",
+                "VisibilityToggle",
                 "SearchZeroResults",
                 "Share",
                 "AboutCreditsOpen",

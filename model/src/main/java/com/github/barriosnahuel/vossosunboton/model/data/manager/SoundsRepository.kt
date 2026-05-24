@@ -10,6 +10,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -23,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -39,6 +41,7 @@ import timber.log.Timber
  * referenced from [BACKUP_FILE_PATH] so Auto Backup includes the right file. If the constant changes,
  * the backup XML breaks silently — `BackupRulesTest` enforces the contract.
  */
+@Suppress("TooManyFunctions") // Persistence facade: many small save*/migrate methods, one concern.
 class SoundsRepository(
     private val context: Context,
     /**
@@ -97,6 +100,51 @@ class SoundsRepository(
                 current + StoredSound(id = id, name = name, isPinned = true)
             } else {
                 current
+            }
+        }
+    }
+
+    /**
+     * Persists [Sound.isVisibleInMySounds] (ADR 0012). Mirrors [savePin]: a plain replace on the
+     * existing row (custom sounds always have one), or — only for the non-default `false` — a stub
+     * so the flag survives even for an id without a stored row yet.
+     */
+    suspend fun saveVisibility(
+        id: String,
+        name: String,
+        isVisibleInMySounds: Boolean,
+    ) {
+        validateName(name)
+        mutate { current ->
+            val existing = current.firstOrNull { it.id == id }
+            if (existing != null) {
+                current.map { if (it.id == id) it.copy(isVisibleInMySounds = isVisibleInMySounds) else it }
+            } else if (!isVisibleInMySounds) {
+                current + StoredSound(id = id, name = name, isVisibleInMySounds = false)
+            } else {
+                current
+            }
+        }
+    }
+
+    /**
+     * One-time migration seeding [Sound.isVisibleInMySounds] for audios created before the explicit
+     * flag (ADR 0012). Pre-flag, "shown in My Sounds" was derived as `inPrivate - inPublic`;
+     * [privateOnlyIds] is exactly that set (the caller computes it from the collections snapshot).
+     * Those audios flip to `false`; everything else keeps the `true` default. Guarded by a one-shot
+     * preference key so it runs at most once per install — and so a user who *later* makes a
+     * private-only audio visible again is not re-hidden on the next launch.
+     */
+    suspend fun migrateVisibilityIfNeeded(privateOnlyIds: Set<String>) {
+        withContext(Dispatchers.IO) {
+            val alreadyMigrated = context.bompsStore.data.first()[VISIBILITY_MIGRATED_KEY] ?: false
+            if (alreadyMigrated) return@withContext
+            context.bompsStore.edit { prefs ->
+                val current = decodeSafely(prefs[SOUNDS_KEY])
+                val next =
+                    current.map { if (it.id in privateOnlyIds) it.copy(isVisibleInMySounds = false) else it }
+                prefs[SOUNDS_KEY] = json.encodeToString(SOUNDS_SERIALIZER, next)
+                prefs[VISIBILITY_MIGRATED_KEY] = true
             }
         }
     }
@@ -230,6 +278,7 @@ class SoundsRepository(
             isFavorite = isFavorite,
             dateAdded = dateAdded,
             isPinned = isPinned,
+            isVisibleInMySounds = isVisibleInMySounds,
         )
     }
 
@@ -241,6 +290,10 @@ class SoundsRepository(
             isFavorite = isFavorite || previous?.isFavorite == true,
             isPinned = isPinned || previous?.isPinned == true,
             durationMs = previous?.durationMs,
+            // Visibility is owned by `saveVisibility`, not `save`: preserve the stored value on an
+            // upsert so a generic `save` can never silently reset a hidden audio back to visible.
+            // A brand-new audio (previous == null) takes the Sound's value (default `true`).
+            isVisibleInMySounds = previous?.isVisibleInMySounds ?: isVisibleInMySounds,
         )
 
     private fun validateName(name: String) {
@@ -259,6 +312,9 @@ class SoundsRepository(
         const val BACKUP_FILE_PATH = "datastore/$DATASTORE_NAME.preferences_pb"
 
         private val SOUNDS_KEY = stringPreferencesKey("sounds_json")
+
+        /** One-shot guard for [migrateVisibilityIfNeeded] (ADR 0012). */
+        private val VISIBILITY_MIGRATED_KEY = booleanPreferencesKey("visibility_migrated_v1")
         private val SOUNDS_SERIALIZER = ListSerializer(StoredSound.serializer())
         private val json =
             Json {

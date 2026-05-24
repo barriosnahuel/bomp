@@ -18,17 +18,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Regression for the "private-only audios stay in the Vault" rule (spec § 1).
+ * Regression for "private-only audios stay in the Vault" (spec § 1), now expressed through the
+ * explicit `isVisibleInMySounds` flag (ADR 0012). My Sounds visibility no longer derives from
+ * `inPrivate - inPublic`; instead the one-time `migrateVisibilityIfNeeded` seeds pre-existing
+ * Vault-only audios to `isVisibleInMySounds = false` at VM init (each test re-runs it because
+ * `TestData.clearAll` resets the store). The end-to-end contract is unchanged:
+ * - `audioOnlyInAPrivateCollectionIsHiddenFromMySounds`: a Vault-only audio is hidden (migrated to
+ *   `false`).
+ * - `audioCrossTaggedInPublicAndPrivateStaysVisibleOnMySounds`: a cross-tagged audio is NOT
+ *   private-only, so it keeps the `true` default and stays visible.
  *
- * The first iteration leaked private-only audios into My Sounds because `loadSounds` joined the
- * full library against the welcome flag but not against the private collections set. The fix
- * lives in `SoundsViewModel.privateOnlyAudioIds()`. The cross-tagged case (audio belongs to BOTH
- * a public and a private collection) is intentionally NOT hidden — spec § 3.1's "cross-preset"
- * restriction says public visibility wins.
- *
- * Two tests here lock both ends of the contract:
- * - `audioOnlyInAPrivateCollectionIsHiddenFromMySounds`: the bug we paid for.
- * - `audioCrossTaggedInPublicAndPrivateStaysVisibleOnMySounds`: the explicit exemption.
+ * The new dual-home capability (a private audio the user explicitly keeps visible) and the toggle
+ * are covered deterministically by the JVM `SoundsViewModelVisibilityTest`.
  */
 @RunWith(AndroidJUnit4::class)
 internal class PrivateOnlyAudiosHiddenFromMySoundsTest : AbstractUiTest() {

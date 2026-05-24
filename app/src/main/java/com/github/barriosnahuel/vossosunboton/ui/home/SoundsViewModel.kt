@@ -73,6 +73,29 @@ data class DeletedSoundEvent(
     val position: Int,
 )
 
+/**
+ * Emitted when the user closes the assign sheet having turned OFF "Visible en Mis Sonidos" for an
+ * audio that still lives in a private collection (ADR 0012). Drives the "Lo moviste al Baúl"
+ * snackbar; [audioId] + [name] let the Undo action re-enable visibility via
+ * [SoundsViewModel.setAudioVisibleInMySounds].
+ */
+data class MovedToVaultEvent(
+    val audioId: String,
+    val name: String,
+)
+
+/**
+ * Anti-orphan predicate (ADR 0012): an audio may be hidden from My Bomps only if it is reachable
+ * **elsewhere** — i.e. it belongs to at least one collection, **public OR private**. A public
+ * member is reachable via that collection's filter chip; a Vault member via the Vault. With zero
+ * collections, hiding it would strand it (not in "Todo", not in any chip, not in the Vault), so the
+ * switch can't be turned off (UI gate) and `applyAssignment` coerces it back to visible (safety net).
+ */
+internal fun isReachableOutsideMySounds(
+    publicCollectionIds: Set<String>,
+    privateCollectionIds: Set<String>,
+): Boolean = publicCollectionIds.isNotEmpty() || privateCollectionIds.isNotEmpty()
+
 data class PlaybackProgress(
     val positionMs: Int,
     val durationMs: Int,
@@ -92,6 +115,9 @@ class SoundsViewModel(
     private val vaultFilterStore: com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore =
         com.github.barriosnahuel.vossosunboton.feature.vault
             .VaultFilterStore(application),
+    private val dualHomeCoachStore: com.github.barriosnahuel.vossosunboton.feature.collections.DualHomeCoachStore =
+        com.github.barriosnahuel.vossosunboton.feature.collections
+            .DualHomeCoachStore(application),
 ) : AndroidViewModel(application),
     PlayerControllerListener {
     private val repo = SoundsRepository(application, onError = Tracker::track)
@@ -239,6 +265,14 @@ class SoundsViewModel(
     private val _shareErrorEvent = Channel<Int>(Channel.CONFLATED)
     val shareErrorEvent: Flow<Int> = _shareErrorEvent.receiveAsFlow()
 
+    // ADR 0012 — dual-home coach + "moved to Vault" undo. CONFLATED: only the latest close matters;
+    // stacking duplicate coach/undo snackbars would just hide the message behind itself.
+    private val _dualHomeCoachEvent = Channel<Unit>(Channel.CONFLATED)
+    val dualHomeCoachEvent: Flow<Unit> = _dualHomeCoachEvent.receiveAsFlow()
+
+    private val _movedToVaultEvent = Channel<MovedToVaultEvent>(Channel.CONFLATED)
+    val movedToVaultEvent: Flow<MovedToVaultEvent> = _movedToVaultEvent.receiveAsFlow()
+
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
         // Single coroutine: read welcome-sticker visibility BEFORE the first loadSounds so the
@@ -256,6 +290,11 @@ class SoundsViewModel(
                 if (active && tracker.markFiredOnce("welcome_sticker_shown")) {
                     tracker.log(AnalyticsEvent.WelcomeStickerShown)
                 }
+                // ADR 0012: one-time seed of `isVisibleInMySounds` for audios created before the
+                // flag existed. Runs before the first `loadSounds` so a pre-existing private-only
+                // audio (which decodes with the `true` default) is flipped to hidden before the new
+                // explicit rule projects the list — otherwise it would flash into My Sounds once.
+                repo.migrateVisibilityIfNeeded(privateOnlyAudioIds())
                 loadSounds()
             } catch (e: CancellationException) {
                 throw e
@@ -571,18 +610,13 @@ class SoundsViewModel(
     private fun applyTabFilterFromCache() {
         val snapshot = allSoundsCache.value
         if (snapshot.isEmpty()) return
-        // Mirrors the byTab branch in loadSounds. We intentionally avoid `privateOnlyAudioIds`
-        // here (it would do a fresh DataStore read) — the projection is best-effort and the next
-        // loadSounds correction lands within ~50ms.
-        val privateIds = collectionsAudioIdsSnapshot()
-        val byTab =
+        // Mirrors the byTab branch in loadSounds so the tab swap doesn't flash an empty list.
+        _sounds.value =
             when (_selectedTab.value) {
-                AppTab.MY_SOUNDS -> snapshot.filter { !it.isBundled() && it.id !in privateIds }
+                AppTab.MY_SOUNDS -> mySoundsProjection(snapshot)
                 AppTab.EXPLORE_SOUNDS -> snapshot.filter { it.isBundled() }
                 AppTab.VAULT -> emptyList()
             }
-        val filtered = applyCollectionFilter(byTab)
-        _sounds.value = filtered
     }
 
     private fun collectionsAudioIdsSnapshot(): Set<String> {
@@ -655,10 +689,12 @@ class SoundsViewModel(
 
     /**
      * Returns the set of audio ids that belong to at least one PRIVATE collection AND zero PUBLIC
-     * collections. Used to hide "Vault-only" audios from My Sounds (spec § 1: those audios are
-     * "preserved inside the app and never come out"). The cross-tagged case (private + public)
-     * is intentionally excluded — spec § 3.1's "Restricción de cross-preset" preserves visibility
-     * from the public surface.
+     * collections — the **pre-flag** "Vault-only" rule (`inPrivate - inPublic`). My Sounds
+     * visibility no longer derives from this (ADR 0012 made it the explicit [Sound.isVisibleInMySounds]
+     * flag); this now feeds **only** the one-time [SoundsRepository.migrateVisibilityIfNeeded] seed,
+     * which flips exactly these audios to `isVisibleInMySounds = false` so the post-update list
+     * matches the old derived list. The search/Vault privacy gate uses the membership-based
+     * [collectionsAudioIdsSnapshot] instead.
      */
     private suspend fun privateOnlyAudioIds(): Set<String> {
         // Read directly from the repo's freshest snapshot instead of `_collections.value` — the
@@ -674,19 +710,32 @@ class SoundsViewModel(
     }
 
     /**
-     * Filters [tabSounds] by the currently active My Sounds chip. Only applied when MY_SOUNDS is
-     * the selected tab — the Explore and Vault tabs ignore the chip state entirely. When the
-     * active filter id points to a deleted collection (race between deletion and a tab swap)
-     * the predicate matches nothing; the observation coroutine in `init` clears the stale id
-     * before the next `loadSounds` runs, so the empty intermediate state is brief.
+     * Projects [library] to the My Sounds list (ADR 0012).
+     *
+     * - **A public chip is active** → that collection's members, by membership only. A chip
+     *   surfaces a member even when its [Sound.isVisibleInMySounds] is `false` — "Todo" and the
+     *   chips are independent axes, so an audio never disappears from its own collection's filter.
+     *   When the active filter id points to a just-deleted collection (delete↔tab-swap race) the
+     *   set is empty; the init observer clears the stale id before the next `loadSounds`.
+     * - **No chip ("Todo")** → every non-bundled audio whose [Sound.isVisibleInMySounds] is `true`.
+     *
+     * The Vault-privacy hide rule does NOT live here — that is the membership-based search/Vault
+     * gate ([collectionsAudioIdsSnapshot]), which the explicit flag deliberately does not touch.
      */
-    private fun applyCollectionFilter(tabSounds: List<Sound>): List<Sound> {
-        val activeId =
-            _activeMySoundsFilter.value.takeIf { _selectedTab.value == AppTab.MY_SOUNDS }
-                ?: return tabSounds
-        val activeCollection = _collections.value.firstOrNull { it.id == activeId }
-        val ids = activeCollection?.audioIds.orEmpty().toSet()
-        return tabSounds.filter { it.id in ids }
+    private fun mySoundsProjection(library: List<Sound>): List<Sound> {
+        val custom = library.filter { !it.isBundled() }
+        val activeChip = _activeMySoundsFilter.value.takeIf { _selectedTab.value == AppTab.MY_SOUNDS }
+        return if (activeChip != null) {
+            val ids =
+                _collections.value
+                    .firstOrNull { it.id == activeChip }
+                    ?.audioIds
+                    .orEmpty()
+                    .toSet()
+            custom.filter { it.id in ids }
+        } else {
+            custom.filter { it.isVisibleInMySounds }
+        }
     }
 
     fun togglePin(sound: Sound) {
@@ -991,8 +1040,121 @@ class SoundsViewModel(
         _activeAssignAudioId.value = audioId
     }
 
+    /**
+     * Cancels the assign sheet: the sheet is transactional (ADR 0012), so backing out **discards**
+     * the staged collection + visibility edits. Nothing is persisted and no coach/undo fires —
+     * those belong to [applyAssignment] ("Listo").
+     */
     fun dismissAssignCollections() {
         _activeAssignAudioId.value = null
+    }
+
+    /**
+     * Commits the assign sheet's staged state in one transaction ("Listo"), then fires the close
+     * effects against the final state (ADR 0012). Replaces the audio's membership per scope, applies
+     * the visibility delta, and emits the same per-delta `collection_audio_toggle` analytics the old
+     * live-commit chips did. Backing out of the sheet does NOT call this — staged edits are dropped.
+     */
+    fun applyAssignment(
+        audioId: String,
+        name: String,
+        publicCollectionIds: Set<String>,
+        privateCollectionIds: Set<String>,
+        isVisibleInMySounds: Boolean,
+    ) {
+        _activeAssignAudioId.value = null
+        viewModelScope.launch(ioDispatcher) {
+            val before = collectionsRepo.collections.first()
+            val currentPublic = before.filter { it.isPublic && audioId in it.audioIds }.map { it.id }.toSet()
+            val currentPrivate = before.filter { it.isPrivate && audioId in it.audioIds }.map { it.id }.toSet()
+
+            runCatching {
+                collectionsRepo.setAudioCollections(audioId, publicCollectionIds, CollectionAccess.PUBLIC)
+                collectionsRepo.setAudioCollections(audioId, privateCollectionIds, CollectionAccess.PRIVATE)
+            }.onSuccess {
+                logAssignmentDeltas(currentPublic, publicCollectionIds, isPublic = true)
+                logAssignmentDeltas(currentPrivate, privateCollectionIds, isPublic = false)
+            }.onFailure {
+                Tracker.log("collections.apply_assignment_failed=${it.javaClass.simpleName}")
+                Tracker.track(RuntimeException("Failed to apply collection assignment", it))
+            }
+
+            // Anti-orphan safety net: never persist hidden for an audio that lives in NO collection
+            // (public or private) — it'd be reachable from nowhere. The UI gate prevents reaching
+            // this, but the invariant is enforced here too.
+            val safeVisible = isVisibleInMySounds || !isReachableOutsideMySounds(publicCollectionIds, privateCollectionIds)
+            val currentVisible = allSoundsCache.value.firstOrNull { it.id == audioId }?.isVisibleInMySounds ?: true
+            if (safeVisible != currentVisible) {
+                // Updates the cache synchronously + persists + logs visibility_toggle. The sync cache
+                // update is what evaluateAssignCloseEffects below reads for the final visibility.
+                setAudioVisibleInMySounds(audioId, name, safeVisible)
+            }
+            evaluateAssignCloseEffects(audioId)
+        }
+    }
+
+    private fun logAssignmentDeltas(
+        current: Set<String>,
+        next: Set<String>,
+        isPublic: Boolean,
+    ) {
+        val scope = AnalyticsScope.of(isPublic)
+        (next - current).forEach { tracker.log(AnalyticsEvent.CollectionAudioToggle(assigned = true, scope = scope)) }
+        (current - next).forEach { tracker.log(AnalyticsEvent.CollectionAudioToggle(assigned = false, scope = scope)) }
+        var newCount = 0L
+        repeat((next - current).size) { newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS) }
+        if ((next - current).isNotEmpty()) {
+            tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS, newCount.toString())
+        }
+    }
+
+    /**
+     * Persists [Sound.isVisibleInMySounds] for [audioId] and reflects it instantly in the catalog
+     * cache (ADR 0012). The DataStore write re-triggers `loadSounds` through the repo observer,
+     * which reprojects the visible list; updating [allSoundsCache] here keeps the sheet's switch and
+     * any cache-derived reads consistent in the meantime. Mirror of [togglePin]'s optimistic shape.
+     */
+    fun setAudioVisibleInMySounds(
+        audioId: String,
+        name: String,
+        visible: Boolean,
+    ) {
+        allSoundsCache.update { list ->
+            list.map { if (it.id == audioId) it.copy(isVisibleInMySounds = visible) else it }
+        }
+        viewModelScope.launch(ioDispatcher) {
+            runCatching { repo.saveVisibility(audioId, name, visible) }
+                .onFailure {
+                    Tracker.log("my_sounds.visibility_persist_failed=${it.javaClass.simpleName}")
+                    Tracker.track(RuntimeException("My Sounds visibility persist failed", it))
+                }
+        }
+        tracker.log(AnalyticsEvent.VisibilityToggle(visible = visible))
+    }
+
+    /**
+     * On assign-sheet close, fires at most one teaching/feedback snackbar (ADR 0012), evaluated
+     * against the audio's final state:
+     * - hidden from My Sounds AND still in a private collection → "Lo moviste al Baúl" + Undo.
+     * - visible in My Sounds AND in a private collection, coach not yet seen → the one-time
+     *   dual-home coach (then mark it seen so it never repeats).
+     *
+     * Membership is read from the freshest collections snapshot, not `_collections.value`, so a
+     * just-committed tag toggle is reflected even if the StateFlow has not re-emitted yet.
+     */
+    private suspend fun evaluateAssignCloseEffects(audioId: String) {
+        val sound = allSoundsCache.value.firstOrNull { it.id == audioId } ?: return
+        val inPrivate =
+            collectionsRepo.collections.first().any { it.isPrivate && audioId in it.audioIds }
+        if (!inPrivate) return
+        when {
+            !sound.isVisibleInMySounds ->
+                _movedToVaultEvent.trySend(MovedToVaultEvent(audioId = audioId, name = sound.name))
+            !dualHomeCoachStore.hasSeen() -> {
+                _dualHomeCoachEvent.trySend(Unit)
+                dualHomeCoachStore.markSeen()
+            }
+        }
     }
 
     /**
@@ -1167,18 +1329,13 @@ class SoundsViewModel(
                 }
             recomputeSearchResults()
             recomputeVaultAudios()
-            // Snapshot of private-only ids: tagged to at least one private collection and to
-            // ZERO public collections. Spec § 3.1 + § 1 — those audios are meant to stay inside
-            // the Vault and never surface on My Sounds. Cross-tagged (private + public) audios
-            // remain visible on My Sounds because the public surface preserves visibility
-            // (the "Restricción de cross-preset" carve-out). Computed OUTSIDE the _sounds.update
-            // lambda because the helper now reads collectionsRepo.collections.first() (suspend).
-            val privateOnlyIds = privateOnlyAudioIds()
             _sounds.update {
                 val byTab =
                     when (_selectedTab.value) {
-                        AppTab.MY_SOUNDS ->
-                            allSounds.filter { !it.isBundled() && it.id !in privateOnlyIds }
+                        // ADR 0012: "Todo" shows audios with isVisibleInMySounds == true; an active
+                        // public chip surfaces that collection's members by membership. Both live in
+                        // mySoundsProjection. The Vault-privacy hide rule is NOT applied here.
+                        AppTab.MY_SOUNDS -> mySoundsProjection(allSounds)
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
                         // The Vault tab is rendered by its own dedicated screen (VaultScreen) — the
                         // primary sound list is empty here so the bottom-bar tab swap leaves the
@@ -1187,8 +1344,7 @@ class SoundsViewModel(
                         // state composable from rendering its "no sounds yet" body for the wrong tab.
                         AppTab.VAULT -> emptyList()
                     }.filter { it.id != deletedId }
-                val filtered = applyCollectionFilter(byTab)
-                val withWelcome = positionWelcomeIn(filtered, welcomeIsPendingDismissal, welcomeWasRestored)
+                val withWelcome = positionWelcomeIn(byTab, welcomeIsPendingDismissal, welcomeWasRestored)
                 if (playingId == null) {
                     withWelcome
                 } else {

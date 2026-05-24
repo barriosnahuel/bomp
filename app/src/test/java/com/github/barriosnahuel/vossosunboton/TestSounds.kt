@@ -22,6 +22,7 @@ internal fun testSound(
     isFavorite: Boolean = false,
     dateAdded: Long? = null,
     isPinned: Boolean = false,
+    isVisibleInMySounds: Boolean = true,
 ): Sound =
     Sound(
         id = if (file != null) "custom:$name" else "bundled:$rawRes",
@@ -32,4 +33,5 @@ internal fun testSound(
         isFavorite = isFavorite,
         dateAdded = dateAdded,
         isPinned = isPinned,
+        isVisibleInMySounds = isVisibleInMySounds,
     )

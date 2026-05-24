@@ -146,7 +146,7 @@
     </plurals>
     <string name="app_collection_sheet_error_name_taken">You already have a collection with that name.</string>
     <string name="app_collection_sheet_name_counter">%1$d / %2$d</string>
-    <string name="app_collection_sheet_private_disclaimer">Vault collections stay on this phone and ask for your fingerprint every time you open them.</string>
+    <string name="app_collection_sheet_private_disclaimer">Vault collections ask for your fingerprint every time you open them.</string>
 
     <!-- Delete confirmation dialog -->
     <string name="app_collection_delete_dialog_title">Delete %1$s?</string>
@@ -167,10 +167,20 @@
     <string name="app_my_sounds_filter_empty_collection_headline">Nothing in here yet.</string>
     <string name="app_my_sounds_filter_empty_collection_body">Add a Bomp to %1$s from its More menu.</string>
 
-    <!-- Sound long-press menu — "Add to collection" entry + bottom-sheet picker -->
-    <string name="app_audio_menu_add_to_collection">Add to collection</string>
-    <string name="app_assign_collection_sheet_title">Add to a collection</string>
+    <!-- Sound long-press menu — single neutral label (add/remove/visibility); bottom-sheet picker -->
+    <string name="app_audio_menu_add_to_collection">Assign to collections</string>
+    <string name="app_assign_collection_sheet_title_named">Assign “%1$s”</string>
+    <string name="app_assign_collection_sheet_subtitle">It can live in more than one place.</string>
     <string name="app_assign_collection_sheet_done">Done</string>
+    <!-- "Visible in My Bomps" toggle (ADR 0012) — explicit per-Bomp My Bomps presence -->
+    <string name="app_assign_visible_label">Visible in My Bomps</string>
+    <string name="app_assign_visible_caption_off">Only in the Vault.</string>
+    <string name="app_assign_visible_off_blocked">Add it to a collection first to take it out of My Bomps.</string>
+    <!-- Dual-home coach (first time) + "moved to Vault" undo snackbar (ADR 0012) -->
+    <string name="app_assign_dual_home_coach_title">You\'ll find it in both places.</string>
+    <string name="app_assign_dual_home_coach_sub">It stays in My Bomps.</string>
+    <string name="app_assign_dual_home_coach_action">Got it</string>
+    <string name="app_assign_moved_to_vault_message">Moved to the Vault.</string>
 
     <!-- Active filter header (below the chip row on My Sounds + Vault) -->
     <string name="app_active_filter_header_all_my_sounds">All sounds · %1$d</string>

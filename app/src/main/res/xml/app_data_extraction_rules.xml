@@ -8,6 +8,7 @@
         <include domain="file" path="datastore/collections.preferences_pb" />
         <include domain="file" path="datastore/my-sounds-filter.preferences_pb" />
         <include domain="file" path="datastore/vault-filter.preferences_pb" />
+        <include domain="file" path="datastore/dual-home-coach.preferences_pb" />
     </cloud-backup>
     <device-transfer>
         <include domain="external" path="Music" />
@@ -17,5 +18,6 @@
         <include domain="file" path="datastore/collections.preferences_pb" />
         <include domain="file" path="datastore/my-sounds-filter.preferences_pb" />
         <include domain="file" path="datastore/vault-filter.preferences_pb" />
+        <include domain="file" path="datastore/dual-home-coach.preferences_pb" />
     </device-transfer>
 </data-extraction-rules>
