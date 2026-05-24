@@ -92,6 +92,10 @@ fun SearchOverlay(
     // audios). Default empty keeps the overlay renderable from previews/tests that don't wire it.
     collectionsByAudio: Map<String, List<String>> = emptyMap(),
     allCollections: List<Collection> = emptyList(),
+    // While the Vault session is locked, private-collection tags are suppressed so a cross-tagged
+    // result never leaks a private collection's name without authentication. Default false = safe
+    // (hide private) for callers that don't wire it.
+    vaultOpen: Boolean = false,
 ) {
     val displayState =
         when {
@@ -171,6 +175,7 @@ fun SearchOverlay(
                                     soundDurations = soundDurations,
                                     collectionsByAudio = collectionsByAudio,
                                     allCollections = allCollections,
+                                    vaultOpen = vaultOpen,
                                     onPlayClick = onPlayClick,
                                     onSeek = onSeek,
                                     onShareClick = onShareClick,
@@ -334,6 +339,7 @@ private fun SearchResultsList(
     soundDurations: Map<String, Int>,
     collectionsByAudio: Map<String, List<String>>,
     allCollections: List<Collection>,
+    vaultOpen: Boolean,
     onPlayClick: (Sound) -> Unit,
     onSeek: (Int) -> Unit,
     onShareClick: (Sound) -> Unit,
@@ -361,6 +367,7 @@ private fun SearchResultsList(
                         collectionsById = collectionsById,
                         systemCollectionLabel = systemCollectionLabel,
                         exploreLabel = exploreLabel,
+                        vaultOpen = vaultOpen,
                     ),
             )
         }
@@ -370,10 +377,16 @@ private fun SearchResultsList(
 /**
  * Origin tags shown on a search result, since search spans every surface and a result on its own
  * gives no hint of where it lives. A bundled audio belongs to the read-only Explore catalog, so it
- * carries the single [exploreLabel]. Any other audio resolves its collection memberships the same
- * way My Sounds does — the Vault's system collection substitutes its localized [systemCollectionLabel]
- * for the stored literal — and an audio in no collection gets no tag. Pure so it can be unit-tested
- * without composing the overlay.
+ * carries the single [exploreLabel]. Any other audio resolves its collection memberships — the
+ * Vault's system collection substitutes its localized [systemCollectionLabel] for the stored
+ * literal — and an audio in no collection gets no tag.
+ *
+ * Privacy: a *private* collection's name is content that lives behind the Vault gate, so while the
+ * Vault session is locked ([vaultOpen] = false) labels for private collections are suppressed —
+ * a cross-tagged (public AND private) audio that the upstream gate keeps visible then shows only
+ * its public tags, never leaking the private collection's name without authentication. Once the
+ * Vault is unlocked, all memberships render. Pure so it can be unit-tested without composing the
+ * overlay.
  */
 internal fun searchResultCollectionLabels(
     sound: Sound,
@@ -381,6 +394,7 @@ internal fun searchResultCollectionLabels(
     collectionsById: Map<String, Collection>,
     systemCollectionLabel: String,
     exploreLabel: String,
+    vaultOpen: Boolean,
 ): List<String> =
     if (sound.isBundled()) {
         listOf(exploreLabel)
@@ -389,6 +403,7 @@ internal fun searchResultCollectionLabels(
             val collection = collectionsById[id]
             when {
                 collection == null -> null
+                !vaultOpen && collection.isPrivate -> null
                 collection.isSystem -> systemCollectionLabel
                 else -> collection.name
             }

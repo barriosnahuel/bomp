@@ -18,20 +18,14 @@ internal class SearchResultLabelsTest {
     private val work = Collection(id = "c-work", name = "Work", profile = CollectionProfile.GENERIC_PUBLIC)
     private val family = Collection(id = "c-family", name = "Family", profile = CollectionProfile.GENERIC_PUBLIC)
     private val baul = Collection(id = "c-baul", name = "stored-literal", profile = CollectionProfile.VAULT, isSystem = true)
-    private val byId = listOf(work, family, baul).associateBy { it.id }
+    private val secrets = Collection(id = "c-secrets", name = "Secrets", profile = CollectionProfile.VAULT)
+    private val byId = listOf(work, family, baul, secrets).associateBy { it.id }
 
     @Test
     fun `bundled audio is tagged Explore`() {
         val bundled = testSound(name = "ambulancia", file = null)
 
-        val labels =
-            searchResultCollectionLabels(
-                bundled,
-                collectionsByAudio = emptyMap(),
-                collectionsById = byId,
-                systemCollectionLabel = vault,
-                exploreLabel = explore,
-            )
+        val labels = labelsFor(bundled, index = emptyMap(), vaultOpen = false)
 
         assertThat(labels).containsExactly(explore)
     }
@@ -41,16 +35,8 @@ internal class SearchResultLabelsTest {
         // Bundled audios cannot be added to collections, but the Explore branch must win regardless
         // so a stale index entry never makes a bundled result show a collection tag instead.
         val bundled = testSound(name = "ambulancia", file = null)
-        val index = mapOf(bundled.id to listOf("c-work"))
 
-        val labels =
-            searchResultCollectionLabels(
-                bundled,
-                collectionsByAudio = index,
-                collectionsById = byId,
-                systemCollectionLabel = vault,
-                exploreLabel = explore,
-            )
+        val labels = labelsFor(bundled, index = mapOf(bundled.id to listOf("c-work")), vaultOpen = false)
 
         assertThat(labels).containsExactly(explore)
     }
@@ -58,87 +44,67 @@ internal class SearchResultLabelsTest {
     @Test
     fun `custom audio in a public collection is tagged with the collection name`() {
         val custom = testSound(name = "che", file = "/audio/che.mp3")
-        val index = mapOf(custom.id to listOf("c-work"))
 
-        val labels =
-            searchResultCollectionLabels(
-                custom,
-                collectionsByAudio = index,
-                collectionsById = byId,
-                systemCollectionLabel = vault,
-                exploreLabel = explore,
-            )
+        val labels = labelsFor(custom, index = mapOf(custom.id to listOf("c-work")), vaultOpen = false)
 
         assertThat(labels).containsExactly("Work")
     }
 
     @Test
-    fun `custom audio in the system Vault collection is tagged with the localized name, not the stored literal`() {
+    fun `system Vault collection shows its localized name when the Vault is unlocked`() {
         val custom = testSound(name = "secreto", file = "/audio/secreto.mp3")
-        val index = mapOf(custom.id to listOf("c-baul"))
 
-        val labels =
-            searchResultCollectionLabels(
-                custom,
-                collectionsByAudio = index,
-                collectionsById = byId,
-                systemCollectionLabel = vault,
-                exploreLabel = explore,
-            )
+        val labels = labelsFor(custom, index = mapOf(custom.id to listOf("c-baul")), vaultOpen = true)
 
         assertThat(labels).containsExactly(vault)
     }
 
     @Test
-    fun `custom audio in several collections keeps the index order`() {
-        val custom = testSound(name = "multi", file = "/audio/multi.mp3")
-        val index = mapOf(custom.id to listOf("c-work", "c-family"))
+    fun `private collection tag is hidden while the Vault is locked`() {
+        // The private collection's name is content behind the Vault gate — a locked session must
+        // not surface it. (Private-only audios are filtered out of search upstream anyway; this is
+        // the resolver's own guard.)
+        val custom = testSound(name = "secreto", file = "/audio/secreto.mp3")
 
-        val labels =
-            searchResultCollectionLabels(
-                custom,
-                collectionsByAudio = index,
-                collectionsById = byId,
-                systemCollectionLabel = vault,
-                exploreLabel = explore,
-            )
+        val labels = labelsFor(custom, index = mapOf(custom.id to listOf("c-secrets")), vaultOpen = false)
+
+        assertThat(labels).isEmpty()
+    }
+
+    @Test
+    fun `custom audio in several public collections keeps the index order`() {
+        val custom = testSound(name = "multi", file = "/audio/multi.mp3")
+
+        val labels = labelsFor(custom, index = mapOf(custom.id to listOf("c-work", "c-family")), vaultOpen = false)
 
         assertThat(labels).containsExactly("Work", "Family").inOrder()
     }
 
     @Test
-    fun `cross-tagged audio shows both its public collection and the Vault, mirroring My Sounds`() {
-        // A public+private audio stays searchable even while the Vault is locked (spec § 3.1), so
-        // its tag carries both memberships exactly as My Sounds renders them — the Vault substitutes
-        // its localized name. The lock-state filtering of private-only audios happens upstream in the
-        // ViewModel, never in this pure resolver, so the same labels apply regardless of lock state.
+    fun `cross-tagged audio shows both its public and private tags when the Vault is unlocked`() {
         val custom = testSound(name = "cross", file = "/audio/cross.mp3")
-        val index = mapOf(custom.id to listOf("c-work", "c-baul"))
 
-        val labels =
-            searchResultCollectionLabels(
-                custom,
-                collectionsByAudio = index,
-                collectionsById = byId,
-                systemCollectionLabel = vault,
-                exploreLabel = explore,
-            )
+        val labels = labelsFor(custom, index = mapOf(custom.id to listOf("c-work", "c-secrets")), vaultOpen = true)
 
-        assertThat(labels).containsExactly("Work", vault).inOrder()
+        assertThat(labels).containsExactly("Work", "Secrets").inOrder()
+    }
+
+    @Test
+    fun `cross-tagged audio hides its private collection tag while the Vault is locked`() {
+        // The leak guard: a public+private audio stays searchable while locked (spec § 3.1), but its
+        // tag must show only the public collection — never the private collection's name.
+        val custom = testSound(name = "cross", file = "/audio/cross.mp3")
+
+        val labels = labelsFor(custom, index = mapOf(custom.id to listOf("c-work", "c-secrets")), vaultOpen = false)
+
+        assertThat(labels).containsExactly("Work")
     }
 
     @Test
     fun `custom audio in no collection has no tag`() {
         val custom = testSound(name = "orphan", file = "/audio/orphan.mp3")
 
-        val labels =
-            searchResultCollectionLabels(
-                custom,
-                collectionsByAudio = emptyMap(),
-                collectionsById = byId,
-                systemCollectionLabel = vault,
-                exploreLabel = explore,
-            )
+        val labels = labelsFor(custom, index = emptyMap(), vaultOpen = false)
 
         assertThat(labels).isEmpty()
     }
@@ -148,17 +114,23 @@ internal class SearchResultLabelsTest {
         // A reverse-index entry can outlive a deleted collection; resolving against an absent id
         // must skip it rather than crash or surface a blank tag.
         val custom = testSound(name = "stale", file = "/audio/stale.mp3")
-        val index = mapOf(custom.id to listOf("c-work", "c-deleted"))
 
-        val labels =
-            searchResultCollectionLabels(
-                custom,
-                collectionsByAudio = index,
-                collectionsById = byId,
-                systemCollectionLabel = vault,
-                exploreLabel = explore,
-            )
+        val labels = labelsFor(custom, index = mapOf(custom.id to listOf("c-work", "c-deleted")), vaultOpen = false)
 
         assertThat(labels).containsExactly("Work")
     }
+
+    private fun labelsFor(
+        sound: com.github.barriosnahuel.vossosunboton.model.Sound,
+        index: Map<String, List<String>>,
+        vaultOpen: Boolean,
+    ): List<String> =
+        searchResultCollectionLabels(
+            sound = sound,
+            collectionsByAudio = index,
+            collectionsById = byId,
+            systemCollectionLabel = vault,
+            exploreLabel = explore,
+            vaultOpen = vaultOpen,
+        )
 }

@@ -310,6 +310,7 @@ private fun SearchOverlayHost(
         },
         collectionsByAudio = collectionsByAudio,
         allCollections = collections,
+        vaultOpen = vaultOpen,
     )
 }
 
