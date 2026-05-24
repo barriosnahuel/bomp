@@ -13,6 +13,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.TestData
+import com.github.barriosnahuel.vossosunboton.awaitNode
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import org.junit.Test
@@ -56,6 +57,38 @@ internal class SoundItemInlineLabelsFlowTest : AbstractUiTest() {
             composeRule
                 .onAllNodes(hasText("Familia · ", substring = true))
                 .assertCountEquals(1)
+        }
+    }
+
+    @Test
+    fun cardHidesPrivateCollectionLabelWhileVaultIsLocked() {
+        // A cross-tagged audio (public + private) stays visible on My Sounds, but a private
+        // collection's name lives behind the Vault gate — with the Vault locked it must not leak in
+        // the card meta. Only the public tag shows.
+        val (audio) = TestData.seedCustomSounds(context, count = 1)
+        TestData.seedPublicCollection(context, name = "Familia", audioIds = listOf(audio.id))
+        TestData.seedPrivateCollection(context, name = "Secretos", audioIds = listOf(audio.id))
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            // Await the card meta carrying the public tag — proves collections loaded and the meta
+            // rendered, so the absence assertion below is meaningful (not a not-yet-loaded pass).
+            composeRule.awaitNode(hasText("Familia · ", substring = true)).assertIsDisplayed()
+            // The private collection name appears nowhere on My Sounds while locked: it is not a
+            // public filter chip, and the card tag suppresses it.
+            composeRule.onAllNodes(hasText("Secretos", substring = true)).assertCountEquals(0)
+        }
+    }
+
+    @Test
+    fun cardShowsPrivateCollectionLabelOnceVaultIsUnlocked() {
+        val (audio) = TestData.seedCustomSounds(context, count = 1)
+        TestData.seedPublicCollection(context, name = "Familia", audioIds = listOf(audio.id))
+        TestData.seedPrivateCollection(context, name = "Secretos", audioIds = listOf(audio.id))
+        TestData.markVaultOpen()
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            // Unlocked → the card meta now carries the private collection name too.
+            composeRule.awaitNode(hasText("Secretos", substring = true)).assertIsDisplayed()
         }
     }
 }

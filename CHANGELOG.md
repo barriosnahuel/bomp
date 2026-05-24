@@ -31,7 +31,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Audio preview no longer bleeds into the success confirmation when you save a new Bomp (or save a rename) while the preview is playing — the audio now stops the moment the confirmation appears
 - Sharing an audio into Bomp while a rename was left open in the background no longer drops you back into that unsaved rename screen with the wrong audio's data; the share now correctly opens the new-Bomp form for the incoming audio (anything you had typed in the unsaved rename is discarded since it was never saved)
 - Deleting several Bomps in a row (in My Sounds or the Vault) now removes all of them; previously only the most recent deletion stuck and the rest reappeared when the last undo snackbar faded or the list reloaded
-- Search results now carry an origin tag — the Bomp's collection, your Vault, or Explore for the bundled catalog — so matches that look alike across tabs are finally distinguishable (the tag had been announced but never appeared); a private collection's name only shows once the Vault is unlocked
+- Search results now carry an origin tag — the Bomp's collection, your Vault, or Explore for the bundled catalog — so matches that look alike across tabs are finally distinguishable (the tag had been announced but never appeared)
+- A Bomp's private collection name no longer appears on My Sounds or in search while the Vault is locked — private collection tags stay hidden until you unlock the Vault
 
 
 ### Changed
