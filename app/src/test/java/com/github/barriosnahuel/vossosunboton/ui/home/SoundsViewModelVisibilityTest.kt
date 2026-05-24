@@ -37,13 +37,12 @@ import org.robolectric.annotation.Config
  * chip-vs-flag rule, the dual-home coach, and the "moved to Vault" feedback.
  *
  * Pinned to a single Robolectric SDK (like [com.github.barriosnahuel.vossosunboton.ui.home.SoundItemTest]
- * et al.): this class drives SDK-independent business logic through five real DataStores
- * (sounds, collections, filters, dual-home coach, welcome). The default multi-SDK matrix
- * (`AbstractRobolectricTest`: M/TIRAMISU/VANILLA) hangs when the second SDK sandbox re-opens those
- * DataStore files in the same process — a Robolectric cross-sandbox artifact with no production
- * analogue. One SDK fully covers the logic.
+ * et al.): this class drives SDK-independent business logic — there is no `Build.VERSION` branch
+ * anywhere in the exercised path — so Robolectric's default of a single SDK fully covers it. Running
+ * it across the [AbstractRobolectricTest] M/TIRAMISU/VANILLA matrix would only triple the runtime for
+ * identical assertions, with no added coverage.
  */
-@Config(sdk = [Build.VERSION_CODES.M])
+@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
 internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
     private val createdViewModels = mutableListOf<SoundsViewModel>()
 
@@ -78,15 +77,17 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking { SoundsRepository(context).save(testSound("dual", file = "dual.mp3")) }
         val vm = givenAViewModel()
-        runBlocking { vm.collections.first { it.isNotEmpty() } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.collections.first { it.isNotEmpty() } } }
 
         // The core fix: adding a private tag must NOT silently drop the audio from the botonera.
         vm.toggleAudioInCollection("custom:dual", CollectionsRepository.BAUL_SYSTEM_ID)
         runBlocking {
-            vm.collections.first { cols ->
-                cols.any { it.id == CollectionsRepository.BAUL_SYSTEM_ID && "custom:dual" in it.audioIds }
+            withTimeout(TIMEOUT_MS) {
+                vm.collections.first { cols ->
+                    cols.any { it.id == CollectionsRepository.BAUL_SYSTEM_ID && "custom:dual" in it.audioIds }
+                }
+                vm.vaultAudios.first { audios -> audios.any { it.name == "dual" } }
             }
-            vm.vaultAudios.first { audios -> audios.any { it.name == "dual" } }
         }
 
         assertThat(vm.sounds.value.map { it.name }).contains("dual")
@@ -104,13 +105,21 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
             }
         }
         val vm = givenAViewModel()
+        // "hideme" lives only in the Baúl (private), so the one-time ADR-0012 visibility migration may
+        // seed it hidden. Asserting it starts *visible* without making that explicit races the
+        // migration (and `repo.sounds` distinctUntilChanged) — the source of this test's earlier
+        // non-deterministic hang. Set the dual-home state explicitly (visible in My Sounds *and* in the
+        // Vault), then assert that turning the flag off removes it from "Todo".
         runBlocking {
-            vm.collections.first { it.isNotEmpty() }
-            vm.sounds.first { list -> list.any { it.name == "hideme" } }
+            withTimeout(TIMEOUT_MS) {
+                vm.collections.first { it.isNotEmpty() }
+                vm.setAudioVisibleInMySounds("custom:hideme", "hideme", visible = true)
+                vm.sounds.first { list -> list.any { it.name == "hideme" } }
+            }
         }
 
         vm.setAudioVisibleInMySounds("custom:hideme", "hideme", visible = false)
-        runBlocking { vm.sounds.first { list -> list.none { it.name == "hideme" } } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.sounds.first { list -> list.none { it.name == "hideme" } } } }
 
         assertThat(vm.sounds.value.map { it.name }).doesNotContain("hideme")
     }
@@ -126,17 +135,17 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
             collections.addAudio(recetas.id, "custom:recipe")
         }
         val vm = givenAViewModel()
-        runBlocking { vm.collections.first { it.any { c -> c.name == "Recetas" } } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.collections.first { it.any { c -> c.name == "Recetas" } } } }
         val recetas = vm.collections.value.first { it.name == "Recetas" }
 
         // Hidden from "Todo"...
         vm.setAudioVisibleInMySounds("custom:recipe", "recipe", visible = false)
-        runBlocking { vm.sounds.first { list -> list.none { it.name == "recipe" } } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.sounds.first { list -> list.none { it.name == "recipe" } } } }
         assertThat(vm.sounds.value.map { it.name }).doesNotContain("recipe")
 
         // ...but the public chip surfaces it by membership (ADR 0012 — independent axes).
         vm.selectMySoundsFilter(recetas.id)
-        runBlocking { vm.sounds.first { list -> list.any { it.name == "recipe" } } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.sounds.first { list -> list.any { it.name == "recipe" } } } }
         assertThat(vm.sounds.value.map { it.name }).containsExactly("recipe")
     }
 
@@ -151,7 +160,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
             }
         }
         val vm = givenAViewModel()
-        runBlocking { vm.collections.first { it.any { c -> c.name == "Recetas" } } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.collections.first { it.any { c -> c.name == "Recetas" } } } }
         val recetas = vm.collections.value.first { it.name == "Recetas" }
 
         vm.applyAssignment(
@@ -162,11 +171,13 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
             isVisibleInMySounds = false,
         )
         runBlocking {
-            vm.collections.first { cols ->
-                cols.first { it.id == recetas.id }.audioIds.contains("custom:tx") &&
-                    cols.first { it.id == CollectionsRepository.BAUL_SYSTEM_ID }.audioIds.contains("custom:tx")
+            withTimeout(TIMEOUT_MS) {
+                vm.collections.first { cols ->
+                    cols.first { it.id == recetas.id }.audioIds.contains("custom:tx") &&
+                        cols.first { it.id == CollectionsRepository.BAUL_SYSTEM_ID }.audioIds.contains("custom:tx")
+                }
+                vm.library.first { lib -> lib.firstOrNull { it.id == "custom:tx" }?.isVisibleInMySounds == false }
             }
-            vm.library.first { lib -> lib.firstOrNull { it.id == "custom:tx" }?.isVisibleInMySounds == false }
         }
 
         assertThat(
@@ -181,7 +192,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking { SoundsRepository(context).save(testSound("coach", file = "c.mp3")) }
         val vm = givenAViewModel()
-        runBlocking { vm.collections.first { it.isNotEmpty() } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.collections.first { it.isNotEmpty() } } }
 
         // "Listo" with the audio staged into the Baúl while staying visible → the dual-home coach.
         vm.applyAssignment(
@@ -210,7 +221,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking { SoundsRepository(context).save(testSound("moved", file = "m.mp3")) }
         val vm = givenAViewModel()
-        runBlocking { vm.collections.first { it.isNotEmpty() } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.collections.first { it.isNotEmpty() } } }
 
         vm.applyAssignment(
             "custom:moved",
@@ -237,8 +248,10 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         }
         val vm = givenAViewModel()
         runBlocking {
-            vm.collections.first { cols ->
-                cols.any { it.id == CollectionsRepository.BAUL_SYSTEM_ID && "custom:cancel" in it.audioIds }
+            withTimeout(TIMEOUT_MS) {
+                vm.collections.first { cols ->
+                    cols.any { it.id == CollectionsRepository.BAUL_SYSTEM_ID && "custom:cancel" in it.audioIds }
+                }
             }
         }
 
@@ -267,7 +280,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
             CollectionsRepository(context).create("Recetas", CollectionProfile.GENERIC_PUBLIC)
         }
         val vm = givenAViewModel()
-        runBlocking { vm.collections.first { it.any { c -> c.name == "Recetas" } } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.collections.first { it.any { c -> c.name == "Recetas" } } } }
         val recetas = vm.collections.value.first { it.name == "Recetas" }
 
         // Hide it while only in a public collection — allowed (reachable via its chip, not orphaned).
@@ -278,7 +291,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
             privateCollectionIds = emptySet(),
             isVisibleInMySounds = false,
         )
-        runBlocking { vm.sounds.first { list -> list.none { it.name == "pubonly" } } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.sounds.first { list -> list.none { it.name == "pubonly" } } } }
         assertThat(
             vm.library.value
                 .first { it.id == "custom:pubonly" }
@@ -287,7 +300,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
 
         // ...still surfaced by its public chip.
         vm.selectMySoundsFilter(recetas.id)
-        runBlocking { vm.sounds.first { list -> list.any { it.name == "pubonly" } } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.sounds.first { list -> list.any { it.name == "pubonly" } } } }
         assertThat(vm.sounds.value.map { it.name }).containsExactly("pubonly")
     }
 
@@ -296,7 +309,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking { SoundsRepository(context).save(testSound("orphan", file = "o.mp3")) }
         val vm = givenAViewModel()
-        runBlocking { vm.collections.first { it.isNotEmpty() } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.collections.first { it.isNotEmpty() } } }
 
         // Attempt to hide with NO collections → coerced back to visible (anti-orphan safety net).
         vm.applyAssignment(
@@ -326,7 +339,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val vm = SoundsViewModel(context, ioDispatcher = UnconfinedTestDispatcher())
         createdViewModels += vm
-        runBlocking { vm.isInitialLoadComplete.first { it } }
+        runBlocking { withTimeout(TIMEOUT_MS) { vm.isInitialLoadComplete.first { it } } }
         return vm
     }
 
