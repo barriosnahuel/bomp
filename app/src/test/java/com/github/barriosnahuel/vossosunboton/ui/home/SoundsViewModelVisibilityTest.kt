@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.collections.DualHomeCoachStore
@@ -28,12 +29,21 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.robolectric.annotation.Config
 
 /**
  * Behaviour of the explicit `isVisibleInMySounds` flag (ADR 0012): tagging an audio to a private
  * (Vault) collection never removes it from My Sounds by itself; only the switch does. Plus the
  * chip-vs-flag rule, the dual-home coach, and the "moved to Vault" feedback.
+ *
+ * Pinned to a single Robolectric SDK (like [com.github.barriosnahuel.vossosunboton.ui.home.SoundItemTest]
+ * et al.): this class drives SDK-independent business logic through five real DataStores
+ * (sounds, collections, filters, dual-home coach, welcome). The default multi-SDK matrix
+ * (`AbstractRobolectricTest`: M/TIRAMISU/VANILLA) hangs when the second SDK sandbox re-opens those
+ * DataStore files in the same process — a Robolectric cross-sandbox artifact with no production
+ * analogue. One SDK fully covers the logic.
  */
+@Config(sdk = [Build.VERSION_CODES.M])
 internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
     private val createdViewModels = mutableListOf<SoundsViewModel>()
 
