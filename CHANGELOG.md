@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - New Bomp screen now flags when you already have a Bomp with the same name and lets you tap an inline play/stop toggle to hear that one before deciding — case-insensitive, trimmed; tap again while playing to stop and reset. Non-blocking: you can still save the duplicate (two Bomps can legitimately share a name)
 
 ### Fixed
+- The two gratitude buttons in the About screen now center their label when it wraps to a second line (e.g. "Invitame un cafecito", or any label at larger font sizes), instead of left-aligning the wrapped line
 - Audio preview card in Rename Bomp now advances the seek bar in real time during playback (was static)
 - Starting a preview while a Bomp from the Home list was playing would leave both audio sources playing at once; now starting a new preview cleanly stops the list playback (and vice versa)
 - Sharing a Bomp whose audio path can't be resolved by the FileProvider no longer crashes the app; the failure is reported to the user with a Snackbar and tracked as a non-fatal so it can be investigated

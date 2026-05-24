@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import java.util.Locale
@@ -73,7 +74,10 @@ internal fun GratitudeSection(
                                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             ),
                     ) {
-                        Text(stringResource(R.string.app_about_gratitude_cafecito_button))
+                        Text(
+                            stringResource(R.string.app_about_gratitude_cafecito_button),
+                            textAlign = TextAlign.Center,
+                        )
                     }
                 }
                 Button(
@@ -85,7 +89,10 @@ internal fun GratitudeSection(
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         ),
                 ) {
-                    Text(stringResource(R.string.app_about_gratitude_kofi_button))
+                    Text(
+                        stringResource(R.string.app_about_gratitude_kofi_button),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }
