@@ -653,6 +653,11 @@ internal fun SoundsList(
     // `mapNotNull` lambda.
     val systemCollectionLabel = stringResource(R.string.app_vault_baul_name)
     val collectionsById = remember(allCollections) { allCollections.associateBy { it.id } }
+    // Live Vault lock state, read directly here the same way SearchOverlayHost / VaultScreen do —
+    // private-collection tags are suppressed while locked so a cross-tagged audio shown on My Sounds
+    // never leaks a private collection's name. On the Vault tab this is always open (the tab only
+    // renders unlocked), so private tags show there as expected.
+    val vaultOpen by VaultSessionState.flow.collectAsState()
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -705,14 +710,7 @@ internal fun SoundsList(
                         if (isWelcome) {
                             emptyList()
                         } else {
-                            collectionsByAudio[sound.id].orEmpty().mapNotNull { id ->
-                                val collection = collectionsById[id]
-                                when {
-                                    collection == null -> null
-                                    collection.isSystem -> systemCollectionLabel
-                                    else -> collection.name
-                                }
-                            }
+                            collectionOriginLabels(sound.id, collectionsByAudio, collectionsById, systemCollectionLabel, vaultOpen)
                         }
                     SoundItem(
                         sound = sound,

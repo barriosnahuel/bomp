@@ -375,18 +375,10 @@ private fun SearchResultsList(
 }
 
 /**
- * Origin tags shown on a search result, since search spans every surface and a result on its own
- * gives no hint of where it lives. A bundled audio belongs to the read-only Explore catalog, so it
- * carries the single [exploreLabel]. Any other audio resolves its collection memberships — the
- * Vault's system collection substitutes its localized [systemCollectionLabel] for the stored
- * literal — and an audio in no collection gets no tag.
- *
- * Privacy: a *private* collection's name is content that lives behind the Vault gate, so while the
- * Vault session is locked ([vaultOpen] = false) labels for private collections are suppressed —
- * a cross-tagged (public AND private) audio that the upstream gate keeps visible then shows only
- * its public tags, never leaking the private collection's name without authentication. Once the
- * Vault is unlocked, all memberships render. Pure so it can be unit-tested without composing the
- * overlay.
+ * Origin tags for a search result. A bundled audio belongs to the read-only Explore catalog, so it
+ * carries the single [exploreLabel]; any other audio defers to the shared [collectionOriginLabels]
+ * — same lock-aware rule used by My Sounds and the Vault list, so a private collection's name never
+ * leaks on a locked search surface.
  */
 internal fun searchResultCollectionLabels(
     sound: Sound,
@@ -399,15 +391,7 @@ internal fun searchResultCollectionLabels(
     if (sound.isBundled()) {
         listOf(exploreLabel)
     } else {
-        collectionsByAudio[sound.id].orEmpty().mapNotNull { id ->
-            val collection = collectionsById[id]
-            when {
-                collection == null -> null
-                !vaultOpen && collection.isPrivate -> null
-                collection.isSystem -> systemCollectionLabel
-                else -> collection.name
-            }
-        }
+        collectionOriginLabels(sound.id, collectionsByAudio, collectionsById, systemCollectionLabel, vaultOpen)
     }
 
 // Dim level of the full-screen scrim behind the search surface (over Color.Black). A named alpha,
