@@ -31,7 +31,7 @@ import org.junit.Test
 import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+@Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class SoundItemTest : AbstractRobolectricTest() {
     @get:Rule
     val composeTestRule = createComposeRule()

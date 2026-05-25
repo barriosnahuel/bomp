@@ -59,7 +59,7 @@ import org.robolectric.annotation.Config
  * resets on each start, doesn't pollute home position cache); tap again while playing →
  * `stopPlayingSound`; disposal → stops the controller only when our uri is the active one.
  */
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+@Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() {
     @get:Rule
     val composeTestRule = createEmptyComposeRule()

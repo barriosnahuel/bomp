@@ -25,7 +25,7 @@ import org.robolectric.annotation.Config
 // Robolectric's JVM File ops), so the disk-on-main-thread guarantee is verified end-to-end by the
 // instrumented AddButtonEditFlowTest on a real debug build with StrictModeConfigurator armed. This
 // test proves the composable launches without throwing when the bug-prone branch is reachable.
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+@Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class AddButtonScreenStrictModeTest : AbstractRobolectricTest() {
     @get:Rule
     val composeTestRule = createEmptyComposeRule()

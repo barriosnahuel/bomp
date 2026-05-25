@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
  * direct Composable test pins the precedence so a future supporting-text refactor can't silently
  * surface both at once.
  */
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+@Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class NameFieldSupportingTextTest : AbstractRobolectricTest() {
     @get:Rule
     val composeTestRule = createComposeRule()

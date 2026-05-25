@@ -22,11 +22,11 @@ import org.robolectric.annotation.Config
 @Suppress("UnnecessaryAbstractClass")
 @RunWith(RobolectricTestRunner::class)
 @Config(
-    // Single-SDK default (ADR 0013): SDK-independent tests run once at TIRAMISU, the suite's
-    // universally proven-green level. A multi-SDK matrix belongs only on a test guarding a real
-    // Build.VERSION.SDK_INT branch, marked `// sdk-boundary:` (see HapticsTest and
-    // AddButtonActivitySdkBoundaryTest). Enforced by scripts/check-adr-invariants.sh.
-    sdk = [Build.VERSION_CODES.TIRAMISU],
+    // Single-SDK default (ADR 0013): SDK-independent tests run once at VANILLA_ICE_CREAM (35) —
+    // recent, close to targetSdk, already proven in the prior matrix. A multi-SDK matrix belongs
+    // only on a test guarding a real Build.VERSION.SDK_INT branch, marked `// sdk-boundary:`
+    // (see HapticsTest and AddButtonActivitySdkBoundaryTest). Enforced by check-adr-invariants.sh.
+    sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM],
     application = TestApplication::class,
 )
 internal abstract class AbstractRobolectricTest {

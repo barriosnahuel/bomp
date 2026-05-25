@@ -30,7 +30,7 @@ import org.junit.Test
 import org.robolectric.annotation.Config
 import java.util.Locale
 
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+@Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 @Suppress("TooManyFunctions")
 internal class AboutScreenTest : AbstractRobolectricTest() {
     @get:Rule

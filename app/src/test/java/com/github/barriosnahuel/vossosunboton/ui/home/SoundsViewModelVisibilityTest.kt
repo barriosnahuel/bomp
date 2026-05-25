@@ -42,7 +42,7 @@ import org.robolectric.annotation.Config
  * it across the [AbstractRobolectricTest] M/TIRAMISU/VANILLA matrix would only triple the runtime for
  * identical assertions, with no added coverage.
  */
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+@Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
     private val createdViewModels = mutableListOf<SoundsViewModel>()
 

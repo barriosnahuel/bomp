@@ -44,7 +44,7 @@ import org.robolectric.annotation.Config
  * is AudioPreview's `DisposableEffect.onDispose`, which fires when the Activity tears down ~600 ms
  * later (overlay hold + `finish()`), so audio keeps bleeding into the confirmation moment.
  */
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+@Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class AddButtonScreenPlaybackTest : AbstractRobolectricTest() {
     @get:Rule
     val composeTestRule = createEmptyComposeRule()
