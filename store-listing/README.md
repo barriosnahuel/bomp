@@ -23,17 +23,13 @@ store-listing/
 │   │   ├── icon-512.svg            # vector composition of the Play Store icon
 │   │   ├── feature-graphic.md      # 1024×500 feature graphic spec
 │   │   ├── feature-graphic.svg     # vector composition ready for export
-│   │   ├── screenshots.md          # hybrid workflow spec (real PNG + SVG header)
-│   │   ├── screenshot-01-home.svg      # hybrid SVG — Home / UI hero
-│   │   ├── screenshot-02-manifesto.svg # hybrid SVG — brand manifesto
-│   │   ├── screenshot-03-search.svg    # hybrid SVG — Search overlay
-│   │   ├── screenshot-04-playing.svg   # hybrid SVG — playing
-│   │   ├── screenshot-05-closing.svg   # hybrid SVG — emotional close
+│   │   ├── screenshots.md          # capture + compose pipeline spec (8 scenes)
+│   │   ├── screenshot-01-home.svg … screenshot-08-closing.svg  # 6 hybrid + 2 typography SVGs
 │   │   └── preview-video.md        # optional video script
 │   └── images/                     # deliverable PNGs (generated with rsvg-convert; see CONTRIBUTING.md § "Store listing")
 │       ├── icon-512-<locale>.png
 │       ├── feature-graphic-1024x500-<locale>.png
-│       ├── phone/                  # 01-home, 02-manifesto, 03-search, 04-playing, 05-closing — *-<locale>.png
+│       ├── phone/                  # 01-home … 08-closing, each as *-<locale>.png (8 scenes)
 │       ├── tablet-7/               # empty — TODO post-launch
 │       └── tablet-10/              # empty — TODO post-launch
 ├── en-US/                          # same tree as es-AR; copy and headlines in English
@@ -41,10 +37,21 @@ store-listing/
 │   ├── short_description.txt
 │   ├── full_description.txt
 │   ├── changelog-6.txt
-│   ├── briefs/                     # icon-512.svg + feature-graphic.svg + 5 screenshot-*.svg + .md briefs
+│   ├── briefs/                     # icon-512.svg + feature-graphic.svg + 8 screenshot-*.svg + .md briefs
 │   └── images/                     # same deliverable PNGs as es-AR, re-rendered from their English SVGs
 └── (future) es-419/, es-ES/, pt-BR/
 ```
+
+## Regenerating phone screenshots
+
+Two scripts (see `<locale>/briefs/screenshots.md` for detail):
+
+```bash
+./scripts/capture-store-screenshots.sh          # drive the app on a rootable emulator → real-screenshots/<scene>-<locale>.png
+python3 scripts/compose-store-screenshots.py     # Ink header + copy over each capture → images/phone/
+```
+
+The 8-scene set: `01-home`, `02-manifesto`, `03-collections`, `04-search`, `05-immersive`, `06-vault`, `07-newbomp`, `08-closing` (manifesto + closing are full-vector typography, not captured).
 
 ## Positioning
 
