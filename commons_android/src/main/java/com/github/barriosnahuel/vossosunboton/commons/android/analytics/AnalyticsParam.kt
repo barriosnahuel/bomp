@@ -57,7 +57,6 @@ object AnalyticsSource {
     const val ADD_BOMP = "add_bomp"
     const val ASSIGN_SHEET = "assign_sheet"
     const val VAULT_TAB = "vault_tab"
-    const val VAULT_FAB = "vault_fab"
     const val VAULT_FILTER = "vault_filter"
     const val MANAGE = "manage"
     const val MY_SOUNDS_FILTER = "my_sounds_filter"

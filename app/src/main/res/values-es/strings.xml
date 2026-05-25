@@ -100,7 +100,6 @@
     <string name="app_vault_baul_name">Mi Baúl</string>
     <string name="app_vault_unprotected_warning_chip">Sin protección — configurá un bloqueo de pantalla</string>
     <string name="app_vault_unprotected_setup_screenlock_cta">Configurar bloqueo de pantalla</string>
-    <string name="app_vault_fab_new">Nuevo Baúl</string>
     <string name="app_vault_card_overflow_description">Más opciones para %1$s</string>
     <string name="app_manage_collections_overflow_view">Ver colección</string>
     <string name="app_vault_card_overflow_rename">Renombrar</string>

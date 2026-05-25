@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,7 +34,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,7 +55,6 @@ import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessio
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsList
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
@@ -347,10 +344,6 @@ private fun VaultBody(
                     allCollections = allCollections,
                     filterIsActive = activeFilter != null,
                     shareEnabled = false,
-                    // Leave room for the ExtendedFloatingActionButton overlay so the last row
-                    // can scroll fully into view instead of sitting under the FAB. Default FAB
-                    // height (56dp) + Spacing.LG margin + Spacing.MD breathing room.
-                    bottomContentPadding = VAULT_FAB_CLEARANCE,
                     // Vault audios use the immersive listen-mode player (CollectionPlaybackUI.IMMERSIVE)
                     // instead of the inline card transport: tapping play opens the full-screen screen.
                     onPlayClick = { sound -> onImmersivePlay(sound) },
@@ -365,31 +358,6 @@ private fun VaultBody(
                 )
             }
         }
-        // Always-visible FAB to create a private collection. Mirrors the Vault chip row's
-        // "+ Nueva" entry point but stays reachable when the list is full.
-        val fabContentDescription = stringResource(R.string.app_vault_fab_new)
-        ExtendedFloatingActionButton(
-            onClick = { viewModel.requestCreateCollection(CollectionAccess.PRIVATE, source = AnalyticsSource.VAULT_FAB) },
-            modifier =
-                Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(Spacing.LG)
-                    .semantics { contentDescription = fabContentDescription },
-            // Collapse to icon-only while the list is actively scrolling (less content covered),
-            // expand back to icon+text once it settles — the Material 3 ExtendedFAB idiom. The
-            // accessible name is unaffected: contentDescription lives on the modifier above, not the
-            // text slot, so it persists across both states.
-            expanded = !listState.isScrollInProgress,
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            icon = {
-                Icon(
-                    imageVector = AppIcons.Add,
-                    contentDescription = null,
-                )
-            },
-            text = { Text(stringResource(R.string.app_vault_fab_new)) },
-        )
     }
 }
 
@@ -472,12 +440,6 @@ private const val ZRP_GLOW_MID_ALPHA = 0.04f
 private const val ZRP_GLOW_STOP_CENTER = 0.0f
 private const val ZRP_GLOW_STOP_MID = 0.5f
 private const val ZRP_GLOW_STOP_EDGE = 1.0f
-
-// Space the LazyColumn reserves at the bottom so the ExtendedFloatingActionButton can sit on top
-// of the last row without clipping it. Computed from the FAB design: 56dp (M3 ExtendedFAB minimum
-// height) + Spacing.LG (16dp outer margin) + Spacing.MD (12dp breathing room) = 84dp. Round to 88
-// to match the 8dp grid.
-private val VAULT_FAB_CLEARANCE = 88.dp
 
 // The heart is a soft accent, not a focal element — kept muted so the headline carries the message.
 private const val HEART_ALPHA = 0.5f
