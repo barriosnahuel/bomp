@@ -346,6 +346,10 @@ private fun ScaffoldedLanding(
     onActiveFilterEditClick: (String) -> Unit,
     onImmersivePlay: (Sound) -> Unit,
 ) {
+    // The Search FAB now renders on the Vault tab too, but only once it's unlocked (its audio list
+    // is on screen) — the locked unlock screen stays focused, matching the old create-collection FAB
+    // which was also only visible inside the unlocked Vault.
+    val vaultOpen by VaultSessionState.flow.collectAsState()
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -372,10 +376,11 @@ private fun ScaffoldedLanding(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            // Search FAB only renders on the sound-list tabs; Vault has its own FAB. Gated on the
-            // global library size (not the tab-filtered `sounds`) because search spans every
-            // surface — a sparse current tab must not hide a FAB that searches the whole catalog.
-            if (selectedTab != AppTab.VAULT && librarySize >= SEARCH_FAB_MIN_SOUNDS) {
+            // Search spans every surface, so the FAB gates on the global library size (not the
+            // tab-filtered `sounds`) — a sparse current tab must not hide a FAB that searches the
+            // whole catalog. It shows on every tab; on the Vault tab only once unlocked, so the
+            // locked unlock screen stays uncluttered.
+            if ((selectedTab != AppTab.VAULT || vaultOpen) && librarySize >= SEARCH_FAB_MIN_SOUNDS) {
                 FloatingActionButton(
                     onClick = { viewModel.showSearch() },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,

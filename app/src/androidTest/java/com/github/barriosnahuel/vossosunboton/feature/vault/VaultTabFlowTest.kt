@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.feature.vault
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
@@ -13,6 +14,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import org.junit.Test
@@ -81,7 +83,37 @@ internal class VaultTabFlowTest : AbstractUiTest() {
         }
     }
 
+    @Test
+    fun unlockedVaultShowsTheSearchFab() {
+        // The Vault tab now offers the global Search FAB (it replaced the dedicated "new private
+        // collection" FAB — creating one still lives on the chip row's "+ Nueva"). markVaultOpen
+        // lands us on the body directly, where the FAB shows like on every other tab.
+        // Seed past SEARCH_FAB_MIN_SOUNDS explicitly so the FAB gate is satisfied by the seeded
+        // library alone, not the (uncommitted, best-effort) bundled catalog.
+        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
+        TestData.markVaultOpen()
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithText(vaultLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun lockedVaultHidesTheSearchFab() {
+        // While the Vault is locked the unlock gate is the whole screen — the Search FAB stays
+        // hidden until unlock, matching the create FAB it replaced (also visible only when unlocked).
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithText(vaultLabel()).performClick()
+            composeRule.awaitNodeWithText(unlockCta()).assertIsDisplayed()
+            composeRule.waitForIdle()
+            composeRule.onNodeWithContentDescription(searchLabel()).assertDoesNotExist()
+        }
+    }
+
     private fun vaultLabel() = context.getString(R.string.app_navigation_menu_item_vault)
+
+    private fun searchLabel() = context.getString(R.string.app_search)
 
     private fun unlockCta() = context.getString(R.string.app_vault_unlock_cta)
 
@@ -90,4 +122,10 @@ internal class VaultTabFlowTest : AbstractUiTest() {
     private fun zrpHeadlineLead() = context.getString(R.string.app_vault_zrp_headline_lead)
 
     private fun zrpEmphasis() = context.getString(R.string.app_vault_zrp_headline_emphasis)
+
+    private companion object {
+        // Mirrors SEARCH_FAB_MIN_SOUNDS in LandingScreen.kt — seeding this many guarantees the
+        // global library crosses the Search FAB threshold without relying on the bundled catalog.
+        const val SOUNDS_FOR_VISIBLE_FAB = 7
+    }
 }
