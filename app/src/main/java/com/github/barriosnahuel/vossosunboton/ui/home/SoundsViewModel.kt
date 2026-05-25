@@ -273,6 +273,16 @@ class SoundsViewModel(
     private val _movedToVaultEvent = Channel<MovedToVaultEvent>(Channel.CONFLATED)
     val movedToVaultEvent: Flow<MovedToVaultEvent> = _movedToVaultEvent.receiveAsFlow()
 
+    /**
+     * Detach from the process-singleton [PlayerControllerFactory] this registers with in [init].
+     * Without it, a cleared ViewModel — with its caches and collectors — stays reachable through
+     * `PlayerControllerImpl.listener` for the whole process (heap-confirmed leak).
+     */
+    override fun onCleared() {
+        PlayerControllerFactory.instance.removeOnStartStopListener(this)
+        super.onCleared()
+    }
+
     init {
         PlayerControllerFactory.instance.setOnStartStopListener(this)
         // Single coroutine: read welcome-sticker visibility BEFORE the first loadSounds so the

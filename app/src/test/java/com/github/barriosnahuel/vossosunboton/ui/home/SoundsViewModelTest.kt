@@ -57,6 +57,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
+        every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
         // deleteSound always asks the controller to forget the sound. Stubbing here keeps individual
         // delete-related tests free of boilerplate; tests that need to assert the call still verify
         // it explicitly.

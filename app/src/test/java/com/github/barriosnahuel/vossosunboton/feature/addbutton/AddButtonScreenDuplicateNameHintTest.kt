@@ -96,6 +96,7 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         every { PlayerControllerFactory.instance.resume() } answers { nothing }
         every { PlayerControllerFactory.instance.seekTo(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
+        every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
         runBlocking { SoundsRepository(context).clearForTest() }
     }
 

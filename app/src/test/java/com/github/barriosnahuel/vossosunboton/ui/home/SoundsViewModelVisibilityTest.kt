@@ -61,6 +61,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
+        every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.pause() } answers { nothing }
     }

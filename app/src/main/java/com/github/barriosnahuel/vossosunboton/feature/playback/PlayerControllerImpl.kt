@@ -410,6 +410,12 @@ internal class PlayerControllerImpl(
         this.listener = listener
     }
 
+    override fun removeOnStartStopListener(listener: PlayerControllerListener) {
+        if (this.listener === listener) {
+            this.listener = null
+        }
+    }
+
     private fun describeTarget(t: PlaybackTarget): String =
         when (t) {
             is PlaybackTarget.SoundTarget -> "sound=${t.sound.name}"
