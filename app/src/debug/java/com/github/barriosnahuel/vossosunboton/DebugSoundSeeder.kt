@@ -156,7 +156,11 @@ internal object DebugSoundSeeder {
         public: List<String>,
         private: List<String>,
     ): Map<String, Collection> {
-        val existingNames = repo.collections.first().map { it.name }.toSet()
+        val existingNames =
+            repo.collections
+                .first()
+                .map { it.name }
+                .toSet()
         public.filterNot { it in existingNames }.forEach {
             runCatching { repo.create(it, CollectionProfile.GENERIC_PUBLIC) }
         }

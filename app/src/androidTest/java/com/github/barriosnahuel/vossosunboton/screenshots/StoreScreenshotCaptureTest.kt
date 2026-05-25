@@ -5,11 +5,13 @@
  */
 package com.github.barriosnahuel.vossosunboton.screenshots
 
+import android.content.Intent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -21,6 +23,7 @@ import com.github.barriosnahuel.vossosunboton.SeedSource
 import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -96,7 +99,25 @@ internal class StoreScreenshotCaptureTest : AbstractUiTest() {
             composeRule.waitForIdle()
             capture("05-immersive", tag)
         }
+
+        // 07 — New Bomp: the save form with the "Assign to collections" section (public chips +
+        // private-unlock CTA). Launched as the share-sheet ACTION_SEND flow with a seeded audio.
+        ActivityScenario.launch<AddButtonActivity>(newBompIntent()).use {
+            composeRule.awaitNodeWithText(string(R.string.app_addbutton_collections_section_title))
+            // Drop the auto-focused IME so the form + collections section are visible, not the keyboard.
+            Espresso.closeSoftKeyboard()
+            composeRule.waitForIdle()
+            capture("07-newbomp", tag)
+        }
     }
+
+    private fun newBompIntent() =
+        Intent(context, AddButtonActivity::class.java).apply {
+            action = Intent.ACTION_SEND
+            type = "audio/*"
+            putExtra(Intent.EXTRA_STREAM, TestData.seedPreviewAudio(context))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
 
     /**
      * Blocks until the seeded list has actually rendered (≥1 play button on screen). A bare
@@ -127,7 +148,12 @@ internal class StoreScreenshotCaptureTest : AbstractUiTest() {
                     privateCollections = item.privateCollections,
                     inSystemVault = item.inSystemVault,
                     visibleInMySounds = item.visibleInMySounds,
-                ) { InstrumentationRegistry.getInstrumentation().context.assets.open(TEST_ASSET) }
+                ) {
+                    InstrumentationRegistry
+                        .getInstrumentation()
+                        .context.assets
+                        .open(TEST_ASSET)
+                }
             }
         runBlocking {
             DebugSoundSeeder.seed(

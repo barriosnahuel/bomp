@@ -23,6 +23,7 @@ TEST_PKG="$PKG.test"
 RUNNER="androidx.test.runner.AndroidJUnitRunner"
 CLASS="com.github.barriosnahuel.vossosunboton.screenshots.StoreScreenshotCaptureTest"
 BOOT_TIMEOUT_SECONDS="${BOOT_TIMEOUT_SECONDS:-180}"
+LOCK_PIN="${LOCK_PIN:-1234}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="$REPO_ROOT/store-listing/real-screenshots"
@@ -56,14 +57,22 @@ for loc in "${LOCALES[@]}"; do
   echo "→ [$loc] setting system locale + rebooting"
   adb_d root >/dev/null 2>&1 || true
   sleep 2
+  # Clear any PIN from a prior iteration so the device boots straight to home — a PIN would leave it
+  # at a locked keyguard the capture can't get past.
+  adb_d shell locksettings clear --old "$LOCK_PIN" >/dev/null 2>&1 || true
   adb_d shell "setprop persist.sys.locale $loc"
   adb_d reboot
   wait_for_boot
   # A freshly-rebooted, loaded emulator can throw a "System UI isn't responding" ANR dialog that
   # dims the screen and lands in the capture. Suppress error dialogs and give SystemUI time to settle.
   adb_d shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+  adb_d shell svc power stayon true >/dev/null 2>&1 || true
   adb_d shell wm dismiss-keyguard >/dev/null 2>&1 || true
   sleep 20
+  # Configure a screen lock now that the device is awake + unlocked: BiometricGate.status() turns
+  # AVAILABLE, so the New Bomp "Assign to collections" private subsection renders the polished
+  # "requires unlock" CTA instead of the unprotected-device warning. The current session stays open.
+  adb_d shell locksettings set-pin "$LOCK_PIN" >/dev/null 2>&1 || true
   echo "→ [$loc] capturing"
   adb_d shell am instrument -w -e class "$CLASS" "$TEST_PKG/$RUNNER"
 done
