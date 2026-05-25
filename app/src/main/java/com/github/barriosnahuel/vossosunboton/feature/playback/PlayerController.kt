@@ -96,6 +96,14 @@ internal interface PlayerController {
      * @param listener the listener that will handle all play/stop callbacks for all buttons.
      */
     fun setOnStartStopListener(listener: PlayerControllerListener)
+
+    /**
+     * Detaches [listener] only if it is the currently-registered one (a no-op once a newer listener
+     * has replaced it). Call from the consumer's lifecycle teardown (e.g. `ViewModel.onCleared`): this
+     * controller is a process-singleton, so a consumer that never detaches is retained for the whole
+     * process — a leak (see [PlayerControllerFactory]).
+     */
+    fun removeOnStartStopListener(listener: PlayerControllerListener)
 }
 
 internal interface PlayerControllerListener {

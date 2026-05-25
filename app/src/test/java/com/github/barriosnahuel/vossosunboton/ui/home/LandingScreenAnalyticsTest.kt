@@ -45,6 +45,7 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
         AnalyticsTrackerProvider.setForTest(fake)
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
+        every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
     }
 
     @After

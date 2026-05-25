@@ -81,6 +81,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - CircleCI PR workflow parallelizes `lint`, `test`, and `bundle` after the cheap linters (`detekt`, `ktlint`, `spotless`) instead of serializing them; `lint` job drops the redundant `app:lintRelease` re-invocation and `app:lintVitalRelease` (a fatal-only filter over the same checks); `bundle` job drops `bundleDebug` (the debug AAB was never consumed in CI). Critical path drops from ~14m39s to an estimated ~6-7min without losing coverage
 - Replaced the unmaintained `androidx.compose.material:material-icons-core` dependency with bundled Material Symbols vector drawables loaded via `painterResource`: the 15 icons in use become `app_ic_*` drawables (filled/outlined matched to the originals, `autoMirrored` preserved for the back arrow and chevron); `AppIcons` local vectors are untouched
 
+#### Fixed
+- Fixed a `SoundsViewModel` leak — it registered as the process-singleton `PlayerController`'s playback listener in `init` but never detached, so each cleared ViewModel stayed reachable for the life of the process; it now detaches in `onCleared`. Confirmed by heap analysis and guarded by `SoundsViewModelLifecycleTest`
+
 #### Removed
 - Dead post-save plumbing: `EXTRA_BUTTON_SAVED` / `EXTRA_BUTTON_RENAMED` / `EXTRA_BUTTON_NAME` Intent extras, `SoundsViewModel.buttonSavedEvent` / `buttonRenamedEvent` channels and their `onButtonSaved` / `onButtonRenamed` setters, the `LandingScreen` `LaunchedEffect`s that consumed them, and `AddButtonActivity.navigateBackSaved` / `navigateBackRenamed`
 - `bundledNames(context)` and the two `require(sound.name !in bundledNames(...))` guards in `SoundsRepository.save`/`rename` — with stable `Sound.id` (ADR 0008) a custom sound legitimately sharing a name with a bundled one is no longer an identity collision

@@ -40,6 +40,7 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
     fun setUp() {
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
+        every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
     }
 
     @After
