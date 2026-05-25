@@ -24,6 +24,7 @@ import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity
+import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -96,6 +97,10 @@ internal class StoreScreenshotCaptureTest : AbstractUiTest() {
                 .onFirst()
                 .performClick()
             composeRule.awaitNodeWithText(immersiveModeLabel()).assertIsDisplayed()
+            // The amplitude waveform (WaveformExtractor) is decoded off-thread on first open; let it
+            // land so the capture shows the real envelope, not the empty placeholder. No semantics
+            // node to await on, so this is a timed settle.
+            Thread.sleep(WAVEFORM_DECODE_MS)
             composeRule.waitForIdle()
             capture("05-immersive", tag)
         }
@@ -139,8 +144,12 @@ internal class StoreScreenshotCaptureTest : AbstractUiTest() {
      *  the audio payload for every item. */
     private fun seedCorpus(locale: Locale) {
         val corpus = DebugSeedCorpus.forLocale(locale)
+        // Use the real bundled Explore audio as the payload (cycling) so the immersive waveform and
+        // the card durations are real — keep the corpus's custom display names. Falls back to the
+        // silent test asset only if the debug audio bundle isn't present on the device.
+        val raws = PackagedAudios.get(context).map { it.rawRes }
         val sources =
-            corpus.items.map { item ->
+            corpus.items.mapIndexed { index, item ->
                 SeedSource(
                     key = item.key,
                     name = item.name,
@@ -149,10 +158,14 @@ internal class StoreScreenshotCaptureTest : AbstractUiTest() {
                     inSystemVault = item.inSystemVault,
                     visibleInMySounds = item.visibleInMySounds,
                 ) {
-                    InstrumentationRegistry
-                        .getInstrumentation()
-                        .context.assets
-                        .open(TEST_ASSET)
+                    if (raws.isEmpty()) {
+                        InstrumentationRegistry
+                            .getInstrumentation()
+                            .context.assets
+                            .open(TEST_ASSET)
+                    } else {
+                        context.resources.openRawResource(raws[index % raws.size])
+                    }
                 }
             }
         runBlocking {
@@ -186,5 +199,6 @@ internal class StoreScreenshotCaptureTest : AbstractUiTest() {
         const val TEST_ASSET = "test_sound.mp3"
         const val SCREENSHOT_DIR = "screenshots"
         const val CONTENT_TIMEOUT_MS = 5_000L
+        const val WAVEFORM_DECODE_MS = 3_000L
     }
 }
