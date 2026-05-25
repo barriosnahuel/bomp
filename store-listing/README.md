@@ -17,29 +17,31 @@ store-listing/
 │   ├── title.txt                   # ≤30 chars
 │   ├── short_description.txt       # ≤80 chars
 │   ├── full_description.txt        # ≤4000 chars
-│   ├── changelog-5.txt             # ≤500 chars; matches the current versionCode
+│   ├── changelog-6.txt             # ≤500 chars; matches the current versionCode
 │   ├── briefs/
 │   │   ├── icon.md                 # 512×512 icon spec
 │   │   ├── icon-512.svg            # vector composition of the Play Store icon
 │   │   ├── feature-graphic.md      # 1024×500 feature graphic spec
 │   │   ├── feature-graphic.svg     # vector composition ready for export
 │   │   ├── screenshots.md          # hybrid workflow spec (real PNG + SVG header)
-│   │   ├── screenshot-01-home.svg  # hybrid SVG — Home scene
-│   │   ├── screenshot-02-search.svg# hybrid SVG — Search overlay
-│   │   ├── screenshot-03-playing.svg# hybrid SVG — playing
+│   │   ├── screenshot-01-home.svg      # hybrid SVG — Home / UI hero
+│   │   ├── screenshot-02-manifesto.svg # hybrid SVG — brand manifesto
+│   │   ├── screenshot-03-search.svg    # hybrid SVG — Search overlay
+│   │   ├── screenshot-04-playing.svg   # hybrid SVG — playing
+│   │   ├── screenshot-05-closing.svg   # hybrid SVG — emotional close
 │   │   └── preview-video.md        # optional video script
 │   └── images/                     # deliverable PNGs (generated with rsvg-convert; see CONTRIBUTING.md § "Store listing")
 │       ├── icon-512-<locale>.png
 │       ├── feature-graphic-1024x500-<locale>.png
-│       ├── phone/                  # 01-home-<locale>.png, 02-search-<locale>.png, 03-playing-<locale>.png
+│       ├── phone/                  # 01-home, 02-manifesto, 03-search, 04-playing, 05-closing — *-<locale>.png
 │       ├── tablet-7/               # empty — TODO post-launch
 │       └── tablet-10/              # empty — TODO post-launch
 ├── en-US/                          # same tree as es-AR; copy and headlines in English
 │   ├── title.txt
 │   ├── short_description.txt
 │   ├── full_description.txt
-│   ├── changelog-5.txt
-│   ├── briefs/                     # icon-512.svg + feature-graphic.svg + 3 screenshot-*.svg + .md briefs
+│   ├── changelog-6.txt
+│   ├── briefs/                     # icon-512.svg + feature-graphic.svg + 5 screenshot-*.svg + .md briefs
 │   └── images/                     # same deliverable PNGs as es-AR, re-rendered from their English SVGs
 └── (future) es-419/, es-ES/, pt-BR/
 ```

@@ -19,7 +19,7 @@ android {
         applicationId "com.github.barriosnahuel.vossosunboton"
         minSdkVersion 23
         targetSdkVersion 37
-        versionCode 5
+        versionCode 6
         versionName '2.1.0'
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
