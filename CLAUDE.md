@@ -128,6 +128,10 @@ Test names are descriptive sentences, never opaque identifiers — reports list 
 - **JVM tests** (`src/test/`): backtick-quoted, sentence-case, no trailing period — `` @Test fun `searchResults emits empty list when query is blank`() ``.
 - **Instrumented tests** (`src/androidTest/`): camelCase — `@Test fun swipeRightPinsACustomSound()`. Backticks need DEX 040, not emitted by AGP/D8 at `minSdk` 23; migrate when that boundary moves.
 
+## Robolectric SDK config
+
+Robolectric tests run at a **single SDK by default** — the `AbstractRobolectricTest` base classes pin it; subclasses inherit. A multi-SDK matrix (`@Config(sdk = [a, b, …])`) is **only** for a test guarding a real `Build.VERSION.SDK_INT` branch and **must** carry a trailing `// sdk-boundary: <branch>` comment (grep-enforced by `scripts/check-adr-invariants.sh`). Straddle the boundary (one level below, one at/above). Canonical: `HapticsTest` (`[M, R]`), `AddButtonActivitySdkBoundaryTest` (`[M, TIRAMISU]`). See [ADR 0013](docs/adr/0013-single-sdk-default-robolectric.md).
+
 ## Test assertions
 
 No bare `kotlin.assert(...)` in test sources — see [ADR 0006](docs/adr/0006-no-kotlin-assert-in-tests.md). Grep-enforced by `scripts/check-adr-invariants.sh` + CircleCI `test-assertion-guard`. Use Truth `assertThat(...)`, JUnit `assertEquals`/`assertTrue`/`assertNotNull`, or Compose UI Test API (`assertCountEquals`, `assertIsDisplayed`). Local check command: CONTRIBUTING.md § *Testing → Test assertions*.

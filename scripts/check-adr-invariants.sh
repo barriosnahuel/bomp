@@ -161,6 +161,25 @@ Use Button (filled-primary, primaryContainer) or TextButton (secondary, primary)
 fi
 
 # ============================================================================
+# ADR 0013 — docs/adr/0013-single-sdk-default-robolectric.md
+# Invariant: a multi-SDK Robolectric matrix — @Config(sdk = [a, b, ...]) with two
+# or more levels — is only for a test guarding a real Build.VERSION.SDK_INT branch,
+# and must be justified inline with a `// sdk-boundary:` comment. Single-SDK pins
+# and the AbstractRobolectricTest base-class default are unrestricted. Stops the
+# cargo-culted 3-SDK matrix that tripled CI time on SDK-independent logic (the
+# matrix that made the #1186 hang 3x more expensive to reproduce).
+# ============================================================================
+bad_matrix=$(
+    grep -rnE --include='*.kt' 'sdk[[:space:]]*=[[:space:]]*\[[^]]*,[^]]*\]' $TEST_DIRS 2>/dev/null \
+        | grep -vF '// sdk-boundary:' || true
+)
+if [ -n "$bad_matrix" ]; then
+    fail "ADR 0013 broken: multi-SDK @Config matrix without a // sdk-boundary: justification:
+$bad_matrix
+A 2+ SDK matrix is only for a test guarding a real Build.VERSION.SDK_INT branch. Collapse to a single SDK (inherit the AbstractRobolectricTest default), or justify the boundary inline with a trailing // sdk-boundary: <branch> comment. See CLAUDE.md § Robolectric SDK config / ADR 0013."
+fi
+
+# ============================================================================
 # CLAUDE.md size budget — see CLAUDE.md § "What goes in this file"
 # Loaded into every Claude Code context window; performance degrades above 40K.
 # Measured in bytes (wc -c): portable and deterministic, and a conservative

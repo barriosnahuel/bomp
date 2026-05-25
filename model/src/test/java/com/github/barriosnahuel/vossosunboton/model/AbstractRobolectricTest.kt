@@ -13,7 +13,7 @@ import org.robolectric.annotation.Config
 /**
  * Robolectric base for unit tests in the `:model` module.
  *
- * Mirrors `app`'s `AbstractRobolectricTest` (same SDK matrix) but without the
+ * Mirrors `app`'s `AbstractRobolectricTest` (same single-SDK default) but without the
  * custom `TestApplication` — model code only needs a plain `Context`, so we
  * let Robolectric supply its default `Application`. Tests in `:app` keep their
  * own base because they exercise UI/Compose flows that benefit from Timber
@@ -22,6 +22,8 @@ import org.robolectric.annotation.Config
 @Suppress("UnnecessaryAbstractClass")
 @RunWith(RobolectricTestRunner::class)
 @Config(
-    sdk = [Build.VERSION_CODES.M, Build.VERSION_CODES.TIRAMISU, Build.VERSION_CODES.VANILLA_ICE_CREAM],
+    // Single-SDK default (ADR 0013) — see app's AbstractRobolectricTest. A multi-SDK matrix
+    // belongs only on a test guarding a real SDK_INT branch, marked `// sdk-boundary:`.
+    sdk = [Build.VERSION_CODES.TIRAMISU],
 )
 internal abstract class AbstractRobolectricTest
