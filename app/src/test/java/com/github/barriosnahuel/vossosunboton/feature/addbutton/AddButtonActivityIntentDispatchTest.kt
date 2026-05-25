@@ -42,7 +42,7 @@ import org.robolectric.annotation.Config
  * for a DESTROYED transition that no longer reaches it. The lower-level controller has no such
  * coupling and lets us drive the lifecycle deterministically.
  */
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+@Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class AddButtonActivityIntentDispatchTest : AbstractRobolectricTest() {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 

@@ -17,7 +17,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.robolectric.annotation.Config
 
-@Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+@Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class MySoundsEmptyStateTest : AbstractRobolectricTest() {
     @get:Rule
     val composeTestRule = createComposeRule()
