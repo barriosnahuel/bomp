@@ -7,8 +7,8 @@ Bomp is your personal collection of the voices that matter. Save them, keep them
 [<img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="80"/>](https://play.google.com/store/apps/details?id=com.github.barriosnahuel.vossosunboton)
 
 ## Project status 📖
-[![version](https://img.shields.io/badge/version-2.0.0-brightgreen.svg)](https://github.com/barriosnahuel/bomp/releases)
-[![Semver](https://img.shields.io/badge/SemVer-v2.0.0-green.svg)](http://semver.org/spec/v2.0.0.html)
+[![version](https://img.shields.io/badge/version-2.1.0-brightgreen.svg)](https://github.com/barriosnahuel/bomp/releases)
+[![Semver](https://img.shields.io/badge/SemVer-v2.1.0-green.svg)](http://semver.org/spec/v2.0.0.html)
 [![stable](https://img.shields.io/badge/stability-experimental-green.svg)](https://nodejs.org/api/documentation.html#documentation_stability_index)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
@@ -26,6 +26,8 @@ Bomp is your personal collection of the voices that matter. Save them, keep them
 - 🔊 **Replay them whenever you want.** Play any voice note in your collection instantly.
 - ⭐ **Pin the ones you care about most** to the top of your collection so they're always first.
 - ✏️ **Make them yours:** rename any voice note whenever you want.
+- 🗂️ **Group them your way.** Gather your voices into collections — family, work, the inside jokes from one group chat — and filter your list to just one with a tap.
+- 🔒 **Keep the private ones private.** Tuck your most personal voices into the Vault, behind your fingerprint or screen lock; they open in a calm, full-screen listen mode.
 - 🔍 **Find them fast.** Search across your whole collection in an instant.
 - ☁️ **Keep them backed up.** Your collection is automatically backed up to your Google account, so if you reinstall the app or switch phones, they come with you.
 - 📤 **Bomp them out** when you feel like it — the voice note has to mean something to you first; sharing is optional.

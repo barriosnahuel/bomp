@@ -1,78 +1,47 @@
 # Brief: Screenshots (Bomp — es-AR)
 
 ## Spec Play Store
-- **Phone:** mínimo 4 caps. Aspect ratio 9:16 a 9:20. Los entregables actuales son **1080 × 2400** (9:20 — el que usan los Pixel modernos). Play acepta 9:16 mínimo histórico.
-- **Tablet 7":** 1 cap. 1024 × 600 px o equivalente 16:9. **TODO post-launch — fuera del scope del primer release.**
-- **Tablet 10":** 1 cap. 2560 × 1600 px o equivalente. **TODO post-launch — fuera del scope del primer release.**
-- **Prohibido enmarcar la UI dentro de un frame de teléfono.**
+- **Phone:** mínimo 2, **máximo 8** caps. Aspect ratio 9:16 a 9:20. Entregables: **1080 × 2400** (9:20, lo que usan los Pixel modernos).
+- **Tablet 7" / 10":** TODO post-launch — fuera del scope.
+- **Prohibido** enmarcar la UI dentro de un frame de teléfono.
 
-## Workflow: 3 híbridas (PNG + SVG header) + 2 typography full-vector
+## Pipeline (automatizado)
 
-5 SVGs en `briefs/screenshot-0X-*.svg`. Dos formatos:
+Dos pasos reproducibles desde scripts — ya no es captura manual + Inkscape:
 
-**Híbridas (#1, #3, #4 — UI proof):**
-- **Marketing header strip** Ink1000 vector (320–380px según largo de la headline) en el top con headline + subtítulo. La copy queda editable como texto, fácil de localizar.
-- **PNG real** del app (`real-screenshots/Screenshot_*.png`, 1080×2400) **embebido como base64** dentro del SVG (`<image href="data:image/png;base64,...">`). Necesario porque `rsvg-convert` bloquea referencias `file://` externas por seguridad.
-- El header opaco cubre la status bar + topbar de la captura, dejando visible cards + bottom nav del app real. UI 100% auténtica, cero risk de "misrepresent" para Play.
+1. **Captura** — `scripts/capture-store-screenshots.sh`. Siembra un board realista (`DebugSoundSeeder` + `DebugSeedCorpus`), navega la app real a cada escena (destrabando el Baúl vía `VaultSessionState`, sin biometría) y guarda PNGs full-screen 1080×2400 en `real-screenshots/<escena>-<locale>.png`. Como la app usa **system locale**, flipea el locale del emulador + reboot por idioma. Necesita un emulador booteado y **rooteable** (imagen Google APIs).
+2. **Composición** — `scripts/compose-store-screenshots.py`. Arma cada SVG híbrido (franja Ink opaca + headline/subtítulo localizable + la captura embebida en base64) y renderiza con `rsvg-convert` a `images/phone/`. La copy de cada escena vive en el dict `SCENES` del script.
 
-**Typography full-vector (#2, #5 — manifesto + cierre):**
-- Sin PNG embebido, todo Ink1000 + texto Paper + acento Acid. Diseñadas para ASO (#2) y emotional close (#5).
+**Híbridas** = header Ink1000 opaco (320px, tapa status bar + topbar) sobre la captura real → UI 100% auténtica, cero risk de "misrepresent". **Typography** (#5 manifiesto, #6 cierre) = full-vector, sin captura embebida.
 
-Canvas final: **1080 × 2400** (9:20). Slot order optimizado para ASO — ver § "Arco narrativo y ASO" abajo.
+## Escenas (6)
 
-| # | Archivo SVG | Tipo | Contenido | Subtítulo / tagline |
-|---|---|---|---|---|
-| 1 | `screenshot-01-home.svg` | Híbrida | `Screenshot_20260428_225250.png` — Home idle (5 cards) — **Tu colección de voces.** | Las que te importan, siempre con vos. |
-| 2 | `screenshot-02-manifesto.svg` | Typography | 4 bullets densos: **Tuyo, primero.** / **Sin registro, sin email, sin número de teléfono.** / **Guardado en la nube.** / **Un abrazo que se escucha.** | Acid blob brand-anchor sutil al pie. Sin header textual — el contexto del listing ya identifica la app. |
-| 3 | `screenshot-03-search.svg` | Híbrida | `Screenshot_20260428_225317.png` — Search overlay con query "ris" filtrando 2 resultados idle — **Encontrá rápido / la voz que querés.** | Cuando tu colección crezca. |
-| 4 | `screenshot-04-playing.svg` | Híbrida | `Screenshot_20260428_225339.png` — Search overlay con "Risa de mi vieja" reproduciéndose (pause + halo + slider Acid) — **Suena en un toque.** | Sin esperas, sin pantalla cargando. |
-| 5 | `screenshot-05-closing.svg` | Typography | Hero único curatorial: **"Para los que guardan momentos como otros guardan fotos."** | Acid blob brand-anchor al pie (mismo treatment que card 02). |
+Producto primero: las 4 pantallas reales ocupan los slots que se ven en resultados de búsqueda; los 2 de texto cierran. `02-collections` es la pantalla **Gestionar colecciones** (overflow ⋮ → Gestionar), visualmente distinta de Home, para que el carrusel no repita el listado de `01-home`.
 
-### Arco narrativo y ASO
+| # | Escena | Tipo | Headline / subtítulo |
+|---|---|---|---|
+| 1 | `01-home` | Híbrida | **Las voces que importan.** / La risa de tu vieja, el audio del amigo. |
+| 2 | `02-collections` | Híbrida | **Cada voz en su lugar.** / Familia, laburo, el grupo de siempre. |
+| 3 | `03-vault` | Híbrida | **Solo vos entrás.** / El Baúl, detrás de tu huella. |
+| 4 | `04-immersive` | Híbrida | **Vos y la voz, nada más.** / Abrís una y el mundo se calla. |
+| 5 | `05-manifesto` | Typography | 4 bullets: Tuyo, primero · Sin registro, sin email, sin número · Guardado en la nube · Un abrazo que se escucha |
+| 6 | `06-closing` | Typography | Hero curatorial: "Para los que guardan momentos como otros guardan fotos." |
 
-`tu colección → manifesto → encontrá → activá → cierre`.
+**Arco ASO:** colección → colecciones → Baúl → escuchar (inmersivo) → manifiesto → cierre. Cero implicancia de "mandar afuera" — el momento de valor es **escuchar**. Sin escena de búsqueda: una ZRP vacía no comunica nada en los caps de mayor visibilidad, y a un usuario con cero audios no le sirve "encontrá entre muchos".
 
-Cero implicancia de "mandar afuera" — el momento del valor es **escuchar**, no compartir.
-
-ASO: el slot #2 (carousel de search results, alta visibilidad) carga el manifesto con 4 bullets densos en keywords ("sin registro", "guardado en la nube") + posicionamiento brand ("tuyo, primero") + invocación poética ("un abrazo que se escucha"). El slot #5 cierra con un hero curatorial único — define la audiencia ("los que guardan momentos como otros guardan fotos") con la misma fuerza visual que el manifesto. Ambas typography cards (02 y 05) llevan el mismo Acid blob al pie como brand anchor consistente.
-
-### Re-render PNGs finales
-
-Los SVG ya están compuestos. Para regenerar los PNGs entregables (`images/phone/0X-*.png`) corré:
+## Regenerar
 
 ```bash
-for n in 01-home 02-manifesto 03-search 04-playing 05-closing; do
-  rsvg-convert -w 1080 -h 2400 \
-    store-listing/es-AR/briefs/screenshot-$n.svg \
-    -o store-listing/es-AR/images/phone/$n-es-AR.png
-done
+./scripts/capture-store-screenshots.sh          # 1. capturas crudas → real-screenshots/
+python3 scripts/compose-store-screenshots.py     # 2. composición → images/phone/
 ```
 
-Nota: las cards #2 y #5 son typography full-vector (no embeben PNG). Las #1, #3, #4 son híbridas (header SVG + PNG real base64). El comando aplica a todas por igual — `rsvg-convert` resuelve cada caso sin cambios.
-
-### Re-capturar PNGs cuando cambie la UI
-
-Cuando la UI in-app cambie (paleta, padding, card, etc.), las 3 capturas hay que re-tomarlas y los SVG hay que re-componer (el base64 está embebido):
-
-1. Build de design QA con la BD sembrada con los nombres canónicos del brief.
-2. Activar Pixel emulator con device en dark mode (`adb shell "cmd uimode night yes"`).
-3. Capturar las 3 pantallas con `adb exec-out screencap -p > Screenshot_xxx.png` (resolución nativa 1080×2400).
-4. Reemplazar los archivos en `real-screenshots/`.
-5. Re-componer los SVG re-embebiendo los PNG como base64 (`base64 < Screenshot_xxx.png` y reemplazar el bloque `data:image/png;base64,...` dentro del SVG correspondiente).
-6. Re-renderizar los entregables con el comando `rsvg-convert` de arriba.
-
-La headline en SVG queda intacta — solo cambia el bloque `<image href="data:...">`.
-
-### Nombres de stickers para la captura #1 (verbatim del ghpages)
-- `Risa de mi vieja`
-- `¡Che, capo!`
-- `Llegué`
-- `La frase del jefe`
-- `Mamá dice qué`
-- `Risa de Pedro`
-- `Buen día, amor`
-- `Volvé pronto`
+Las typography (#5, #6) no se capturan (full-vector); para re-renderizarlas:
+```bash
+rsvg-convert -w 1080 -h 2400 store-listing/es-AR/briefs/screenshot-05-manifesto.svg -o store-listing/es-AR/images/phone/05-manifesto-es-AR.png
+rsvg-convert -w 1080 -h 2400 store-listing/es-AR/briefs/screenshot-06-closing.svg   -o store-listing/es-AR/images/phone/06-closing-es-AR.png
+```
 
 ## Contraste (WCAG)
 - Paper ↔ Ink1000 (header strip) = 17.5:1 ✓
-- Para los elementos de la UI capturada, los pares ya están cubiertos por `AppThemeContrastTest` en el repo.
+- Para la UI capturada, los pares ya están cubiertos por `AppThemeContrastTest` en el repo.

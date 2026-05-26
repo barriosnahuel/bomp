@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2400" width="1080" height="2400">
   <!--
-    Bomp Play Store screenshot 02 — manifesto card (en-US).
-    Full vector. Slot #2 (high-visibility ASO carousel).
-    4 dense bullets (bullet 2 wraps for length) + Acid blob as subtle brand anchor at the bottom.
-    No textual header: the listing context already identifies the app.
+    Bomp Play Store screenshot 05 — manifesto card (es-AR).
+    Full vector. Slot #5 (frame de privacidad + emoción, antes del cierre).
+    4 bullets densos (bullet 2 wrappea por longitud) + Acid blob como brand-anchor sutil al pie.
+    Sin header textual: el contexto del listing ya identifica la app.
   -->
   <defs>
     <style>
@@ -16,20 +16,20 @@
 
   <!-- Bullet 1 -->
   <text x="120" y="360" class="bullet-mark">•</text>
-  <text x="180" y="360" class="bullet-text">Yours, first.</text>
+  <text x="180" y="360" class="bullet-text">Tuyo, primero.</text>
 
   <!-- Bullet 2 (wraps to 2 visual lines) -->
   <text x="120" y="560" class="bullet-mark">•</text>
-  <text x="180" y="560" class="bullet-text">No signup, no email,</text>
-  <text x="180" y="680" class="bullet-text">no phone number.</text>
+  <text x="180" y="560" class="bullet-text">Sin registro, sin email,</text>
+  <text x="180" y="680" class="bullet-text">sin número de teléfono.</text>
 
   <!-- Bullet 3 -->
   <text x="120" y="880" class="bullet-mark">•</text>
-  <text x="180" y="880" class="bullet-text">Saved to the cloud.</text>
+  <text x="180" y="880" class="bullet-text">Guardado en la nube.</text>
 
   <!-- Bullet 4 -->
   <text x="120" y="1080" class="bullet-mark">•</text>
-  <text x="180" y="1080" class="bullet-text">A hug you can hear.</text>
+  <text x="180" y="1080" class="bullet-text">Un abrazo que se escucha.</text>
 
   <!-- Acid blob brand-anchor (subtle, bottom-centered) -->
   <g transform="translate(444 1900) scale(6)">

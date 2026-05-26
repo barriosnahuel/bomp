@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
 
-## \[unreleased] (v2.1.0)
+## \[v2.1.0] - 2026-05-25
 
 ### Added
 - New **Vault** tab in the bottom navigation, grouping your private collections behind your fingerprint or screen lock. The "Baúl" lives there by default and you can create more private collections for specific people, moments, or memories. Audios tagged to a private collection only play from there: tapping play opens an immersive, full-screen listen mode — waveform, the date and name, a single play/pause control, and no share button

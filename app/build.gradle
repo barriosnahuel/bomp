@@ -19,9 +19,14 @@ android {
         applicationId "com.github.barriosnahuel.vossosunboton"
         minSdkVersion 23
         targetSdkVersion 37
-        versionCode 5
+        versionCode 6
         versionName '2.1.0'
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // Keep capture/utility drivers out of the default suite (connectedDebugAndroidTest /
+        // run-instrumented-tests.sh). The store-screenshot driver still runs via
+        // capture-store-screenshots.sh, which targets it with `am instrument -e class …` and so
+        // doesn't inherit these Gradle-passed runner arguments.
+        testInstrumentationRunnerArguments notAnnotation: 'com.github.barriosnahuel.vossosunboton.ScreenshotCapture'
     }
 
     androidResources {
