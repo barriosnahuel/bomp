@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2400" width="1080" height="2400">
   <!--
-    Bomp Play Store screenshot 05 — closing emotional card (en-US).
-    Full vector. Slot #5 (listing close).
-    Single curatorial hero — defines the audience and gives it identity.
-    Acid blob at the bottom (same treatment as card 02-manifesto) as visual anchor.
+    Bomp Play Store screenshot 06 — closing emotional card (es-AR).
+    Full vector. Slot #6 (cierre del listing).
+    Hero único curatorial — define la audiencia y le pone identidad.
+    Acid blob al pie (mismo treatment que card 05-manifesto) como anchor visual.
   -->
   <defs>
     <style>
@@ -13,11 +13,10 @@
 
   <rect x="0" y="0" width="1080" height="2400" fill="#0B0B0C"/>
 
-  <!-- Hero statement (4 lines centered) -->
-  <text x="540" y="480" class="hero">For people who</text>
-  <text x="540" y="620" class="hero">keep moments</text>
-  <text x="540" y="760" class="hero">the way others</text>
-  <text x="540" y="900" class="hero">keep photos.</text>
+  <!-- Hero statement (3 lines centered) -->
+  <text x="540" y="540" class="hero">Para los que guardan</text>
+  <text x="540" y="680" class="hero">momentos como otros</text>
+  <text x="540" y="820" class="hero">guardan fotos.</text>
 
   <!-- Acid blob brand-anchor (subtle, bottom-centered) -->
   <g transform="translate(444 1900) scale(6)">

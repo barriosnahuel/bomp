@@ -6,6 +6,6 @@ Your personal collection of voices — the ones that matter, always close: your 
 ▸ Give it the name only you'd get.
 ▸ Bomp it whenever: you first, share later if you want.
 
-New: a Vault for your most private voices, and Collections to group them.
+Group your voices into Collections, and keep the most private ones in the Vault, behind your fingerprint.
 
 Free and open source, AGPL-3.0.

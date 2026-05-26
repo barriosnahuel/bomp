@@ -69,10 +69,11 @@ for loc in "${LOCALES[@]}"; do
   adb_d shell svc power stayon true >/dev/null 2>&1 || true
   adb_d shell wm dismiss-keyguard >/dev/null 2>&1 || true
   sleep 20
-  # Configure a screen lock now that the device is awake + unlocked: BiometricGate.status() turns
-  # AVAILABLE, so the New Bomp "Assign to collections" private subsection renders the polished
-  # "requires unlock" CTA instead of the unprotected-device warning. The current session stays open.
-  adb_d shell locksettings set-pin "$LOCK_PIN" >/dev/null 2>&1 || true
+  # No device screen lock: every captured scene runs with the keyguard down so the launched Activity
+  # reaches the foreground and attaches its Compose hierarchy. The Vault scene fakes its unlock
+  # in-process (TestData.markVaultOpen), so it needs no real biometric. (A PIN was set here only for
+  # the old New Bomp private-collections CTA, a scene since dropped; a PIN re-locks the screen and
+  # the capture lands behind the keyguard — "No compose hierarchies found".)
   echo "→ [$loc] capturing"
   adb_d shell am instrument -w -e class "$CLASS" "$TEST_PKG/$RUNNER"
 done

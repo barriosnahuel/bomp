@@ -7,7 +7,7 @@
 #
 # Usage:
 #   scripts/compose-store-screenshots.py                # all hybrid scenes, both locales
-#   scripts/compose-store-screenshots.py 03-collections # one scene
+#   scripts/compose-store-screenshots.py 02-collections # one scene
 import base64
 import pathlib
 import subprocess
@@ -27,25 +27,17 @@ SCENES = {
         "es-AR": ("Las voces que importan.", "La risa de tu vieja, el audio del amigo."),
         "en-US": ("The voices that matter.", "Mom's laugh, a friend's voice note."),
     },
-    "03-collections": {
+    "02-collections": {
         "es-AR": ("Cada voz en su lugar.", "Familia, laburo, el grupo de siempre."),
         "en-US": ("All in its place.", "Family, work, the group chat."),
     },
-    "04-search": {
-        "es-AR": ("Encontrá cualquier voz.", "Aunque tengas un montón."),
-        "en-US": ("Find any voice, fast.", "Even when you've got hundreds."),
-    },
-    "06-vault": {
+    "03-vault": {
         "es-AR": ("Solo vos entrás.", "El Baúl, detrás de tu huella."),
         "en-US": ("Only you get in.", "The Vault, behind your fingerprint."),
     },
-    "05-immersive": {
+    "04-immersive": {
         "es-AR": ("Vos y la voz, nada más.", "Abrís una y el mundo se calla."),
         "en-US": ("Just you and the voice.", "Open one and the world goes quiet."),
-    },
-    "07-newbomp": {
-        "es-AR": ("Apodalo. Tenelo cerca.", "Y sumalo a las colecciones que le pertenecen."),
-        "en-US": ("Name it. Keep it.", "Drop it into the collections it belongs to."),
     },
 }
 
@@ -65,7 +57,7 @@ FINGERPRINT = (
 
 
 def overlay_for(scene: str, locale: str) -> str:
-    if scene != "06-vault":
+    if scene != "03-vault":
         return ""
     return (
         '<rect x="0" y="320" width="1080" height="2080" fill="#0B0B0C" opacity="0.62"/>'
@@ -82,13 +74,20 @@ SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2400" width="
       .hint {{ font-family: Inter, Roboto, system-ui, sans-serif; font-weight: 600; font-size: 44px; fill: #FAFAF7; opacity: 0.92; letter-spacing: 1px; }}
     </style>
   </defs>
-  <image x="0" y="0" width="1080" height="2400" preserveAspectRatio="xMidYMin slice" href="data:image/png;base64,{b64}"/>
+  <image x="0" y="{img_y}" width="1080" height="2400" preserveAspectRatio="xMidYMin slice" href="data:image/png;base64,{b64}"/>
   {overlay}
   <rect x="0" y="0" width="1080" height="320" fill="#0B0B0C"/>
   <text x="64" y="172" class="header-h1">{h1}</text>
   <text x="64" y="244" class="header-h2">{h2}</text>
 </svg>
 """
+
+
+# Per-scene downward shift (px) of the embedded capture, for a screen whose content sits too high
+# under the marketing header. The slice revealed at the seam is the app top bar's solid Ink bottom
+# (#0B0B0C, identical to the strip) below its title + back arrow, so it blends seamlessly. Keep
+# ≤ ~70 so the chrome (title text / back arrow) stays hidden behind the 320px strip.
+SCENE_IMAGE_SHIFT = {"02-collections": 64}
 
 
 def compose(scene: str, locale: str) -> None:
@@ -98,7 +97,13 @@ def compose(scene: str, locale: str) -> None:
         print(f"  ! missing capture {raw_png.name}, skipping")
         return
     b64 = base64.b64encode(raw_png.read_bytes()).decode("ascii")
-    svg = SVG.format(b64=b64, overlay=overlay_for(scene, locale), h1=escape(headline), h2=escape(subtitle))
+    svg = SVG.format(
+        b64=b64,
+        img_y=SCENE_IMAGE_SHIFT.get(scene, 0),
+        overlay=overlay_for(scene, locale),
+        h1=escape(headline),
+        h2=escape(subtitle),
+    )
     svg_path = ROOT / locale / "briefs" / f"screenshot-{scene}.svg"
     svg_path.write_text(svg, encoding="utf-8")
     out_png = ROOT / locale / "images" / "phone" / f"{scene}-{locale}.png"

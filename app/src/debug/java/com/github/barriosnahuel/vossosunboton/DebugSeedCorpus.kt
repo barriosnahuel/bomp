@@ -45,15 +45,23 @@ internal object DebugSeedCorpus {
 
     private val SPANISH =
         Corpus(
-            publicCollections = listOf("Familia", "Laburo"),
+            // Canonical collection order: Familia → Amigos → Laburo → Los pibes (drives the My Sounds
+            // filter chips + the Manage Collections sections).
+            publicCollections = listOf("Familia", "Amigos", "Laburo", "Los pibes"),
             privateCollections = listOf("Solo nuestro"),
+            // My Sounds and the Vault render newest-first, so this list is seeded oldest→newest — the
+            // REVERSE of what shows on screen. It's ordered so My Sounds reads Familia → Amigos →
+            // Laburo → Los pibes top-to-bottom, and the Vault leads with "Para los días grises".
             items =
                 listOf(
-                    SeedItem("risa-vieja", "Risa de mi vieja", publicCollections = listOf("Familia")),
+                    SeedItem("partido-ocho", "Partido a las 8", publicCollections = listOf("Los pibes")),
                     SeedItem("frase-jefe", "La frase del jefe", publicCollections = listOf("Laburo")),
+                    SeedItem("reunion-lunes", "Reunión del lunes", publicCollections = listOf("Laburo")),
+                    SeedItem("asado-listo", "Salió el asado", publicCollections = listOf("Amigos")),
+                    SeedItem("joda-finde", "Joda del finde", publicCollections = listOf("Amigos")),
+                    SeedItem("risa-vieja", "Risa de mi vieja", publicCollections = listOf("Familia")),
                     SeedItem("llegue-bien", "Llegué bien", publicCollections = listOf("Familia")),
                     SeedItem("mama-llamo", "Mamá llamó", publicCollections = listOf("Familia")),
-                    SeedItem("reunion-lunes", "Reunión del lunes", publicCollections = listOf("Laburo")),
                     SeedItem("buen-dia-amor", "Buen día, amor", privateCollections = listOf("Solo nuestro")),
                     SeedItem("te-re-quiero", "Te re quiero", inSystemVault = true, visibleInMySounds = false),
                     SeedItem(
@@ -67,15 +75,22 @@ internal object DebugSeedCorpus {
 
     private val ENGLISH =
         Corpus(
-            publicCollections = listOf("Family", "Work"),
+            // Canonical collection order: Family → Friends → Work → The crew (mirrors es-AR).
+            publicCollections = listOf("Family", "Friends", "Work", "The crew"),
             privateCollections = listOf("Just ours"),
+            // Seeded oldest→newest (the reverse of the newest-first on-screen order) so My Sounds
+            // reads Family → Friends → Work → The crew top-to-bottom, and the Vault leads with "For
+            // the grey days".
             items =
                 listOf(
-                    SeedItem("moms-laugh", "Mom's laugh", publicCollections = listOf("Family")),
+                    SeedItem("game-at-eight", "Game at eight", publicCollections = listOf("The crew")),
                     SeedItem("boss-catchphrase", "The boss's catchphrase", publicCollections = listOf("Work")),
+                    SeedItem("monday-standup", "Monday standup", publicCollections = listOf("Work")),
+                    SeedItem("bbq-ready", "BBQ's ready", publicCollections = listOf("Friends")),
+                    SeedItem("weekend-plans", "Weekend plans", publicCollections = listOf("Friends")),
+                    SeedItem("moms-laugh", "Mom's laugh", publicCollections = listOf("Family")),
                     SeedItem("made-it-home", "Made it home", publicCollections = listOf("Family")),
                     SeedItem("mom-called", "Mom called", publicCollections = listOf("Family")),
-                    SeedItem("monday-standup", "Monday standup", publicCollections = listOf("Work")),
                     SeedItem("morning-love", "Morning, love", privateCollections = listOf("Just ours")),
                     SeedItem("love-you-lots", "Love you lots", inSystemVault = true, visibleInMySounds = false),
                     SeedItem(
