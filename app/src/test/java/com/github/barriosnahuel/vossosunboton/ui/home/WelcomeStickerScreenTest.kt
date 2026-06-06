@@ -35,11 +35,12 @@ internal class WelcomeStickerScreenTest : AbstractRobolectricTest() {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun `welcome sticker variant renders play button and trailing label`() {
+    fun `welcome sticker variant renders title play and maker origin without a countdown`() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val sound = welcomeSticker(context)
         val title = context.getString(R.string.app_welcome_sticker_title)
         val playLabel = context.getString(R.string.app_play)
+        val origin = context.getString(R.string.app_welcome_sticker_origin)
 
         composeTestRule.setContent {
             MaterialTheme {
@@ -54,14 +55,48 @@ internal class WelcomeStickerScreenTest : AbstractRobolectricTest() {
                     onPinClick = {},
                     isWelcomeVariant = true,
                     borderOverride = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primaryContainer),
-                    trailingLabel = "-0:14",
+                    originLabel = origin,
                 )
             }
         }
 
+        // The welcome no longer self-destructs, so the "-M:SS" countdown is gone (feedback v2.1.0 #1)
+        // — it shows like a normal audio: title, play, and the "from the maker" origin label.
         composeTestRule.onNodeWithText(title).assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription(playLabel).assertIsDisplayed()
-        composeTestRule.onNodeWithText("-0:14").assertIsDisplayed()
+        composeTestRule.onNodeWithText(origin).assertIsDisplayed()
+    }
+
+    @Test
+    fun `welcome variant swipe-hint nudge runs once and reports it shown`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val sound = welcomeSticker(context)
+        val title = context.getString(R.string.app_welcome_sticker_title)
+        var hintShownCount = 0
+
+        composeTestRule.setContent {
+            MaterialTheme {
+                SoundItem(
+                    sound = sound,
+                    playbackProgress = null,
+                    durationMs = 14_000,
+                    onPlayClick = {},
+                    onSeek = {},
+                    onShareClick = {},
+                    onDelete = {},
+                    onPinClick = {},
+                    isWelcomeVariant = true,
+                    showSwipeHint = true,
+                    onSwipeHintShown = { hintShownCount++ },
+                )
+            }
+        }
+
+        // The peek animation (or its reduced-motion skip) completes and reports back exactly once so
+        // the nudge never repeats. The card itself stays rendered (nothing was deleted).
+        composeTestRule.waitUntil(timeoutMillis = 5_000L) { hintShownCount == 1 }
+        composeTestRule.onNodeWithText(title).assertIsDisplayed()
+        assertThat(hintShownCount).isEqualTo(1)
     }
 
     @Test

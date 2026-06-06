@@ -403,7 +403,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `onPlayerStop completed=true on welcome logs welcome_sticker_completed`() {
+    fun `onPlayerStop completed=true on welcome logs welcome_sticker_completed once`() {
         val viewModel = givenAViewModel()
         val welcomeTitle =
             ApplicationProvider
@@ -413,24 +413,31 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
         viewModel.onPlayerStop(welcome, completed = true)
 
+        // The event now fires from inside the acknowledged-gated coroutine (so replays don't inflate
+        // it) — await the info event it emits right after, then assert the one-time completion log.
+        runBlocking { withTimeout(2_000L) { viewModel.welcomeInfoEvent.first() } }
         fake.assertEmitted("welcome_sticker_completed")
     }
 
     @Test
-    fun `restoreSound on welcome logs only welcome_sticker_undone`() {
+    fun `restoreSound on welcome logs the generic sound_delete_undone`() {
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val viewModel = givenAViewModel()
         val welcomeTitle =
             ApplicationProvider
                 .getApplicationContext<android.content.Context>()
                 .getString(R.string.app_welcome_sticker_title)
         val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
-        viewModel.onPlayerStop(welcome, completed = true)
+        // Manual delete (swipe) is the only path that enqueues a delete event now that completion no
+        // longer self-destructs the welcome.
+        viewModel.deleteSound(welcome)
         fake.events.clear()
 
         viewModel.restoreSound()
 
-        fake.assertEmitted("welcome_sticker_undone")
-        fake.assertNotEmitted("sound_delete_undone")
+        // The welcome-specific `welcome_sticker_undone` was pruned (feedback v2.1.0 #1): the welcome
+        // is just-another-audio, so its Undo emits the generic event like any other sound.
+        fake.assertEmitted("sound_delete_undone")
     }
 
     @Test

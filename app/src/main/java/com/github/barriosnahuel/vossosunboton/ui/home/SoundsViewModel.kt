@@ -128,6 +128,17 @@ class SoundsViewModel(
     private val _welcomeStickerVisible = MutableStateFlow(false)
     val welcomeStickerVisible: StateFlow<Boolean> = _welcomeStickerVisible.asStateFlow()
 
+    // `true` while the one-time swipe-hint nudge on the welcome card is still eligible to run. The
+    // UI consumes it, runs the peek animation once, and calls [markWelcomeHintShown].
+    private val _welcomeHintPending = MutableStateFlow(false)
+    val welcomeHintPending: StateFlow<Boolean> = _welcomeHintPending.asStateFlow()
+
+    // In-process latch closing the race between [markWelcomeHintShown] (flips the flag on the main
+    // thread, persists async) and a `loadSounds` landing before that write commits — without it, the
+    // recompute below would observe a stale `isHintShown()` and replay the nudge.
+    @Volatile
+    private var welcomeHintConsumed = false
+
     private val _selectedTab = MutableStateFlow(AppTab.MY_SOUNDS)
     val selectedTab: StateFlow<AppTab> = _selectedTab.asStateFlow()
 
@@ -254,6 +265,12 @@ class SoundsViewModel(
     private val _scrollToTopEvent = Channel<Unit>(Channel.BUFFERED)
     val scrollToTopEvent: Flow<Unit> = _scrollToTopEvent.receiveAsFlow()
 
+    // One-shot informative snackbar shown the first time the welcome audio plays to completion —
+    // "it's yours, delete it whenever". Replaces the old self-destruct-on-completion flow (ADR 0003
+    // Channel for one-shot UI events; feedback v2.1.0 #1).
+    private val _welcomeInfoEvent = Channel<Unit>(Channel.BUFFERED)
+    val welcomeInfoEvent: Flow<Unit> = _welcomeInfoEvent.receiveAsFlow()
+
     private val _playbackErrorEvent = Channel<Unit>(Channel.BUFFERED)
     val playbackErrorEvent: Flow<Unit> = _playbackErrorEvent.receiveAsFlow()
 
@@ -295,6 +312,11 @@ class SoundsViewModel(
         // tests that await `isInitialLoadComplete.first { it }` would deadlock.
         viewModelScope.launch(ioDispatcher) {
             try {
+                // One-time migration from the old "ephemeral, self-destruct on completion" model:
+                // resurfaces the welcome for installs that consumed it under the old behavior
+                // (feedback v2.1.0 #1). Runs BEFORE isActive() so the reset takes effect on first
+                // paint. Idempotent: a manual delete under the new model still sticks.
+                welcomeStore.migrateToPersistentIfNeeded()
                 val active = welcomeStore.isActive()
                 _welcomeStickerVisible.value = active
                 if (active && tracker.markFiredOnce("welcome_sticker_shown")) {
@@ -882,9 +904,10 @@ class SoundsViewModel(
         if (shouldUpdateVisibleSounds) {
             val currentSounds = _sounds.value.toMutableList()
             if (isWelcome) {
-                // Demote to the end of MY_SOUNDS — the prime row 0 spot belongs to the user once
-                // they've shown they want this sticker back rather than letting it consume.
+                // Re-insert the welcome and sort it back into place by date — it behaves like any
+                // other audio (feedback v2.1.0 #1). `event.sound` already carries its `dateAdded`.
                 currentSounds.add(event.sound)
+                currentSounds.sortWith(SOUND_ORDER)
             } else {
                 val insertPosition = event.position.coerceAtMost(currentSounds.size)
                 currentSounds.add(insertPosition, event.sound)
@@ -906,10 +929,10 @@ class SoundsViewModel(
             // restore fire-and-forget on IO so the snackbar interaction stays responsive.
             _welcomeStickerVisible.value = true
             restoreWelcomeAsync()
-            tracker.log(AnalyticsEvent.WelcomeStickerUndone)
-        } else {
-            tracker.log(AnalyticsEvent.SoundDeleteUndone)
         }
+        // Welcome is just-another-audio now, so its Undo logs the generic `sound_delete_undone` like
+        // any other (the welcome-specific `welcome_sticker_undone` was pruned — feedback v2.1.0 #1).
+        tracker.log(AnalyticsEvent.SoundDeleteUndone)
     }
 
     fun confirmDelete() {
@@ -1234,25 +1257,26 @@ class SoundsViewModel(
     /**
      * Resolves where the welcome sticker belongs in the visible MY_SOUNDS list. Returns [filtered]
      * unchanged for non-MY_SOUNDS tabs, when the sticker is consumed, or while the snackbar window
-     * is hiding it. Otherwise prepends on a fresh install or appends once the user has undone the
-     * dismissal at least once (the demoted state).
+     * is hiding it. Otherwise the welcome is added to the list and sorted by [SOUND_ORDER] like any
+     * other audio: its [installTs] is its `dateAdded`, so on a fresh install it lands at the top
+     * (newest) and naturally sinks as the Bomper adds their own audios (feedback v2.1.0 #1).
      *
-     * [welcomeIsPendingDismissal] and [wasRestored] are snapshotted at the top of `loadSounds` so
-     * this stays a pure function — easier to test, and avoids issuing extra DataStore reads inside
-     * the `_sounds.update` lambda.
+     * [welcomeIsPendingDismissal] and [installTs] are snapshotted at the top of `loadSounds` so this
+     * stays a pure function — easier to test, and avoids issuing extra DataStore reads inside the
+     * `_sounds.update` lambda.
      */
     private fun positionWelcomeIn(
         filtered: List<Sound>,
         welcomeIsPendingDismissal: Boolean,
-        wasRestored: Boolean,
+        installTs: Long,
     ): List<Sound> {
         val shouldShowWelcome =
             _selectedTab.value == AppTab.MY_SOUNDS &&
                 _welcomeStickerVisible.value &&
                 !welcomeIsPendingDismissal
         if (!shouldShowWelcome) return filtered
-        val welcome = welcomeSticker(getApplication())
-        return if (wasRestored) filtered + welcome else listOf(welcome) + filtered
+        val welcome = welcomeSticker(getApplication(), dateAdded = installTs)
+        return (filtered + welcome).sortedWith(SOUND_ORDER)
     }
 
     private fun deletePersistedSoundAsync(sound: Sound) {
@@ -1296,9 +1320,30 @@ class SoundsViewModel(
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Throwable,
             ) {
-                // Same shape as `consumeWelcomeAsync` — the in-memory state is already correct;
-                // we only lose the disk persistence of the demoted-position flag.
+                // Same shape as `consumeWelcomeAsync` — the in-memory state is already correct; we
+                // only lose the disk persistence of the re-enabled flag.
                 Tracker.track(RuntimeException("Welcome sticker restore persistence failed", e))
+            }
+        }
+    }
+
+    /**
+     * Called by the UI once the one-time swipe-hint nudge has run on the welcome card. Flips the
+     * in-memory pending flag immediately and persists it fire-and-forget so the nudge never repeats.
+     */
+    fun markWelcomeHintShown() {
+        if (!_welcomeHintPending.value) return
+        welcomeHintConsumed = true
+        _welcomeHintPending.value = false
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                welcomeStore.markHintShown()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
+                Tracker.track(RuntimeException("Welcome sticker hint persistence failed", e))
             }
         }
     }
@@ -1309,17 +1354,16 @@ class SoundsViewModel(
 
     private suspend fun loadSounds() {
         try {
-            val allSounds =
-                repo.sounds
-                    .first()
-                    .sortedWith(
-                        compareByDescending<Sound> { it.isPinned }
-                            .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
-                            .thenBy { it.name.lowercase() },
-                    )
+            val allSounds = repo.sounds.first().sortedWith(SOUND_ORDER)
             val cachedDurations = repo.durations.first()
-            // Read once per loadSounds — pure function over a snapshotted boolean, easier to test.
-            val welcomeWasRestored = welcomeStore.wasRestored()
+            // Read once per loadSounds — pure function over a snapshotted value, easier to test. The
+            // welcome's install timestamp is its `dateAdded` so it sorts by date with user audios.
+            val welcomeInstallTs = welcomeStore.installTimestamp()
+            // The swipe-hint nudge is eligible while the welcome is showing and the nudge hasn't run.
+            _welcomeHintPending.value =
+                !welcomeHintConsumed &&
+                _welcomeStickerVisible.value &&
+                !welcomeStore.isHintShown()
             _soundDurations.update { current -> cachedDurations + current }
             _hasBundledSounds.value = allSounds.any { it.isBundled() }
             val playingId = _playingSound.value?.id
@@ -1354,7 +1398,7 @@ class SoundsViewModel(
                         // state composable from rendering its "no sounds yet" body for the wrong tab.
                         AppTab.VAULT -> emptyList()
                     }.filter { it.id != deletedId }
-                val withWelcome = positionWelcomeIn(byTab, welcomeIsPendingDismissal, welcomeWasRestored)
+                val withWelcome = positionWelcomeIn(byTab, welcomeIsPendingDismissal, welcomeInstallTs)
                 if (playingId == null) {
                     withWelcome
                 } else {
@@ -1417,11 +1461,18 @@ class SoundsViewModel(
         recomputeVaultAudios()
 
         if (completed && isWelcomeSticker(sound)) {
-            val position = _sounds.value.indexOfFirst { it.id == sound.id }.coerceAtLeast(0)
-            _sounds.update { list -> list.filter { it.id != sound.id } }
-            _welcomeStickerVisible.value = false
-            _deletedSoundEvent.value = DeletedSoundEvent(stoppedSound, position)
-            tracker.log(AnalyticsEvent.WelcomeStickerCompleted)
+            // The welcome no longer self-destructs (feedback v2.1.0 #1) — it stays in the list as a
+            // persistent audio. Only the FIRST completion does anything: log `welcome_sticker_completed`
+            // (gated so unlimited replays don't inflate it — replays are covered by `welcome_sticker_play`),
+            // show the one-shot informative snackbar, and mark the welcome acknowledged. Later
+            // completions are silent.
+            viewModelScope.launch(ioDispatcher) {
+                if (!welcomeStore.isAcknowledged()) {
+                    welcomeStore.markAcknowledged()
+                    tracker.log(AnalyticsEvent.WelcomeStickerCompleted)
+                    _welcomeInfoEvent.trySend(Unit)
+                }
+            }
         }
     }
 
@@ -1455,6 +1506,16 @@ class SoundsViewModel(
 
     companion object {
         private val AUDIO_MILESTONES = listOf(3, 5, 10, 25)
+
+        /**
+         * Canonical My Sounds ordering: pinned first, then most-recent by `dateAdded`, then name.
+         * Shared between the initial repo sort and [positionWelcomeIn] so the persistent welcome
+         * sticker sorts by its `dateAdded` exactly like a user-created audio (feedback v2.1.0 #1).
+         */
+        private val SOUND_ORDER: Comparator<Sound> =
+            compareByDescending<Sound> { it.isPinned }
+                .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
+                .thenBy { it.name.lowercase() }
 
         val Factory: ViewModelProvider.Factory =
             viewModelFactory {

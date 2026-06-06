@@ -33,7 +33,8 @@ import org.junit.runner.RunWith
  *  - The Material3 `SwipeToDismissBox` threshold + animation actually fire on a real surface
  *    (the `rememberSaveable` re-trigger bug documented in `SoundItem.kt:164` was a device-only
  *    discovery).
- *  - The post-Undo demotion is observable in the actual rendered list order.
+ *  - The date-driven ordering is observable in the actual rendered list with real file timestamps
+ *    (feedback v2.1.0 #1 — the welcome is no longer force-positioned).
  */
 @RunWith(AndroidJUnit4::class)
 internal class WelcomeStickerFlowTest : AbstractUiTest() {
@@ -50,8 +51,10 @@ internal class WelcomeStickerFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun swipeLeftOnWelcomeShowsUndoSnackbarAndDemotesToBottomOnUndo() {
+    fun swipeLeftOnWelcomeShowsUndoSnackbarAndRestoresItSortedByDate() {
         TestData.enableWelcomeSticker(context)
+        // Seeded before launch, so the custom file's timestamp predates the welcome's install
+        // timestamp (captured at first load) — the welcome is the newer audio.
         TestData.seedCustomSounds(context, count = 1)
         val title = context.getString(R.string.app_welcome_sticker_title)
         val undoLabel = context.getString(R.string.app_undo)
@@ -63,8 +66,9 @@ internal class WelcomeStickerFlowTest : AbstractUiTest() {
             composeRule.onNodeWithText(undoLabel).performClick()
             composeRule.awaitNodeWithText(title).assertIsDisplayed()
 
-            // The welcome must reappear BELOW the user's custom sound — row 0 belongs to the
-            // user once they've shown they want this sticker back rather than letting it consume.
+            // The welcome reappears sorted by date like any other audio (feedback v2.1.0 #1). It is
+            // the newer audio here (its install timestamp postdates the pre-seeded custom file), so
+            // it sits ABOVE the custom — no longer force-demoted to the bottom.
             val welcomeTop =
                 composeRule
                     .onNodeWithText(title)
@@ -75,7 +79,7 @@ internal class WelcomeStickerFlowTest : AbstractUiTest() {
                     .onNodeWithText("custom_1")
                     .fetchSemanticsNode()
                     .boundsInRoot.top
-            assertThat(welcomeTop).isGreaterThan(customTop)
+            assertThat(welcomeTop).isLessThan(customTop)
         }
     }
 

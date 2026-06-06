@@ -13,12 +13,14 @@ import org.junit.Test
 
 internal class DeletionSnackbarDurationTest {
     @Test
-    fun `returns Short for the welcome sticker so dismissal feedback is not lingering`() {
+    fun `returns Long for the welcome sticker so Undo is reachable after manual delete`() {
+        // The welcome is now persistent and deleted only manually (feedback v2.1.0 #1), so its
+        // deletion is destructive+undoable and needs Long just like a user-created sound.
         val welcome = testSound(name = "Welcome", rawRes = R.raw.app_welcome_sticker)
 
         val duration = deletionSnackbarDuration(welcome)
 
-        assertThat(duration).isEqualTo(SnackbarDuration.Short)
+        assertThat(duration).isEqualTo(SnackbarDuration.Long)
     }
 
     @Test

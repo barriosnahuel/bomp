@@ -54,9 +54,12 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
             CollectionsRepository(context).clearForTest()
             MySoundsFilterStore(context).clearForTest()
             DualHomeCoachStore(context).clearForTest()
-            // Consume (not clear) the welcome sticker so it never sits on top of the asserted list.
+            // Keep the welcome sticker off the asserted list. Run the one-time persistence migration
+            // first so it can't resurrect the welcome, then consume it (a new-model manual delete,
+            // which sticks). clearForTest() alone would re-enable it.
             val welcome = WelcomeStickerStore(context)
             welcome.clearForTest()
+            welcome.migrateToPersistentIfNeeded()
             welcome.consume()
         }
         mockkObject(PlayerControllerFactory)
