@@ -412,11 +412,13 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
 
         viewModel.onPlayerStop(welcome, completed = true)
-
-        // The event now fires from inside the acknowledged-gated coroutine (so replays don't inflate
-        // it) — await the info event it emits right after, then assert the one-time completion log.
+        // Await the info event the gated coroutine emits right after logging, so the first completion
+        // has fully landed before we replay.
         runBlocking { withTimeout(2_000L) { viewModel.welcomeInfoEvent.first() } }
-        fake.assertEmitted("welcome_sticker_completed")
+        // A replay completing again must NOT re-log it — the `acknowledged` flag gates it to once.
+        viewModel.onPlayerStop(welcome, completed = true)
+
+        assertThat(fake.events.count { it.name == "welcome_sticker_completed" }).isEqualTo(1)
     }
 
     @Test
@@ -435,7 +437,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
 
         viewModel.restoreSound()
 
-        // The welcome-specific `welcome_sticker_undone` was pruned (feedback v2.1.0 #1): the welcome
+        // The welcome-specific `welcome_sticker_undone` was pruned: the welcome
         // is just-another-audio, so its Undo emits the generic event like any other sound.
         fake.assertEmitted("sound_delete_undone")
     }

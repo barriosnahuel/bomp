@@ -492,7 +492,7 @@ private fun SnackbarEffects(
     }
 
     // Informative, one-shot snackbar shown the first time the welcome audio finishes playing — warm
-    // "it's yours, delete it whenever" message (feedback v2.1.0 #1). No action: the swipe-hint nudge
+    // "it's yours, delete it whenever" message. No action: the swipe-hint nudge
     // teaches deletion; this just reassures. Long so it stays readable.
     LaunchedEffect(Unit) {
         viewModel.welcomeInfoEvent.collect {
@@ -799,8 +799,8 @@ internal fun SoundsList(
     }
 }
 
-// Deleting the welcome is now a real, manual, destructive action (it no longer self-destructs —
-// feedback v2.1.0 #1), so it needs Long like any user-deleted sound to keep Undo reachable.
+// Deleting the welcome is now a real, manual, destructive action (it no longer self-destructs), so
+// it needs Long like any user-deleted sound to keep Undo reachable.
 internal fun deletionSnackbarDuration(
     @Suppress("UNUSED_PARAMETER") sound: Sound,
 ): SnackbarDuration = SnackbarDuration.Long

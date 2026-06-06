@@ -85,7 +85,7 @@ internal class WelcomeStickerStoreTest : AbstractRobolectricTest() {
     fun `acknowledged is independent of consumed`() {
         runBlocking {
             // Playing to completion (acknowledged) must NOT remove the welcome (consumed) — the card
-            // stays in the list until the user manually deletes it (feedback v2.1.0 #1).
+            // stays in the list until the user manually deletes it.
             store.markAcknowledged()
 
             assertThat(store.isAcknowledged()).isTrue()

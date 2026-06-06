@@ -33,8 +33,8 @@ import org.junit.runner.RunWith
  *  - The Material3 `SwipeToDismissBox` threshold + animation actually fire on a real surface
  *    (the `rememberSaveable` re-trigger bug documented in `SoundItem.kt:164` was a device-only
  *    discovery).
- *  - The date-driven ordering is observable in the actual rendered list with real file timestamps
- *    (feedback v2.1.0 #1 — the welcome is no longer force-positioned).
+ *  - The date-driven ordering is observable in the actual rendered list with real file timestamps —
+ *    the welcome is no longer force-positioned.
  */
 @RunWith(AndroidJUnit4::class)
 internal class WelcomeStickerFlowTest : AbstractUiTest() {
@@ -66,7 +66,7 @@ internal class WelcomeStickerFlowTest : AbstractUiTest() {
             composeRule.onNodeWithText(undoLabel).performClick()
             composeRule.awaitNodeWithText(title).assertIsDisplayed()
 
-            // The welcome reappears sorted by date like any other audio (feedback v2.1.0 #1). It is
+            // The welcome reappears sorted by date like any other audio. It is
             // the newer audio here (its install timestamp postdates the pre-seeded custom file), so
             // it sits ABOVE the custom — no longer force-demoted to the bottom.
             val welcomeTop =

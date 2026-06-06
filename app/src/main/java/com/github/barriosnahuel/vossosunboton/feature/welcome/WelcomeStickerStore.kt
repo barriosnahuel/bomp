@@ -122,7 +122,7 @@ class WelcomeStickerStore(
 
     /**
      * One-time migration from the old "ephemeral, self-destruct on completion" model to the new
-     * persistent one (feedback v2.1.0 #1). Under the old model, letting the welcome play to the end
+     * persistent one. Under the old model, letting the welcome play to the end
      * set `consumed=true` and it vanished forever — many Bompers lost it without understanding why.
      * Since the old `consumed` is ambiguous (auto-destruct vs intentional delete, indistinguishable
      * on disk), we resurface it for everyone once: clear `consumed`, drop the orphaned `was_restored`

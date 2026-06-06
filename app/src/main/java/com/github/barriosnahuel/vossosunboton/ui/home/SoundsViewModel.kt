@@ -267,7 +267,7 @@ class SoundsViewModel(
 
     // One-shot informative snackbar shown the first time the welcome audio plays to completion —
     // "it's yours, delete it whenever". Replaces the old self-destruct-on-completion flow (ADR 0003
-    // Channel for one-shot UI events; feedback v2.1.0 #1).
+    // Channel for one-shot UI events).
     private val _welcomeInfoEvent = Channel<Unit>(Channel.BUFFERED)
     val welcomeInfoEvent: Flow<Unit> = _welcomeInfoEvent.receiveAsFlow()
 
@@ -313,9 +313,9 @@ class SoundsViewModel(
         viewModelScope.launch(ioDispatcher) {
             try {
                 // One-time migration from the old "ephemeral, self-destruct on completion" model:
-                // resurfaces the welcome for installs that consumed it under the old behavior
-                // (feedback v2.1.0 #1). Runs BEFORE isActive() so the reset takes effect on first
-                // paint. Idempotent: a manual delete under the new model still sticks.
+                // resurfaces the welcome for installs that consumed it under the old behavior. Runs
+                // BEFORE isActive() so the reset takes effect on first paint. Idempotent: a manual
+                // delete under the new model still sticks.
                 welcomeStore.migrateToPersistentIfNeeded()
                 val active = welcomeStore.isActive()
                 _welcomeStickerVisible.value = active
@@ -905,7 +905,7 @@ class SoundsViewModel(
             val currentSounds = _sounds.value.toMutableList()
             if (isWelcome) {
                 // Re-insert the welcome and sort it back into place by date — it behaves like any
-                // other audio (feedback v2.1.0 #1). `event.sound` already carries its `dateAdded`.
+                // other audio. `event.sound` already carries its `dateAdded`.
                 currentSounds.add(event.sound)
                 currentSounds.sortWith(SOUND_ORDER)
             } else {
@@ -931,7 +931,7 @@ class SoundsViewModel(
             restoreWelcomeAsync()
         }
         // Welcome is just-another-audio now, so its Undo logs the generic `sound_delete_undone` like
-        // any other (the welcome-specific `welcome_sticker_undone` was pruned — feedback v2.1.0 #1).
+        // any other (the welcome-specific `welcome_sticker_undone` was pruned).
         tracker.log(AnalyticsEvent.SoundDeleteUndone)
     }
 
@@ -1259,7 +1259,7 @@ class SoundsViewModel(
      * unchanged for non-MY_SOUNDS tabs, when the sticker is consumed, or while the snackbar window
      * is hiding it. Otherwise the welcome is added to the list and sorted by [SOUND_ORDER] like any
      * other audio: its [installTs] is its `dateAdded`, so on a fresh install it lands at the top
-     * (newest) and naturally sinks as the Bomper adds their own audios (feedback v2.1.0 #1).
+     * (newest) and naturally sinks as the Bomper adds their own audios.
      *
      * [welcomeIsPendingDismissal] and [installTs] are snapshotted at the top of `loadSounds` so this
      * stays a pure function — easier to test, and avoids issuing extra DataStore reads inside the
@@ -1461,16 +1461,26 @@ class SoundsViewModel(
         recomputeVaultAudios()
 
         if (completed && isWelcomeSticker(sound)) {
-            // The welcome no longer self-destructs (feedback v2.1.0 #1) — it stays in the list as a
+            // The welcome no longer self-destructs — it stays in the list as a
             // persistent audio. Only the FIRST completion does anything: log `welcome_sticker_completed`
             // (gated so unlimited replays don't inflate it — replays are covered by `welcome_sticker_play`),
             // show the one-shot informative snackbar, and mark the welcome acknowledged. Later
             // completions are silent.
             viewModelScope.launch(ioDispatcher) {
-                if (!welcomeStore.isAcknowledged()) {
-                    welcomeStore.markAcknowledged()
-                    tracker.log(AnalyticsEvent.WelcomeStickerCompleted)
-                    _welcomeInfoEvent.trySend(Unit)
+                try {
+                    if (!welcomeStore.isAcknowledged()) {
+                        welcomeStore.markAcknowledged()
+                        tracker.log(AnalyticsEvent.WelcomeStickerCompleted)
+                        _welcomeInfoEvent.trySend(Unit)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") e: Throwable,
+                ) {
+                    // viewModelScope has no CoroutineExceptionHandler, so an uncaught throw here would
+                    // crash the app. Same defensive shape as consumeWelcomeAsync / markWelcomeHintShown.
+                    Tracker.track(RuntimeException("Welcome sticker acknowledge failed", e))
                 }
             }
         }
@@ -1510,7 +1520,7 @@ class SoundsViewModel(
         /**
          * Canonical My Sounds ordering: pinned first, then most-recent by `dateAdded`, then name.
          * Shared between the initial repo sort and [positionWelcomeIn] so the persistent welcome
-         * sticker sorts by its `dateAdded` exactly like a user-created audio (feedback v2.1.0 #1).
+         * sticker sorts by its `dateAdded` exactly like a user-created audio.
          */
         private val SOUND_ORDER: Comparator<Sound> =
             compareByDescending<Sound> { it.isPinned }
