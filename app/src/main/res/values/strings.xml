@@ -95,9 +95,9 @@
     <string name="app_my_sounds_empty_body">A laugh, a "happy birthday", an "on my way" from someone who matters. Share any voice note from WhatsApp, Telegram, or wherever — it\'ll wait right here, ready when you are.</string>
 
     <!-- Welcome sticker (Sticker Cero, fresh-install variant) -->
-    <string name="app_welcome_sticker_title">A hello from Nahu</string>
+    <string name="app_welcome_sticker_title">Your first voice-hug</string>
     <string name="app_welcome_sticker_origin">From the maker</string>
-    <string name="app_welcome_sticker_remaining_format">-%1$s</string>
+    <string name="app_welcome_sticker_info">From me to you. It\'s yours — delete it whenever you like.</string>
     <string name="app_welcome_sticker_feedback_dismissed">Catch you around!</string>
 
     <!-- Vault tab (private collections — biometric-gated per collection) -->

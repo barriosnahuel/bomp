@@ -77,7 +77,6 @@ internal class AnalyticsCoverageMatrixTest {
                 "WelcomeStickerShown",
                 "WelcomeStickerPlay",
                 "WelcomeStickerCompleted",
-                "WelcomeStickerUndone",
                 "WelcomeStickerDismissed",
                 "DuplicateNameHintShown",
                 "DuplicateNameHintPlay",

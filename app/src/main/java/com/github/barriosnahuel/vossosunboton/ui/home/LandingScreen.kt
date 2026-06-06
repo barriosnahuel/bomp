@@ -58,6 +58,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
@@ -451,6 +452,7 @@ private fun SnackbarEffects(
     val deletedEvent by viewModel.deletedSoundEvent.collectAsState()
     val audioDeletedMessage = stringResource(R.string.app_feedback_audio_deleted)
     val welcomeDismissedMessage = stringResource(R.string.app_welcome_sticker_feedback_dismissed)
+    val welcomeInfoMessage = stringResource(R.string.app_welcome_sticker_info)
     val undoLabel = stringResource(R.string.app_undo)
     val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
     val shareDismissLabel = stringResource(R.string.app_snackbar_action_dismiss)
@@ -486,6 +488,18 @@ private fun SnackbarEffects(
     LaunchedEffect(Unit) {
         viewModel.shareErrorEvent.collect { errorRes ->
             showShareErrorSnackbar(snackbarHostState, activityContext, errorRes, shareDismissLabel)
+        }
+    }
+
+    // Informative, one-shot snackbar shown the first time the welcome audio finishes playing — warm
+    // "it's yours, delete it whenever" message (feedback v2.1.0 #1). No action: the swipe-hint nudge
+    // teaches deletion; this just reassures. Long so it stays readable.
+    LaunchedEffect(Unit) {
+        viewModel.welcomeInfoEvent.collect {
+            snackbarHostState.showSnackbar(
+                message = welcomeInfoMessage,
+                duration = SnackbarDuration.Long,
+            )
         }
     }
 
@@ -683,10 +697,14 @@ internal fun SoundsList(
     // CTA on top of the list (e.g. the Vault tab's ExtendedFloatingActionButton) bump this so the
     // last item can scroll above the overlay; everything else stays at the default Spacing.SM.
     bottomContentPadding: androidx.compose.ui.unit.Dp = Spacing.SM,
+    // When true, the welcome card runs its one-time swipe-hint nudge (peek the delete background and
+    // settle back) to teach the swipe gesture; [onWelcomeHintShown] fires once it has run. Only the
+    // My Sounds list passes these — the Vault never renders the welcome.
+    welcomeHintPending: Boolean = false,
+    onWelcomeHintShown: () -> Unit = {},
 ) {
     val dismissingItems = remember { mutableStateSetOf<String>() }
     val coroutineScope = rememberCoroutineScope()
-    val remainingFormat = stringResource(R.string.app_welcome_sticker_remaining_format)
     // Locale-aware fallback for system collections (the seeded "Baúl") — resolved once at the
     // top of the composable since `stringResource` cannot be invoked from a non-Composable
     // `mapNotNull` lambda.
@@ -732,19 +750,6 @@ internal fun SoundsList(
                         } else {
                             null
                         }
-                    val welcomeTrailingLabel =
-                        if (isWelcome) {
-                            val remainingMs =
-                                when {
-                                    effectiveProgress != null ->
-                                        (effectiveProgress.durationMs - effectiveProgress.positionMs).coerceAtLeast(0)
-                                    resolvedDurationMs != null -> resolvedDurationMs
-                                    else -> null
-                                }
-                            remainingMs?.let { String.format(remainingFormat, formatDuration(it)) }
-                        } else {
-                            null
-                        }
                     val labels =
                         if (isWelcome) {
                             emptyList()
@@ -782,7 +787,8 @@ internal fun SoundsList(
                         originLabel = if (isWelcome) stringResource(R.string.app_welcome_sticker_origin) else null,
                         isWelcomeVariant = isWelcome,
                         borderOverride = welcomeBorder,
-                        trailingLabel = welcomeTrailingLabel,
+                        showSwipeHint = isWelcome && welcomeHintPending,
+                        onSwipeHintShown = onWelcomeHintShown,
                         collectionLabels = labels,
                         showCollectionLabels = !filterIsActive,
                         shareEnabled = shareEnabled,
@@ -793,10 +799,11 @@ internal fun SoundsList(
     }
 }
 
-// Welcome dismissal is a low-stakes "got it, move on" interaction — Short keeps it from lingering.
-// User-deleted sounds are destructive and need Long so Undo stays reachable.
-internal fun deletionSnackbarDuration(sound: Sound): SnackbarDuration =
-    if (isWelcomeSticker(sound)) SnackbarDuration.Short else SnackbarDuration.Long
+// Deleting the welcome is now a real, manual, destructive action (it no longer self-destructs —
+// feedback v2.1.0 #1), so it needs Long like any user-deleted sound to keep Undo reachable.
+internal fun deletionSnackbarDuration(
+    @Suppress("UNUSED_PARAMETER") sound: Sound,
+): SnackbarDuration = SnackbarDuration.Long
 
 @Composable
 private fun MySoundsBody(
@@ -816,6 +823,7 @@ private fun MySoundsBody(
     context: Context,
 ) {
     val activeCollection = publicCollections.firstOrNull { it.id == activeFilterId }
+    val welcomeHintPending by viewModel.welcomeHintPending.collectAsStateWithLifecycle()
     val isOnMySounds = selectedTab == AppTab.MY_SOUNDS
     val showFilterEmptyState = isOnMySounds && activeFilterId != null && sounds.isEmpty() && activeCollection != null
     val showWelcomeEmptyState = sounds.isEmpty() && isOnMySounds && !showFilterEmptyState
@@ -873,6 +881,8 @@ private fun MySoundsBody(
                         context.startActivity(LandingActivity.editIntent(context, sound))
                     },
                     onAddToCollection = { sound -> viewModel.requestAssignCollections(sound.id) },
+                    welcomeHintPending = welcomeHintPending,
+                    onWelcomeHintShown = { viewModel.markWelcomeHintShown() },
                 )
         }
     }
