@@ -492,13 +492,14 @@ private fun SnackbarEffects(
     }
 
     // Informative, one-shot snackbar shown the first time the welcome audio finishes playing — warm
-    // "it's yours, delete it whenever" message. No action: the swipe-hint nudge
-    // teaches deletion; this just reassures. Long so it stays readable.
+    // "it's yours, delete it whenever" message. No action: the swipe-hint nudge teaches deletion;
+    // this just reassures. Short (Material's duration for actionless info) — it's brief, non-critical
+    // reassurance (the card stays whether read or not), so Long would linger.
     LaunchedEffect(Unit) {
         viewModel.welcomeInfoEvent.collect {
             snackbarHostState.showSnackbar(
                 message = welcomeInfoMessage,
-                duration = SnackbarDuration.Long,
+                duration = SnackbarDuration.Short,
             )
         }
     }
