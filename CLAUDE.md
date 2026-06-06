@@ -85,6 +85,7 @@ Two write-time invariants below; the full procedure (Firebase projects, signing 
 
 - Worktrees live as **siblings of the primary worktree** (`../push-me-<topic>`), never nested under `.claude/` — a nested worktree gets indexed by the IDE as a separate project, cluttering navigation. The committed `WorktreeCreate` hook (`.claude/hooks/create-sibling-worktree.sh`) applies this layout to harness/subagent worktrees automatically.
 - Real `google-services.json` lives only in the working tree via `git update-index --skip-worktree` (the committed copies are scrubbed dummies so CI compiles) — **never** unmark + `git add` without first stashing the real file, or you leak real keys.
+- The `post-merge` hook that auto-cleans merged worktrees is installed by **copy** into `.git/hooks/` (via `scripts/install-hooks.sh`, re-armed by the committed `SessionStart` hook) — **never** rewire it through `git config core.hooksPath`: the remote environment owns `core.hooksPath` globally for commit-signing, and overriding it silently breaks verified commits.
 
 After creating a worktree by hand, run `./scripts/setup-worktree.sh` from its root (idempotent; the `WorktreeCreate` hook invokes it automatically) — it copies the real google-services configs + bundled debug audio and re-arms skip-worktree.
 

@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
 
+## \[unreleased] (v2.2.0)
+
+### For nerds 🤓
+
+#### Added
+- `scripts/cleanup-merged-worktrees.sh` + a committed `.githooks/post-merge` hook auto-remove linked worktrees (and their local branch) once their PR is `MERGED` on GitHub, and `git fetch --prune` dead remote refs — the local-side gap left by `deleteBranchOnMerge`, which only drops the remote branch. Keyed on the PR's `MERGED` state via `gh` (squash merges rewrite SHAs, so `git branch -d` can't detect them); fail-safe (removes nothing when `gh` is offline), skips the primary/protected/dirty worktrees, never `--force`. Installed by copy into `.git/hooks` via `scripts/install-hooks.sh` (re-armed each session by a committed `SessionStart` hook) rather than `core.hooksPath`, which the remote environment owns for commit-signing; CLAUDE.md and CONTRIBUTING.md document the convention
+
 ## \[v2.1.0] - 2026-05-25
 
 ### Added

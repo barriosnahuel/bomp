@@ -314,6 +314,37 @@ cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.ogg model/sr
 
 This is distinct from the swap-from-disk procedure above (used the first time you set up a fresh clone). The worktree-copy variant assumes the primary worktree already has the real files in place.
 
+### Cleaning up merged worktrees
+
+Overnight runs create one worktree + branch + PR per task and never tear them down. GitHub's `deleteBranchOnMerge` removes the *remote* branch when a PR merges, but the **local** worktree and branch linger. `scripts/cleanup-merged-worktrees.sh` removes them automatically.
+
+**The trigger is a `post-merge` git hook.** When you `git pull` `develop` in the primary worktree (the fast-forward that follows a GitHub squash-merge), the hook runs the cleanup script. It only acts on the `develop` branch, and always exits 0 so it can never block a pull.
+
+**What it removes** — for each *linked* worktree:
+
+- worktree + its local branch, **only if** the branch's PR is `MERGED` on GitHub;
+- plus `git fetch --prune` to drop dead `origin/*` refs.
+
+**What it never touches:** the primary worktree; protected branches (`develop`, `gh-pages`, `feat/gh-pages-*` — extend the `PROTECTED_BRANCHES` array at the top of the script); detached worktrees; worktrees with uncommitted changes (skipped with a warning, never `--force`); and **orphan local branches** that have no worktree (e.g. `backup/*` stay intact).
+
+**Why keyed on the PR's MERGED state, not git ancestry:** PRs land as **squash** merges, which rewrite SHAs, so `git branch -d` / `merge-base --is-ancestor` report the branch as *not* merged. The PR's own `MERGED` status (queried via `gh pr list`) is the only reliable signal — it persists even after the remote branch is deleted.
+
+**Fail-safe:** if `gh` is offline / unauthenticated, the merged set is empty and **nothing is removed**. The script never deletes without a positive MERGED signal.
+
+Preview without changing anything:
+
+```bash
+./scripts/cleanup-merged-worktrees.sh --dry-run
+```
+
+**Installation.** The hook source is committed at `.githooks/post-merge`; `scripts/install-hooks.sh` **copies** it into the repo's hooks dir (`$(git rev-parse --git-common-dir)/hooks`). A committed `SessionStart` hook in `.claude/settings.json` re-runs the installer every Claude Code session, so a fresh clone self-arms on its first session; thereafter the installed copy persists for terminal `git pull`s. To arm it by hand (e.g. a clone you won't open in Claude Code):
+
+```bash
+./scripts/install-hooks.sh
+```
+
+**Why copy instead of `git config core.hooksPath .githooks`** (the usual convention): the remote (CCR) environment sets `core.hooksPath` globally to install the commit-signing / `Co-authored-by` hooks. A repo-local `core.hooksPath` would override that and silently break verified commits. The remote env's hooks are passthroughs that chain to `$(git rev-parse --git-common-dir)/hooks/<name>` — exactly where we copy to — so the hook fires in both the remote env and a plain local clone, with signing intact.
+
 ### Editing the committed dummy
 
 To **edit the committed dummy itself** (rare — only when adding fields the plugin needs, or when scrubbing differently). Naively running `--no-skip-worktree` then `git add` would stage the real file from the working tree and leak `AIza…` keys, so use this safe sequence per file:
