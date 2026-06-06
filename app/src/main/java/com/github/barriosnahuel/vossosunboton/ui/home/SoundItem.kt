@@ -141,7 +141,7 @@ fun SoundItem(
         }
 
         // One-time swipe-hint nudge: the card peeks the delete background and settles back, teaching
-        // the swipe-to-delete gesture (feedback v2.1.0 #1). Driven by a self-contained Animatable
+        // the swipe-to-delete gesture. Driven by a self-contained Animatable
         // offset rather than the SwipeToDismissBox anchors, which have no public partial-peek API.
         val hintOffsetX = remember { Animatable(0f) }
         val density = LocalDensity.current

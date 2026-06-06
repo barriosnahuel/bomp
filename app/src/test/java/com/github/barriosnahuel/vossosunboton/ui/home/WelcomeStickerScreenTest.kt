@@ -8,6 +8,7 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 import android.os.Build
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -60,11 +61,13 @@ internal class WelcomeStickerScreenTest : AbstractRobolectricTest() {
             }
         }
 
-        // The welcome no longer self-destructs, so the "-M:SS" countdown is gone (feedback v2.1.0 #1)
-        // — it shows like a normal audio: title, play, and the "from the maker" origin label.
+        // The welcome no longer self-destructs, so the "-M:SS" countdown is gone — it shows like a
+        // normal audio: title, play, and the "from the maker" origin label.
         composeTestRule.onNodeWithText(title).assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription(playLabel).assertIsDisplayed()
         composeTestRule.onNodeWithText(origin).assertIsDisplayed()
+        // And no countdown is synthesized from the 14s duration (the old "-0:14" trailing label).
+        composeTestRule.onAllNodesWithText("-0:14").assertCountEquals(0)
     }
 
     @Test

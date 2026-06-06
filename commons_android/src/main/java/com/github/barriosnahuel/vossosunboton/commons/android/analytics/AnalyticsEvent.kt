@@ -138,7 +138,7 @@ sealed class AnalyticsEvent(
 
     /**
      * Welcome sticker (Sticker Cero, fresh-install variant) became visible in MY_SOUNDS. It is now a
-     * persistent, date-sorted audio (feedback v2.1.0 #1), not force-pinned to row 0. Gated call-site
+     * persistent, date-sorted audio, not force-pinned to row 0. Gated call-site
      * via `tracker.markFiredOnce("welcome_sticker_shown")` so it fires at most once per install.
      * `hasFirstVariant = false` because the marker is already one-shot.
      */
@@ -153,7 +153,7 @@ sealed class AnalyticsEvent(
 
     /**
      * Welcome audio reached its natural end for the FIRST time — the "they heard it through" onboarding
-     * milestone (feedback v2.1.0 #1). Gated by the `acknowledged` flag in `SoundsViewModel.onPlayerStop`
+     * milestone. Gated by the `acknowledged` flag in `SoundsViewModel.onPlayerStop`
      * so unlimited replays of the now-persistent welcome don't inflate it; replays are measured by
      * [WelcomeStickerPlay]. `hasFirstVariant = false` because it is already one-shot.
      */

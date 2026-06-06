@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
@@ -775,7 +776,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val welcomeTitle = context.getString(R.string.app_welcome_sticker_title)
 
         // The one-time migration in init clears the stale `consumed` flag and brings it back so the
-        // Bomper who "lost" it without understanding gets it again (feedback v2.1.0 #1).
+        // Bomper who "lost" it without understanding gets it again.
         assertThat(viewModel.sounds.value.any { it.name == welcomeTitle }).isTrue()
     }
 
@@ -828,7 +829,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         viewModel.onPlayerStop(welcome, completed = true)
 
-        // The welcome no longer self-destructs (feedback v2.1.0 #1): it stays in the list, no delete
+        // The welcome no longer self-destructs: it stays in the list, no delete
         // event is enqueued, the informative snackbar fires once, and it is marked acknowledged.
         assertThat(viewModel.deletedSoundEvent.value).isNull()
         assertThat(viewModel.welcomeStickerVisible.value).isTrue()
@@ -837,6 +838,25 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             assertThat(withTimeoutOrNull(2_000L) { viewModel.welcomeInfoEvent.first() }).isNotNull()
             assertThat(store.isAcknowledged()).isTrue()
         }
+    }
+
+    @Test
+    fun `onPlayerStop completed on welcome tracks a non-fatal instead of crashing when the store fails`() {
+        val welcomeStore = mockk<WelcomeStickerStore>(relaxed = true)
+        coEvery { welcomeStore.isActive() } returns true
+        coEvery { welcomeStore.isAcknowledged() } throws RuntimeException("datastore boom")
+        val viewModel = givenAViewModel(welcomeStore = welcomeStore)
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+
+        viewModel.onPlayerStop(welcome, completed = true)
+
+        // viewModelScope has no CoroutineExceptionHandler, so an uncaught throw from the store would
+        // crash the app on completion. The handler must catch it and report a non-fatal instead.
+        verify { Tracker.track(any()) }
     }
 
     @Test
@@ -942,7 +962,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         viewModel.restoreSound()
 
         // Post-condition: welcome is sorted back into its date position (row 0), NOT demoted to the
-        // end — it behaves like any other audio now (feedback v2.1.0 #1).
+        // end — it behaves like any other audio now.
         assertThat(
             viewModel.sounds.value
                 .first()
