@@ -72,6 +72,15 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `prepareShareIntent attaches an install-invite caption carrying the audio referrer`() {
+        val outcome = whenPreparing(givenASoundWithUri())
+
+        val caption = (outcome as ShareIntentOutcome.Success).intent.getStringExtra(Intent.EXTRA_TEXT)
+        assertThat(caption).contains("Bomp")
+        assertThat(caption).contains("utm_source%3Dbomp%26utm_medium%3Daudio%26utm_content%3Dcaption")
+    }
+
+    @Test
     fun `prepareShareIntent returns Success for sound with rawRes resource`() {
         val outcome = whenPreparing(givenASoundWithResourceId())
 
