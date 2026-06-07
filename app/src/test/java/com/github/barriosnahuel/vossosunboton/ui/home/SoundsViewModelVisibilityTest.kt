@@ -348,7 +348,10 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
     }
 
     private companion object {
-        const val TIMEOUT_MS = 3_000L
+        // Generous headroom for the DataStore → repo → loadSounds → StateFlow chain on a loaded CI
+        // machine (a 3s cap intermittently timed out under load). It only delays the genuine-hang
+        // case; passing awaits return as soon as the awaited state arrives.
+        const val TIMEOUT_MS = 10_000L
         const val SHORT_TIMEOUT_MS = 750L
     }
 }
