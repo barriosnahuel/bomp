@@ -92,6 +92,16 @@ android {
                 debugSymbolLevel 'FULL'
             }
         }
+
+        // Release-like build target consumed only by the :macrobenchmark module (non-debuggable +
+        // minified so startup/frame numbers match what users get). Made profileable via
+        // src/benchmark/AndroidManifest.xml. Firebase config is a scrubbed dummy
+        // (src/benchmark/google-services.json) so benchmark runs never report to bomp-prod.
+        benchmark {
+            initWith release
+            matchingFallbacks = ['release']
+            debuggable false
+        }
     }
 
     buildFeatures {

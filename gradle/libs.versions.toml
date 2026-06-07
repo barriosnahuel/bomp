@@ -37,6 +37,8 @@ truth                     = "1.4.5"
 mockk                     = "1.14.11"
 espresso                  = "3.7.0"
 uiautomator               = "2.3.0"
+benchmarkMacro            = "1.4.1"
+androidxTestExtJunit      = "1.2.1"
 
 [libraries]
 # ---------- Build-script classpath ----------
@@ -108,3 +110,7 @@ espresso-core                     = { module = "androidx.test.espresso:espresso-
 espresso-intents                  = { module = "androidx.test.espresso:espresso-intents",       version.ref = "espresso" }
 espresso-accessibility            = { module = "androidx.test.espresso:espresso-accessibility", version.ref = "espresso" }
 androidx-uiautomator              = { module = "androidx.test.uiautomator:uiautomator",         version.ref = "uiautomator" }
+androidx-test-ext-junit           = { module = "androidx.test.ext:junit",                       version.ref = "androidxTestExtJunit" }
+
+# ---------- Macrobenchmark (performance harness, :macrobenchmark module only) ----------
+androidx-benchmark-macro-junit4   = { module = "androidx.benchmark:benchmark-macro-junit4",     version.ref = "benchmarkMacro" }

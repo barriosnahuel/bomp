@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### Changed
 - The welcome audio no longer vanishes on its own after it plays — it stays in your list like any other audio, sorted by date, and the first time it finishes a warm note reminds you it's yours to keep or delete whenever you want; a one-time nudge shows you can swipe it away
 
+### For nerds 🤓
+
+#### Added
+- Macrobenchmark module measuring LandingActivity cold-start and sound-list scroll frame timing, to diagnose the entry-screen jank on lower-tier devices
+
 ## \[v2.1.0] - 2026-05-25
 
 ### Added
