@@ -19,7 +19,7 @@ import timber.log.Timber
  * benchmark to control the list size (the scroll-jank-vs-N question, H2).
  *
  * This overrides the release source set's `CustomBuildTypeApplication` for the benchmark variant;
- * the synthetic seeding never reaches release or debug.
+ * the synthetic seeding never reaches release or debug. Architecture + rationale: ADR 0015.
  */
 internal abstract class CustomBuildTypeApplication : Application() {
     override fun onCreate() {

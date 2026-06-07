@@ -11,6 +11,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Continuous integration](#continuous-integration-)
 - [Sources of truth for platform decisions](#sources-of-truth-for-platform-decisions-)
 - [Testing](#testing-)
+- [Performance benchmarking](#performance-benchmarking-)
 - [Gradle upgrade](#gradle-upgrade)
 - [Firebase config file](#firebase-config-file-)
 - [Backup & restore testing](#backup--restore-testing-)
@@ -263,6 +264,23 @@ composeRule.awaitNode(hasSetTextAction()).performTextInput(name)
 ```
 
 Bare `waitForIdle()` / `waitUntil { onAllNodes(...).isNotEmpty() }` is still correct after deterministic actions (`performClick`, `pressBack`), before negative assertions (`assertCountEquals(0)`), before `.onFirst()` chains, and when the matcher would multi-match (the helpers' terminal `onNode*` throws on multi-match). The one-line rule also lives in `CLAUDE.md` § *Local UI test suite*.
+
+## Performance benchmarking 📈
+
+The `:macrobenchmark` module (`com.android.test`, AndroidX Macrobenchmark) measures LandingActivity's cold start and sound-list scroll on a **real device or emulator** — the on-device half of the entry-screen jank investigation (Firebase Performance flags the regimes; these reproduce them with numbers). It targets the app's release-like `benchmark` build type (non-debuggable, minified, profileable), so the numbers track what users get — not the debug build. Architecture + rationale (why synchronous atomic seeding, why not real files, relationship to ADR 0004): [ADR 0015](docs/adr/0015-macrobenchmark-seeding-architecture.md).
+
+### Run it
+
+```bash
+./gradlew :macrobenchmark:connectedBenchmarkAndroidTest
+```
+
+Needs a connected device/emulator (API 28+; metrics are most reliable on API 29+, where the build is profileable). Results land in `macrobenchmark/build/outputs/connected_android_test_additional_output/` (JSON + Perfetto traces), with a summary in the Gradle output. In Android Studio, run a benchmark class from the gutter. CircleCI does not run benchmarks (no device), same as the instrumented suite (§ *Local UI test suite*).
+
+### What it measures
+
+- **`StartupBenchmark`** — cold start, `CompilationMode.None` vs `DEFAULT` (brackets the AOT effect without a Baseline Profile yet).
+- **`ScrollBenchmark`** — `FrameTimingMetric` while flinging the sound list at **5 / 50 / 200** items, to expose whether scroll jank scales with list size (hypothesis H2). The list is seeded to exactly N synthetic sounds via a launch-intent extra handled by the benchmark build type's `CustomBuildTypeApplication` (a release-like override; never reaches release or debug). Seeding is synchronous and atomic so the measured scroll always traverses exactly N — see [ADR 0015](docs/adr/0015-macrobenchmark-seeding-architecture.md).
 
 ## Platform upgrades
 ### API Level

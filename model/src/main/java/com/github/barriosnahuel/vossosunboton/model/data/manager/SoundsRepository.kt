@@ -91,7 +91,8 @@ class SoundsRepository(
      *
      * One write means a deterministic exact-N state: idempotent, shrinkable, and a single
      * recomposition (no per-item churn polluting frame timing). Non-prefixed sounds are untouched.
-     * The only caller is the `benchmark` build type's seeder; never used by production flows.
+     * The only caller is the `benchmark` build type's seeder; never used by production flows — see
+     * ADR 0015, with the benchmark-only call-site enforced by `scripts/check-adr-invariants.sh`.
      */
     suspend fun replaceSyntheticCorpus(
         idPrefix: String,
