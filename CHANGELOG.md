@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### Changed
 - The welcome audio no longer vanishes on its own after it plays — it stays in your list like any other audio, sorted by date, and the first time it finishes a warm note reminds you it's yours to keep or delete whenever you want; a one-time nudge shows you can swipe it away
+- Audios you share now arrive ready to play inline in more chat apps, instead of as a file the other person has to download first
 
 ### For nerds 🤓
 

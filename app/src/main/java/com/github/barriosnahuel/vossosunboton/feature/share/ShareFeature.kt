@@ -108,7 +108,10 @@ private class ShareFeatureImpl : ShareFeature {
                     sound.rawRes,
                     surface,
                 )
-                ShareIntentOutcome.Success(buildShareIntent(resolution.value), surface)
+                // getType() reads the platform MIME map from disk, so build the intent on IO — otherwise the
+                // debug StrictMode disk-read guard crashes when prepareShareIntent resumes on the main thread.
+                val intent = withContext(Dispatchers.IO) { buildShareIntent(applicationContext, resolution.value) }
+                ShareIntentOutcome.Success(intent, surface)
             }
         }
     }
@@ -137,10 +140,15 @@ private class ShareFeatureImpl : ShareFeature {
         return null
     }
 
-    private fun buildShareIntent(contentUri: Uri): Intent =
+    private fun buildShareIntent(
+        context: Context,
+        contentUri: Uri,
+    ): Intent =
         Intent().apply {
             action = Intent.ACTION_SEND
-            type = "audio/*"
+            // A concrete MIME (e.g. audio/mpeg) makes some clients (Telegram) render the inline audio player
+            // instead of a generic "file to download"; `audio/*` stays only as the last-resort fallback.
+            type = resolveAudioMimeType(context.contentResolver.getType(contentUri), contentUri.lastPathSegment)
             putExtra(Intent.EXTRA_STREAM, contentUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -228,4 +236,39 @@ private class ShareFeatureImpl : ShareFeature {
             val feedback: Int,
         ) : ShareOutcome<Nothing>()
     }
+}
+
+private const val WILDCARD_AUDIO_MIME = "audio/*"
+
+/**
+ * Audio MIME by lowercase file extension. Covers the formats Bomp actually stores: bundled `mp3`s plus
+ * whatever the user imports via the share sheet — notably WhatsApp voice notes (`opus`).
+ */
+private val AUDIO_MIME_BY_EXTENSION =
+    mapOf(
+        "mp3" to "audio/mpeg",
+        "opus" to "audio/opus",
+        "ogg" to "audio/ogg",
+        "m4a" to "audio/mp4",
+        "aac" to "audio/aac",
+        "wav" to "audio/wav",
+    )
+
+/**
+ * Resolves the MIME type to attach to the share intent. Prefers [resolverType] (from
+ * `ContentResolver.getType`) when it is a concrete audio type; otherwise derives it from [fileName]'s
+ * extension, falling back to the [WILDCARD_AUDIO_MIME] wildcard.
+ *
+ * The fallback is SDK-agnostic on purpose: `ContentResolver.getType` / `MimeTypeMap` can return `null` (or a
+ * non-audio `application/octet-stream`) for `.opus` on older API levels, so we never trust a non-audio answer.
+ */
+internal fun resolveAudioMimeType(
+    resolverType: String?,
+    fileName: String?,
+): String {
+    if (resolverType != null && resolverType.startsWith("audio/")) {
+        return resolverType
+    }
+    val extension = fileName?.substringAfterLast('.', "").orEmpty().lowercase()
+    return AUDIO_MIME_BY_EXTENSION[extension] ?: WILDCARD_AUDIO_MIME
 }
