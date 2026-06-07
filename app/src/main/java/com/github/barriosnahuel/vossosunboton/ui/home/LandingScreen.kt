@@ -65,6 +65,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
+import com.github.barriosnahuel.vossosunboton.feature.share.ShareAppIntent
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.feature.vault.requestUnlock
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
@@ -72,6 +73,7 @@ import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGa
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.feature.welcome.isWelcomeSticker
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.playstore.PlayStoreReferrer
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.about.AboutScreen
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
@@ -560,6 +562,7 @@ private fun AppTopBar(
     onManageCollectionsClick: () -> Unit,
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     TopAppBar(
         title = { Text(stringResource(R.string.app_name)) },
         actions = {
@@ -585,6 +588,13 @@ private fun AppTopBar(
                     onClick = {
                         isMenuExpanded = false
                         onAboutClick()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.app_share_app_menu_item)) },
+                    onClick = {
+                        isMenuExpanded = false
+                        ShareAppIntent.launch(context, PlayStoreReferrer.CONTENT_MENU)
                     },
                 )
             }
