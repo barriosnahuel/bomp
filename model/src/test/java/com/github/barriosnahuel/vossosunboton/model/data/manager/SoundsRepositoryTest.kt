@@ -54,6 +54,25 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
         }
 
     @Test
+    fun `replaceSyntheticCorpus sets exactly N with duration, can shrink, and preserves other sounds`() =
+        runTest {
+            repo.save(testSound("keep", "keep.mp3"))
+
+            val three = (0 until 3).map { Sound("benchmark:$it", "Benchmark $it", "benchmark:$it.dat") }
+            repo.replaceSyntheticCorpus("benchmark:", three, durationMs = 1234)
+
+            assertThat(repo.sounds.first().filter { it.id.startsWith("benchmark:") }).hasSize(3)
+            assertThat(repo.durations.first()["benchmark:0"]).isEqualTo(1234)
+
+            // Shrink to 1 — what the disk-coupled delete() could not do for file-less synthetic rows.
+            val one = listOf(Sound("benchmark:0", "Benchmark 0", "benchmark:0.dat"))
+            repo.replaceSyntheticCorpus("benchmark:", one, durationMs = 1234)
+
+            assertThat(repo.sounds.first().filter { it.id.startsWith("benchmark:") }).hasSize(1)
+            assertThat(repo.sounds.first().any { it.id == "custom:keep" }).isTrue()
+        }
+
+    @Test
     fun `save then clear then sounds emits no custom sounds`() =
         runTest {
             repo.save(testSound("bell", "bell.mp3"))
