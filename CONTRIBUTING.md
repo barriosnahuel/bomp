@@ -184,6 +184,7 @@ Run `./gradlew check -x test && ./gradlew test` before pushing — catches the s
 - **Heavy path is opt-in:** `PREPUSH_FULL=1 git push` also runs `./gradlew test` + `:app:lintDebug :app:lintRelease`. Kept out of the default path so the hook stays fast; CI runs them regardless.
 - **Escape hatch:** `git push --no-verify` skips the hook entirely — for cosmetic-only pushes (CHANGELOG, copy strings, README, comments).
 - The instrumented UI suite is **not** part of the hook (it cold-boots an emulator) — run it via `./scripts/run-instrumented-tests.sh` for functional changes as above.
+- **Claude Code sessions auto-format first:** a committed `PreToolUse` hook (`.claude/hooks/pre-check-ktlint-format.sh`, registered in `.claude/settings.json`) runs `ktlintFormat` before any Gradle check command, so the pre-push hook's `ktlintCheck` never trips on an auto-fixable violation. Best-effort (always exits 0, never blocks the command, no-ops in microseconds on non-check commands); it does not replace running `ktlintFormat` by hand in a plain terminal.
 
 **Functional changes also require the local UI test suite** (see § *Local UI test suite → When to run* below). If the change touches Composables, ViewModels, intents, navigation, deep links, or persistence — run `./scripts/run-instrumented-tests.sh` before pushing (it cold-boots the emulator; never run the Gradle task directly against a warm AVD). CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
 
