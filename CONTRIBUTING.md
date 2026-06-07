@@ -322,14 +322,19 @@ Overnight runs create one worktree + branch + PR per task and never tear them do
 
 **What it removes** — for each *linked* worktree:
 
-- worktree + its local branch, **only if** the branch's PR is `MERGED` on GitHub;
-- plus `git fetch --prune` to drop dead `origin/*` refs.
+- worktree + its local branch, **only if** a `MERGED` PR for that head landed **this exact commit** (the PR's `headRefOid` equals the worktree's tip) **and** no PR for the head is still `OPEN`;
+- plus `git fetch --prune` to drop dead `origin/*` refs (real runs only — skipped in `--dry-run`).
 
 **What it never touches:** the primary worktree; protected branches (`develop`, `gh-pages`, `feat/gh-pages-*` — extend the `PROTECTED_BRANCHES` array at the top of the script); detached worktrees; worktrees with uncommitted changes (skipped with a warning, never `--force`); and **orphan local branches** that have no worktree (e.g. `backup/*` stay intact).
 
-**Why keyed on the PR's MERGED state, not git ancestry:** PRs land as **squash** merges, which rewrite SHAs, so `git branch -d` / `merge-base --is-ancestor` report the branch as *not* merged. The PR's own `MERGED` status (queried via `gh pr list`) is the only reliable signal — it persists even after the remote branch is deleted.
+**Why keyed on the branch's own PR + commit, not git ancestry or branch name:** PRs land as **squash** merges, which rewrite SHAs, so `git branch -d` / `merge-base --is-ancestor` report the branch as *not* merged. But "a PR with this branch name was merged" is also unsafe — two data-loss traps it would hit:
 
-**Fail-safe:** if `gh` is offline / unauthenticated, the merged set is empty and **nothing is removed**. The script never deletes without a positive MERGED signal.
+- **branch-name reuse** — `deleteBranchOnMerge` frees the name, so a *new* worktree reusing a name whose old PR merged would be wrongly classified as merged;
+- **post-merge local commits** — work committed on the branch *after* its PR merged (a clean tree, so the uncommitted-changes guard misses it).
+
+Both are caught by requiring the local tip to equal the merged PR's `headRefOid`: a reused name or extra commits make the tip differ → kept.
+
+**Fail-safe:** any `gh` failure (offline / unauthenticated), a missing PR, or a tip that doesn't match a merged PR all yield **keep**. The script never deletes without a positive "merged at this commit" signal.
 
 Preview without changing anything:
 
