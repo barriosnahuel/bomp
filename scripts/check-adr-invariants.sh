@@ -192,6 +192,26 @@ if [ "$CLAUDE_MD_SIZE" -gt "$CLAUDE_MD_FAIL" ]; then
 fi
 
 # ============================================================================
+# ADR 0015 — docs/adr/0015-macrobenchmark-seeding-architecture.md
+# Invariant: replaceSyntheticCorpus is a benchmark-only seeding primitive. It is
+# declared in SoundsRepository (model/src/main) and called only from the
+# benchmark build type (app/src/benchmark); the model unit test exercises it.
+# Any other production/debug/release reference fails — this grep stands in for
+# the @VisibleForTesting fence Lint can't provide for a cross-module caller.
+# ============================================================================
+rogue_seed=$(
+    grep -rln --include="*.kt" 'replaceSyntheticCorpus' \
+        app commons_android commons_file model 2>/dev/null \
+        | grep -vE '/src/benchmark/|/src/test/|/src/androidTest/' \
+        | grep -vE 'model/src/main/.*/SoundsRepository\.kt$' || true
+)
+if [ -n "$rogue_seed" ]; then
+    fail "ADR 0015 broken: replaceSyntheticCorpus referenced outside the benchmark seeder:
+$rogue_seed
+It is a benchmark-only primitive — only app/src/benchmark may call it (declared in SoundsRepository, tested in model/src/test). Supersede ADR 0015 or move the call site."
+fi
+
+# ============================================================================
 if [ "$errors" -gt 0 ]; then
     echo
     echo "$errors ADR invariant(s) violated. See messages above for which ADR(s) to revisit." >&2
