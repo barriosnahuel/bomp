@@ -84,6 +84,27 @@ class SoundsRepository(
         }
     }
 
+    /**
+     * Benchmark seeding primitive: in a single atomic write, replaces every sound whose id starts
+     * with [idPrefix] with [sounds], each stamped with [durationMs] (sounds and their cached duration
+     * share one DataStore key, so this populates both — rows render their duration like a real audio).
+     *
+     * One write means a deterministic exact-N state: idempotent, shrinkable, and a single
+     * recomposition (no per-item churn polluting frame timing). Non-prefixed sounds are untouched.
+     * The only caller is the `benchmark` build type's seeder; never used by production flows.
+     */
+    suspend fun replaceSyntheticCorpus(
+        idPrefix: String,
+        sounds: List<Sound>,
+        durationMs: Int,
+    ) {
+        sounds.forEach { validateName(it.name) }
+        mutate { current ->
+            current.filterNot { it.id.startsWith(idPrefix) } +
+                sounds.map { it.toStored(previous = null).copy(durationMs = durationMs) }
+        }
+    }
+
     suspend fun savePin(
         id: String,
         name: String,

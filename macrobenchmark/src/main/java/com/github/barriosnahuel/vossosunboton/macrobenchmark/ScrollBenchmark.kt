@@ -54,7 +54,8 @@ class ScrollBenchmark {
             startupMode = StartupMode.WARM,
             setupBlock = {
                 startActivityAndWait { intent -> intent.putExtra(SEED_COUNT_EXTRA, itemCount) }
-                // Seeding is async + persisted; wait until a seeded item renders before measuring.
+                // Seeding is synchronous (done in onCreate before the list loads), so once any seeded
+                // item renders the full exact-N corpus is present — safe to start measuring.
                 device.wait(Until.hasObject(By.textContains(SYNTHETIC_NAME_PREFIX)), SEED_RENDER_TIMEOUT_MS)
             },
         ) {

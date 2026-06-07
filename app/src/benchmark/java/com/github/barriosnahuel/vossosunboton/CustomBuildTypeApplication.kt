@@ -10,11 +10,7 @@ import android.content.Intent
 import com.github.barriosnahuel.vossosunboton.commons.android.error.ErrorTrackerTree
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 
 /**
@@ -22,13 +18,10 @@ import timber.log.Timber
  * corpus), plus an on-demand synthetic-corpus seeder used **only** by the :macrobenchmark scroll
  * benchmark to control the list size (the scroll-jank-vs-N question, H2).
  *
- * The `benchmark` variant overrides the release source set's [CustomBuildTypeApplication]; the
- * synthetic seeding never reaches release or debug. Triggered via [SEED_COUNT_EXTRA] on the launch
- * intent — kept in sync with the benchmark in :macrobenchmark.
+ * This overrides the release source set's `CustomBuildTypeApplication` for the benchmark variant;
+ * the synthetic seeding never reaches release or debug.
  */
 internal abstract class CustomBuildTypeApplication : Application() {
-    private val seedScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onCreate() {
         Timber.plant(ErrorTrackerTree())
 
@@ -36,27 +29,24 @@ internal abstract class CustomBuildTypeApplication : Application() {
     }
 
     /**
-     * Seeds exactly [count][SEED_COUNT_EXTRA] synthetic sounds (idempotent: a no-op when the corpus
-     * already has that many, so repeated benchmark iterations don't re-pay the cost). Fire-and-forget;
-     * the benchmark waits for the list to render before measuring.
+     * Seeds exactly [count][SEED_COUNT_EXTRA] synthetic sounds (each stamped with a duration so rows
+     * render like a real audio). Done **synchronously** in `onCreate`, before the ViewModel's first
+     * load, so the measured scroll never sees a stale or half-seeded list — `replaceSyntheticCorpus`
+     * is a single atomic write, so this is cheap. Runs only in the benchmark build (release-like, no
+     * StrictMode); inert for the startup benchmark, which doesn't pass the extra.
      */
     fun seedDebugSoundsIfRequested(intent: Intent) {
         val count = intent.getIntExtra(SEED_COUNT_EXTRA, 0)
         if (count <= 0) {
             return
         }
-        seedScope.launch { seedSyntheticSounds(count) }
-    }
-
-    private suspend fun seedSyntheticSounds(count: Int) {
-        val repo = SoundsRepository(this)
-        val existing = repo.sounds.first().filter { it.id.startsWith(SYNTHETIC_ID_PREFIX) }
-        if (existing.size == count) {
-            return
-        }
-        existing.forEach { repo.delete(it) }
-        repeat(count) { index ->
-            repo.save(Sound("$SYNTHETIC_ID_PREFIX$index", "$SYNTHETIC_NAME_PREFIX $index", "$SYNTHETIC_ID_PREFIX$index.dat"))
+        val sounds =
+            (0 until count).map { index ->
+                Sound("$SYNTHETIC_ID_PREFIX$index", "$SYNTHETIC_NAME_PREFIX $index", "$SYNTHETIC_ID_PREFIX$index.dat")
+            }
+        runBlocking {
+            SoundsRepository(this@CustomBuildTypeApplication)
+                .replaceSyntheticCorpus(SYNTHETIC_ID_PREFIX, sounds, SYNTHETIC_DURATION_MS)
         }
     }
 }
@@ -68,3 +58,6 @@ const val SEED_COUNT_EXTRA = "benchmark_seed_count"
 const val SYNTHETIC_NAME_PREFIX = "Benchmark sound"
 
 private const val SYNTHETIC_ID_PREFIX = "benchmark:"
+
+/** A plausible audio length so each seeded row renders a duration like a real sound. */
+private const val SYNTHETIC_DURATION_MS = 3_000
