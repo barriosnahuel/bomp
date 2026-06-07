@@ -314,6 +314,32 @@ cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.ogg model/sr
 
 This is distinct from the swap-from-disk procedure above (used the first time you set up a fresh clone). The worktree-copy variant assumes the primary worktree already has the real files in place.
 
+### Cleaning up merged worktrees
+
+Worktrees created per task — by the `overnight-work` Claude Code skill (user-level, **not** in this repo), by harness subagents, or by hand — accumulate after their PR merges: `deleteBranchOnMerge` drops the *remote* branch, but the **local** worktree and branch linger. `scripts/cleanup-merged-worktrees.sh` removes them automatically. The full rationale (why keyed on the PR's merged commit and not git ancestry/branch name, why copy-install instead of `core.hooksPath`, how it relates to the harness's own cleanup) is in [ADR 0014](docs/adr/0014-worktree-lifecycle-sibling-layout-and-cleanup.md) — this section is the operator's how-to.
+
+**Trigger.** The committed `.githooks/post-merge` hook runs the script on the `git pull` of `develop` that follows a merge (only on `develop`; always exits 0, so it can never block a pull).
+
+**What it does.** For each linked worktree, it removes the worktree + its local branch **only if** a `MERGED` PR for that head landed this exact commit (`headRefOid` == the worktree's tip) and no PR is still `OPEN`; then `git fetch --prune`s dead `origin/*` refs. It never touches the primary worktree, protected branches (`develop`, `gh-pages`, `feat/gh-pages-*` — the `PROTECTED_BRANCHES` list at the top of the script), detached or dirty worktrees (kept with a warning, never `--force`), or orphan local branches with no worktree (e.g. `backup/*`). Any `gh` failure or tip mismatch ⇒ *keep* (fail-safe).
+
+Preview without changing anything (side-effect-free):
+
+```bash
+./scripts/cleanup-merged-worktrees.sh --dry-run
+```
+
+**Tests.** `scripts/test-cleanup-merged-worktrees.sh` is a self-contained behaviour test (pure bash + git — no network/`gh`/extra tooling: it builds a throwaway repo with real worktrees and shims `gh`), mutation-tested to fail if the keep/remove decision regresses. Runs in CI as the `worktree-cleanup-test` job; run it locally the same way:
+
+```bash
+./scripts/test-cleanup-merged-worktrees.sh
+```
+
+**Installation.** The hook is installed by copy into `$(git rev-parse --git-common-dir)/hooks` via `scripts/install-hooks.sh`, re-armed every session by a committed `SessionStart` hook in `.claude/settings.json` (a fresh clone self-arms on its first session; the installed copy then persists for terminal `git pull`s). Arm it by hand for a clone you won't open in Claude Code — **not** via `core.hooksPath`, see [ADR 0014](docs/adr/0014-worktree-lifecycle-sibling-layout-and-cleanup.md):
+
+```bash
+./scripts/install-hooks.sh
+```
+
 ### Editing the committed dummy
 
 To **edit the committed dummy itself** (rare — only when adding fields the plugin needs, or when scrubbing differently). Naively running `--no-skip-worktree` then `git add` would stage the real file from the working tree and leak `AIza…` keys, so use this safe sequence per file:
