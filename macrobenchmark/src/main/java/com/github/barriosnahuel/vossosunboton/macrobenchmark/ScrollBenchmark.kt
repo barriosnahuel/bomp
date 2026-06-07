@@ -7,6 +7,7 @@ package com.github.barriosnahuel.vossosunboton.macrobenchmark
 
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.FrameTimingMetric
+import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
@@ -38,9 +39,17 @@ class ScrollBenchmark {
             metrics = listOf(FrameTimingMetric()),
             iterations = DEFAULT_ITERATIONS,
             compilationMode = CompilationMode.DEFAULT,
+            // WARM recreates LandingActivity each iteration so the list starts at the top. Without it
+            // the singleTask activity is reused with the process alive, leaving the list bottomed-out
+            // after iteration 1 — later flings would hit an idle screen and fake good frame numbers.
+            startupMode = StartupMode.WARM,
             setupBlock = { startActivityAndWait() },
         ) {
-            val list = device.findObject(By.scrollable(true)) ?: return@measureRepeated
+            // Fail loudly: a missing scrollable node must not silently record idle frames as a result.
+            val list =
+                requireNotNull(device.findObject(By.scrollable(true))) {
+                    "No scrollable node on LandingActivity — wire a stable testTag if this fails on-device."
+                }
             list.setGestureMargin(device.displayWidth / GESTURE_MARGIN_DIVISOR)
             repeat(SCROLL_GESTURES) {
                 list.fling(Direction.DOWN)
