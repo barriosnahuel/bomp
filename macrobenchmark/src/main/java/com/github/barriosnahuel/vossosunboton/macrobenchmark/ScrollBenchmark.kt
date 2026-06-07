@@ -12,20 +12,22 @@ import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
+import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Frame timing while scrolling the sound list on LandingActivity.
+ * Frame timing while scrolling the sound list on LandingActivity, across three controlled list sizes
+ * (few / medium / many). Production data flags the interaction regime as the worst bucket (~39% slow
+ * frames + the only frozen frames during mid-length sessions); comparing the sizes shows whether that
+ * jank scales with item count (hypothesis H2 — per-item composition cost), separate from the startup
+ * regime measured by [StartupBenchmark].
  *
- * Targets the interaction regime of the jank investigation, which production data flags as the worst
- * bucket (~39% slow frames + the only frozen frames during mid-length sessions) — separate from the
- * startup regime measured by [StartupBenchmark].
- *
- * Scrolls via the first scrollable node ([By.scrollable]) so it needs no `testTag` wiring in the
- * app. If the soundboard later exposes a stable test tag, target it directly for robustness.
- * Numbers are read on-device by a human (plan Fase 3).
+ * Each run seeds a synthetic corpus of exactly N sounds via a launch-intent extra (handled by the
+ * benchmark-variant `CustomBuildTypeApplication`), then waits for the list to render before scrolling.
+ * Scrolls the first scrollable node ([By.scrollable]) so it needs no `testTag` in the app. Numbers are
+ * read on-device by a human (plan Fase 3).
  */
 @RunWith(AndroidJUnit4::class)
 class ScrollBenchmark {
@@ -33,17 +35,28 @@ class ScrollBenchmark {
     val benchmarkRule = MacrobenchmarkRule()
 
     @Test
-    fun scrollSoundsList() =
+    fun scrollSmallList() = measureScroll(SMALL_LIST)
+
+    @Test
+    fun scrollMediumList() = measureScroll(MEDIUM_LIST)
+
+    @Test
+    fun scrollLargeList() = measureScroll(LARGE_LIST)
+
+    private fun measureScroll(itemCount: Int) =
         benchmarkRule.measureRepeated(
             packageName = TARGET_PACKAGE,
             metrics = listOf(FrameTimingMetric()),
             iterations = DEFAULT_ITERATIONS,
             compilationMode = CompilationMode.DEFAULT,
-            // WARM recreates LandingActivity each iteration so the list starts at the top. Without it
-            // the singleTask activity is reused with the process alive, leaving the list bottomed-out
-            // after iteration 1 — later flings would hit an idle screen and fake good frame numbers.
+            // WARM recreates LandingActivity each iteration so the list starts at the top. Seeding is
+            // idempotent, so the relaunch re-sends the extra cheaply (no-op once N already seeded).
             startupMode = StartupMode.WARM,
-            setupBlock = { startActivityAndWait() },
+            setupBlock = {
+                startActivityAndWait { intent -> intent.putExtra(SEED_COUNT_EXTRA, itemCount) }
+                // Seeding is async + persisted; wait until a seeded item renders before measuring.
+                device.wait(Until.hasObject(By.textContains(SYNTHETIC_NAME_PREFIX)), SEED_RENDER_TIMEOUT_MS)
+            },
         ) {
             // Fail loudly: a missing scrollable node must not silently record idle frames as a result.
             val list =

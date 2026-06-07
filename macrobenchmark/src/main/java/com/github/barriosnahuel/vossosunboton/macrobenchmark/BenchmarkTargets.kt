@@ -24,3 +24,25 @@ internal const val SCROLL_GESTURES = 3
  * on the system back-gesture edges. `displayWidth / 5` ≈ 20% per side.
  */
 internal const val GESTURE_MARGIN_DIVISOR = 5
+
+// --- Seeded scroll benchmark (controlled list size, hypothesis H2: does scroll jank scale with N?) ---
+
+/**
+ * Launch-intent extra carrying how many synthetic sounds to seed. Must match `SEED_COUNT_EXTRA` in
+ * the app's benchmark-variant `CustomBuildTypeApplication`.
+ */
+internal const val SEED_COUNT_EXTRA = "benchmark_seed_count"
+
+/**
+ * Display-name prefix of seeded sounds; the benchmark waits for one to render before scrolling. Must
+ * match `SYNTHETIC_NAME_PREFIX` in the app's benchmark-variant `CustomBuildTypeApplication`.
+ */
+internal const val SYNTHETIC_NAME_PREFIX = "Benchmark sound"
+
+/** Max wait for the seeded corpus to render before scrolling. Seeding is async + persisted. */
+internal const val SEED_RENDER_TIMEOUT_MS = 15_000L
+
+/** Three list sizes — few / medium / many — to expose whether scroll jank scales with item count. */
+internal const val SMALL_LIST = 5
+internal const val MEDIUM_LIST = 50
+internal const val LARGE_LIST = 200
