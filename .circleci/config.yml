@@ -124,26 +124,7 @@ jobs:
       - checkout
       - run:
           name: "Verify nothing bypasses the AnalyticsTracker wrapper"
-          command: |
-            # Production sourcesets only — tests legitimately mock FirebaseAnalytics inside the wrapper's own tests.
-            MAIN_DIRS="app/src/main commons_android/src/main commons_file/src/main model/src/main"
-            # Any FirebaseAnalytics.getInstance(...) call must originate inside the wrapper provider.
-            if grep -rnE 'FirebaseAnalytics\s*\.\s*getInstance' \
-                --include='*.kt' --include='*.java' \
-                --exclude='AnalyticsTrackerProvider.kt' \
-                --exclude='FirebaseAnalyticsTracker.kt' \
-                $MAIN_DIRS; then
-                echo "ERROR: Direct FirebaseAnalytics.getInstance(...) call detected outside the wrapper. Use AnalyticsTrackerProvider.get(context)."
-                exit 1
-            fi
-            # And only FirebaseAnalyticsTracker.kt is allowed to call .logEvent(.
-            if grep -rnE '\.logEvent\s*\(' \
-                --include='*.kt' --include='*.java' \
-                --exclude='FirebaseAnalyticsTracker.kt' \
-                $MAIN_DIRS; then
-                echo "ERROR: Direct .logEvent(...) call detected outside FirebaseAnalyticsTracker.kt. Add an AnalyticsEvent subclass and call tracker.log(...) instead."
-                exit 1
-            fi
+          command: ./scripts/check-analytics-wrapper.sh
 
   "test-assertion-guard":
     executor:
@@ -153,16 +134,7 @@ jobs:
       - checkout
       - run:
           name: "Verify no bare kotlin.assert(...) in test sources"
-          command: |
-            # `kotlin.assert(cond) { msg }` is a no-op without JVM `-ea` — see CLAUDE.md § Test assertions.
-            # Tests must use Truth (`assertThat`), JUnit (`assertEquals` etc.), or the Compose UI Test API.
-            TEST_DIRS="app/src/test app/src/androidTest commons_android/src/test commons_file/src/test model/src/test"
-            if grep -rnE '(^|[^[:alnum:]_])assert[[:space:]]*\(' \
-                --include='*.kt' \
-                $TEST_DIRS; then
-                echo "ERROR: Bare assert(...) detected in test sources. kotlin.assert is a no-op without JVM -ea — use assertThat(...) (Truth), assertEquals(...) (JUnit), or assertCountEquals(...) (Compose UI Test). See CLAUDE.md § Test assertions."
-                exit 1
-            fi
+          command: ./scripts/check-test-assertions.sh
 
   "worktree-cleanup-test":
     executor:

@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+# pre-push — run CI's cheap checks locally so style/format/guard failures are
+# caught before the push instead of round-tripping through CircleCI.
+#
+# Installed by COPY into .git/hooks/ via scripts/install-hooks.sh. It is NOT
+# wired through `git config core.hooksPath`: the remote (CCR) environment owns
+# core.hooksPath globally to install the commit-signing / Co-authored-by hooks,
+# and overriding it would silently break verified commits. CCR's hooks are
+# passthroughs that chain to $(git rev-parse --git-common-dir)/hooks/<name>, so
+# installing here fires in both environments. See CLAUDE.md § Worktree setup.
+#
+# Mirrors the CircleCI PR workflow's fail-fast ordering: the pure grep/bash
+# guards first (seconds, no Gradle), then the cheap Gradle linters. The heavy
+# unit-test + Android-lint jobs stay OUT of the default path to keep the hook
+# fast; opt in with PREPUSH_FULL=1. Skip the whole hook with `git push
+# --no-verify` for cosmetic-only pushes (CHANGELOG, README, comments).
+#
+# Checks run against the current working tree (= the pushed state when HEAD is
+# committed and the tree is clean, the normal case).
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+# pre-push gets one line per ref on stdin: <local-ref> <local-sha> <remote-ref>
+# <remote-sha>. git sets <local-ref> to "(delete)" for a deletion. Skip the
+# (heavy) checks when every pushed ref is a deletion or there's nothing to push —
+# no new code to validate, and the linters would run for nothing.
+has_content=0
+while read -r local_ref _ _ _; do
+    [ "$local_ref" = "(delete)" ] || has_content=1
+done
+if [ "$has_content" -eq 0 ]; then
+    echo "▶ pre-push: only ref deletions (or nothing to push) — skipping checks."
+    exit 0
+fi
+
+fail() {
+    echo "" >&2
+    echo "✘ pre-push blocked: $1" >&2
+    [ -n "${2:-}" ] && echo "  ↳ $2" >&2
+    echo "  (cosmetic-only push? re-run with: git push --no-verify)" >&2
+    exit 1
+}
+
+echo "▶ pre-push: running CI's fast checks locally (PREPUSH_FULL=1 adds tests + Android lint)…"
+
+# ── 1. Pure grep/bash guards — cheapest first, no Gradle ────────────────────
+./scripts/check-adr-invariants.sh      || fail "ADR invariants violated (adr-invariants)" "the message above names the ADR to revisit"
+./scripts/check-security-test-count.sh || fail "security-test count mismatch (security-test-count-guard)" "restore the removed test, or bump EXPECTED_COUNT in the script"
+./scripts/check-analytics-wrapper.sh   || fail "AnalyticsTracker wrapper bypassed (analytics-wrapper-guard)" "route the call through AnalyticsTrackerProvider / FirebaseAnalyticsTracker"
+./scripts/check-test-assertions.sh     || fail "bare kotlin.assert(...) in tests (test-assertion-guard)" "use assertThat / assertEquals / assertCountEquals instead"
+
+# ── 2. Cheap Gradle linters (detekt + ktlint + spotless) ────────────────────
+./gradlew ktlintCheck detekt spotlessCheck \
+    || fail "Gradle linters failed (ktlint / detekt / spotless)" "auto-fix style: ./gradlew ktlintFormat — auto-fix license headers: ./gradlew spotlessApply — detekt needs manual fixes (config/detekt)"
+
+# ── 3. Opt-in heavy path: unit tests + Android lint (CI runs these too) ──────
+if [ "${PREPUSH_FULL:-}" = "1" ]; then
+    echo "▶ pre-push: PREPUSH_FULL=1 — running unit tests + Android lint…"
+    ./gradlew test                       || fail "unit tests failed (test)" "inspect app/build/reports/tests/"
+    ./gradlew :app:lintDebug :app:lintRelease || fail "Android Lint failed (lint)" "inspect app/build/reports/lint-results-*.html"
+fi
+
+echo "✓ pre-push: all checks passed."
+exit 0
