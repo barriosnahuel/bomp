@@ -26,6 +26,7 @@ firebaseBom               = "34.14.0"
 timber                    = "5.0.1"
 coroutines                = "1.11.0"
 datastore                 = "1.2.1"
+metricsPerformance        = "1.0.0"
 kotlinxSerialization      = "1.11.0"
 biometric                 = "1.4.0-alpha07"
 
@@ -91,6 +92,9 @@ coroutines-test                   = { module = "org.jetbrains.kotlinx:kotlinx-co
 
 # ---------- DataStore ----------
 androidx-datastore-preferences    = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+
+# ---------- JankStats (debug-only frame diagnostics) ----------
+androidx-metrics-performance      = { module = "androidx.metrics:metrics-performance", version.ref = "metricsPerformance" }
 
 # ---------- Biometric ----------
 androidx-biometric                = { module = "androidx.biometric:biometric", version.ref = "biometric" }

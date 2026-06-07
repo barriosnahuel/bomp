@@ -29,6 +29,11 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 #### Changed
 - Scroll benchmark now seeds a controlled corpus and runs across three list sizes (20 / 50 / 200) so the sound-list frame timing exposes whether scroll jank scales with item count
 
+### For nerds 🤓
+
+#### Added
+- Debug-only JankStats frame diagnostics that log janky frames per screen to Logcat, to help locate the LandingActivity entry-screen jank
+
 ## \[v2.1.0] - 2026-05-25
 
 ### Added
