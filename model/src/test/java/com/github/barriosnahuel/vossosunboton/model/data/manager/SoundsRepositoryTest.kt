@@ -70,6 +70,8 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
 
             assertThat(repo.sounds.first().filter { it.id.startsWith("benchmark:") }).hasSize(1)
             assertThat(repo.sounds.first().any { it.id == "custom:keep" }).isTrue()
+            // Cached durations of the dropped rows are gone too (durations derive from the stored list).
+            assertThat(repo.durations.first().keys).containsExactly("benchmark:0")
         }
 
     @Test
