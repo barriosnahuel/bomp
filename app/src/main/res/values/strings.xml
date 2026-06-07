@@ -3,6 +3,8 @@
 
     <string name="app_share_chooser_title">Share vía</string>
     <string name="app_share_caption_invite">Have it one tap away whenever you want to hear it.\nYour collection of voices, on Bomp 👉 %1$s</string>
+    <string name="app_share_app_menu_item">Share Bomp</string>
+    <string name="app_share_app_invite">My favorite voices, always one tap away. This is Bomp 👉 %1$s</string>
     <string name="app_share_feedback_unshareable">Couldn\'t share this Bomp. Nahu\'s already on it.</string>
     <string name="app_share_feedback_no_app_for_audio">No app on your device can share audio. Try installing one.</string>
     <string name="app_share_feedback_copy_failed">Couldn\'t prepare this Bomp for sharing. Free up some space and try again — Nahu\'s already looking into it.</string>

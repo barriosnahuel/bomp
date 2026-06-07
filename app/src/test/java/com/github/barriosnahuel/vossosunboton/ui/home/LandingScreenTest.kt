@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
@@ -121,6 +122,17 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("Search").assertIsDisplayed()
+    }
+
+    @Test
+    fun `overflow menu offers the share-app action`() {
+        val viewModel = givenAViewModel()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("More options").performClick()
+        composeTestRule.onNodeWithText("Share Bomp").assertIsDisplayed()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
