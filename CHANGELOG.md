@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - `scripts/test-cleanup-merged-worktrees.sh` — a self-contained behaviour test (pure bash + git, no network/`gh`/extra tooling) covering the worktree-cleanup keep/remove decision across every case (merged-at-commit, name reuse, post-merge commits, open PR, `gh` failure, protected, dirty, dry-run). Runs in CI as the `worktree-cleanup-test` job
 - Macrobenchmark module measuring LandingActivity cold-start and sound-list scroll frame timing, to diagnose the entry-screen jank on lower-tier devices
 
+#### Changed
+- Scroll benchmark now seeds a controlled corpus and runs across three list sizes (5 / 50 / 200) so the sound-list frame timing exposes whether scroll jank scales with item count
+
 ## \[v2.1.0] - 2026-05-25
 
 ### Added
