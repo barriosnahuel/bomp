@@ -47,11 +47,13 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
                         )
                     }
                 }
+            // Register before the best-effort state tagging: if putState threw, the tracker would
+            // be live but unrecorded, double-installing on the next resume.
+            trackers[activity] = jankStats
             PerformanceMetricsState
                 .getHolderForHierarchy(activity.window.decorView)
                 .state
                 ?.putState(STATE_SCREEN, activity::class.simpleName ?: activity.localClassName)
-            trackers[activity] = jankStats
         }.onFailure { error ->
             // Debug-only dev diagnostic: Logcat is enough; don't surface a non-fatal for a tool.
             Timber.w(error, "Could not install jank diagnostics on %s", activity.localClassName)
