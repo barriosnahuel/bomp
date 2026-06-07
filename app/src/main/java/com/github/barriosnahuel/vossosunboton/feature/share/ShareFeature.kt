@@ -20,6 +20,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.playstore.PlayStoreReferrer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -150,6 +151,15 @@ private class ShareFeatureImpl : ShareFeature {
             // instead of a generic "file to download"; `audio/*` stays only as the last-resort fallback.
             type = resolveAudioMimeType(context.contentResolver.getType(contentUri), contentUri.lastPathSegment)
             putExtra(Intent.EXTRA_STREAM, contentUri)
+            // Soft install invite + attributed Play link. Clients that keep a caption on audio (Telegram)
+            // show it; those that drop it (WhatsApp) just send the audio — no harm either way.
+            val playUrl =
+                PlayStoreReferrer.playStoreUrl(
+                    BuildConfig.APPLICATION_ID,
+                    PlayStoreReferrer.MEDIUM_AUDIO,
+                    PlayStoreReferrer.CONTENT_CAPTION,
+                )
+            putExtra(Intent.EXTRA_TEXT, context.getString(R.string.app_share_caption_invite, playUrl))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 

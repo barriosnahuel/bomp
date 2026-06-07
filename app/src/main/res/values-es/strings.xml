@@ -2,6 +2,7 @@
     <string name="app_name">Bomp</string>
 
     <string name="app_share_chooser_title">Compartir vía</string>
+    <string name="app_share_caption_invite">Tenelo a un toque cuando quieras escucharlo.\nTu colección de voces, en Bomp 👉 %1$s</string>
     <string name="app_share_feedback_unshareable">No se pudo compartir este Bomp. Nahu ya se enteró y lo va a investigar.</string>
     <string name="app_share_feedback_no_app_for_audio">No tenés una app para compartir audios. Probá instalando una.</string>
     <string name="app_share_feedback_copy_failed">No pude preparar este Bomp para compartir. Liberá espacio y probá de nuevo — Nahu ya se enteró y lo va a investigar.</string>
