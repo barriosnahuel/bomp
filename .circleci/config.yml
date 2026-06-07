@@ -164,6 +164,16 @@ jobs:
                 exit 1
             fi
 
+  "worktree-cleanup-test":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+    steps:
+      - checkout
+      - run:
+          name: "Behaviour test for scripts/cleanup-merged-worktrees.sh"
+          command: ./scripts/test-cleanup-merged-worktrees.sh
+
   "bundle":
     executor:
       name: android/android_docker
@@ -206,6 +216,7 @@ workflows:
       - test-assertion-guard
       - adr-invariants
       - security-test-count-guard
+      - worktree-cleanup-test
       - bundle:
           requires:
             - detekt
@@ -215,3 +226,4 @@ workflows:
             - test-assertion-guard
             - adr-invariants
             - security-test-count-guard
+            - worktree-cleanup-test

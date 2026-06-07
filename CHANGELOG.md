@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### Changed
 - The welcome audio no longer vanishes on its own after it plays — it stays in your list like any other audio, sorted by date, and the first time it finishes a warm note reminds you it's yours to keep or delete whenever you want; a one-time nudge shows you can swipe it away
 
+### For nerds 🤓
+
+#### Added
+- `scripts/cleanup-merged-worktrees.sh` + a committed `.githooks/post-merge` hook auto-remove linked worktrees (and their local branch) once their PR has merged, and `git fetch --prune` dead remote refs — the local-side gap left by `deleteBranchOnMerge`, which only drops the remote branch. Removal requires the branch's own PR to have landed this exact commit (merged `headRefOid` == local tip, no open PR) — squash merges rewrite SHAs so `git branch -d` can't detect them, and matching by branch name alone would mishandle reused names or commits added locally after the merge. Fail-safe (keeps on any `gh` failure or tip mismatch), skips primary/protected/dirty worktrees, never `--force`, and `--dry-run` mutates nothing. Installed by copy into `.git/hooks` via `scripts/install-hooks.sh` (re-armed each session by a committed `SessionStart` hook) rather than `core.hooksPath`, which the remote environment owns for commit-signing; the worktree lifecycle (sibling layout + this cleanup) is documented in ADR 0014
+- `scripts/test-cleanup-merged-worktrees.sh` — a self-contained behaviour test (pure bash + git, no network/`gh`/extra tooling) covering the worktree-cleanup keep/remove decision across every case (merged-at-commit, name reuse, post-merge commits, open PR, `gh` failure, protected, dirty, dry-run). Runs in CI as the `worktree-cleanup-test` job
+
 ## \[v2.1.0] - 2026-05-25
 
 ### Added

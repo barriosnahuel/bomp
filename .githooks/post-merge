@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#
+# post-merge — auto-clean worktrees whose PR has been merged.
+#
+# Installed by COPY into .git/hooks/ via scripts/install-hooks.sh. It is NOT
+# wired through `git config core.hooksPath`: the remote (CCR) environment owns
+# core.hooksPath globally to install the commit-signing / Co-authored-by hooks,
+# and overriding it would silently break verified commits. CCR's hooks are
+# passthroughs that chain to $(git rev-parse --git-common-dir)/hooks/<name>, so
+# installing here fires in both environments. See CLAUDE.md § Worktree setup.
+#
+# Fires after every successful merge (including the fast-forward `git pull` that
+# follows a GitHub squash-merge). `pull.rebase` is unset, so pulls merge and this
+# runs — no post-rewrite needed. post-merge passes a squash flag arg we ignore.
+
+# Only act in the primary worktree on the default branch. `develop` can be
+# checked out in exactly one worktree at a time, so this also implies primary.
+branch="$(git symbolic-ref --short -q HEAD 2>/dev/null)"
+[ "$branch" = "develop" ] || exit 0
+
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+"$root/scripts/cleanup-merged-worktrees.sh" || true
+
+exit 0
