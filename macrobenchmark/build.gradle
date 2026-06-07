@@ -1,0 +1,48 @@
+apply plugin: 'com.android.test'
+apply from: "$project.rootProject.projectDir/linters.gradle"
+
+android {
+    namespace = 'com.github.barriosnahuel.vossosunboton.macrobenchmark'
+
+    compileSdkVersion "android-37.0"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    defaultConfig {
+        // minSdk 28: Macrobenchmark needs a profileable/debuggable target and is most reliable on
+        // API 28+. The app itself stays at minSdk 23; this only constrains where benchmarks run.
+        minSdkVersion 28
+        targetSdkVersion 37
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        // Matches the app's `benchmark` build type. Debuggable so the test harness (not the app
+        // under test) installs and runs; signed with the debug key for local/CI use.
+        benchmark {
+            debuggable true
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
+        }
+    }
+
+    targetProjectPath = ':app'
+    experimentalProperties["android.experimental.self-instrumenting"] = true
+}
+
+// Only build the `benchmark` variant; skip the default `debug` variant (it would target the app's
+// debuggable build and produce meaningless numbers).
+androidComponents {
+    beforeVariants(selector().all()) { variant ->
+        variant.enable = variant.buildType == 'benchmark'
+    }
+}
+
+dependencies {
+    implementation libs.androidx.test.ext.junit
+    implementation libs.androidx.uiautomator
+    implementation libs.androidx.benchmark.macro.junit4
+}

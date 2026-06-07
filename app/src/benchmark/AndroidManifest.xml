@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Makes the non-debuggable `benchmark` build type profileable so the :macrobenchmark module can
+  ~ capture traces on a real device (Macrobenchmark requires the target to be debuggable OR
+  ~ profileable; benchmark is debuggable=false). Scoped to this source set so release stays
+  ~ unaffected. The attribute is ignored below API 29.
+  -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <profileable
+            android:shell="true"
+            tools:targetApi="29" />
+    </application>
+</manifest>
