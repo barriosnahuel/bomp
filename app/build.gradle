@@ -175,6 +175,7 @@ dependencies {
 
     debugImplementation libs.compose.ui.tooling
     debugImplementation libs.compose.ui.test.manifest
+    debugImplementation libs.androidx.metrics.performance
 
     testImplementation libs.junit
     testImplementation libs.androidx.test.core
