@@ -161,6 +161,7 @@ Full checklists: CONTRIBUTING.md § *Testing → Pre-PR checklist* / *Pre-push c
 
 - Smoke tests required: new `Activity` (§ *Activity smoke tests*); new full-screen Composable with business logic (`createComposeRule()`); Composables with durable state need at least one `scenario.recreate()` test (§ *Stateful Composables*).
 - Run `./gradlew check -x test && ./gradlew test` before pushing — same failures CI reports. Detekt max line length: **150**.
+- **`.githooks/pre-push` enforces the cheap CI checks locally** (ADR/security/analytics/assertion grep guards, then `ktlintCheck detekt spotlessCheck`) so style/format/guard failures block the push instead of round-tripping CircleCI. Heavy unit-test + Android-lint are opt-in via `PREPUSH_FULL=1`. Escape hatch for cosmetic-only pushes: `git push --no-verify`. Auto-fix: `ktlintFormat` / `spotlessApply`.
 - **Functional changes also require the local UI test suite** (§ *Local UI test suite*). Touching Composables, ViewModels, intents, navigation, deep links, or persistence → run `./scripts/run-instrumented-tests.sh` (cold-boots the emulator; never run the Gradle task against a warm AVD). CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy, README, comments) are exempt.
 
 ## Analytics events

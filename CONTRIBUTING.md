@@ -179,6 +179,12 @@ CI linters that must pass:
 
 Run `./gradlew check -x test && ./gradlew test` before pushing — catches the same failures CI reports without waiting for a full CI run.
 
+**Enforced locally by `.githooks/pre-push`** (installed by copy via `scripts/install-hooks.sh`, re-armed each session). On every `git push` it runs CI's cheap checks fail-fast, cheapest first — the pure grep guards (`check-adr-invariants.sh`, `check-security-test-count.sh`, `check-analytics-wrapper.sh`, `check-test-assertions.sh`; the latter two are the shared scripts the `analytics-wrapper-guard` / `test-assertion-guard` CI jobs also call), then `./gradlew ktlintCheck detekt spotlessCheck`. A failing check blocks the push and prints the auto-fix command (`ktlintFormat` / `spotlessApply`) where applicable.
+
+- **Heavy path is opt-in:** `PREPUSH_FULL=1 git push` also runs `./gradlew test` + `:app:lintDebug :app:lintRelease`. Kept out of the default path so the hook stays fast; CI runs them regardless.
+- **Escape hatch:** `git push --no-verify` skips the hook entirely — for cosmetic-only pushes (CHANGELOG, copy strings, README, comments).
+- The instrumented UI suite is **not** part of the hook (it cold-boots an emulator) — run it via `./scripts/run-instrumented-tests.sh` for functional changes as above.
+
 **Functional changes also require the local UI test suite** (see § *Local UI test suite → When to run* below). If the change touches Composables, ViewModels, intents, navigation, deep links, or persistence — run `./scripts/run-instrumented-tests.sh` before pushing (it cold-boots the emulator; never run the Gradle task directly against a warm AVD). CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy strings, README, comments) are exempt.
 
 ### Test assertions
