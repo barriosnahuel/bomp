@@ -93,8 +93,13 @@ mk_wt feat/no-pr no-pr >/dev/null                         # no fixture → no PR
 t_down="$(mk_wt feat/gh-down gh-down)"                     # gh fails → KEEP
 echo "__FAIL__" >"$fixtures/feat__gh-down"
 
-git worktree add -q -b gh-pages "$tmp/ghpages" develop >/dev/null   # protected → KEEP
-git worktree add -q -b feat/gh-pages-x "$tmp/ghpages-x" develop >/dev/null  # protected glob
+# Protected cases carry a MERGED-at-tip fixture ON PURPOSE: without the protection
+# gate they WOULD be removed, so the assertions below are mutation-sensitive (a
+# regression that drops protection turns these into "would remove" → red).
+t_prot="$(mk_wt gh-pages ghpages)"                                 # protected name → KEEP
+echo "MERGED $t_prot" >"$fixtures/gh-pages"
+t_protg="$(mk_wt feat/gh-pages-x ghpages-x)"                       # protected glob → KEEP
+echo "MERGED $t_protg" >"$fixtures/feat__gh-pages-x"
 
 t_dirty="$(mk_wt feat/dirty-merged dirty)"                # merged here BUT dirty → KEEP
 echo "MERGED $t_dirty" >"$fixtures/feat__dirty-merged"
@@ -114,8 +119,10 @@ assert_contains     "open PR → keep"                             "$out" "keep 
 assert_contains     "no PR → keep"                               "$out" "keep  no-pr"
 assert_contains     "gh failure → keep (fail-safe #4)"           "$out" "keep  gh-down"
 assert_contains     "gh failure surfaced"                        "$out" "gh query failed"
-assert_contains     "protected branch → keep"                    "$out" "keep  ghpages"
-assert_contains     "protected glob → keep"                      "$out" "keep  ghpages-x"
+assert_contains     "protected branch → keep (for protection reason)" "$out" "ghpages  (protected branch: gh-pages)"
+assert_not_contains "protected branch not removed despite merged"     "$out" "would remove  ghpages  "
+assert_contains     "protected glob → keep (for protection reason)"   "$out" "ghpages-x  (protected branch: feat/gh-pages-x)"
+assert_not_contains "protected glob not removed despite merged"       "$out" "would remove  ghpages-x"
 assert_contains     "dirty worktree → keep"                      "$out" "keep  dirty"
 assert_contains     "dirty reason is uncommitted, not merged"    "$out" "uncommitted changes"
 
