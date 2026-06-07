@@ -64,35 +64,86 @@ internal class WelcomeStickerStoreTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `wasRestored defaults to false`() {
+    fun `acknowledged defaults to false`() {
         runBlocking {
-            assertThat(store.wasRestored()).isFalse()
+            assertThat(store.isAcknowledged()).isFalse()
         }
     }
 
     @Test
-    fun `restore sets both consumed=false AND wasRestored=true atomically`() {
+    fun `markAcknowledged flips it true and survives a fresh instance`() {
         runBlocking {
-            store.consume()
+            store.markAcknowledged()
 
-            store.restore()
+            assertThat(store.isAcknowledged()).isTrue()
+            // A fresh instance reads the persisted disk value, not the in-memory cache.
+            assertThat(WelcomeStickerStore(context).isAcknowledged()).isTrue()
+        }
+    }
+
+    @Test
+    fun `acknowledged is independent of consumed`() {
+        runBlocking {
+            // Playing to completion (acknowledged) must NOT remove the welcome (consumed) — the card
+            // stays in the list until the user manually deletes it.
+            store.markAcknowledged()
+
+            assertThat(store.isAcknowledged()).isTrue()
+            assertThat(store.isActive()).isTrue()
+        }
+    }
+
+    @Test
+    fun `hintShown defaults to false and flips true once marked`() {
+        runBlocking {
+            assertThat(store.isHintShown()).isFalse()
+
+            store.markHintShown()
+
+            assertThat(store.isHintShown()).isTrue()
+        }
+    }
+
+    @Test
+    fun `installTimestamp is captured once and stable across reads`() {
+        runBlocking {
+            var clock = 1_000L
+            val timed = WelcomeStickerStore(context, now = { clock })
+
+            val first = timed.installTimestamp()
+            clock = 9_999L
+            val second = timed.installTimestamp()
+            // The timestamp is captured on first read and persisted, so it never moves even though
+            // the clock advanced — the welcome keeps a stable position in the date-sorted list.
+            assertThat(first).isEqualTo(1_000L)
+            assertThat(second).isEqualTo(1_000L)
+        }
+    }
+
+    @Test
+    fun `migrateToPersistentIfNeeded resurfaces a welcome consumed under the old model`() {
+        runBlocking {
+            // Old model: letting it auto-destruct set consumed=true and it vanished forever.
+            store.consume()
+            assertThat(store.isActive()).isFalse()
+
+            store.migrateToPersistentIfNeeded()
 
             assertThat(store.isActive()).isTrue()
-            assertThat(store.wasRestored()).isTrue()
         }
     }
 
     @Test
-    fun `wasRestored is sticky once set`() {
+    fun `migrateToPersistentIfNeeded is idempotent so a later manual delete sticks`() {
         runBlocking {
             store.consume()
-            store.restore()
-            // A subsequent consume must NOT clear wasRestored — the demotion is permanent until
-            // the user manually dismisses again, which marks consumed = true and the flag becomes
-            // moot.
+            store.migrateToPersistentIfNeeded() // resurfaced once
+            // Under the new model the user deletes it on purpose.
             store.consume()
 
-            assertThat(store.wasRestored()).isTrue()
+            store.migrateToPersistentIfNeeded() // must NOT resurrect it again
+
+            assertThat(store.isActive()).isFalse()
         }
     }
 }

@@ -137,35 +137,33 @@ sealed class AnalyticsEvent(
     object AboutBrandingAudioPlay : AnalyticsEvent(name = "about_branding_audio_play", hasFirstVariant = true)
 
     /**
-     * Welcome sticker (Sticker Cero, fresh-install variant) became visible at the top of MY_SOUNDS.
-     * Gated call-site-side via `tracker.markFiredOnce("welcome_sticker_shown")` so it fires at most
-     * once per install. `hasFirstVariant = false` because the marker is already one-shot.
+     * Welcome sticker (Sticker Cero, fresh-install variant) became visible in MY_SOUNDS. It is now a
+     * persistent, date-sorted audio, not force-pinned to row 0. Gated call-site
+     * via `tracker.markFiredOnce("welcome_sticker_shown")` so it fires at most once per install.
+     * `hasFirstVariant = false` because the marker is already one-shot.
      */
     object WelcomeStickerShown : AnalyticsEvent(name = "welcome_sticker_shown", hasFirstVariant = false)
 
     /**
-     * User tapped play on the welcome sticker. `hasFirstVariant = true` so the dashboard can tell
-     * a first listen apart from replays (only path to a replay is the Undo flow on the snackbar) —
-     * a useful signal when deciding whether to ship the deferred UPDATE flow.
+     * User tapped play on the welcome sticker. `hasFirstVariant = true` so the dashboard can tell a
+     * first listen apart from replays — useful to gauge affection (do they come back to it) and as
+     * the engagement denominator for the deferred UPDATE flow.
      */
     object WelcomeStickerPlay : AnalyticsEvent(name = "welcome_sticker_play", hasFirstVariant = true)
 
     /**
-     * Welcome audio reached natural end-of-stream. The auto-destruct + Undo snackbar follows.
-     * `hasFirstVariant = true` so a second completion (after Undo + replay) is visible.
+     * Welcome audio reached its natural end for the FIRST time — the "they heard it through" onboarding
+     * milestone. Gated by the `acknowledged` flag in `SoundsViewModel.onPlayerStop`
+     * so unlimited replays of the now-persistent welcome don't inflate it; replays are measured by
+     * [WelcomeStickerPlay]. `hasFirstVariant = false` because it is already one-shot.
      */
-    object WelcomeStickerCompleted : AnalyticsEvent(name = "welcome_sticker_completed", hasFirstVariant = true)
-
-    /**
-     * User tapped Undo on the welcome auto-destruct snackbar. Suppresses the regular
-     * [SoundDeleteUndone] for this branch to avoid double-counting in dashboards.
-     */
-    object WelcomeStickerUndone : AnalyticsEvent(name = "welcome_sticker_undone", hasFirstVariant = true)
+    object WelcomeStickerCompleted : AnalyticsEvent(name = "welcome_sticker_completed", hasFirstVariant = false)
 
     /**
      * Welcome sticker manually dismissed — swipe-left or long-press → Delete. Distinct from
      * [WelcomeStickerCompleted] (audio reached natural end) so dashboards can compare engagement
-     * (listened all the way) vs impatience (dismissed early).
+     * (listened all the way) vs impatience (dismissed early). Its Undo logs the generic
+     * [SoundDeleteUndone] (welcome is just-another-audio now).
      */
     object WelcomeStickerDismissed : AnalyticsEvent(name = "welcome_sticker_dismissed", hasFirstVariant = true)
 

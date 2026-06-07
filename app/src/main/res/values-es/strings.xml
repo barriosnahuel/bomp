@@ -89,9 +89,9 @@
     <string name="app_my_sounds_empty_body">Una risa, un \"feliz cumple\", el \"estoy llegando\" del que querés. Compartí cualquier audio desde WhatsApp, Telegram o donde sea — se queda guardado y lo escuchás cuando quieras.</string>
 
     <!-- Sticker Cero (variante de bienvenida, fresh install) -->
-    <string name="app_welcome_sticker_title">Un saludo de Nahu</string>
+    <string name="app_welcome_sticker_title">Tu primer audio-abrazo</string>
     <string name="app_welcome_sticker_origin">Del que armó esto</string>
-    <string name="app_welcome_sticker_remaining_format">-%1$s</string>
+    <string name="app_welcome_sticker_info">De mí para vos. Es tuyo: borralo cuando quieras.</string>
     <string name="app_welcome_sticker_feedback_dismissed">¡Hasta luego!</string>
 
     <!-- Vault (colecciones privadas — biométrico por colección) -->

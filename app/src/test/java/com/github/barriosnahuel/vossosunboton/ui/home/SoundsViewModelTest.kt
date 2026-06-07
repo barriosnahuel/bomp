@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
@@ -765,9 +766,28 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `welcome sticker is absent when flag is consumed`() {
+    fun `welcome resurfaces after init for an install that consumed it under the old model`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         runBlocking {
-            WelcomeStickerStore(ApplicationProvider.getApplicationContext()).consume()
+            // Simulate a v2.1.0 install that let the welcome auto-destruct (consumed=true).
+            WelcomeStickerStore(context).consume()
+        }
+        val viewModel = givenAViewModel()
+        val welcomeTitle = context.getString(R.string.app_welcome_sticker_title)
+
+        // The one-time migration in init clears the stale `consumed` flag and brings it back so the
+        // Bomper who "lost" it without understanding gets it again.
+        assertThat(viewModel.sounds.value.any { it.name == welcomeTitle }).isTrue()
+    }
+
+    @Test
+    fun `welcome sticker is absent when manually deleted under the new model`() {
+        runBlocking {
+            val store = WelcomeStickerStore(ApplicationProvider.getApplicationContext())
+            // Run the one-time resurrection migration first, so a subsequent delete is a NEW-model
+            // manual delete (which must stick) rather than the old auto-destruct state it resurrects.
+            store.migrateToPersistentIfNeeded()
+            store.consume()
         }
         val viewModel = givenAViewModel()
         val welcomeTitle =
@@ -800,8 +820,32 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `onPlayerStop with completed=true on welcome enqueues delete event and hides sticker`() {
-        val viewModel = givenAViewModel()
+    fun `onPlayerStop completed on welcome keeps it visible and emits the info event once`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val store = WelcomeStickerStore(context)
+        val viewModel = givenAViewModel(welcomeStore = store)
+        val welcomeTitle = context.getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
+
+        viewModel.onPlayerStop(welcome, completed = true)
+
+        // The welcome no longer self-destructs: it stays in the list, no delete
+        // event is enqueued, the informative snackbar fires once, and it is marked acknowledged.
+        assertThat(viewModel.deletedSoundEvent.value).isNull()
+        assertThat(viewModel.welcomeStickerVisible.value).isTrue()
+        assertThat(viewModel.sounds.value.any { it.name == welcomeTitle }).isTrue()
+        runBlocking {
+            assertThat(withTimeoutOrNull(2_000L) { viewModel.welcomeInfoEvent.first() }).isNotNull()
+            assertThat(store.isAcknowledged()).isTrue()
+        }
+    }
+
+    @Test
+    fun `onPlayerStop completed on welcome tracks a non-fatal instead of crashing when the store fails`() {
+        val welcomeStore = mockk<WelcomeStickerStore>(relaxed = true)
+        coEvery { welcomeStore.isActive() } returns true
+        coEvery { welcomeStore.isAcknowledged() } throws RuntimeException("datastore boom")
+        val viewModel = givenAViewModel(welcomeStore = welcomeStore)
         val welcomeTitle =
             ApplicationProvider
                 .getApplicationContext<android.content.Context>()
@@ -810,13 +854,9 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         viewModel.onPlayerStop(welcome, completed = true)
 
-        assertThat(
-            viewModel.deletedSoundEvent.value
-                ?.sound
-                ?.name,
-        ).isEqualTo(welcomeTitle)
-        assertThat(viewModel.welcomeStickerVisible.value).isFalse()
-        assertThat(viewModel.sounds.value.none { it.name == welcomeTitle }).isTrue()
+        // viewModelScope has no CoroutineExceptionHandler, so an uncaught throw from the store would
+        // crash the app on completion. The handler must catch it and report a non-fatal instead.
+        verify { Tracker.track(any()) }
     }
 
     @Test
@@ -837,39 +877,39 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
     @Test
     fun `restoreSound on welcome restores visibility and asks the store to restore`() {
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val welcomeStore = mockk<WelcomeStickerStore>(relaxed = true)
         coEvery { welcomeStore.isActive() } returns true
-        coEvery { welcomeStore.wasRestored() } returns false
         val viewModel = givenAViewModel(welcomeStore = welcomeStore)
         val welcomeTitle =
             ApplicationProvider
                 .getApplicationContext<android.content.Context>()
                 .getString(R.string.app_welcome_sticker_title)
         val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
-        viewModel.onPlayerStop(welcome, completed = true)
+        // Manual delete (swipe) is the only path that enqueues a delete event now that completion no
+        // longer self-destructs the welcome.
+        viewModel.deleteSound(welcome)
 
         viewModel.restoreSound()
 
         assertThat(viewModel.welcomeStickerVisible.value).isTrue()
         assertThat(viewModel.sounds.value.any { it.name == welcomeTitle }).isTrue()
         // Behavior assertion only — disk persistence is covered by `WelcomeStickerStoreTest`.
-        // The previous version polled a fresh store instance, which raced with the IO write and
-        // could permanently cache a stale read.
         coVerify { welcomeStore.restore() }
     }
 
     @Test
     fun `confirmDelete on welcome calls welcomeStore consume and skips repo delete`() {
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val welcomeStore = mockk<WelcomeStickerStore>(relaxed = true)
         coEvery { welcomeStore.isActive() } returns true
-        coEvery { welcomeStore.wasRestored() } returns false
         val viewModel = givenAViewModel(welcomeStore = welcomeStore)
         val welcomeTitle =
             ApplicationProvider
                 .getApplicationContext<android.content.Context>()
                 .getString(R.string.app_welcome_sticker_title)
         val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
-        viewModel.onPlayerStop(welcome, completed = true)
+        viewModel.deleteSound(welcome)
 
         viewModel.confirmDelete()
 
@@ -900,7 +940,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `restoreSound on welcome inserts at the END not at original position 0`() {
+    fun `restoreSound on welcome re-inserts it sorted by date`() {
         every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking {
@@ -909,7 +949,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         }
         val viewModel = givenAViewModel()
         val welcomeTitle = context.getString(R.string.app_welcome_sticker_title)
-        // Pre-condition: welcome at row 0, custom at row 1.
+        // Pre-condition: welcome at row 0 — its install timestamp is newer than the custom (whose
+        // file is absent in unit tests, so its dateAdded is null and it sorts last).
         assertThat(
             viewModel.sounds.value
                 .first()
@@ -920,47 +961,42 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
         viewModel.restoreSound()
 
-        // Post-condition: welcome demoted to the END, custom now at row 0.
-        assertThat(
-            viewModel.sounds.value
-                .last()
-                .name,
-        ).isEqualTo(welcomeTitle)
+        // Post-condition: welcome is sorted back into its date position (row 0), NOT demoted to the
+        // end — it behaves like any other audio now.
         assertThat(
             viewModel.sounds.value
                 .first()
                 .name,
-        ).isEqualTo("custom")
+        ).isEqualTo(welcomeTitle)
     }
 
     @Test
-    fun `loadSounds appends welcome at the end when wasRestored is true`() {
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    fun `welcome sticker carries its install timestamp as dateAdded and sorts by date`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val store = WelcomeStickerStore(context, now = { 5_000L })
         runBlocking {
-            // Seed store as if a previous Undo happened: restore() flips consumed=false AND
-            // was_restored=true atomically.
-            val store = WelcomeStickerStore(context)
-            store.consume()
-            store.restore()
-            val repo = SoundsRepository(context as android.app.Application)
-            repo.save(testSound("custom-a", "custom-a.mp3"))
-            repo.save(testSound("custom-b", "custom-b.mp3"))
+            SoundsRepository(context).save(testSound("custom", "custom.mp3"))
         }
 
-        val viewModel = givenAViewModel()
+        val viewModel = givenAViewModel(welcomeStore = store)
         val welcomeTitle = context.getString(R.string.app_welcome_sticker_title)
+        val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
 
-        // Welcome must be at the end, after the user's two custom sounds.
-        assertThat(
-            viewModel.sounds.value
-                .last()
-                .name,
-        ).isEqualTo(welcomeTitle)
+        // The welcome is built with the store's install timestamp as its dateAdded, so it flows
+        // through the same SOUND_ORDER comparator as user audios instead of being force-positioned.
+        assertThat(welcome.dateAdded).isEqualTo(5_000L)
+        // The custom audio has no file on disk (null dateAdded → sorts last), so the dated welcome
+        // leads the list. With real file timestamps (instrumented), a newer audio outranks it.
         assertThat(
             viewModel.sounds.value
                 .first()
                 .name,
-        ).isNotEqualTo(welcomeTitle)
+        ).isEqualTo(welcomeTitle)
+        assertThat(
+            viewModel.sounds.value
+                .last()
+                .name,
+        ).isEqualTo("custom")
     }
 
     @Test

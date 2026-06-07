@@ -36,11 +36,12 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
             SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
             CollectionsRepository(ApplicationProvider.getApplicationContext()).clearForTest()
             MySoundsFilterStore(ApplicationProvider.getApplicationContext()).clearForTest()
-            // Consume (not clear) the welcome sticker so it does NOT appear on top of the
-            // sound list during these tests. clearForTest() resets the consumed flag, which
-            // re-enables the sticker — exactly the opposite of what we need here.
+            // Keep the welcome sticker off the sound list during these tests. Run the one-time
+            // persistence migration first (so it can't resurrect the welcome), then consume it — a
+            // new-model manual delete that sticks. clearForTest() alone would re-enable it.
             val welcome = WelcomeStickerStore(ApplicationProvider.getApplicationContext())
             welcome.clearForTest()
+            welcome.migrateToPersistentIfNeeded()
             welcome.consume()
         }
         mockkObject(PlayerControllerFactory)

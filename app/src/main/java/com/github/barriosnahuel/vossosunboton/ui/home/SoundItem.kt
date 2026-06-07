@@ -4,6 +4,9 @@
  * See LICENSE in the project root for full license information.
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
+import android.provider.Settings
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -43,19 +47,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performConfirmHaptic
@@ -64,6 +72,13 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.DISABLED_TRACK_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.MUTED_TEXT_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.PLAYING_TINT_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
+import kotlinx.coroutines.CancellationException
+import kotlin.math.roundToInt
+
+// One-time swipe-hint nudge (welcome card): how far it peeks and the in/out durations.
+private val WELCOME_HINT_PEEK = 88.dp
+private const val WELCOME_HINT_OUT_MS = 220
+private const val WELCOME_HINT_BACK_MS = 280
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +97,11 @@ fun SoundItem(
     isWelcomeVariant: Boolean = false,
     borderOverride: BorderStroke? = null,
     trailingLabel: String? = null,
+    // When true (welcome variant only), the card runs a one-time swipe-hint nudge: it peeks the
+    // delete background and settles back, teaching that the card is swipe-to-delete. [onSwipeHintShown]
+    // fires once it has run (or was skipped for reduced-motion) so it never repeats.
+    showSwipeHint: Boolean = false,
+    onSwipeHintShown: () -> Unit = {},
     collectionLabels: List<String> = emptyList(),
     showCollectionLabels: Boolean = true,
     shareEnabled: Boolean = true,
@@ -119,28 +139,87 @@ fun SoundItem(
                     }
                 }
         }
-        SwipeToDismissBox(
-            state = dismissState,
-            backgroundContent = { SwipeActionBackground(dismissState, canPin = false, canDelete = true) },
-        ) {
-            SoundCard(
-                sound = sound,
-                playbackProgress = playbackProgress,
-                durationMs = durationMs,
-                onPlayClick = onPlayClick,
-                onSeek = onSeek,
-                onShareClick = onShareClick,
-                onPinClick = null,
-                onEditClick = null,
-                onAddToCollection = null,
-                onDelete = onDelete,
-                originLabel = originLabel,
-                borderOverride = borderOverride,
-                trailingLabel = trailingLabel,
-                collectionLabels = collectionLabels,
-                showCollectionLabels = showCollectionLabels,
-                shareEnabled = shareEnabled,
-            )
+
+        // One-time swipe-hint nudge: the card peeks the delete background and settles back, teaching
+        // the swipe-to-delete gesture. Driven by a self-contained Animatable
+        // offset rather than the SwipeToDismissBox anchors, which have no public partial-peek API.
+        val hintOffsetX = remember { Animatable(0f) }
+        val density = LocalDensity.current
+        val peekPx = remember(density) { with(density) { WELCOME_HINT_PEEK.toPx() } }
+        val hintContext = LocalView.current.context
+        val currentOnHintShown by rememberUpdatedState(onSwipeHintShown)
+        LaunchedEffect(showSwipeHint) {
+            if (!showSwipeHint) return@LaunchedEffect
+            // Wait for the first frame so the node is laid out before animating, mirroring the
+            // FocusRequester incantation documented in CLAUDE.md.
+            withFrameNanos { }
+            val animationsEnabled =
+                Settings.Global.getFloat(
+                    hintContext.contentResolver,
+                    Settings.Global.ANIMATOR_DURATION_SCALE,
+                    1f,
+                ) != 0f
+            try {
+                if (animationsEnabled) {
+                    hintOffsetX.animateTo(-peekPx, tween(WELCOME_HINT_OUT_MS))
+                    hintOffsetX.animateTo(0f, tween(WELCOME_HINT_BACK_MS))
+                }
+                currentOnHintShown()
+            } catch (e: CancellationException) {
+                // Left composition mid-peek — keep the hint pending so it runs again next time.
+                throw e
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Throwable,
+            ) {
+                Tracker.track(RuntimeException("Welcome swipe hint nudge failed", e))
+                currentOnHintShown()
+            }
+        }
+
+        Box {
+            // Delete-side background revealed under the card during the peek — mirrors the delete
+            // half of [SwipeActionBackground] (which renders nothing while the state is Settled).
+            if (hintOffsetX.value < 0f) {
+                Box(
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .background(MaterialTheme.colorScheme.errorContainer)
+                            .padding(horizontal = Spacing.LG),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.app_ic_delete),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+            Box(modifier = Modifier.offset { IntOffset(hintOffsetX.value.roundToInt(), 0) }) {
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = { SwipeActionBackground(dismissState, canPin = false, canDelete = true) },
+                ) {
+                    SoundCard(
+                        sound = sound,
+                        playbackProgress = playbackProgress,
+                        durationMs = durationMs,
+                        onPlayClick = onPlayClick,
+                        onSeek = onSeek,
+                        onShareClick = onShareClick,
+                        onPinClick = null,
+                        onEditClick = null,
+                        onAddToCollection = null,
+                        onDelete = onDelete,
+                        originLabel = originLabel,
+                        borderOverride = borderOverride,
+                        trailingLabel = trailingLabel,
+                        collectionLabels = collectionLabels,
+                        showCollectionLabels = showCollectionLabels,
+                        shareEnabled = shareEnabled,
+                    )
+                }
+            }
         }
         return
     }

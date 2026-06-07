@@ -403,7 +403,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `onPlayerStop completed=true on welcome logs welcome_sticker_completed`() {
+    fun `onPlayerStop completed=true on welcome logs welcome_sticker_completed once`() {
         val viewModel = givenAViewModel()
         val welcomeTitle =
             ApplicationProvider
@@ -412,25 +412,34 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
 
         viewModel.onPlayerStop(welcome, completed = true)
+        // Await the info event the gated coroutine emits right after logging, so the first completion
+        // has fully landed before we replay.
+        runBlocking { withTimeout(2_000L) { viewModel.welcomeInfoEvent.first() } }
+        // A replay completing again must NOT re-log it — the `acknowledged` flag gates it to once.
+        viewModel.onPlayerStop(welcome, completed = true)
 
-        fake.assertEmitted("welcome_sticker_completed")
+        assertThat(fake.events.count { it.name == "welcome_sticker_completed" }).isEqualTo(1)
     }
 
     @Test
-    fun `restoreSound on welcome logs only welcome_sticker_undone`() {
+    fun `restoreSound on welcome logs the generic sound_delete_undone`() {
+        every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
         val viewModel = givenAViewModel()
         val welcomeTitle =
             ApplicationProvider
                 .getApplicationContext<android.content.Context>()
                 .getString(R.string.app_welcome_sticker_title)
         val welcome = viewModel.sounds.value.first { it.name == welcomeTitle }
-        viewModel.onPlayerStop(welcome, completed = true)
+        // Manual delete (swipe) is the only path that enqueues a delete event now that completion no
+        // longer self-destructs the welcome.
+        viewModel.deleteSound(welcome)
         fake.events.clear()
 
         viewModel.restoreSound()
 
-        fake.assertEmitted("welcome_sticker_undone")
-        fake.assertNotEmitted("sound_delete_undone")
+        // The welcome-specific `welcome_sticker_undone` was pruned: the welcome
+        // is just-another-audio, so its Undo emits the generic event like any other sound.
+        fake.assertEmitted("sound_delete_undone")
     }
 
     @Test
