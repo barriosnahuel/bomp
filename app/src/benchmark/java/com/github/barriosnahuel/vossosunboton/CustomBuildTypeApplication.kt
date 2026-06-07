@@ -30,10 +30,14 @@ internal abstract class CustomBuildTypeApplication : Application() {
 
     /**
      * Seeds exactly [count][SEED_COUNT_EXTRA] synthetic sounds (each stamped with a duration so rows
-     * render like a real audio). Done **synchronously** in `onCreate`, before the ViewModel's first
-     * load, so the measured scroll never sees a stale or half-seeded list — `replaceSyntheticCorpus`
-     * is a single atomic write, so this is cheap. Runs only in the benchmark build (release-like, no
-     * StrictMode); inert for the startup benchmark, which doesn't pass the extra.
+     * render like a real audio), via the single atomic `replaceSyntheticCorpus`.
+     *
+     * Runs **synchronously** (`runBlocking`) from `LandingActivity.onCreate`. The benchmark launch
+     * intent carries no data URI, so `handleDeeplink` early-returns without touching the lazy
+     * ViewModel — meaning the seed write completes before composition instantiates the VM and reads
+     * the store. The measured scroll therefore always sees exactly N, never a stale or half-seeded
+     * list. (A reactive `repo.sounds` collector in the VM is a second safety net if a read ever beat
+     * the write.) Benchmark build only (release-like, no StrictMode); inert for the startup benchmark.
      */
     fun seedDebugSoundsIfRequested(intent: Intent) {
         val count = intent.getIntExtra(SEED_COUNT_EXTRA, 0)
