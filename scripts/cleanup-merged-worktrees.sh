@@ -83,18 +83,30 @@ fi
 # == local tip) AND no PR for this head is still OPEN. Any doubt ⇒ KEEP.
 # FAIL-SAFE: a failed/absent gh query yields KEEP, never a removal.
 pr_verdict() {
-  local path="$1" branch="$2" tip v
+  local path="$1" branch="$2" tip prs state oid
   tip="$(git -C "$path" rev-parse HEAD 2>/dev/null)"
   [[ "$tip" =~ ^[0-9a-f]{40,64}$ ]] || { echo "KEEP (cannot resolve tip)"; return 0; }
-  # One gh call per candidate. tip is a validated hex SHA, safe to interpolate.
-  if ! v="$(gh pr list --head "$branch" --state all --limit 20 --json state,headRefOid \
-        --jq "if any(.[]; .state==\"OPEN\") then \"KEEP\" elif any(.[]; .state==\"MERGED\" and .headRefOid==\"$tip\") then \"REMOVE\" else \"KEEP\" end" 2>/dev/null)"; then
+  # One gh call per candidate. gh's --jq only projects "<STATE> <headRefOid>" per
+  # PR; the decision below is plain bash so it's unit-testable without jq (the
+  # test shims gh to emit these same lines). See test-cleanup-merged-worktrees.sh.
+  if ! prs="$(gh pr list --head "$branch" --state all --limit 20 --json state,headRefOid \
+        --jq '.[] | .state + " " + .headRefOid' 2>/dev/null)"; then
     echo "KEEP (gh query failed — offline/unauthenticated?)"; return 0
   fi
-  if [ "$v" = "REMOVE" ]; then
+  local has_open=0 merged_here=0
+  while IFS=' ' read -r state oid; do
+    [ -z "$state" ] && continue
+    case "$state" in
+      OPEN) has_open=1 ;;                                  # an open PR ⇒ still in flight
+      MERGED) [ "$oid" = "$tip" ] && merged_here=1 ;;      # merged THIS exact commit
+    esac
+  done <<<"$prs"
+  if [ "$has_open" -eq 1 ]; then
+    echo "KEEP (open PR for this head)"
+  elif [ "$merged_here" -eq 1 ]; then
     echo "REMOVE"
   else
-    echo "KEEP (no merged PR at this commit / open PR / extra local commits)"
+    echo "KEEP (no merged PR at this commit / extra local commits)"
   fi
 }
 

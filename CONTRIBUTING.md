@@ -342,6 +342,12 @@ Preview without changing anything:
 ./scripts/cleanup-merged-worktrees.sh --dry-run
 ```
 
+**Tests.** `scripts/test-cleanup-merged-worktrees.sh` is a self-contained behaviour test (pure bash + git — no network, no `gh`, no extra tooling: it builds a throwaway repo with real worktrees and shims `gh`). It guards the keep/remove decision for every case — merged-at-this-commit, branch-name reuse, post-merge local commits, open PR, `gh` failure, protected, dirty — and that `--dry-run` mutates nothing. Runs in CI as the `worktree-cleanup-test` job; run it locally the same way:
+
+```bash
+./scripts/test-cleanup-merged-worktrees.sh
+```
+
 **Installation.** The hook source is committed at `.githooks/post-merge`; `scripts/install-hooks.sh` **copies** it into the repo's hooks dir (`$(git rev-parse --git-common-dir)/hooks`). A committed `SessionStart` hook in `.claude/settings.json` re-runs the installer every Claude Code session, so a fresh clone self-arms on its first session; thereafter the installed copy persists for terminal `git pull`s. To arm it by hand (e.g. a clone you won't open in Claude Code):
 
 ```bash
