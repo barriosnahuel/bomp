@@ -316,45 +316,29 @@ This is distinct from the swap-from-disk procedure above (used the first time yo
 
 ### Cleaning up merged worktrees
 
-Overnight runs create one worktree + branch + PR per task and never tear them down. GitHub's `deleteBranchOnMerge` removes the *remote* branch when a PR merges, but the **local** worktree and branch linger. `scripts/cleanup-merged-worktrees.sh` removes them automatically.
+Worktrees created per task — by the `overnight-work` Claude Code skill (user-level, **not** in this repo), by harness subagents, or by hand — accumulate after their PR merges: `deleteBranchOnMerge` drops the *remote* branch, but the **local** worktree and branch linger. `scripts/cleanup-merged-worktrees.sh` removes them automatically. The full rationale (why keyed on the PR's merged commit and not git ancestry/branch name, why copy-install instead of `core.hooksPath`, how it relates to the harness's own cleanup) is in [ADR 0014](docs/adr/0014-worktree-lifecycle-sibling-layout-and-cleanup.md) — this section is the operator's how-to.
 
-**The trigger is a `post-merge` git hook.** When you `git pull` `develop` in the primary worktree (the fast-forward that follows a GitHub squash-merge), the hook runs the cleanup script. It only acts on the `develop` branch, and always exits 0 so it can never block a pull.
+**Trigger.** The committed `.githooks/post-merge` hook runs the script on the `git pull` of `develop` that follows a merge (only on `develop`; always exits 0, so it can never block a pull).
 
-**What it removes** — for each *linked* worktree:
+**What it does.** For each linked worktree, it removes the worktree + its local branch **only if** a `MERGED` PR for that head landed this exact commit (`headRefOid` == the worktree's tip) and no PR is still `OPEN`; then `git fetch --prune`s dead `origin/*` refs. It never touches the primary worktree, protected branches (`develop`, `gh-pages`, `feat/gh-pages-*` — the `PROTECTED_BRANCHES` list at the top of the script), detached or dirty worktrees (kept with a warning, never `--force`), or orphan local branches with no worktree (e.g. `backup/*`). Any `gh` failure or tip mismatch ⇒ *keep* (fail-safe).
 
-- worktree + its local branch, **only if** a `MERGED` PR for that head landed **this exact commit** (the PR's `headRefOid` equals the worktree's tip) **and** no PR for the head is still `OPEN`;
-- plus `git fetch --prune` to drop dead `origin/*` refs (real runs only — skipped in `--dry-run`).
-
-**What it never touches:** the primary worktree; protected branches (`develop`, `gh-pages`, `feat/gh-pages-*` — extend the `PROTECTED_BRANCHES` array at the top of the script); detached worktrees; worktrees with uncommitted changes (skipped with a warning, never `--force`); and **orphan local branches** that have no worktree (e.g. `backup/*` stay intact).
-
-**Why keyed on the branch's own PR + commit, not git ancestry or branch name:** PRs land as **squash** merges, which rewrite SHAs, so `git branch -d` / `merge-base --is-ancestor` report the branch as *not* merged. But "a PR with this branch name was merged" is also unsafe — two data-loss traps it would hit:
-
-- **branch-name reuse** — `deleteBranchOnMerge` frees the name, so a *new* worktree reusing a name whose old PR merged would be wrongly classified as merged;
-- **post-merge local commits** — work committed on the branch *after* its PR merged (a clean tree, so the uncommitted-changes guard misses it).
-
-Both are caught by requiring the local tip to equal the merged PR's `headRefOid`: a reused name or extra commits make the tip differ → kept.
-
-**Fail-safe:** any `gh` failure (offline / unauthenticated), a missing PR, or a tip that doesn't match a merged PR all yield **keep**. The script never deletes without a positive "merged at this commit" signal.
-
-Preview without changing anything:
+Preview without changing anything (side-effect-free):
 
 ```bash
 ./scripts/cleanup-merged-worktrees.sh --dry-run
 ```
 
-**Tests.** `scripts/test-cleanup-merged-worktrees.sh` is a self-contained behaviour test (pure bash + git — no network, no `gh`, no extra tooling: it builds a throwaway repo with real worktrees and shims `gh`). It guards the keep/remove decision for every case — merged-at-this-commit, branch-name reuse, post-merge local commits, open PR, `gh` failure, protected, dirty — and that `--dry-run` mutates nothing. Runs in CI as the `worktree-cleanup-test` job; run it locally the same way:
+**Tests.** `scripts/test-cleanup-merged-worktrees.sh` is a self-contained behaviour test (pure bash + git — no network/`gh`/extra tooling: it builds a throwaway repo with real worktrees and shims `gh`), mutation-tested to fail if the keep/remove decision regresses. Runs in CI as the `worktree-cleanup-test` job; run it locally the same way:
 
 ```bash
 ./scripts/test-cleanup-merged-worktrees.sh
 ```
 
-**Installation.** The hook source is committed at `.githooks/post-merge`; `scripts/install-hooks.sh` **copies** it into the repo's hooks dir (`$(git rev-parse --git-common-dir)/hooks`). A committed `SessionStart` hook in `.claude/settings.json` re-runs the installer every Claude Code session, so a fresh clone self-arms on its first session; thereafter the installed copy persists for terminal `git pull`s. To arm it by hand (e.g. a clone you won't open in Claude Code):
+**Installation.** The hook is installed by copy into `$(git rev-parse --git-common-dir)/hooks` via `scripts/install-hooks.sh`, re-armed every session by a committed `SessionStart` hook in `.claude/settings.json` (a fresh clone self-arms on its first session; the installed copy then persists for terminal `git pull`s). Arm it by hand for a clone you won't open in Claude Code — **not** via `core.hooksPath`, see [ADR 0014](docs/adr/0014-worktree-lifecycle-sibling-layout-and-cleanup.md):
 
 ```bash
 ./scripts/install-hooks.sh
 ```
-
-**Why copy instead of `git config core.hooksPath .githooks`** (the usual convention): the remote (CCR) environment sets `core.hooksPath` globally to install the commit-signing / `Co-authored-by` hooks. A repo-local `core.hooksPath` would override that and silently break verified commits. The remote env's hooks are passthroughs that chain to `$(git rev-parse --git-common-dir)/hooks/<name>` — exactly where we copy to — so the hook fires in both the remote env and a plain local clone, with signing intact.
 
 ### Editing the committed dummy
 

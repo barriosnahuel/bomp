@@ -3,11 +3,13 @@
 # Removes linked worktrees (and their local branch) whose PR has already been
 # MERGED on GitHub, plus prunes dead remote-tracking refs.
 #
-# Why this exists: overnight-work creates one worktree + branch + PR per task
-# and never tears them down. GitHub's `deleteBranchOnMerge` already removes the
-# *remote* branch on merge, but the local worktree + local branch linger. We
-# can't lean on `git branch -d` to detect "merged" because PRs land as **squash**
+# Why this exists: worktrees created per task — by the `overnight-work` Claude
+# Code skill (user-level, not in this repo), by harness subagents, or by hand —
+# linger after their PR merges. GitHub's `deleteBranchOnMerge` removes the
+# *remote* branch on merge, but the local worktree + local branch stay. We can't
+# lean on `git branch -d` to detect "merged" because PRs land as **squash**
 # merges, which rewrite SHAs — so `merge-base --is-ancestor` reports false.
+# Full rationale + revisit criteria: docs/adr/0014-worktree-lifecycle-sibling-layout-and-cleanup.md.
 #
 # Removal signal (see pr_verdict): for the branch's OWN PR, REMOVE only when a
 # MERGED PR landed THIS exact commit (its headRefOid == the local tip) AND no PR
