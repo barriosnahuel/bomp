@@ -46,6 +46,16 @@ internal class ShareAppIntentTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `build links to the published listing, not the debug variant id`() {
+        val intent = ShareAppIntent.build(context, PlayStoreReferrer.CONTENT_MENU)
+
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+        assertThat(text).contains("id=com.github.barriosnahuel.vossosunboton&")
+        // This test runs against the debug variant; the link must never carry its `.debug` applicationIdSuffix.
+        assertThat(text).doesNotContain(".debug")
+    }
+
+    @Test
     fun `build carries the about referrer when shared from About`() {
         val intent = ShareAppIntent.build(context, PlayStoreReferrer.CONTENT_ABOUT)
 

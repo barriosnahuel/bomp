@@ -153,12 +153,7 @@ private class ShareFeatureImpl : ShareFeature {
             putExtra(Intent.EXTRA_STREAM, contentUri)
             // Soft install invite + attributed Play link. Clients that keep a caption on audio (Telegram)
             // show it; those that drop it (WhatsApp) just send the audio — no harm either way.
-            val playUrl =
-                PlayStoreReferrer.playStoreUrl(
-                    BuildConfig.APPLICATION_ID,
-                    PlayStoreReferrer.MEDIUM_AUDIO,
-                    PlayStoreReferrer.CONTENT_CAPTION,
-                )
+            val playUrl = PlayStoreReferrer.playStoreUrl(PlayStoreReferrer.MEDIUM_AUDIO, PlayStoreReferrer.CONTENT_CAPTION)
             putExtra(Intent.EXTRA_TEXT, context.getString(R.string.app_share_caption_invite, playUrl))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }

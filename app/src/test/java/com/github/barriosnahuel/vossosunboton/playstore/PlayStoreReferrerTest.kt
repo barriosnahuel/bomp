@@ -11,25 +11,26 @@ import org.junit.Test
 
 /** Robolectric because [PlayStoreReferrer] uses `android.net.Uri.encode`. */
 internal class PlayStoreReferrerTest : AbstractRobolectricTest() {
-    private val applicationId = "com.github.barriosnahuel.vossosunboton"
-
     @Test
-    fun `playStoreUrl points at the app details page for the given application id`() {
-        val url = PlayStoreReferrer.playStoreUrl(applicationId, PlayStoreReferrer.MEDIUM_AUDIO, PlayStoreReferrer.CONTENT_CAPTION)
+    fun `playStoreUrl points at the published listing, never the build variant id`() {
+        val url = PlayStoreReferrer.playStoreUrl(PlayStoreReferrer.MEDIUM_AUDIO, PlayStoreReferrer.CONTENT_CAPTION)
 
-        assertThat(url).startsWith("https://play.google.com/store/apps/details?id=$applicationId&referrer=")
+        assertThat(url).startsWith("https://play.google.com/store/apps/details?id=com.github.barriosnahuel.vossosunboton&referrer=")
+        // Regression guard: debug/benchmark variants must not leak their applicationIdSuffix (e.g. `.debug`)
+        // into the Store link — that would point at an app that doesn't exist on the Play Store.
+        assertThat(url).doesNotContain(".debug")
     }
 
     @Test
     fun `playStoreUrl encodes the audio caption referrer`() {
-        val url = PlayStoreReferrer.playStoreUrl(applicationId, PlayStoreReferrer.MEDIUM_AUDIO, PlayStoreReferrer.CONTENT_CAPTION)
+        val url = PlayStoreReferrer.playStoreUrl(PlayStoreReferrer.MEDIUM_AUDIO, PlayStoreReferrer.CONTENT_CAPTION)
 
         assertThat(url).contains("referrer=utm_source%3Dbomp%26utm_medium%3Daudio%26utm_content%3Dcaption")
     }
 
     @Test
     fun `playStoreUrl encodes the app menu referrer`() {
-        val url = PlayStoreReferrer.playStoreUrl(applicationId, PlayStoreReferrer.MEDIUM_APP, PlayStoreReferrer.CONTENT_MENU)
+        val url = PlayStoreReferrer.playStoreUrl(PlayStoreReferrer.MEDIUM_APP, PlayStoreReferrer.CONTENT_MENU)
 
         assertThat(url).contains("referrer=utm_source%3Dbomp%26utm_medium%3Dapp%26utm_content%3Dmenu")
     }
