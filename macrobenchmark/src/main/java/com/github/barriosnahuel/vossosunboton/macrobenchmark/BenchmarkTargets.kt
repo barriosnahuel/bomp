@@ -19,6 +19,9 @@ internal const val DEFAULT_ITERATIONS = 5
 /** Number of fling gestures per scroll-benchmark iteration. */
 internal const val SCROLL_GESTURES = 3
 
+/** Max backward swipes to reset the list to the top between iterations (overshoots [SCROLL_GESTURES]). */
+internal const val SCROLL_RESET_SWIPES = 12
+
 /** Swipe dead-zone (fraction per edge) so UiScrollable flings clear the system back-gesture areas. */
 internal const val SWIPE_DEAD_ZONE = 0.2
 

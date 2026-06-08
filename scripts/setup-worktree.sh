@@ -67,16 +67,23 @@ else
 fi
 
 # The `benchmark` build type uses applicationId `.debug` and reuses the real DEBUG Firebase config
-# (bomp-debug, valid key — a scrubbed dummy would make FirebaseSessions fatal on a real device; see
-# app/build.gradle / ADR 0015). google-services resolves per build-type folder, so the debug file is
-# copied into the benchmark folder; its `.debug` package already matches. Skip-worktree first so the
-# real `AIza…` key never stages (the committed copy is a scrubbed dummy).
+# (bomp-debug — a scrubbed dummy would make FirebaseSessions fatal on a real device; see
+# app/build.gradle). google-services resolves per build-type folder, so the debug file is copied into
+# the benchmark folder; its `.debug` package already matches. Hard-fail on a missing source and stay
+# idempotent, mirroring the CONFIGS loop above (skip-worktree first so the real key never stages).
 bench_dest="app/src/benchmark/google-services.json"
 bench_src="$primary_root/app/src/debug/google-services.json"
-if [ -f "$bench_src" ]; then
+if [ ! -f "$bench_src" ]; then
+  echo "✘ Primary worktree is missing app/src/debug/google-services.json (needed for the benchmark config)." >&2
+  exit 1
+fi
+bench_flag="$(git ls-files -v -- "$bench_dest" | awk 'NR==1 {print $1}')"
+if [ "$bench_flag" != "S" ] || ! cmp -s "$bench_src" "$bench_dest"; then
   git update-index --skip-worktree -- "$bench_dest"
   cp "$bench_src" "$bench_dest"
   echo "✓ benchmark google-services seeded from the debug config (skip-worktree)."
+else
+  echo "✓ benchmark google-services already set up."
 fi
 
 mkdir -p model/src/debug/res/raw

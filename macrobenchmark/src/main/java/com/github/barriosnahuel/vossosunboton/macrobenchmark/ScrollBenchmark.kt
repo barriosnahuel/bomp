@@ -51,14 +51,22 @@ class ScrollBenchmark {
             metrics = listOf(FrameTimingMetric()),
             iterations = DEFAULT_ITERATIONS,
             compilationMode = CompilationMode.DEFAULT,
-            // WARM recreates LandingActivity each iteration so the list starts at the top. Seeding is
-            // idempotent, so the relaunch re-sends the extra cheaply (no-op once N already seeded).
+            // WARM keeps the process alive and relaunches LandingActivity each iteration. It's a
+            // singleTask Activity, so the relaunch re-enters the live instance via onNewIntent (no
+            // recreate) and the LazyColumn keeps its scroll position — setupBlock resets it to the top
+            // below. Seeding is idempotent, so the relaunch re-sends the extra cheaply (no-op once seeded).
             startupMode = StartupMode.WARM,
             setupBlock = {
                 startActivityAndWait { intent -> intent.putExtra(SEED_COUNT_EXTRA, itemCount) }
-                // Seeding is synchronous (done in onCreate before the list loads), so once any seeded
-                // item renders the full exact-N corpus is present — safe to start measuring.
-                device.wait(Until.hasObject(By.textContains(SYNTHETIC_NAME_PREFIX)), SEED_RENDER_TIMEOUT_MS)
+                // Seeding is synchronous (done in onCreate before the list loads), so once a seeded item
+                // renders the full exact-N corpus is present. Fail loudly if it never does, rather than
+                // measuring an empty/wrong list.
+                check(device.wait(Until.hasObject(By.textContains(SYNTHETIC_NAME_PREFIX)), SEED_RENDER_TIMEOUT_MS)) {
+                    "Seeded corpus ($SYNTHETIC_NAME_PREFIX) didn't render within $SEED_RENDER_TIMEOUT_MS ms."
+                }
+                // Reset to the top so every iteration measures the same top-to-bottom fling, not the
+                // already-scrolled list left by the previous iteration (singleTask, see above).
+                UiScrollable(UiSelector().scrollable(true)).scrollToBeginning(SCROLL_RESET_SWIPES)
             },
         ) {
             val list = UiScrollable(UiSelector().scrollable(true))
@@ -70,6 +78,9 @@ class ScrollBenchmark {
             list.setSwipeDeadZonePercentage(SWIPE_DEAD_ZONE)
             repeat(SCROLL_GESTURES) {
                 list.flingForward()
+                // Settle after each fling so the deceleration frames (often the jankiest) land inside
+                // the measured window and consecutive flings don't cut each other short.
+                device.waitForIdle()
             }
         }
 }

@@ -44,15 +44,34 @@ avdmanager list avd 2>/dev/null | grep -q "Name: $AVD" || {
 }
 
 echo "▶ Launching $AVD (windowed, -gpu host, -cores $CORES, -memory $MEMORY)…"
+# Snapshot existing emulators so we can identify (and only ever kill) the one WE launch.
+before="$(adb devices | awk '/^emulator-/{print $1}')"
 nohup emulator -avd "$AVD" -gpu host -cores "$CORES" -memory "$MEMORY" \
   -no-snapshot -no-boot-anim -no-audio > "$OUT/emulator.log" 2>&1 &
 EMU_PID=$!
-trap 'adb -s "${S:-}" emu kill >/dev/null 2>&1 || kill "$EMU_PID" 2>/dev/null || true' EXIT
+trap 'if [ -n "${S:-}" ]; then adb -s "$S" emu kill >/dev/null 2>&1 || true; fi; kill "$EMU_PID" 2>/dev/null || true' EXIT
 
-until adb devices | grep -q '^emulator-'; do sleep 3; done
-S=$(adb devices | awk '/^emulator-/{print $1; exit}')
+# Resolve the serial of the emulator this script launched (not a pre-existing one), with a timeout
+# and a process-alive check so a boot failure fails fast instead of hanging forever.
+S=""
+for _ in $(seq 1 90); do
+  for d in $(adb devices | awk '/^emulator-/{print $1}'); do
+    case " $before " in *" $d "*) : ;; *) S="$d"; break ;; esac
+  done
+  [ -n "$S" ] && break
+  kill -0 "$EMU_PID" 2>/dev/null || { echo "✘ emulator exited during launch — see $OUT/emulator.log" >&2; exit 1; }
+  sleep 3
+done
+[ -n "$S" ] || { echo "✘ launched emulator never registered (timeout) — see $OUT/emulator.log" >&2; exit 1; }
+
 echo "▶ $S booting…"
-until [ "$(adb -s "$S" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 3; done
+for _ in $(seq 1 90); do
+  [ "$(adb -s "$S" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break
+  kill -0 "$EMU_PID" 2>/dev/null || { echo "✘ emulator died during boot — see $OUT/emulator.log" >&2; exit 1; }
+  sleep 3
+done
+[ "$(adb -s "$S" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] \
+  || { echo "✘ emulator boot timed out — see $OUT/emulator.log" >&2; exit 1; }
 adb -s "$S" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1
 adb -s "$S" install -r "$APK" >/dev/null
 echo "▶ Installed. Measuring sizes: ${SIZES[*]}"
@@ -64,10 +83,12 @@ for N in "${SIZES[@]}"; do
   adb -s "$S" shell am start -n "$ACT" --ei benchmark_seed_count "$N" >/dev/null 2>&1
   ok=0
   for _ in $(seq 1 40); do
-    pid=$(adb -s "$S" shell pidof "$PKG" 2>/dev/null | tr -d '\r')
-    rendered=$(adb -s "$S" exec-out uiautomator dump /sdcard/u.xml >/dev/null 2>&1; \
-               adb -s "$S" shell cat /sdcard/u.xml 2>/dev/null | grep -c 'Benchmark sound')
-    [ -n "$pid" ] && [ "$rendered" -ge 1 ] && { ok=1; break; }
+    pid=$(adb -s "$S" shell pidof "$PKG" 2>/dev/null | tr -d '\r' || true)
+    adb -s "$S" exec-out uiautomator dump /sdcard/u.xml >/dev/null 2>&1 || true
+    # `grep -c` exits 1 on zero matches — the normal "not rendered yet" state on every early poll.
+    # `|| true` keeps `set -euo pipefail` from aborting the wait loop before the list shows up.
+    rendered=$(adb -s "$S" shell cat /sdcard/u.xml 2>/dev/null | grep -c 'Benchmark sound' || true)
+    [ -n "$pid" ] && [ "${rendered:-0}" -ge 1 ] && { ok=1; break; }
     sleep 2
   done
   [ "$ok" -ne 1 ] && { echo "N=$N: app not ready (pid=$pid rendered=$rendered) — SKIP"; continue; }
@@ -83,7 +104,7 @@ for N in "${SIZES[@]}"; do
   for _ in $(seq 1 8); do adb -s "$S" shell input swipe 540 1500 540 500 250; sleep 0.6; done
   sleep 1
   adb -s "$S" shell dumpsys gfxinfo "$PKG" > "$OUT/gfxinfo-$N.txt" 2>&1
-  grep -E 'Total frames|Janky frames|percentile|Number Missed Vsync|Number Slow' "$OUT/gfxinfo-$N.txt" | sed 's/^/   /'
+  grep -E 'Total frames|Janky frames|percentile|Number Missed Vsync|Number Slow' "$OUT/gfxinfo-$N.txt" | sed 's/^/   /' || true
 
   if [ -n "$trace" ]; then
     sleep 12

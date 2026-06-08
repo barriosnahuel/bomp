@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Gradle Managed Devices (API 34 / 30 / 33) for the macrobenchmark module, so the jank matrix and the fix re-validation run reproducible in-repo emulators
 
 #### Changed
-- Scroll benchmark now seeds a controlled corpus and runs across three list sizes (5 / 50 / 200) so the sound-list frame timing exposes whether scroll jank scales with item count
+- Scroll benchmark now seeds a controlled corpus and runs across three list sizes (20 / 50 / 200) so the sound-list frame timing exposes whether scroll jank scales with item count
 
 ## \[v2.1.0] - 2026-05-25
 
