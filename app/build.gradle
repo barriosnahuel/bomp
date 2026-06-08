@@ -35,6 +35,10 @@ android {
 
     sourceSets {
         androidTest.assets.srcDirs += 'src/androidTest/assets'
+        // The benchmark build type runs under the debug applicationId (`.debug`), so it should look
+        // like the debug app — reuse the debug grey launcher icon. The production green icon on a
+        // throwaway benchmark build is misleading.
+        benchmark.res.srcDirs += 'src/debug/res'
     }
 
     resourcePrefix = 'app_'
@@ -95,12 +99,22 @@ android {
 
         // Release-like build target consumed only by the :macrobenchmark module (non-debuggable +
         // minified so startup/frame numbers match what users get). Made profileable via
-        // src/benchmark/AndroidManifest.xml. Firebase config is a scrubbed dummy
-        // (src/benchmark/google-services.json) so benchmark runs never report to bomp-prod.
+        // src/benchmark/AndroidManifest.xml.
         benchmark {
             initWith release
             matchingFallbacks = ['release']
             debuggable false
+            // Reuse the debug app identity (`.debug`) + debug signing: the benchmark then installs
+            // over the dev debug app (same key, an update — not a signature clash) and resolves the
+            // real debug Firebase config (bomp-debug, valid key → no FirebaseSessions fatal; its
+            // init is also measured representatively). google-services for this build type is the
+            // debug one, swapped in by scripts/setup-worktree.sh (skip-worktree).
+            applicationIdSuffix ".debug"
+            signingConfig signingConfigs.debug
+            // Don't upload the R8 mapping to Firebase (minified benchmark would 400 on the dummy).
+            firebaseCrashlytics {
+                mappingFileUploadEnabled false
+            }
         }
     }
 

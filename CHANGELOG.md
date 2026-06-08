@@ -22,9 +22,10 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - `scripts/test-cleanup-merged-worktrees.sh` — a self-contained behaviour test (pure bash + git, no network/`gh`/extra tooling) covering the worktree-cleanup keep/remove decision across every case (merged-at-commit, name reuse, post-merge commits, open PR, `gh` failure, protected, dirty, dry-run). Runs in CI as the `worktree-cleanup-test` job
 - Macrobenchmark module measuring LandingActivity cold-start and sound-list scroll frame timing, to diagnose the entry-screen jank on lower-tier devices
 - A committed `PreToolUse` hook (`.claude/hooks/pre-check-ktlint-format.sh`) runs `ktlintFormat` before any Gradle check command in Claude Code sessions, so checks run on already-formatted sources and never fail on an auto-fixable ktlint violation; non-check commands no-op in microseconds
+- Gradle Managed Devices (API 34 / 30 / 33) for the macrobenchmark module, so the jank matrix and the fix re-validation run reproducible in-repo emulators
 
 #### Changed
-- Scroll benchmark now seeds a controlled corpus and runs across three list sizes (5 / 50 / 200) so the sound-list frame timing exposes whether scroll jank scales with item count
+- Scroll benchmark now seeds a controlled corpus and runs across three list sizes (20 / 50 / 200) so the sound-list frame timing exposes whether scroll jank scales with item count
 
 ## \[v2.1.0] - 2026-05-25
 
