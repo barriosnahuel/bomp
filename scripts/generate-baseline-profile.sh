@@ -3,13 +3,15 @@
 # Regenerates the committed Baseline Profile for the LandingActivity cold-start path
 # (app/src/main/baseline-prof.txt), which AGP bakes into the release/benchmark APK.
 #
-# We deliberately do NOT use the androidx.baselineprofile plugin — it would add
-# nonMinifiedRelease/benchmarkRelease app variants that each need their own google-services.json.
-# Instead the profile is generated here and committed. Rules must carry REAL (non-obfuscated) method
-# names so AGP can remap them through R8 at release time, so generation runs against the NON-MINIFIED
-# `debug` build (the minified `benchmark` build would bake obfuscated names that don't match a fresh
-# release). Device type doesn't matter for generation — the profile is a code-path snapshot; a real
-# device is only needed to VALIDATE timing afterwards.
+# We deliberately do NOT use the androidx.baselineprofile plugin — it would auto-create variants that
+# overlap our `benchmark` build type and rewire the :macrobenchmark module (consolidation is a deferred
+# follow-up; see handoff). Instead the profile is generated here and committed. It must reflect the
+# REAL RELEASE startup path with REAL (non-obfuscated) names (so AGP remaps them through R8 when it
+# bakes the profile into the minified release), so generation runs against the `nonMinifiedRelease`
+# build type: release code (via the src/release source set) but un-minified. Generating against `debug`
+# would capture debug-only code (StrictMode, seeder, debug Application); against the minified
+# `benchmark` it would capture obfuscated names. Device type doesn't matter for generation — the
+# profile is a code-path snapshot; a real device is only needed to VALIDATE timing afterwards.
 #
 # Run from anywhere in the repo. Set ANDROID_SERIAL to pick a device when several are attached.
 # Regenerate when the startup path changes meaningfully. See CONTRIBUTING § Baseline Profile.
@@ -33,10 +35,10 @@ if [ -z "${ANDROID_SERIAL:-}" ]; then
 fi
 echo "▶ Device: $ANDROID_SERIAL"
 
-# Fresh non-minified debug install: the profile must be captured against REAL names, never the
-# minified benchmark build that may currently occupy the .debug package.
-echo "▶ Installing the non-minified debug build + the benchmark test apk…"
-./gradlew :app:installDebug :macrobenchmark:assembleBenchmark -q
+# Fresh nonMinifiedRelease install: the profile must be captured against release code with REAL names,
+# never the minified benchmark build that may currently occupy the .debug package.
+echo "▶ Installing the nonMinifiedRelease build + the benchmark test apk…"
+./gradlew :app:installNonMinifiedRelease :macrobenchmark:assembleBenchmark -q
 adb -s "$ANDROID_SERIAL" install -r "$TEST_APK" >/dev/null
 
 echo "▶ Generating the profile (cold-start collect)…"
@@ -59,7 +61,7 @@ adb -s "$ANDROID_SERIAL" pull "$REMOTE" "$DEST" >/dev/null
 # rules are obfuscated and AGP bakes nothing. Fail loudly rather than commit a no-op profile.
 grep -q 'Lcom/github/barriosnahuel/vossosunboton/' "$DEST" || {
   echo "✘ pulled profile has no readable app rules — a MINIFIED build was profiled. Generation must run" >&2
-  echo "  against the non-minified debug build (this script installs it; check nothing else holds .debug)." >&2
+  echo "  against the nonMinifiedRelease build (this script installs it; check nothing else holds .debug)." >&2
   exit 1
 }
 echo "✓ $DEST updated ($(grep -c . "$DEST" || echo 0) lines). Review the diff, then commit."

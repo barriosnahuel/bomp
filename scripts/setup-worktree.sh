@@ -66,25 +66,26 @@ else
   echo "✓ google-services configs copied from primary and marked skip-worktree."
 fi
 
-# The `benchmark` build type uses applicationId `.debug` and reuses the real DEBUG Firebase config
-# (bomp-debug — a scrubbed dummy would make FirebaseSessions fatal on a real device; see
-# app/build.gradle). google-services resolves per build-type folder, so the debug file is copied into
-# the benchmark folder; its `.debug` package already matches. Hard-fail on a missing source and stay
-# idempotent, mirroring the CONFIGS loop above (skip-worktree first so the real key never stages).
-bench_dest="app/src/benchmark/google-services.json"
-bench_src="$primary_root/app/src/debug/google-services.json"
-if [ ! -f "$bench_src" ]; then
-  echo "✘ Primary worktree is missing app/src/debug/google-services.json (needed for the benchmark config)." >&2
+# The `benchmark` and `nonMinifiedRelease` build types both use applicationId `.debug` and reuse the
+# real DEBUG Firebase config (bomp-debug — a scrubbed dummy would make FirebaseSessions fatal on a
+# real device; see app/build.gradle). google-services resolves per build-type folder, so the debug
+# file is copied into each folder; its `.debug` package already matches. Hard-fail on a missing source
+# and stay idempotent, mirroring the CONFIGS loop above (skip-worktree first so the real key never stages).
+debug_src="$primary_root/app/src/debug/google-services.json"
+if [ ! -f "$debug_src" ]; then
+  echo "✘ Primary worktree is missing app/src/debug/google-services.json (needed for the .debug-suffixed build types)." >&2
   exit 1
 fi
-bench_flag="$(git ls-files -v -- "$bench_dest" | awk 'NR==1 {print $1}')"
-if [ "$bench_flag" != "S" ] || ! cmp -s "$bench_src" "$bench_dest"; then
-  git update-index --skip-worktree -- "$bench_dest"
-  cp "$bench_src" "$bench_dest"
-  echo "✓ benchmark google-services seeded from the debug config (skip-worktree)."
-else
-  echo "✓ benchmark google-services already set up."
-fi
+for dest in app/src/benchmark/google-services.json app/src/nonMinifiedRelease/google-services.json; do
+  flag="$(git ls-files -v -- "$dest" | awk 'NR==1 {print $1}')"
+  if [ "$flag" != "S" ] || ! cmp -s "$debug_src" "$dest"; then
+    git update-index --skip-worktree -- "$dest"
+    cp "$debug_src" "$dest"
+    echo "✓ $(dirname "$dest" | xargs basename) google-services seeded from the debug config (skip-worktree)."
+  else
+    echo "✓ $(dirname "$dest" | xargs basename) google-services already set up."
+  fi
+done
 
 mkdir -p model/src/debug/res/raw
 cp "$primary_root/model/src/debug/res/raw/"*.mp3 model/src/debug/res/raw/ 2>/dev/null || true
