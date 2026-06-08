@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Makes the non-debuggable `nonMinifiedRelease` build type profileable so the Baseline Profile
+  ~ generator (BaselineProfileRule, run via scripts/generate-baseline-profile.sh) can collect on a
+  ~ device — Macrobenchmark/BaselineProfileRule requires the target to be debuggable OR profileable,
+  ~ and this build type is debuggable=false. Scoped to this source set so release stays unaffected.
+  ~ The attribute is ignored below API 29.
+  -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <profileable
+            android:shell="true"
+            tools:targetApi="29" />
+    </application>
+</manifest>
