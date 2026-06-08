@@ -1,19 +1,19 @@
 {
   "project_info": {
-    "project_number": "383291838647",
-    "project_id": "bomp-prod"
+    "project_number": "947596384148",
+    "project_id": "bomp-debug"
   },
   "client": [
     {
       "client_info": {
         "mobilesdk_app_id": "1:999999999:android:dummydummydummy",
         "android_client_info": {
-          "package_name": "com.github.barriosnahuel.vossosunboton"
+          "package_name": "com.github.barriosnahuel.vossosunboton.debug"
         }
       },
       "api_key": [
         {
-          "current_key": "a-really-dummy-value"
+          "current_key": "AIzaSyDUMMYbenchmarkKEYnotARealKEY0000000"
         }
       ]
     }

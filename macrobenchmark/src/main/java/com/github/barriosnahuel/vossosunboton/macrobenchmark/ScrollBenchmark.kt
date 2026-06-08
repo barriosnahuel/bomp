@@ -11,7 +11,8 @@ import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
-import androidx.test.uiautomator.Direction
+import androidx.test.uiautomator.UiScrollable
+import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import org.junit.Rule
 import org.junit.Test
@@ -25,9 +26,10 @@ import org.junit.runner.RunWith
  * regime measured by [StartupBenchmark].
  *
  * Each run seeds a synthetic corpus of exactly N sounds via a launch-intent extra (handled by the
- * benchmark-variant `CustomBuildTypeApplication`), then waits for the list to render before scrolling.
- * Scrolls the first scrollable node ([By.scrollable]) so it needs no `testTag` in the app. Numbers are
- * read on-device by a human (plan Fase 3).
+ * benchmark-variant `CustomBuildTypeApplication`), then scrolls the list. Uses [UiScrollable] (not
+ * `findObject` + `fling`): it re-resolves the scrollable node on every gesture, so a recomposition
+ * between gestures can't invalidate a cached handle (the StaleObjectException that sank the earlier
+ * approach). Numbers are read on-device by a human (plan Fase 3).
  */
 @RunWith(AndroidJUnit4::class)
 class ScrollBenchmark {
@@ -59,15 +61,15 @@ class ScrollBenchmark {
                 device.wait(Until.hasObject(By.textContains(SYNTHETIC_NAME_PREFIX)), SEED_RENDER_TIMEOUT_MS)
             },
         ) {
-            // Fail loudly: a missing scrollable node must not silently record idle frames as a result.
-            val list =
-                requireNotNull(device.findObject(By.scrollable(true))) {
-                    "No scrollable node on LandingActivity — wire a stable testTag if this fails on-device."
-                }
-            list.setGestureMargin(device.displayWidth / GESTURE_MARGIN_DIVISOR)
+            val list = UiScrollable(UiSelector().scrollable(true))
+            // Fail loudly if the list never appears; idle frames must not pass as a result.
+            check(list.waitForExists(SEED_RENDER_TIMEOUT_MS)) {
+                "No scrollable sound list on LandingActivity within $SEED_RENDER_TIMEOUT_MS ms."
+            }
+            // Keep flings clear of the system back-gesture edges.
+            list.setSwipeDeadZonePercentage(SWIPE_DEAD_ZONE)
             repeat(SCROLL_GESTURES) {
-                list.fling(Direction.DOWN)
-                device.waitForIdle()
+                list.flingForward()
             }
         }
 }

@@ -66,6 +66,19 @@ else
   echo "✓ google-services configs copied from primary and marked skip-worktree."
 fi
 
+# The `benchmark` build type uses applicationId `.debug` and reuses the real DEBUG Firebase config
+# (bomp-debug, valid key — a scrubbed dummy would make FirebaseSessions fatal on a real device; see
+# app/build.gradle / ADR 0015). google-services resolves per build-type folder, so the debug file is
+# copied into the benchmark folder; its `.debug` package already matches. Skip-worktree first so the
+# real `AIza…` key never stages (the committed copy is a scrubbed dummy).
+bench_dest="app/src/benchmark/google-services.json"
+bench_src="$primary_root/app/src/debug/google-services.json"
+if [ -f "$bench_src" ]; then
+  git update-index --skip-worktree -- "$bench_dest"
+  cp "$bench_src" "$bench_dest"
+  echo "✓ benchmark google-services seeded from the debug config (skip-worktree)."
+fi
+
 mkdir -p model/src/debug/res/raw
 cp "$primary_root/model/src/debug/res/raw/"*.mp3 model/src/debug/res/raw/ 2>/dev/null || true
 cp "$primary_root/model/src/debug/res/raw/"*.ogg model/src/debug/res/raw/ 2>/dev/null || true
