@@ -17,6 +17,11 @@ import org.junit.runner.RunWith
  * debug** build (real method names, so AGP can remap the rules through R8 at release time) and the
  * collected rules are committed to `app/src/main/baseline-prof.txt`, which AGP bakes into the release
  * APK. Regenerate when the startup path changes meaningfully. How-to: CONTRIBUTING § Baseline Profile.
+ *
+ * **Run only via `scripts/generate-baseline-profile.sh`** (which installs the non-minified debug build
+ * first). Do NOT run it through the unfiltered `:macrobenchmark:connectedBenchmarkAndroidTest` suite:
+ * that targets the **minified** `benchmark` variant, so it would collect obfuscated rules that R8
+ * can't remap into release — a silently useless profile.
  */
 @RunWith(AndroidJUnit4::class)
 class BaselineProfileGenerator {
