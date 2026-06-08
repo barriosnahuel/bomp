@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.macrobenchmark
 
+import androidx.benchmark.macro.BaselineProfileMode
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.StartupTimingMetric
@@ -21,11 +22,13 @@ import org.junit.runner.RunWith
  * ~573 ms cold start on an Android-11 OnePlus 8Pro vs 33–84 ms on current flagships. Run the same
  * benchmark on a flagship and on a throttled / older device to quantify that gap.
  *
- * Two compilation modes bracket the real-world spread without a Baseline Profile yet:
+ * Three compilation modes bracket the real-world spread:
  *  - [CompilationMode.None]: no AOT — worst case, closest to a fresh install / cold ART.
  *  - [CompilationMode.DEFAULT]: typical post-install state.
+ *  - [CompilationMode.Partial] with [BaselineProfileMode.Require]: AOT-compiles the startup hot path
+ *    from the committed `app/src/main/baseline-prof.txt`. Measures the actual shipped Baseline Profile.
  *
- * Numbers are read on-device by a human (plan Fase 3); this class only defines the measurement.
+ * Numbers are read on-device by a human (plan Fase 3/4); this class only defines the measurement.
  */
 @RunWith(AndroidJUnit4::class)
 class StartupBenchmark {
@@ -37,6 +40,9 @@ class StartupBenchmark {
 
     @Test
     fun startupDefaultCompilation() = measureStartup(CompilationMode.DEFAULT)
+
+    @Test
+    fun startupBaselineProfile() = measureStartup(CompilationMode.Partial(baselineProfileMode = BaselineProfileMode.Require))
 
     private fun measureStartup(compilationMode: CompilationMode) =
         benchmarkRule.measureRepeated(
