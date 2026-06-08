@@ -8,7 +8,6 @@ package com.github.barriosnahuel.vossosunboton.feature.share
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import com.github.barriosnahuel.vossosunboton.BuildConfig
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.playstore.PlayStoreReferrer
@@ -24,7 +23,7 @@ object ShareAppIntent {
         context: Context,
         content: String,
     ): Intent {
-        val playUrl = PlayStoreReferrer.playStoreUrl(BuildConfig.APPLICATION_ID, PlayStoreReferrer.MEDIUM_APP, content)
+        val playUrl = PlayStoreReferrer.playStoreUrl(PlayStoreReferrer.MEDIUM_APP, content)
         return Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, context.getString(R.string.app_share_app_invite, playUrl))

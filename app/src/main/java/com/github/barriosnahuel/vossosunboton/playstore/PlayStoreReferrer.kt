@@ -32,15 +32,21 @@ object PlayStoreReferrer {
     private const val PLAY_STORE_DETAILS_URL = "https://play.google.com/store/apps/details"
 
     /**
-     * Play Store URL for [applicationId] with the install referrer for [medium] + [content]. The referrer
+     * The published Play Store package — a fixed external identity, intentionally NOT `BuildConfig.APPLICATION_ID`:
+     * debug/benchmark variants carry an `applicationIdSuffix` (e.g. `.debug`) that points the link at an app that
+     * doesn't exist on the Store. The listing is always this one id, in every build variant.
+     */
+    private const val STORE_PACKAGE_NAME = "com.github.barriosnahuel.vossosunboton"
+
+    /**
+     * Play Store URL for the published listing with the install referrer for [medium] + [content]. The referrer
      * value is URL-encoded (Play requires it encoded, ≤ 512 chars — this stays well under).
      */
     fun playStoreUrl(
-        applicationId: String,
         medium: String,
         content: String,
     ): String {
         val referrer = "utm_source=$SOURCE&utm_medium=$medium&utm_content=$content"
-        return "$PLAY_STORE_DETAILS_URL?id=$applicationId&referrer=${Uri.encode(referrer)}"
+        return "$PLAY_STORE_DETAILS_URL?id=$STORE_PACKAGE_NAME&referrer=${Uri.encode(referrer)}"
     }
 }
