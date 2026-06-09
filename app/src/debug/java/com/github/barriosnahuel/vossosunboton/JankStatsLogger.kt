@@ -24,9 +24,11 @@ import timber.log.Timber
  * Firebase Performance to flag it weeks after release.
  *
  * Never ships to release: this class lives in the debug source set and the JankStats dependency is
- * `debugImplementation` only. The gate therefore fires in manual debug use AND in the instrumented
- * suite (same runtime home as `StrictModeConfigurator`) — making the existing pre-PR instrumented run
- * a jank gate for free, no new tests and no human watching Logcat.
+ * `debugImplementation` only. The crash fires in **manual / real-device debug use** but is suppressed
+ * **under instrumentation** ([armFrozenFrameCrash]): the cold-boot test emulator emits multi-second
+ * frozen frames from its own starvation that no per-frame threshold can tell apart from a real block,
+ * while a real device produces none in the same flows (verified on a Pixel 8). Instrumented runs keep
+ * the diagnostic log; the slow-frame regression gate there is the Macrobenchmark, not this.
  *
  * Two failure modes, deliberately mirroring the repo's fail-loud StrictMode philosophy:
  *  - **Install failure** is surfaced via [Tracker] (a non-fatal), not swallowed to a log nobody reads —
@@ -49,6 +51,15 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
     /** Session-scoped: one gate across all activities, so the frozen counter is the whole-session count. */
     private val frozenFrameGate = FrozenFrameGate()
 
+    /**
+     * The crash fires only outside instrumentation. The cold-boot test emulator emits multi-second
+     * frozen frames from its own starvation (system_server ANR / Choreographer skipping hundreds of
+     * frames) that are indistinguishable from a real main-thread block — and a real device produces
+     * none in the same flows (verified on a Pixel 8). So under instrumentation we keep the diagnostic
+     * *log* but suppress the *kill*; the gate stays a hard gate for manual / real-device debug use.
+     */
+    private val armFrozenFrameCrash = !isRunningUnderInstrumentation()
+
     override fun onActivityCreated(
         activity: Activity,
         savedInstanceState: Bundle?,
@@ -59,7 +70,9 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
                     val durationMs = frameData.frameDurationUiNanos / NANOS_PER_MILLI
                     // Feed every frame (not only janky ones) so the gate's startup window anchors on the
                     // genuine first rendered frame rather than the first slow one.
-                    if (frozenFrameGate.onFrame(frameData.frameStartNanos / NANOS_PER_MILLI, durationMs, frameData.states)) {
+                    if (armFrozenFrameCrash &&
+                        frozenFrameGate.onFrame(frameData.frameStartNanos / NANOS_PER_MILLI, durationMs, frameData.states)
+                    ) {
                         crashOnFrozenFrame(activity, durationMs, frameData.states)
                     }
                     if (frameData.isJank) {
@@ -71,7 +84,11 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
                 .getHolderForHierarchy(activity.window.decorView)
                 .state
                 ?.putState(JANK_SCREEN_STATE_KEY, activity::class.simpleName ?: activity.localClassName)
-            Timber.d("Jank diagnostics installed on %s", activity.localClassName)
+            Timber.d(
+                "Jank diagnostics installed on %s (frozen-frame crash gate %s)",
+                activity.localClassName,
+                if (armFrozenFrameCrash) "armed" else "log-only — under instrumentation",
+            )
         }.onFailure { error ->
             // Surface, don't swallow: a silently dead diagnostic is indistinguishable from "no jank".
             Tracker.track(RuntimeException("could not install jank diagnostics", error))
@@ -136,6 +153,14 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
 }
 
 private const val NANOS_PER_MILLI = 1_000_000L
+
+/**
+ * True when the app process is being driven by AndroidX instrumentation tests. Probed by reflection
+ * because `androidx.test.*` is on the `androidTest` classpath only — present in the app process during
+ * a `connectedAndroidTest` run, absent during a normal (manual) debug launch.
+ */
+private fun isRunningUnderInstrumentation(): Boolean =
+    runCatching { Class.forName("androidx.test.platform.app.InstrumentationRegistry") }.isSuccess
 
 /**
  * Wraps the frozen-frame gate failure so the message starts with the searchable `"JankStats: frozen

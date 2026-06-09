@@ -32,7 +32,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### For nerds 🤓
 
 #### Added
-- Debug-only JankStats frame diagnostics that log janky frames per screen to Logcat, and a hard gate that crashes debug and instrumented runs on a repeated frozen frame, so a main-thread block fails loudly like a StrictMode violation instead of surfacing weeks after release
+- Debug-only JankStats frame diagnostics that log janky frames per screen to Logcat, and a hard gate that crashes manual debug runs on a repeated frozen frame, so a main-thread block fails loudly like a StrictMode violation instead of surfacing weeks after release
 
 ## \[v2.1.0] - 2026-05-25
 
