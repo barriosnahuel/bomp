@@ -10,45 +10,58 @@ import androidx.metrics.performance.StateInfo
 /**
  * Decides whether a frozen frame should crash the process — the assertable half of the debug-only
  * jank gate (mirrors `StrictModeConfigurator`'s report decision). Pure logic, no Android/rendering
- * dependency, so the calibration (startup window, tolerance, allowlist) is exhaustively unit-tested
- * headless; [JankStatsLogger] owns the runtime wiring (the frame source and the actual kill).
+ * dependency, so the calibration (startup window, sustained-block window, allowlist) is exhaustively
+ * unit-tested headless; [JankStatsLogger] owns the runtime wiring (the frame source and the kill).
  *
- * Why frozen-only, why a hard gate: slow-frame jank is a non-deterministic spectrum (GC, thermal,
- * emulator slowness), so gating on it would be flaky — worse than no gate. A frozen frame (UI
- * duration > [FROZEN_FRAME_THRESHOLD_MS] ms) is so far above normal jitter it almost always means a
- * real main-thread block — the egregious class that *can* be a hard gate, like StrictMode crashing
- * on disk-on-main. Slow-frame regressions stay statistical (the Macrobenchmark `FrameTimingMetric`),
- * not a per-frame crash.
+ * **What "frozen" means here, and why not the Vitals metric.** A frame counts as frozen when its
+ * **UI-thread** duration (`FrameData.frameDurationUiNanos`) reaches [FROZEN_FRAME_THRESHOLD_MS]. This
+ * is deliberately *not* the Android Vitals "frozen frame > 700 ms" definition, which is *total* frame
+ * duration including GPU/composition. The gate targets a **main-thread block** — the egregious,
+ * crash-worthy bug class — and a block shows up as long UI-thread time, not GPU time. GPU-bound
+ * slowness (overdraw, heavy shaders) is real but is not a main-thread block; crashing for it would be
+ * a false positive, so it stays out of scope (covered statistically by the Macrobenchmark
+ * `FrameTimingMetric`). Slow-frame jank (JankStats' `isJank`, ~2× the refresh interval) is far too
+ * frequent to gate on and stays log-only.
  *
  * Three calibration mechanisms keep it from being flaky:
- *  - **Startup window** — frozen frames within [startupSettleMillis] of the first observed frame are
- *    ignored (not even counted). Cold-start composition + Firebase init legitimately exceed the
- *    threshold on slow devices; without this every cold start on a slow emulator would crash.
- *  - **Tolerance** — the gate fires on the [crashOnFrozenCount]-th frozen frame, so a single one-off
- *    environmental hiccup never crashes; only a repeated block does.
+ *  - **Per-screen startup window** — frozen frames within [startupSettleMillis] of the *first frame
+ *    of a given screen* are ignored (not even counted). Cold-start composition + Firebase init
+ *    legitimately exceed the threshold; crucially the window is re-armed per screen (keyed by the
+ *    [JANK_SCREEN_STATE_KEY] attribution), so an Activity opened late in the session gets the same
+ *    grace as the first one — not only the very first frame of the process.
+ *  - **Sustained-block window** — frozen frames only stack toward a crash when they occur within
+ *    [sustainedWindowMillis] of each other. Two unrelated one-off hiccups minutes (or tests) apart
+ *    don't accumulate; only a *sustained / repeated* block does. This also bounds the counter's
+ *    memory so frozen frames can't pile up across a whole session or instrumented suite.
  *  - **Allowlist** — known-legit-heavy frames matched by their attributed state (the frozen-frame
  *    analogue of StrictMode's `KnownThirdPartyViolation` escape hatch) never count.
  *
- * Session-scoped: one instance per process (held by the single [JankStatsLogger]); the frozen
- * counter is the whole-session count, not per-Activity.
+ * The gate fires on the [crashOnFrozenCount]-th frozen frame inside a sustained window; the first is
+ * absorbed as a one-off hiccup. Trade-off (accepted, see the investigation handoff): a single
+ * genuine one-shot block is *not* gated — that is the price of not crashing on environmental jitter.
+ *
+ * Session-scoped: one instance per process (held by the single [JankStatsLogger]). All mutable state
+ * is touched only from the JankStats frame-callback thread (a single shared `HandlerThread`), so the
+ * non-synchronized fields are safe; do not call [onFrame] from another thread.
  */
 internal class FrozenFrameGate(
     private val startupSettleMillis: Long = STARTUP_SETTLE_MILLIS,
     private val crashOnFrozenCount: Int = CRASH_ON_FROZEN_COUNT,
+    private val sustainedWindowMillis: Long = SUSTAINED_FROZEN_WINDOW_MILLIS,
     private val allowlist: List<KnownHeavyFrame> = KNOWN_HEAVY_FRAMES,
 ) {
-    private var firstFrameStartMillis: Long? = null
-    private var frozenCount = 0
+    private val screenFirstFrameMillis = mutableMapOf<String, Long>()
+    private var lastFrozenFrameMillis: Long? = null
+    private var frozenInWindowCount = 0
     private var fired = false
 
     /**
      * Feed one observed frame. Returns `true` iff this frame should crash the process.
      *
-     * Fed for *every* frame (not only janky ones) so [firstFrameStartMillis] anchors on the genuine
-     * first rendered frame rather than the first slow one.
+     * Fed for *every* frame (not only janky ones) so each screen's window anchors on its genuine
+     * first rendered frame rather than its first slow one.
      *
-     * @param frameStartMillis the frame's start timestamp (`FrameData.frameStartNanos` / 1e6); the
-     *   first value seen anchors the startup window.
+     * @param frameStartMillis the frame's start timestamp (`FrameData.frameStartNanos` / 1e6).
      * @param frameDurationMillis the frame's UI duration (`FrameData.frameDurationUiNanos` / 1e6).
      * @param states the frame's attributed states (`FrameData.states`).
      */
@@ -59,15 +72,29 @@ internal class FrozenFrameGate(
     ): Boolean {
         if (fired) return false // already posted the kill; don't re-fire (avoids duplicate non-fatals before death)
 
-        val firstFrame = firstFrameStartMillis ?: frameStartMillis.also { firstFrameStartMillis = it }
+        // Stamp this screen's first-seen time on its first frame of ANY duration — must precede the
+        // frozen early-return below, otherwise the window would anchor on the screen's first *frozen*
+        // frame and never exclude its legitimately-heavy cold paint.
+        val screen = screenKey(states)
+        val screenFirstFrame = screenFirstFrameMillis.getOrPut(screen) { frameStartMillis }
 
         if (frameDurationMillis < FROZEN_FRAME_THRESHOLD_MS) return false // slow/normal frame — never gates
-        if (frameStartMillis - firstFrame < startupSettleMillis) return false // startup window — legitimately heavy
+        if (frameStartMillis - screenFirstFrame < startupSettleMillis) return false // this screen's settle window
         if (allowlist.any { matcher -> matcher.matches(states) }) return false // known-legit-heavy render
 
-        frozenCount++
-        return (frozenCount >= crashOnFrozenCount).also { shouldCrash -> if (shouldCrash) fired = true }
+        // Only frozen frames close in time stack toward a crash: a sustained/repeated block, not two
+        // unrelated hiccups far apart. A gap larger than the window restarts the count.
+        val previousFrozen = lastFrozenFrameMillis
+        if (previousFrozen == null || frameStartMillis - previousFrozen > sustainedWindowMillis) {
+            frozenInWindowCount = 0
+        }
+        lastFrozenFrameMillis = frameStartMillis
+        frozenInWindowCount++
+        return (frozenInWindowCount >= crashOnFrozenCount).also { shouldCrash -> if (shouldCrash) fired = true }
     }
+
+    private fun screenKey(states: List<StateInfo>): String =
+        states.firstOrNull { it.key == JANK_SCREEN_STATE_KEY }?.value ?: UNATTRIBUTED_SCREEN
 }
 
 /**
@@ -89,18 +116,35 @@ internal data class KnownHeavyFrame(
         }
 }
 
-/** Frames whose UI duration reaches this are "frozen" (Firebase / Android Vitals definition). */
+/**
+ * The JankStats state key under which [JankStatsLogger] attributes each frame to its screen, and the
+ * key [FrozenFrameGate] reads to scope its per-screen startup window. Single source of truth so the
+ * producer and consumer can't drift (a silent drift would break every per-screen window + allowlist).
+ */
+internal const val JANK_SCREEN_STATE_KEY = "screen"
+
+/** Frames whose UI-thread duration reaches this are "frozen" (a main-thread block, not the GPU). */
 internal const val FROZEN_FRAME_THRESHOLD_MS = 700L
 
-/** Crash on the Nth frozen frame of the session; the first absorbs a one-off environmental hiccup. */
+/** Frozen frames with no `screen` attribution (e.g. before the state attaches) share this window. */
+private const val UNATTRIBUTED_SCREEN = ""
+
+/** Crash on the Nth frozen frame inside a sustained window; the first absorbs a one-off hiccup. */
 private const val CRASH_ON_FROZEN_COUNT = 2
 
 /**
- * Ignore frozen frames within this window of the first observed frame: cold-start composition +
+ * Ignore frozen frames within this window of a screen's first frame: cold-start composition +
  * Firebase init legitimately exceed the threshold on slow devices/emulators. Generous on purpose —
  * the gate catches steady-state regressions, not cold start (that is the Macrobenchmark's job).
  */
 private const val STARTUP_SETTLE_MILLIS = 5_000L
+
+/**
+ * Two frozen frames farther apart than this are treated as independent one-off hiccups, not a
+ * sustained block — the second restarts the count instead of firing the gate. Bounds the counter so
+ * frozen frames don't accumulate across an entire session / instrumented suite.
+ */
+private const val SUSTAINED_FROZEN_WINDOW_MILLIS = 5_000L
 
 // frozen-frame-allowlist: empty today — no screen has a known-legit frozen render. Add entries as the
 // gate surfaces deliberate heavy frames that are not main-thread bugs (same triage spirit as the

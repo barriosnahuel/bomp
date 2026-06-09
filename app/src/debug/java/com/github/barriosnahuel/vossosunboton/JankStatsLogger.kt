@@ -33,10 +33,11 @@ import timber.log.Timber
  *    otherwise a dead tool looks identical to "no jank". A successful install is logged too, so the
  *    absence of jank lines is a positive signal rather than ambiguous silence.
  *  - **A frozen frame past the gate** ([FrozenFrameGate]) crashes the process, exactly as StrictMode
- *    crashes on a violation. Only *frozen* frames gate — slow-frame jank is a non-deterministic
- *    spectrum and stays log-only / statistical (the Macrobenchmark `FrameTimingMetric` is its
- *    regression gate). The startup window + 2nd-frozen tolerance + allowlist that keep the gate from
- *    being flaky all live in [FrozenFrameGate]; this class only wires the frame source and the kill.
+ *    crashes on a violation. Only *frozen* frames (a long UI-thread block, not GPU slowness) gate —
+ *    slow-frame jank is a non-deterministic spectrum and stays log-only / statistical (the
+ *    Macrobenchmark `FrameTimingMetric` is its regression gate). The per-screen startup window +
+ *    sustained-block window + allowlist that keep the gate from being flaky all live in
+ *    [FrozenFrameGate]; this class only wires the frame source and the kill.
  *
  * Scope note: fine-grained per-phase marks (`list_scroll`, `playback`) need [PerformanceMetricsState]
  * seams at the exact scroll/playback call-sites in main/production code, intentionally deferred to
@@ -69,7 +70,7 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
             PerformanceMetricsState
                 .getHolderForHierarchy(activity.window.decorView)
                 .state
-                ?.putState(STATE_SCREEN, activity::class.simpleName ?: activity.localClassName)
+                ?.putState(JANK_SCREEN_STATE_KEY, activity::class.simpleName ?: activity.localClassName)
             Timber.d("Jank diagnostics installed on %s", activity.localClassName)
         }.onFailure { error ->
             // Surface, don't swallow: a silently dead diagnostic is indistinguishable from "no jank".
@@ -86,7 +87,9 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityDestroyed(activity: Activity) {
-        trackers.remove(activity)
+        // Stop tracking before dropping the reference: a heavy teardown frame (e.g. a config change)
+        // can otherwise still reach the gate's shared counter after the Activity is gone.
+        trackers.remove(activity)?.isTrackingEnabled = false
     }
 
     override fun onActivityStarted(activity: Activity) = Unit
@@ -133,8 +136,6 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
 }
 
 private const val NANOS_PER_MILLI = 1_000_000L
-
-private const val STATE_SCREEN = "screen"
 
 /**
  * Wraps the frozen-frame gate failure so the message starts with the searchable `"JankStats: frozen
