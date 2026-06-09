@@ -8,7 +8,8 @@
 # follow-up; see handoff). Instead the profile is generated here and committed. It must reflect the
 # REAL RELEASE startup path with REAL (non-obfuscated) names (so AGP remaps them through R8 when it
 # bakes the profile into the minified release), so generation runs against the `nonMinifiedRelease`
-# build type: release code (via the src/release source set) but un-minified. Generating against `debug`
+# build type: the real release code (its own CustomBuildTypeApplication, mirroring release) but
+# un-minified. Generating against `debug`
 # would capture debug-only code (StrictMode, seeder, debug Application); against the minified
 # `benchmark` it would capture obfuscated names. Device type doesn't matter for generation — the
 # profile is a code-path snapshot; a real device is only needed to VALIDATE timing afterwards.
@@ -23,14 +24,16 @@ TEST_APK=macrobenchmark/build/outputs/apk/benchmark/macrobenchmark-benchmark.apk
 DEST=app/src/main/baseline-prof.txt
 REMOTE="/storage/emulated/0/Android/media/$TEST_PKG/BaselineProfileGenerator_generate-baseline-prof.txt"
 
-# Resolve a single target device unless ANDROID_SERIAL is already set.
+# Resolve a single target device unless ANDROID_SERIAL is already set. Read `adb devices` ONCE so a
+# device (dis)connecting between the count and the pick can't leave us with an empty serial.
 if [ -z "${ANDROID_SERIAL:-}" ]; then
-  n="$(adb devices | awk 'NR>1 && $2=="device"' | wc -l | tr -d ' ')"
+  serials="$(adb devices | awk 'NR>1 && $2=="device"{print $1}')"
+  n="$(printf '%s\n' "$serials" | sed '/^$/d' | wc -l | tr -d ' ')"
   if [ "$n" != "1" ]; then
     echo "✘ Need exactly one attached device, or set ANDROID_SERIAL (found $n)." >&2
     exit 1
   fi
-  ANDROID_SERIAL="$(adb devices | awk 'NR>1 && $2=="device"{print $1; exit}')"
+  ANDROID_SERIAL="$serials"
   export ANDROID_SERIAL
 fi
 echo "▶ Device: $ANDROID_SERIAL"
@@ -45,9 +48,12 @@ echo "▶ Generating the profile (cold-start collect)…"
 # Delete any profile left by a previous run first: `am instrument` exits 0 even when the test fails
 # (it only prints FAILURES!!!), so without this a failed generation would silently pull the STALE file.
 adb -s "$ANDROID_SERIAL" shell rm -f "$REMOTE"
+# `|| true`: am instrument exits non-zero when the instrumentation can't even START (e.g. a renamed
+# class → INSTRUMENTATION_FAILED); without it `set -e` would kill the script at this assignment, before
+# the diagnostic below ever prints. The OK/FAILURE verdict is read from the captured output instead.
 instr_out="$(adb -s "$ANDROID_SERIAL" shell am instrument -w \
   -e class "$TEST_PKG.BaselineProfileGenerator" \
-  "$TEST_PKG/androidx.test.runner.AndroidJUnitRunner" 2>&1)"
+  "$TEST_PKG/androidx.test.runner.AndroidJUnitRunner" 2>&1 || true)"
 echo "$instr_out" | tail -3
 echo "$instr_out" | grep -q 'OK (1 test)' || {
   echo "✘ generation failed (am instrument did not report OK) — see output above." >&2
@@ -56,14 +62,19 @@ echo "$instr_out" | grep -q 'OK (1 test)' || {
 
 echo "▶ Pulling → $DEST"
 adb -s "$ANDROID_SERIAL" pull "$REMOTE" "$DEST" >/dev/null
-# The profile is only usable if it carries REAL (non-obfuscated) app names — AGP remaps those through
-# R8 at release time. If a stale minified `.debug` (the benchmark build) got profiled instead, the
-# rules are obfuscated and AGP bakes nothing. Fail loudly rather than commit a no-op profile.
-grep -q 'Lcom/github/barriosnahuel/vossosunboton/' "$DEST" || {
-  echo "✘ pulled profile has no readable app rules — a MINIFIED build was profiled. Generation must run" >&2
-  echo "  against the nonMinifiedRelease build (this script installs it; check nothing else holds .debug)." >&2
+# The profile is only usable if it carries the real release startup path with REAL (non-obfuscated)
+# names that AGP can remap through R8. A mere prefix check is NOT enough: R8 keeps the manifest
+# components (MainApplication, LandingActivity) by name even in a MINIFIED build, so an accidentally
+# profiled minified `.debug` (benchmark) build would still match the prefix. Require a high COUNT of
+# app rules instead — nonMinifiedRelease yields ~2000+, a minified build only the handful of kept
+# components. Fail loudly rather than commit a no-op (obfuscated) profile.
+app_rules="$(grep -c 'Lcom/github/barriosnahuel/vossosunboton/' "$DEST" || true)"
+if [ "${app_rules:-0}" -lt 200 ]; then
+  echo "✘ profile has only ${app_rules:-0} app rules — a MINIFIED build was profiled (R8 keeps manifest" >&2
+  echo "  components by name but obfuscates the rest). Generation must run against nonMinifiedRelease;" >&2
+  echo "  check nothing else holds the .debug package." >&2
   exit 1
-}
+fi
 echo "✓ $DEST updated ($(grep -c . "$DEST" || echo 0) lines). Review the diff, then commit."
 echo "  Validate on a REAL device (emulators report inverted AOT numbers):"
 echo "    ANDROID_SERIAL=<real-device> ./gradlew :macrobenchmark:connectedBenchmarkAndroidTest \\"

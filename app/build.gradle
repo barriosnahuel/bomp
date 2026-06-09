@@ -118,10 +118,12 @@ android {
         }
 
         // Non-minified release, used ONLY to generate the Baseline Profile (scripts/generate-baseline-
-        // profile.sh). Runs the real release code (via src/release source set) but un-minified, so the
-        // collected rules carry real names that AGP remaps through R8 when it bakes the profile into the
-        // minified release. Same `.debug` identity as benchmark (debug Firebase config, debug signing,
-        // installs over the dev debug app). Profileable via src/nonMinifiedRelease/AndroidManifest.xml.
+        // profile.sh). Runs the real release code — its own CustomBuildTypeApplication in
+        // src/nonMinifiedRelease mirrors src/release (source sets resolve by build-type name, not
+        // initWith, so it can't share the release one) — but un-minified, so the collected rules carry
+        // real names that AGP remaps through R8 when it bakes the profile into the minified release.
+        // Same `.debug` identity as benchmark (debug Firebase config, debug signing, installs over the
+        // dev debug app). Profileable via src/nonMinifiedRelease/AndroidManifest.xml.
         nonMinifiedRelease {
             initWith release
             matchingFallbacks = ['release']
