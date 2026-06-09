@@ -50,7 +50,7 @@ import org.junit.Test
 import org.robolectric.annotation.Config
 
 /**
- * Covers the non-blocking duplicate-name hint introduced in PR #2 of the stable-`Sound.id` series.
+ * Covers the non-blocking duplicate-name hint.
  * The hint surfaces when the user types a name that matches an existing Bomp; the save button
  * stays enabled because [SoundsRepository.save] upserts by id (ADR 0008), so two same-named
  * Bomps can legitimately coexist.

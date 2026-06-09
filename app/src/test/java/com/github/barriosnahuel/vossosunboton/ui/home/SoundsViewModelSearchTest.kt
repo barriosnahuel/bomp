@@ -38,8 +38,8 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
-        // Deterministically stop the reactive `repo.sounds` collector each VM starts in `init`
-        // (post-PR-#1130 fix). A bare `cancel()` is fire-and-forget: the collector can outlive the
+        // Deterministically stop the reactive `repo.sounds` collector each VM starts in `init`.
+        // A bare `cancel()` is fire-and-forget: the collector can outlive the
         // test, parked on the process-singleton DataStore, and pollute the next test by re-running
         // `loadSounds` against stale state. `cancelAndJoinAll()` joins until it unwinds — see
         // ViewModelTestCleanup.kt.

@@ -69,8 +69,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
-        // Deterministically stop the reactive `repo.sounds` collector each VM starts in `init`
-        // (post-PR-#1130 fix). A bare `cancel()` is fire-and-forget: the collector can outlive the
+        // Deterministically stop the reactive `repo.sounds` collector each VM starts in `init`.
+        // A bare `cancel()` is fire-and-forget: the collector can outlive the
         // test, parked on the process-singleton DataStore, and pollute the next test (e.g. firing
         // `loadSounds` against the prior VM's stale `_searchQuery`). `cancelAndJoinAll()` joins
         // until it unwinds — see ViewModelTestCleanup.kt.
@@ -642,7 +642,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
 
     @Test
     fun `repo save after VM init makes the new sound appear without selectTab`() {
-        // Regression for the post-PR-#1130 bug: AddButton save persisted but the visible list
+        // Regression: AddButton save persisted but the visible list
         // stayed stale until the user killed and reopened the app. The reactive `combine` in
         // `observeSoundsList` is what pulls the new emission through. Uses `runBlocking` rather
         // than `runTest` because the underlying `repo.save` suspends on real `Dispatchers.IO`
@@ -741,7 +741,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             // prime, repo.sounds.drop(1) collector) reach their suspension points before tests
             // mutate state via reflection. Without this yield, those collectors can race with
             // the test's `injectSounds(...)` and overwrite `_sounds` / `allSoundsCache` via a
-            // late-arriving loadSounds emission. The previous post-PR-#1130 timing relied on
+            // late-arriving loadSounds emission. The previous timing relied on
             // loadSounds being a single synchronous read; v2.4.0 added a per-load DataStore
             // round-trip for the private-only filter, widening the window where the test sees
             // a half-applied projection.

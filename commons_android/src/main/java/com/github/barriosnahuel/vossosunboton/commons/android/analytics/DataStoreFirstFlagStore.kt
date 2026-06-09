@@ -24,28 +24,14 @@ import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * [FirstFlagStore] backed by Jetpack DataStore Preferences with an in-memory cache.
+ * [FirstFlagStore] backed by Jetpack DataStore Preferences with an in-memory cache. Reads
+ * (`isFirstTime`) are pure in-memory `getOrDefault` — sync, lock-free; writes (`markFired`) update
+ * the [ConcurrentHashMap] atomically (`putIfAbsent`) and dispatch the disk write fire-and-forget on
+ * the process-lived [scope]. The constructor primes the map once via `runBlocking(Dispatchers.IO)`
+ * inside `AnalyticsTrackerProvider`'s `StrictMode.allowThreadDiskReads` block.
  *
- * Why the cache: the [FirstFlagStore] / [AnalyticsTracker] API is sync-from-caller because Firebase's
- * own `logEvent` is sync — the SDK queues events synchronously and persists them to disk on its own
- * worker thread, so the call returns before the caller can navigate away. Several of our analytics
- * call sites fire right before a context switch out of the app (share-sheet chooser, browser
- * intent, etc.); a `coroutineScope.launch { tracker.log(...) }` could lose the event because the
- * launch may not run before the OS suspends our process. Mirroring Firebase's design — sync API +
- * async-internal-buffer — preserves durability.
- *
- * Implementation:
- * - Constructor primes the in-memory map from DataStore once via `runBlocking(Dispatchers.IO)`.
- *   This is a one-time cost on first `AnalyticsTrackerProvider.get(context)` and lives inside the
- *   same `StrictMode.allowThreadDiskReads` block that already wraps Firebase init. The
- *   `MainApplication.onCreate` warm-up dispatches that init onto a background thread so the prime
- *   rarely blocks main in practice.
- * - Reads (`isFirstTime`) are pure in-memory `getOrDefault` — sync, lock-free.
- * - Writes update the [ConcurrentHashMap] atomically (`putIfAbsent`) and dispatch the disk write
- *   fire-and-forget on a process-lived [scope].
- *
- * Trade-off: a process kill between an in-memory write and the DataStore commit would lose the
- * `markFired` and re-emit the `first_*` variant on next launch. Acceptable for telemetry.
+ * Why a sync API + cache (not suspend reads), why the `runBlocking` boot-time prime, and the
+ * process-kill durability trade-off: docs/adr/0004-datastore-sync-api-cache-prime.md.
  */
 class DataStoreFirstFlagStore(
     context: Context,

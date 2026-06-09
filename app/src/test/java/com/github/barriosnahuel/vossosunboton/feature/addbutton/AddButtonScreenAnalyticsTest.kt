@@ -141,7 +141,7 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
         // Symmetry contract with Edit mode: AudioPreview's LaunchedEffect must run for the share-incoming URI.
         // We can't assert the play/pause Card here: SAMPLE_URI is unresolvable so MediaPlayer.prepare fails and
         // the Card stays hidden by the `if (isReady)` guard. Asserting the form below remains reachable proves
-        // the LaunchedEffect didn't throw. Happy-path interactivity needs a playable test URI — see PR notes.
+        // the LaunchedEffect didn't throw. Happy-path interactivity would need a playable test URI.
         ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
             composeTestRule.waitForIdle()
 
