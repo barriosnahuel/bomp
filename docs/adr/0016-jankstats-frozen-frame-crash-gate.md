@@ -36,15 +36,24 @@ A **frozen frame** — a frame whose **UI-thread** duration (`FrameData.frameDur
 delivers frames on a background `HandlerThread`). The decision logic lives in a pure, unit-tested
 `FrozenFrameGate`; `JankStatsLogger` wires the frame source and the kill.
 
-Three mechanisms keep it from being flaky:
+It crashes in **two tiers**, by how unambiguous the block is:
+
+- **Tier 1 — a single egregious frame (≥ 1.5 s)** crashes immediately. Outside the startup window, on
+  real hardware, a multi-second UI-thread frame is a genuine block, not jitter (GC pauses are
+  sub-second; thermal throttling spreads slowness over many frames, it doesn't freeze one for seconds).
+  So a real **one-shot** block on a screen visited once still fails loud.
+- **Tier 2 — the ambiguous 700 ms..1.5 s band** crashes on the **2nd** frozen frame within a 5 s
+  window. A lone frozen frame here is absorbed as a one-off environmental hiccup; two frozen frames far
+  apart don't accumulate (the window also bounds the counter across a session).
+
+Three filters apply before either tier:
 
 - **Per-screen startup window** — frozen frames within 5 s of a *screen's first frame* don't count
   (cold composition + Firebase init legitimately exceed 700 ms). Re-armed per screen, keyed by the
   attributed `screen` state — not once per process, so an Activity opened late gets the same grace.
-- **Sustained-block tolerance** — crash on the **2nd** frozen frame within a 5 s window; a lone frozen
-  frame is absorbed as a one-off hiccup, and two frozen frames far apart don't accumulate.
 - **Allowlist** — `KnownHeavyFrame` matchers exempt known-legit-heavy renders (the frozen-frame
-  analogue of StrictMode's `KnownThirdPartyViolation`).
+  analogue of StrictMode's `KnownThirdPartyViolation`), in either tier.
+- **Frozen threshold** — frames under 700 ms are ordinary jank, never gated.
 
 **The crash is suppressed under instrumentation** (`isRunningUnderInstrumentation()`, reflection on
 the androidTest-only `androidx.test`): instrumented runs keep the diagnostic **log** but not the kill.
@@ -60,8 +69,12 @@ Slow-frame jank stays log-only everywhere; its regression gate is the Macrobench
   GPU/composition) — GPU-bound slowness isn't a main-thread block; crashing for it is a false positive
   (driver 3). `frameDurationUiNanos` (UI/CPU-centric; `frameDurationCpuNanos` is its API-24+
   refinement) is the correct signal.
-- **Tolerance = 1** — a single 700 ms frame is too often an environmental hiccup (GC, thermal);
-  crashing on it reintroduces the flakiness driver 2 forbids.
+- **Tolerance = 1 across the whole frozen band** — a single 700 ms frame is too often an environmental
+  hiccup (GC, thermal); crashing on every one reintroduces the flakiness driver 2 forbids. The two-tier
+  rule keeps the 2-in-window tolerance for the ambiguous 700 ms..1.5 s band but *does* crash on a single
+  ≥ 1.5 s frame (tier 1), where the block is unambiguous — closing the one-shot-block gap without the
+  flakiness. (Rejecting tier 1 entirely was the original PR design; it hid a genuine one-shot block on a
+  screen visited once behind the log.)
 - **Arm under instrumentation** ("the existing pre-PR suite becomes the gate for free") — empirically
   does not survive the test emulator. A degraded cold-boot AVD (routine, per
   [ADR 0001](0001-local-ui-test-suite.md)) emits multi-second frozen frames from its own starvation
@@ -76,10 +89,11 @@ Slow-frame jank stays log-only everywhere; its regression gate is the Macrobench
   keeps the log). This deliberately narrows PR #1202's original "debug + instrumented" scope.
 - A real main-thread block introduced on any screen the developer exercises by hand on a real device
   fails loudly, like a StrictMode violation — without scripting a benchmark for that screen.
-- Calibration is emulator-sensitive; the per-screen window / sustained tolerance / allowlist are the
-  knobs. A frozen-frame crash on real hardware is triaged like a StrictMode violation (CONTRIBUTING.md
-  § *Performance → Frozen-frame crash gate*): fix the prod block, scope-allow a known-legit render via
-  the allowlist, or — last resort — tune the constants.
+- Calibration is emulator-sensitive; the per-screen window / the two-tier thresholds (700 ms band +
+  1.5 s egregious) / sustained tolerance / allowlist are the knobs. A frozen-frame crash on real
+  hardware is triaged like a StrictMode violation (CONTRIBUTING.md § *Performance → Frozen-frame crash
+  gate*): fix the prod block, scope-allow a known-legit render via the allowlist, or — last resort —
+  tune the constants.
 - **Revisit if:** real-device CI becomes available (instrumented arming could return); Vitals
   total-duration semantics are wanted (`frameDurationUiNanos` → `FrameDataApi31.frameOverrunNanos`,
   accepting GPU causes); or per-phase attribution (`list_scroll`, `playback`) is added (production
