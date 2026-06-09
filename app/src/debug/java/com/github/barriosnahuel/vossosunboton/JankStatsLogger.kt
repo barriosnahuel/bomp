@@ -17,48 +17,24 @@ import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import timber.log.Timber
 
 /**
- * Debug-only frame diagnostics + a hard gate on frozen frames. Installs [JankStats] on every Activity
- * window, attributes each frame to the screen it occurred on, logs janky frames to Logcat (to locate
- * the LandingActivity entry-screen jank, ~24.8% slow frames in production), and — for the pathological
- * frozen frames — crashes the process so a main-thread block fails loudly instead of waiting for
- * Firebase Performance to flag it weeks after release.
+ * Debug-only frame diagnostics + a hard gate on frozen frames: installs [JankStats] per Activity,
+ * attributes each frame to its screen, logs janky frames, and crashes on a frozen frame
+ * ([FrozenFrameGate]) so a main-thread block fails loud like a StrictMode violation. Decision +
+ * rationale: `docs/adr/0016-jankstats-frozen-frame-crash-gate.md`.
  *
- * Never ships to release: this class lives in the debug source set and the JankStats dependency is
- * `debugImplementation` only. The crash fires in **manual / real-device debug use** but is suppressed
- * **under instrumentation** ([armFrozenFrameCrash]): the cold-boot test emulator emits multi-second
- * frozen frames from its own starvation that no per-frame threshold can tell apart from a real block,
- * while a real device produces none in the same flows (verified on a Pixel 8). Instrumented runs keep
- * the diagnostic log; the slow-frame regression gate there is the Macrobenchmark, not this.
- *
- * Two failure modes, deliberately mirroring the repo's fail-loud StrictMode philosophy:
- *  - **Install failure** is surfaced via [Tracker] (a non-fatal), not swallowed to a log nobody reads —
- *    otherwise a dead tool looks identical to "no jank". A successful install is logged too, so the
- *    absence of jank lines is a positive signal rather than ambiguous silence.
- *  - **A frozen frame past the gate** ([FrozenFrameGate]) crashes the process, exactly as StrictMode
- *    crashes on a violation. Only *frozen* frames (a long UI-thread block, not GPU slowness) gate —
- *    slow-frame jank is a non-deterministic spectrum and stays log-only / statistical (the
- *    Macrobenchmark `FrameTimingMetric` is its regression gate). The two crash tiers (a single
- *    egregious frame, or a repeated one in the ambiguous band) + the per-screen startup window +
- *    allowlist that keep the gate from being flaky all live in [FrozenFrameGate]; this class only wires
- *    the frame source and the kill.
- *
- * Scope note: fine-grained per-phase marks (`list_scroll`, `playback`) need [PerformanceMetricsState]
- * seams at the exact scroll/playback call-sites in main/production code, intentionally deferred to
- * the production JankStats work (investigation plan Fase 6); here jank is attributed by screen.
+ * Never ships to release (debug source set, `debugImplementation` dep). The crash fires in manual /
+ * real-device debug but is **suppressed under instrumentation** ([armFrozenFrameCrash]) — the test
+ * emulator's own starvation fakes frozen frames a real device doesn't. Install failures surface via
+ * [Tracker] (a dead diagnostic must not look like "no jank"). Per-phase marks (`list_scroll`, …) are
+ * deferred to the production JankStats work; here jank is attributed by screen.
  */
 internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
     private val trackers = mutableMapOf<Activity, JankStats>()
 
-    /** Session-scoped: one gate across all activities, so the frozen counter is the whole-session count. */
+    /** One gate across all activities, so the frozen counter is the whole-session count. */
     private val frozenFrameGate = FrozenFrameGate()
 
-    /**
-     * The crash fires only outside instrumentation. The cold-boot test emulator emits multi-second
-     * frozen frames from its own starvation (system_server ANR / Choreographer skipping hundreds of
-     * frames) that are indistinguishable from a real main-thread block — and a real device produces
-     * none in the same flows (verified on a Pixel 8). So under instrumentation we keep the diagnostic
-     * *log* but suppress the *kill*; the gate stays a hard gate for manual / real-device debug use.
-     */
+    /** Crash only outside instrumentation: the test emulator's starvation fakes frozen frames a real device won't (ADR 0016). */
     private val armFrozenFrameCrash = !isRunningUnderInstrumentation()
 
     override fun onActivityCreated(
@@ -69,8 +45,7 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
             val jankStats =
                 JankStats.createAndTrack(activity.window) { frameData ->
                     val durationMs = frameData.frameDurationUiNanos / NANOS_PER_MILLI
-                    // Feed every frame (not only janky ones) so the gate's startup window anchors on the
-                    // genuine first rendered frame rather than the first slow one.
+                    // Feed every frame (not only janky ones) so each screen's window anchors on its first paint.
                     if (armFrozenFrameCrash &&
                         frozenFrameGate.onFrame(frameData.frameStartNanos / NANOS_PER_MILLI, durationMs, frameData.states)
                     ) {
@@ -91,7 +66,6 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
                 if (armFrozenFrameCrash) "armed" else "log-only — under instrumentation",
             )
         }.onFailure { error ->
-            // Surface, don't swallow: a silently dead diagnostic is indistinguishable from "no jank".
             Tracker.track(RuntimeException("could not install jank diagnostics", error))
         }
     }
@@ -105,8 +79,7 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
     }
 
     override fun onActivityDestroyed(activity: Activity) {
-        // Stop tracking before dropping the reference: a heavy teardown frame (e.g. a config change)
-        // can otherwise still reach the gate's shared counter after the Activity is gone.
+        // Stop tracking before dropping the ref: a teardown frame could otherwise still reach the gate.
         trackers.remove(activity)?.isTrackingEnabled = false
     }
 
@@ -132,13 +105,9 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
     }
 
     /**
-     * The gate fired: record a non-fatal with a static, searchable message, then kill the process —
-     * the exact shape of `StrictModeConfigurator.reportViolation`. Per-frame context (screen, duration)
-     * rides as breadcrumbs, never in the wrapper message, so the Crashlytics title stays stable.
-     *
-     * The kill is posted to the main looper because throwing from inside the JankStats callback would
-     * be caught by its own dispatch; a fresh main-loop message escapes to the system uncaught handler,
-     * which terminates the process. Same reasoning as the StrictMode `penaltyListener` kill.
+     * The gate fired: record a non-fatal (static message; per-frame context as breadcrumbs) then kill —
+     * the `StrictModeConfigurator.reportViolation` shape. The throw is posted to the main looper because
+     * the JankStats callback runs on a background thread and would swallow a direct throw.
      */
     private fun crashOnFrozenFrame(
         activity: Activity,
@@ -155,20 +124,11 @@ internal class JankStatsLogger : Application.ActivityLifecycleCallbacks {
 
 private const val NANOS_PER_MILLI = 1_000_000L
 
-/**
- * True when the app process is being driven by AndroidX instrumentation tests. Probed by reflection
- * because `androidx.test.*` is on the `androidTest` classpath only — present in the app process during
- * a `connectedAndroidTest` run, absent during a normal (manual) debug launch.
- */
+/** True under AndroidX instrumentation. Reflection because `androidx.test` is androidTest-only (absent in a manual debug launch). */
 private fun isRunningUnderInstrumentation(): Boolean =
     runCatching { Class.forName("androidx.test.platform.app.InstrumentationRegistry") }.isSuccess
 
-/**
- * Wraps the frozen-frame gate failure so the message starts with the searchable `"JankStats: frozen
- * frame"` identifier (the analogue of [StrictModeException]'s `"StrictMode:"` prefix). The message is
- * static — a compile-time constant — so the Crashlytics title never flickers; dynamic context (screen,
- * duration) travels as `Tracker.log` breadcrumbs attached just before the `track` call.
- */
+/** Static, searchable crash title (`"JankStats: frozen frame…"`); per-frame context rides as breadcrumbs, like StrictMode. */
 private class FrozenFrameException :
     RuntimeException(
         "JankStats: frozen frame exceeded ${FROZEN_FRAME_THRESHOLD_MS}ms (debug jank gate)",
