@@ -10,15 +10,10 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /**
- * Calibration of the debug-only frozen-frame gate. Pure logic, no rendering — the headless,
- * deterministic half of the gate; the runtime kill is wired in [JankStatsLogger] (mirroring the
- * already-trusted `StrictModeConfigurator` one-liner). Each test pins one calibration mechanism so a
- * future tweak to thresholds/windows can't silently break the others.
- *
- * Timing model: each screen's startup window anchors on *that screen's* first observed frame; the
- * sustained-block window measures the gap between consecutive frozen frames. Tests call [prime] (a
- * fast frame at t=0) to anchor a screen's window where the real app would, then place frames relative
- * to it.
+ * Calibration of [FrozenFrameGate] — one test per mechanism so a threshold/window tweak can't silently
+ * break the others. Timing model: each screen's startup window anchors on that screen's first observed
+ * frame; the sustained window measures the gap between consecutive frozen frames. [prime] anchors a
+ * screen's window at t=0 (where the real app would), then tests place frames relative to it.
  */
 class FrozenFrameGateTest {
     private val settleMs = 5_000L
