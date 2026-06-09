@@ -61,13 +61,14 @@ build's `debuggable=true` would distort the numbers.
   exact-N (idempotent, shrinkable), a single recomposition (no metric pollution), and — since sounds
   and their cached duration share one DataStore key — populated durations (render fidelity).
 
-**Rejected alternatives:**
-- *Real files for synthetic rows* — the scroll render never reads the file, so this adds I/O and
+## Options considered (and rejected)
+
+- **Real files for synthetic rows** — the scroll render never reads the file, so this adds I/O and
   file-path coupling without improving fidelity; its only effect would be making the disk-coupled
   `delete()` work, which the atomic primitive makes moot.
-- *Target the debug build* — `debuggable=true` distorts the numbers and forces a test-module variant
+- **Target the debug build** — `debuggable=true` distorts the numbers and forces a test-module variant
   matrix (two target applicationIds).
-- *Per-item `save()` + `delete()`* — cannot shrink (constraint 1) and pollutes the metric
+- **Per-item `save()` + `delete()`** — cannot shrink (constraint 1) and pollutes the metric
   (constraint 2).
 
 ## Consequences
