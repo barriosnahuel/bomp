@@ -60,7 +60,7 @@ the androidTest-only `androidx.test`): instrumented runs keep the diagnostic **l
 Slow-frame jank stays log-only everywhere; its regression gate is the Macrobenchmark `FrameTimingMetric`
 (ADR 0015), not this.
 
-## Rejected alternatives
+## Options considered (and rejected)
 
 - **Gate on `isJank`** — JankStats defines jank as ~2× the refresh interval (any frame over ~33 ms at
   60 Hz). Debug builds jank routinely; crashing on it would fire on nearly every interaction
@@ -94,10 +94,6 @@ Slow-frame jank stays log-only everywhere; its regression gate is the Macrobench
   hardware is triaged like a StrictMode violation (CONTRIBUTING.md § *Performance → Frozen-frame crash
   gate*): fix the prod block, scope-allow a known-legit render via the allowlist, or — last resort —
   tune the constants.
-- **Revisit if:** real-device CI becomes available (instrumented arming could return); Vitals
-  total-duration semantics are wanted (`frameDurationUiNanos` → `FrameDataApi31.frameOverrunNanos`,
-  accepting GPU causes); or per-phase attribution (`list_scroll`, `playback`) is added (production
-  JankStats, deferred).
 
 ## Invariants
 
@@ -105,6 +101,13 @@ Debug-only **by source set** — `FrozenFrameGate` / `JankStatsLogger` live in `
 dependency is `debugImplementation`; neither can reach a release build, so **no grep guard is needed**
 (the source-set boundary is the fence, the same reason `StrictModeConfigurator` has none). The gate's
 calibration is fenced by the `FrozenFrameGateTest` unit suite, not a grep.
+
+## Revisit criteria
+
+- **Real-device CI becomes available** — the instrumented arming this ADR drops could return.
+- **Vitals total-duration semantics are wanted** — switch `frameDurationUiNanos` →
+  `FrameDataApi31.frameOverrunNanos`, accepting GPU-bound causes into the gate.
+- **Per-phase attribution** (`list_scroll`, `playback`) is added — production JankStats, deferred today.
 
 ## Cross-references
 
