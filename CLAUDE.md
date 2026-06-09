@@ -204,6 +204,10 @@ Source of truth: `app/src/debug/.../StrictModeConfigurator.kt` (debug-only, neve
 
 When a new violation surfaces, the fix order is: **(1)** top app-code frame is ours (`com.github.barriosnahuel.vossosunboton.*`) → fix the production code, don't filter; **(2)** scopable to a known-OK call-site we own → wrap with `StrictMode.allowThreadDiskReads()` + `try/finally` at the call-site (canonical: `AnalyticsTrackerProvider.createTracker`), don't add a matcher; **(3)** third-party class running its own code → add a `KnownThirdPartyViolation`. Logcat filter, and the full triage tree with `methodNameContains` vs `fileNameContains` guidance: CONTRIBUTING.md § *Terminal: StrictMode violations*.
 
+## JankStats frozen-frame gate
+
+Debug-only rendering sibling of StrictMode: `app/src/debug/.../FrozenFrameGate.kt` + `JankStatsLogger.kt`. A **repeated frozen frame** (UI-thread duration ≥ 700 ms — a main-thread block, *not* GPU slowness) crashes the process via `Tracker.track(FrozenFrameException)` + a main-looper throw, static message `"JankStats: frozen frame…"`. Unlike StrictMode it is **manual / real-device debug only** — the crash is armed off under instrumentation (the cold-boot emulator emits multi-second frozen frames from its own starvation; a real device produces none). Slow-frame jank stays log-only; its regression gate is the Macrobenchmark, not this. Don't gate on `isJank` (too frequent) or total frame duration (GPU isn't a block). Calibration (per-screen startup window, 2nd-frozen-within-5s tolerance, allowlist) + the test-harness-disable rationale: [ADR 0016](docs/adr/0016-jankstats-frozen-frame-crash-gate.md). Triage when it fires (StrictMode-style fix order) + the perf-tool trio: CONTRIBUTING.md § *Performance*.
+
 ## Security boundaries
 
 Concrete rules for input/output validation and component exposure.

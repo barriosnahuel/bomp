@@ -96,6 +96,6 @@ Enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`):
 ## Cross-references
 
 - `CLAUDE.md` § *Project-specific overrides → Threading* and [ADR 0004](0004-datastore-sync-api-cache-prime.md) (the production `runBlocking` rule this is **not** an exception to).
-- `CONTRIBUTING.md` § *Performance benchmarking* (how to run).
+- `CONTRIBUTING.md` § *Performance* (how to run).
 - AndroidX Macrobenchmark: https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview
 - PRs #1201 (module + startup/scroll harness) and #1203 (seeded scroll across list sizes).

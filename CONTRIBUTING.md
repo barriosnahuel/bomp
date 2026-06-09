@@ -11,7 +11,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 - [Continuous integration](#continuous-integration-)
 - [Sources of truth for platform decisions](#sources-of-truth-for-platform-decisions-)
 - [Testing](#testing-)
-- [Performance benchmarking](#performance-benchmarking-)
+- [Performance](#performance-)
 - [Gradle upgrade](#gradle-upgrade)
 - [Firebase config file](#firebase-config-file-)
 - [Backup & restore testing](#backup--restore-testing-)
@@ -272,7 +272,17 @@ composeRule.awaitNode(hasSetTextAction()).performTextInput(name)
 
 Bare `waitForIdle()` / `waitUntil { onAllNodes(...).isNotEmpty() }` is still correct after deterministic actions (`performClick`, `pressBack`), before negative assertions (`assertCountEquals(0)`), before `.onFirst()` chains, and when the matcher would multi-match (the helpers' terminal `onNode*` throws on multi-match). The one-line rule also lives in `CLAUDE.md` § *Local UI test suite*.
 
-## Performance benchmarking 📈
+## Performance 📈
+
+Three complementary layers — reach for the one that matches the question:
+
+| Layer | What it does | When to reach for it |
+|---|---|---|
+| **Baseline Profile** (`app/src/main/baseline-prof.txt`) | AOT-compiles the cold-start path so first launches are fast | Make startup faster; regenerate when the startup path changes (§ *Baseline Profile* below) |
+| **Macrobenchmark** (`:macrobenchmark`) | Statistical on-device numbers for cold start + scroll — the **assertable regression gate** for slow-frame jank | Prove or measure a regression with numbers; validate the Baseline Profile |
+| **Frozen-frame crash gate** (debug JankStats) | **Fails loud** in manual debug on a repeated main-thread block, like StrictMode | Catch an egregious block the moment you hit it by hand — no script, no watching logcat |
+
+Rule of thumb: slow-frame jank is *measured* (Macrobenchmark); a *frozen* frame — a main-thread block — is *gated* (the crash gate). Complementary, not redundant. The first two are documented immediately below; the gate is § *Frozen-frame crash gate (JankStats)*.
 
 The `:macrobenchmark` module (`com.android.test`, AndroidX Macrobenchmark) measures LandingActivity's cold start and sound-list scroll on a **real device or emulator** — the on-device half of the entry-screen jank investigation (Firebase Performance flags the regimes; these reproduce them with numbers). It targets the app's release-like `benchmark` build type (non-debuggable, minified, profileable), so the numbers track what users get — not the debug build. Architecture + rationale (why synchronous atomic seeding, why not real files, relationship to ADR 0004): [ADR 0015](docs/adr/0015-macrobenchmark-seeding-architecture.md).
 
@@ -300,6 +310,20 @@ The profile must reflect the **real release startup path** with **real (non-obfu
 ```
 
 Any device or emulator works for **generation** (the profile is a code-path snapshot, not a timing). Review the diff and commit. Then **validate on a real device** (emulators report inverted AOT numbers, so they can't validate this): `StartupBenchmark.startupBaselineProfile` (`CompilationMode.Partial(Require)`) should land near `startupDefaultCompilation` and well under `startupNoCompilation`.
+
+### Frozen-frame crash gate (JankStats)
+
+Debug-only, the rendering sibling of StrictMode. `JankStatsLogger` installs JankStats per Activity (logs janky frames by screen to Logcat); `FrozenFrameGate` turns a **repeated frozen frame** into a process crash. Source of truth: `app/src/debug/.../FrozenFrameGate.kt` + `JankStatsLogger.kt`. Decision + full rationale (why frozen-only, why not `isJank`, why not total frame duration, why log-only under instrumentation): [ADR 0016](docs/adr/0016-jankstats-frozen-frame-crash-gate.md).
+
+**What fires it:** the **2nd** frozen frame — UI-thread duration ≥ 700 ms, a main-thread block, *not* GPU slowness — within a 5 s window, after each screen's 5 s startup settle. A lone frozen frame, or two far apart, never fires. Crash message: `JankStats: frozen frame exceeded 700ms (debug jank gate)`.
+
+**When it does NOT fire:** under instrumentation (`connectedAndroidTest` / the local UI suite) the crash is **suppressed** — the cold-boot emulator emits multi-second frozen frames from its own starvation that aren't real blocks (ADR 0016). Those runs keep the log; the line `frozen-frame crash gate log-only — under instrumentation` confirms it. The gate's home is **manual / real-device** debug use.
+
+**Triage when it fires** (same order as the StrictMode tree, § *Terminal: StrictMode violations*):
+
+1. **Top app-code frame is ours** (`com.github.barriosnahuel.vossosunboton.*`) → a real main-thread block on that screen. Fix the production code (move the work off the main thread). Don't allowlist.
+2. **A known-legit heavy render we own** (e.g. the first paint of a deliberately huge list) → add a `KnownHeavyFrame` to the allowlist in `FrozenFrameGate.kt` (grep marker `frozen-frame-allowlist`), same spirit as StrictMode's `KnownThirdPartyViolation`.
+3. **Suspected environment** (a thermally-throttled real device) → it already needs 2 frozen frames within 5 s; if it still misfires on real hardware, that's the signal to tune the constants — see ADR 0016.
 
 ## Platform upgrades
 ### API Level
