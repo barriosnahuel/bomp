@@ -37,9 +37,10 @@ import timber.log.Timber
  *  - **A frozen frame past the gate** ([FrozenFrameGate]) crashes the process, exactly as StrictMode
  *    crashes on a violation. Only *frozen* frames (a long UI-thread block, not GPU slowness) gate —
  *    slow-frame jank is a non-deterministic spectrum and stays log-only / statistical (the
- *    Macrobenchmark `FrameTimingMetric` is its regression gate). The per-screen startup window +
- *    sustained-block window + allowlist that keep the gate from being flaky all live in
- *    [FrozenFrameGate]; this class only wires the frame source and the kill.
+ *    Macrobenchmark `FrameTimingMetric` is its regression gate). The two crash tiers (a single
+ *    egregious frame, or a repeated one in the ambiguous band) + the per-screen startup window +
+ *    allowlist that keep the gate from being flaky all live in [FrozenFrameGate]; this class only wires
+ *    the frame source and the kill.
  *
  * Scope note: fine-grained per-phase marks (`list_scroll`, `playback`) need [PerformanceMetricsState]
  * seams at the exact scroll/playback call-sites in main/production code, intentionally deferred to

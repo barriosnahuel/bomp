@@ -24,6 +24,7 @@ class FrozenFrameGateTest {
     private val settleMs = 5_000L
     private val sustainedMs = 5_000L
     private val frozenMs = FROZEN_FRAME_THRESHOLD_MS // 700
+    private val egregiousMs = 1_500L
     private val afterWindow = settleMs + 1_000L
     private val gate = newGate(allowlist = emptyList())
 
@@ -32,6 +33,7 @@ class FrozenFrameGateTest {
             startupSettleMillis = settleMs,
             crashOnFrozenCount = 2,
             sustainedWindowMillis = sustainedMs,
+            egregiousFrozenMillis = egregiousMs,
             allowlist = allowlist,
         )
 
@@ -70,7 +72,33 @@ class FrozenFrameGateTest {
     fun `a second frozen frame within the sustained window crashes`() {
         gate.prime()
         gate.feed(start = afterWindow, durMs = 900)
-        assertThat(gate.feed(start = afterWindow + 200, durMs = 1_500)).isTrue()
+        assertThat(gate.feed(start = afterWindow + 200, durMs = 1_200)).isTrue() // both in the 700..egregious band
+    }
+
+    @Test
+    fun `a single egregiously long frame crashes immediately, no second needed`() {
+        gate.prime()
+        assertThat(gate.feed(start = afterWindow, durMs = egregiousMs)).isTrue()
+    }
+
+    @Test
+    fun `a frame just below the egregious threshold still needs a second frozen frame`() {
+        gate.prime()
+        assertThat(gate.feed(start = afterWindow, durMs = egregiousMs - 1)).isFalse() // 1st, ambiguous band
+        assertThat(gate.feed(start = afterWindow + 100, durMs = egregiousMs - 1)).isTrue() // 2nd within window
+    }
+
+    @Test
+    fun `an egregious frame within the startup window is still ignored`() {
+        gate.prime() // anchors the window at t=0
+        assertThat(gate.feed(start = 2_000, durMs = 4_000)).isFalse() // 2s in: inside the window, ignored despite its size
+    }
+
+    @Test
+    fun `an allowlisted egregious frame never crashes`() {
+        val allowlisted = newGate(listOf(KnownHeavyFrame(stateKey = JANK_SCREEN_STATE_KEY, stateValueContains = "HugeListActivity")))
+        allowlisted.prime(screen = "HugeListActivity")
+        assertThat(allowlisted.feed(start = afterWindow, durMs = 10_000, screen = "HugeListActivity")).isFalse()
     }
 
     @Test

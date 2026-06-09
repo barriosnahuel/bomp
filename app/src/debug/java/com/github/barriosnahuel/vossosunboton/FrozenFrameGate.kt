@@ -23,22 +23,23 @@ import androidx.metrics.performance.StateInfo
  * `FrameTimingMetric`). Slow-frame jank (JankStats' `isJank`, ~2× the refresh interval) is far too
  * frequent to gate on and stays log-only.
  *
- * Three calibration mechanisms keep it from being flaky:
- *  - **Per-screen startup window** — frozen frames within [startupSettleMillis] of the *first frame
- *    of a given screen* are ignored (not even counted). Cold-start composition + Firebase init
- *    legitimately exceed the threshold; crucially the window is re-armed per screen (keyed by the
- *    [JANK_SCREEN_STATE_KEY] attribution), so an Activity opened late in the session gets the same
- *    grace as the first one — not only the very first frame of the process.
- *  - **Sustained-block window** — frozen frames only stack toward a crash when they occur within
- *    [sustainedWindowMillis] of each other. Two unrelated one-off hiccups minutes (or tests) apart
- *    don't accumulate; only a *sustained / repeated* block does. This also bounds the counter's
- *    memory so frozen frames can't pile up across a whole session or instrumented suite.
- *  - **Allowlist** — known-legit-heavy frames matched by their attributed state (the frozen-frame
- *    analogue of StrictMode's `KnownThirdPartyViolation` escape hatch) never count.
+ * Two crash tiers, by how unambiguous the block is:
+ *  - **Tier 1 — a single egregious frame** (≥ [egregiousFrozenMillis]) crashes immediately. Outside the
+ *    startup window, on real hardware, a multi-second UI-thread frame is a genuine block, not jitter, so
+ *    a one-shot block on a screen you visit once still fails loud.
+ *  - **Tier 2 — the ambiguous [FROZEN_FRAME_THRESHOLD_MS]..[egregiousFrozenMillis] band** crashes on the
+ *    [crashOnFrozenCount]-th frozen frame inside a [sustainedWindowMillis] window. A lone frozen frame
+ *    here is absorbed as a one-off environmental hiccup (GC, thermal); only a *sustained / repeated*
+ *    block crashes. The window also bounds the counter so frozen frames can't pile up across a session.
  *
- * The gate fires on the [crashOnFrozenCount]-th frozen frame inside a sustained window; the first is
- * absorbed as a one-off hiccup. Trade-off (accepted, see the investigation handoff): a single
- * genuine one-shot block is *not* gated — that is the price of not crashing on environmental jitter.
+ * Three filters apply before either tier:
+ *  - **Per-screen startup window** — frozen frames within [startupSettleMillis] of the *first frame
+ *    of a given screen* are ignored. Cold-start composition + Firebase init legitimately exceed the
+ *    threshold; the window is re-armed per screen (keyed by [JANK_SCREEN_STATE_KEY]), so an Activity
+ *    opened late in the session gets the same grace as the first one — not only the first process frame.
+ *  - **Allowlist** — known-legit-heavy frames matched by their attributed state (the frozen-frame
+ *    analogue of StrictMode's `KnownThirdPartyViolation` escape hatch) never count, in either tier.
+ *  - **Frozen threshold** — frames under [FROZEN_FRAME_THRESHOLD_MS] are normal jank, never gated.
  *
  * Session-scoped: one instance per process (held by the single [JankStatsLogger]). All mutable state
  * is touched only from the JankStats frame-callback thread (a single shared `HandlerThread`), so the
@@ -48,6 +49,7 @@ internal class FrozenFrameGate(
     private val startupSettleMillis: Long = STARTUP_SETTLE_MILLIS,
     private val crashOnFrozenCount: Int = CRASH_ON_FROZEN_COUNT,
     private val sustainedWindowMillis: Long = SUSTAINED_FROZEN_WINDOW_MILLIS,
+    private val egregiousFrozenMillis: Long = EGREGIOUS_FROZEN_FRAME_THRESHOLD_MS,
     private val allowlist: List<KnownHeavyFrame> = KNOWN_HEAVY_FRAMES,
 ) {
     private val screenFirstFrameMillis = mutableMapOf<String, Long>()
@@ -82,8 +84,20 @@ internal class FrozenFrameGate(
         if (frameStartMillis - screenFirstFrame < startupSettleMillis) return false // this screen's settle window
         if (allowlist.any { matcher -> matcher.matches(states) }) return false // known-legit-heavy render
 
-        // Only frozen frames close in time stack toward a crash: a sustained/repeated block, not two
-        // unrelated hiccups far apart. A gap larger than the window restarts the count.
+        // Tier 1 — a single egregiously long frame. Outside the startup window, on real hardware (the gate
+        // only arms there), a frame this long is a genuine main-thread block, not environmental jitter: GC
+        // pauses are sub-second and thermal throttling spreads slowness over many frames, it doesn't freeze
+        // one for seconds. So a one-shot block on a screen you visit once still fails loud — no need to
+        // catch it a second time within a window.
+        if (frameDurationMillis >= egregiousFrozenMillis) {
+            fired = true
+            return true
+        }
+
+        // Tier 2 — the ambiguous 700 ms..egregious band, where a lone frozen frame is too often an
+        // environmental hiccup to justify a crash. Only frozen frames close in time stack toward a crash:
+        // a sustained/repeated block, not two unrelated hiccups far apart. A gap larger than the window
+        // restarts the count.
         val previousFrozen = lastFrozenFrameMillis
         if (previousFrozen == null || frameStartMillis - previousFrozen > sustainedWindowMillis) {
             frozenInWindowCount = 0
@@ -125,6 +139,13 @@ internal const val JANK_SCREEN_STATE_KEY = "screen"
 
 /** Frames whose UI-thread duration reaches this are "frozen" (a main-thread block, not the GPU). */
 internal const val FROZEN_FRAME_THRESHOLD_MS = 700L
+
+/**
+ * A *single* frozen frame this long crashes immediately (tier 1): on real hardware, outside the startup
+ * window, a multi-second UI-thread frame is a genuine block, not jitter (GC pauses are sub-second). The
+ * 700 ms..this band is ambiguous and uses the 2-in-a-window tolerance instead.
+ */
+private const val EGREGIOUS_FROZEN_FRAME_THRESHOLD_MS = 1_500L
 
 /** Frozen frames with no `screen` attribution (e.g. before the state attaches) share this window. */
 private const val UNATTRIBUTED_SCREEN = ""
