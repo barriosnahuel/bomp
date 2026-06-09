@@ -10,36 +10,40 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /**
- * Calibration of the debug-only frozen-frame gate. Pure logic, no rendering — this is the headless,
- * deterministic half of the gate; the runtime kill is wired in [JankStatsLogger] (and mirrors the
- * already-trusted `StrictModeConfigurator` one-liner). Each test fixes one calibration mechanism so a
- * future tweak to thresholds/tolerance/window can't silently break the others.
+ * Calibration of the debug-only frozen-frame gate. Pure logic, no rendering — the headless,
+ * deterministic half of the gate; the runtime kill is wired in [JankStatsLogger] (mirroring the
+ * already-trusted `StrictModeConfigurator` one-liner). Each test pins one calibration mechanism so a
+ * future tweak to thresholds/windows can't silently break the others.
  *
- * Timing model: the *first* [FrozenFrameGate.onFrame] call anchors the startup window at its
- * `frameStartMillis`; SETTLE_MS later the gate arms. In a real app the first observed frame is near
- * process start, so tests call [prime] first (a fast frame at t=0) to reproduce that anchor before
- * placing frames before/after the window.
+ * Timing model: each screen's startup window anchors on *that screen's* first observed frame; the
+ * sustained-block window measures the gap between consecutive frozen frames. Tests call [prime] (a
+ * fast frame at t=0) to anchor a screen's window where the real app would, then place frames relative
+ * to it.
  */
 class FrozenFrameGateTest {
     private val settleMs = 5_000L
+    private val sustainedMs = 5_000L
     private val frozenMs = FROZEN_FRAME_THRESHOLD_MS // 700
     private val afterWindow = settleMs + 1_000L
     private val gate = newGate(allowlist = emptyList())
 
     private fun newGate(allowlist: List<KnownHeavyFrame>) =
-        FrozenFrameGate(startupSettleMillis = settleMs, crashOnFrozenCount = 2, allowlist = allowlist)
+        FrozenFrameGate(
+            startupSettleMillis = settleMs,
+            crashOnFrozenCount = 2,
+            sustainedWindowMillis = sustainedMs,
+            allowlist = allowlist,
+        )
 
-    private fun screen(name: String = "LandingActivity") = listOf(StateInfo("screen", name))
-
-    /** Feed one frame; named args inlined here so the per-test call sites stay short and readable. */
+    /** Feed one frame attributed to [screen]; named args inlined so call sites stay short. */
     private fun FrozenFrameGate.feed(
         start: Long,
         durMs: Long,
-        name: String = "LandingActivity",
-    ) = onFrame(frameStartMillis = start, frameDurationMillis = durMs, states = screen(name))
+        screen: String = "LandingActivity",
+    ) = onFrame(frameStartMillis = start, frameDurationMillis = durMs, states = listOf(StateInfo(JANK_SCREEN_STATE_KEY, screen)))
 
-    /** A fast frame at t=0 — anchors the startup window where the real app would, and never counts. */
-    private fun FrozenFrameGate.prime() = feed(start = 0, durMs = 16)
+    /** A fast frame at t=0 — anchors [screen]'s startup window where the real app would, never counts. */
+    private fun FrozenFrameGate.prime(screen: String = "LandingActivity") = feed(start = 0, durMs = 16, screen = screen)
 
     @Test
     fun `a slow frame below the frozen threshold never gates, however many`() {
@@ -63,14 +67,14 @@ class FrozenFrameGateTest {
     }
 
     @Test
-    fun `the second frozen frame after the startup window crashes`() {
+    fun `a second frozen frame within the sustained window crashes`() {
         gate.prime()
         gate.feed(start = afterWindow, durMs = 900)
         assertThat(gate.feed(start = afterWindow + 200, durMs = 1_500)).isTrue()
     }
 
     @Test
-    fun `frozen frames within the startup window are ignored and never counted`() {
+    fun `frozen frames within a screen's startup window are ignored and never counted`() {
         // The first frame anchors the window at t=0; three frozen frames inside [0, settle) must not count.
         gate.feed(start = 0, durMs = 2_000)
         gate.feed(start = 1_000, durMs = 3_000)
@@ -80,7 +84,7 @@ class FrozenFrameGateTest {
     }
 
     @Test
-    fun `the window is anchored on the first observed frame even when it is fast`() {
+    fun `the startup window is anchored on the screen's first observed frame even when it is fast`() {
         gate.prime() // fast frame at t=0 anchors the window, does not count
         gate.feed(start = 2_000, durMs = 900) // inside window — ignored
         assertThat(gate.feed(start = afterWindow, durMs = 900)).isFalse()
@@ -88,31 +92,45 @@ class FrozenFrameGateTest {
     }
 
     @Test
-    fun `the window boundary is exclusive - a frame at exactly settle is already armed`() {
+    fun `the startup window boundary is exclusive - a frame at exactly settle is already armed`() {
         gate.prime()
-        // frameStart - firstFrame == settle is NOT < settle, so the boundary frame is armed (counts).
         assertThat(gate.feed(start = settleMs - 1, durMs = 900)).isFalse() // inside, uncounted
         assertThat(gate.feed(start = settleMs, durMs = 900)).isFalse() // armed: 1st counted
-        assertThat(gate.feed(start = settleMs + 10, durMs = 900)).isTrue() // 2nd counted
+        assertThat(gate.feed(start = settleMs + 10, durMs = 900)).isTrue() // 2nd counted, within sustained window
     }
 
     @Test
-    fun `an allowlisted frozen frame never counts toward the gate`() {
-        val allowlisted = newGate(listOf(KnownHeavyFrame(stateKey = "screen", stateValueContains = "HugeListActivity")))
-        allowlisted.prime()
-        repeat(10) {
-            assertThat(allowlisted.feed(start = afterWindow + it * 100L, durMs = 2_000, name = "HugeListActivity")).isFalse()
-        }
+    fun `each screen gets its own startup window - a late screen's cold paint is excluded`() {
+        // Regression guard: previously the window anchored on the FIRST frame of the whole process, so
+        // an Activity opened late legitimately froze past it. Now each screen re-arms its own window.
+        gate.feed(start = 0, durMs = 16, screen = "LandingActivity") // anchor Landing at t=0
+        gate.feed(start = 20_000, durMs = 16, screen = "AddButtonActivity") // anchor AddButton at t=20s
+        // 22s is 22s into the *process* but only 2s into AddButton's window → ignored.
+        assertThat(gate.feed(start = 22_000, durMs = 2_000, screen = "AddButtonActivity")).isFalse()
     }
 
     @Test
-    fun `allowlisted frozen frames do not absorb the tolerance for real ones`() {
-        val allowlisted = newGate(listOf(KnownHeavyFrame(stateKey = "screen", stateValueContains = "HugeListActivity")))
-        allowlisted.prime()
-        // One allowlisted frozen frame (ignored), then two REAL frozen frames → crash on the second real one.
-        allowlisted.feed(start = afterWindow, durMs = 2_000, name = "HugeListActivity")
-        assertThat(allowlisted.feed(start = afterWindow + 100, durMs = 900)).isFalse()
-        assertThat(allowlisted.feed(start = afterWindow + 200, durMs = 900)).isTrue()
+    fun `a screen still gates after its own startup window elapses`() {
+        gate.feed(start = 0, durMs = 16, screen = "LandingActivity")
+        gate.feed(start = 20_000, durMs = 16, screen = "AddButtonActivity") // anchor AddButton at t=20s
+        assertThat(gate.feed(start = 26_000, durMs = 900, screen = "AddButtonActivity")).isFalse() // 6s in → 1st
+        assertThat(gate.feed(start = 26_200, durMs = 900, screen = "AddButtonActivity")).isTrue() // 2nd within sustained
+    }
+
+    @Test
+    fun `two frozen frames farther apart than the sustained window do not accumulate`() {
+        // Regression guard: previously the session-wide counter let two frozen frames anywhere in the
+        // run crash the process. Now a gap beyond the sustained window restarts the count.
+        gate.prime()
+        gate.feed(start = afterWindow, durMs = 900) // 1st counted
+        assertThat(gate.feed(start = afterWindow + sustainedMs + 1_000, durMs = 900)).isFalse() // gap > window → reset
+    }
+
+    @Test
+    fun `the sustained-window boundary is inclusive - frames exactly a window apart still stack`() {
+        gate.prime()
+        gate.feed(start = afterWindow, durMs = 900) // 1st
+        assertThat(gate.feed(start = afterWindow + sustainedMs, durMs = 900)).isTrue() // gap == window → 2nd stacks
     }
 
     @Test
@@ -126,9 +144,36 @@ class FrozenFrameGateTest {
     }
 
     @Test
+    fun `an allowlisted frozen frame never counts toward the gate`() {
+        val allowlisted = newGate(listOf(KnownHeavyFrame(stateKey = JANK_SCREEN_STATE_KEY, stateValueContains = "HugeListActivity")))
+        allowlisted.prime(screen = "HugeListActivity")
+        repeat(10) {
+            assertThat(allowlisted.feed(start = afterWindow + it * 100L, durMs = 2_000, screen = "HugeListActivity")).isFalse()
+        }
+    }
+
+    @Test
+    fun `allowlisted frozen frames do not absorb the tolerance for real ones`() {
+        val allowlisted = newGate(listOf(KnownHeavyFrame(stateKey = JANK_SCREEN_STATE_KEY, stateValueContains = "HugeListActivity")))
+        allowlisted.prime()
+        // One allowlisted frozen frame (ignored), then two REAL frozen frames → crash on the second real one.
+        allowlisted.feed(start = afterWindow, durMs = 2_000, screen = "HugeListActivity")
+        assertThat(allowlisted.feed(start = afterWindow + 100, durMs = 900)).isFalse()
+        assertThat(allowlisted.feed(start = afterWindow + 200, durMs = 900)).isTrue()
+    }
+
+    @Test
+    fun `frames with no screen attribution share one window`() {
+        val unattributed = { start: Long, durMs: Long -> gate.onFrame(start, durMs, emptyList()) }
+        unattributed(0, 16) // anchors the unattributed window
+        assertThat(unattributed(afterWindow, 900)).isFalse() // 1st
+        assertThat(unattributed(afterWindow + 100, 900)).isTrue() // 2nd within sustained
+    }
+
+    @Test
     fun `a key-only allowlist matcher ignores the state value`() {
-        val matcher = KnownHeavyFrame(stateKey = "screen")
-        assertThat(matcher.matches(listOf(StateInfo("screen", "anything")))).isTrue()
+        val matcher = KnownHeavyFrame(stateKey = JANK_SCREEN_STATE_KEY)
+        assertThat(matcher.matches(listOf(StateInfo(JANK_SCREEN_STATE_KEY, "anything")))).isTrue()
         assertThat(matcher.matches(listOf(StateInfo("other", "anything")))).isFalse()
     }
 }
