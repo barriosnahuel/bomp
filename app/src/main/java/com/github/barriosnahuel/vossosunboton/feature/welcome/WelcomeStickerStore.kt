@@ -25,8 +25,8 @@ import kotlinx.coroutines.withContext
  * Persists the state of the home-grid welcome sticker (Sticker Cero, fresh-install variant).
  *
  * The welcome audio is **persistent** — it is treated as just-another-audio that the Bomper deletes
- * manually whenever they want. It no longer self-destructs on playback completion (feedback
- * v2.1.0 #1). Four pieces of state:
+ * manually whenever they want. It no longer self-destructs on playback completion. Four pieces of
+ * state:
  * - `consumed`: flips to `true` **only** when the user manually deletes the welcome and lets the
  *   Undo snackbar time out. Once `true`, the welcome never reappears on this install.
  * - `acknowledged`: flips to `true` the first time the welcome plays to completion. Drives the

@@ -338,9 +338,9 @@ class SoundsViewModel(
             }
         }
         // Reactive trigger: any change to the persisted sound list (save / rename / pin /
-        // duration / delete) re-runs `loadSounds` so the visible list catches up. This is the
-        // fix for the post-PR-#1130 regression where AddButton save/rename never propagated to
-        // Home — `loadSounds` only ran on cold start and tab switch.
+        // duration / delete) re-runs `loadSounds` so the visible list catches up. Without it,
+        // `loadSounds` would only run on cold start and tab switch, so an AddButton save/rename
+        // never propagated to Home.
         //
         // `drop(1)` skips this collector's own initial snapshot — the `loadSounds()` above has
         // already consumed it. `repo.sounds` is `distinctUntilChanged` upstream, so a write

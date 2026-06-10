@@ -25,8 +25,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * [CounterStore] backed by Jetpack DataStore Preferences with an in-memory cache. Same design as
- * [DataStoreFirstFlagStore] — see its KDoc for the rationale (sync API for durability across
- * navigate-away events, in-memory cache + async write-back for performance).
+ * [DataStoreFirstFlagStore]; rationale in docs/adr/0004-datastore-sync-api-cache-prime.md.
  *
  * One critical detail in [increment]: the disk write reads the latest cache value INSIDE the
  * `store.edit` block instead of capturing the `newValue` returned by `merge`. DataStore serialises

@@ -212,6 +212,51 @@ It is a benchmark-only primitive — only app/src/benchmark may call it (declare
 fi
 
 # ============================================================================
+# Comment-block length budget — see CLAUDE.md § "Comments & KDoc"
+# KDoc/comments carry what the code can't say: the contract, invariants & gotchas
+# you'd break unknowingly, and grep-anchor markers. Decision *rationale* (why this
+# design, rejected alternatives, revisit criteria) belongs in docs/adr/*.md,
+# referenced by a one-line pointer — not re-derived in a comment that then drifts
+# from the ADR (two sources of truth). This guard is the blunt backstop against an
+# egregiously long single comment block creeping back; the 25-26 line band is where
+# legit multi-key contracts live, so anything LONGER must be acknowledged. Escape
+# hatch for a genuinely-legit long block (a multi-key contract, a triage table): a
+# `long-comment-ok` marker anywhere inside the block. Counts a contiguous run of
+# comment lines (`//`, `/* */`, `/** */`); the 5-line license header is well under.
+# ============================================================================
+COMMENT_BLOCK_MAX=26
+COMMENT_DIRS="app/src commons_android/src commons_file/src model/src macrobenchmark/src"
+long_comments=$(
+    find $COMMENT_DIRS -name '*.kt' 2>/dev/null | while IFS= read -r f; do
+        awk -v MAX="$COMMENT_BLOCK_MAX" '
+            function flush() {
+                if (blocklen > MAX && !blockok) print FILENAME ":" blockstart " (" blocklen " comment lines)"
+                blocklen = 0; blockok = 0; blockstart = 0
+            }
+            {
+                t = $0; sub(/^[ \t]+/, "", t); iscomment = 0; afterclose = 0
+                if (inblock) { iscomment = 1; if (index(t, "*/") > 0) afterclose = 1 }
+                else if (t ~ /^\/\*/) { iscomment = 1; if (index(substr(t, 3), "*/") == 0) inblock = 1 }
+                else if (t ~ /^\/\//) iscomment = 1
+                if (iscomment) {
+                    if (blocklen == 0) blockstart = FNR
+                    blocklen++
+                    # marker must be a standalone token, not a substring of a longer identifier
+                    if (t ~ /(^|[^[:alnum:]_-])long-comment-ok([^[:alnum:]_-]|$)/) blockok = 1
+                    if (afterclose) inblock = 0
+                } else if (blocklen > 0) flush()
+            }
+            END { if (blocklen > 0) flush() }
+        ' "$f"
+    done || true
+)
+if [ -n "$long_comments" ]; then
+    fail "Comment hygiene: comment block longer than $COMMENT_BLOCK_MAX lines without a long-comment-ok marker:
+$long_comments
+KDoc = contract + invariants/gotchas + grep anchors; decision rationale belongs in docs/adr/*.md (one-line pointer), how-comments stay <= 2-3 lines. Trim the block to a pointer, or — for a genuinely-legit long block — acknowledge it with a \`long-comment-ok\` marker inside the block. See CLAUDE.md § Comments & KDoc."
+fi
+
+# ============================================================================
 if [ "$errors" -gt 0 ]; then
     echo
     echo "$errors ADR invariant(s) violated. See messages above for which ADR(s) to revisit." >&2

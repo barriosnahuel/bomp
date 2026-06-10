@@ -108,6 +108,12 @@ Every `.kt` source file must start with the AGPLv3 copyright block (`SPDX-Licens
 
 **Do not remove or hide the About screen.** It's the "Appropriate Legal Notices" mechanism required by AGPLv3 §0 (paired with the headers above). Entry: TopAppBar overflow menu in `LandingScreen.kt`.
 
+## Comments & KDoc
+
+**KDoc = contract.** Document what the code can't say itself: the contract (what/params/returns), invariants & gotchas you'd break unknowingly (thread-safety, main-looper post, ordering, reflection probe), and grep-anchor markers. **Decision rationale — why this design, rejected alternatives, revisit criteria — goes in `docs/adr/*.md`**, referenced by a one-line pointer (e.g. `… : docs/adr/00XX-name.md`). Re-deriving an ADR's rationale in a comment is two sources of truth that drift; the worked trim is [ADR 0016](docs/adr/0016-jankstats-frozen-frame-crash-gate.md) ↔ `FrozenFrameGate.kt`. **"How" comments stay ≤ 2-3 lines** — no truth is truer than the code itself. **No traceability breadcrumbs** in comments (PR/issue/feedback refs) — that lives in git/CHANGELOG/ADR/PR.
+
+Audit case-by-case, never blind-delete: a long block that is *local justification* with no ADR home (a multi-key contract, the `StrictModeConfigurator` matchers) stays. A single comment block over **26 lines** is flagged by `scripts/check-adr-invariants.sh` (an awk line-count over a contiguous comment run); trim it to a pointer, or acknowledge a genuinely-legit long block with a `long-comment-ok` marker **on its own line inside the block** — kin to the `// alpha-ok` / `// button-ok` hatches, but placed in the comment itself rather than trailing a code line (there is no offending code line to trail).
+
 ## Bug fixes — TDD workflow
 
 Bug fixes follow TDD: failing test reproducing the bug → minimum production fix → `./gradlew test`. Skip only when the bug is exclusively in UI rendering or platform wiring not exercisable by unit / Robolectric tests; note why in the PR. For production bugs (not local-repro), scope frequency, versions, OS, recurring stack frames in Crashlytics + BigQuery first. Full procedure + BigQuery patterns: CONTRIBUTING.md § *Testing → Bug fixes — TDD procedure* + § *BigQuery export*.

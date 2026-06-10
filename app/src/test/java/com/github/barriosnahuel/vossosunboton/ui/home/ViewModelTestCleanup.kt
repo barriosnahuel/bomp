@@ -16,7 +16,7 @@ import kotlinx.coroutines.runBlocking
  *
  * A bare `viewModelScope.cancel()` is fire-and-forget — it flips the scope's `Job` to
  * "cancelling" and returns without waiting. The `repo.sounds.drop(1).collect { loadSounds() }`
- * collector each VM starts in `init` (post-PR-#1130 fix) then stays parked on the
+ * collector each VM starts in `init` then stays parked on the
  * process-singleton `bompsStore` DataStore and can outlive the test: the next test's
  * `clearForTest()` / `save(...)` writes emit through it, re-running `loadSounds` and leaking
  * analytics events (e.g. `milestone_sounds_3`, `search_zero_results`) into the next test's
