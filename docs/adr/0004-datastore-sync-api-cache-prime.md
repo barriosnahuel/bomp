@@ -84,6 +84,13 @@ Use the in-memory cache + async write-back pattern, with these specifics:
   reads. If a new call site claims it needs sync, the bar is: produce a
   failure mode that costs durability the way the chooser-navigation race
   does, and supersede this ADR with one that widens the scope deliberately.
+- **Durability trade-off of the fire-and-forget write-back.** A write updates
+  the in-memory cache synchronously but commits to DataStore asynchronously, so
+  a process kill in the window between the two loses that write. For the
+  `is_first_<event>` flags this means re-emitting the `first_*` variant on the
+  next launch; for counters it means a missed increment. Accepted: telemetry
+  tolerates the rare double-count / re-emit, and the alternative (a synchronous
+  disk write per event) reintroduces the main-thread I/O this design avoids.
 - Tests substitute via `clearForTest()` (declared on every store) and / or
   a fake tracker (`FakeAnalyticsTracker`); the production cache-prime path
   does not run in unit tests.

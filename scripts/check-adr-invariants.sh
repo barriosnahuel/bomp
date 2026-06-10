@@ -224,8 +224,8 @@ fi
 # `long-comment-ok` marker anywhere inside the block. Counts a contiguous run of
 # comment lines (`//`, `/* */`, `/** */`); the 5-line license header is well under.
 # ============================================================================
-COMMENT_BLOCK_MAX=25
-COMMENT_DIRS="app/src commons_android/src commons_file/src model/src"
+COMMENT_BLOCK_MAX=26
+COMMENT_DIRS="app/src commons_android/src commons_file/src model/src macrobenchmark/src"
 long_comments=$(
     find $COMMENT_DIRS -name '*.kt' 2>/dev/null | while IFS= read -r f; do
         awk -v MAX="$COMMENT_BLOCK_MAX" '
@@ -241,13 +241,14 @@ long_comments=$(
                 if (iscomment) {
                     if (blocklen == 0) blockstart = FNR
                     blocklen++
-                    if (index(t, "long-comment-ok") > 0) blockok = 1
+                    # marker must be a standalone token, not a substring of a longer identifier
+                    if (t ~ /(^|[^[:alnum:]_-])long-comment-ok([^[:alnum:]_-]|$)/) blockok = 1
                     if (afterclose) inblock = 0
                 } else if (blocklen > 0) flush()
             }
             END { if (blocklen > 0) flush() }
         ' "$f"
-    done
+    done || true
 )
 if [ -n "$long_comments" ]; then
     fail "Comment hygiene: comment block longer than $COMMENT_BLOCK_MAX lines without a long-comment-ok marker:

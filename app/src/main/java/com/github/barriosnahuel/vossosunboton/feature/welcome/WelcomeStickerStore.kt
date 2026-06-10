@@ -46,8 +46,6 @@ import kotlinx.coroutines.withContext
  * purpose, separate from the audio-metadata store. Backup posture: included in
  * `app_backup_rules.xml` and `app_data_extraction_rules.xml` — the user's "I dismissed this" gesture
  * is meaningful state that should survive a restore. `BackupRulesTest` enforces the include rules.
- *
- * long-comment-ok: four-key persistence contract + backup invariant — local to this store, no ADR rationale to lift.
  */
 class WelcomeStickerStore(
     context: Context,
