@@ -167,6 +167,18 @@ internal class AppThemeContrastTest {
         assertTextAA(DarkColors.onSurfaceVariant, DarkColors.background, "dark: onSurfaceVariant / background")
     }
 
+    // --- Onboarding tour muted text (eyebrow + body on the Scaffold `surface`) ---
+
+    @Test
+    fun `light onSurfaceVariant on surface onboarding text passes AA`() {
+        assertTextAA(LightColors.onSurfaceVariant, LightColors.surface, "light: onSurfaceVariant / surface")
+    }
+
+    @Test
+    fun `dark onSurfaceVariant on surface onboarding text passes AA`() {
+        assertTextAA(DarkColors.onSurfaceVariant, DarkColors.surface, "dark: onSurfaceVariant / surface")
+    }
+
     // --- MySoundsEmptyState ripple pairs ---
     // Lock the inner-ring composite (primary @ INNER_RIPPLE_ALPHA over surface) to ≥3:1 non-text
     // in both modes. Guards against future alpha drift in MySoundsEmptyState.kt.

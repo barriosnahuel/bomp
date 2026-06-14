@@ -97,6 +97,7 @@
     <string name="app_my_sounds_empty_headline">This is where the voices live.</string>
     <string name="app_my_sounds_empty_body">A laugh, a "happy birthday", an "on my way" from someone who matters. Share any voice note from WhatsApp, Telegram, or wherever — it\'ll wait right here, ready when you are.</string>
     <string name="app_my_sounds_empty_cta">Import</string>
+    <string name="app_my_sounds_empty_secondary">See how it works</string>
 
     <!-- Welcome sticker (Sticker Cero, fresh-install variant) -->
     <string name="app_welcome_sticker_title">Your first voice-hug</string>
@@ -233,4 +234,36 @@
     <string name="app_hub_record">Record your first Bomp</string>
     <string name="app_hub_record_sub">Press and talk. We\'re cooking it up.</string>
     <string name="app_hub_record_badge">Soon</string>
+    <string name="app_hub_how">See how it works</string>
+    <string name="app_hub_how_sub">A minute and you\'ve got it.</string>
+
+    <!-- Onboarding tour (3 steps, on-demand from the Hub and the empty state) -->
+    <string name="app_onboarding_skip">Skip</string>
+    <string name="app_onboarding_progress_description">Step %1$d of %2$d</string>
+    <string name="app_onboarding_step1_eyebrow">Add</string>
+    <string name="app_onboarding_step1_title">Bring in the voices you already have.</string>
+    <string name="app_onboarding_step1_body">A voice note from WhatsApp, Telegram, wherever. Share it to Bomp and it stays saved.</string>
+    <string name="app_onboarding_step1_cta">Go on</string>
+    <string name="app_onboarding_step1_demo_description">Sharing a voice note from another app into Bomp.</string>
+    <string name="app_onboarding_step2_eyebrow">Keep</string>
+    <string name="app_onboarding_step2_title">Keep them forever, your way.</string>
+    <string name="app_onboarding_step2_body">Swipe to pin the ones you use most, and sort them into collections or the Vault. Here they don\'t expire or get deleted — they\'re yours for good.</string>
+    <string name="app_onboarding_step2_cta">Next</string>
+    <string name="app_onboarding_step2_demo_description">Swiping a saved audio to pin it, with collections and the Vault below.</string>
+    <string name="app_onboarding_step3_eyebrow">Bomp</string>
+    <string name="app_onboarding_step3_title">Send it to whoever needs to hear it.</string>
+    <string name="app_onboarding_step3_body">The right audio, in the right chat, at the right moment. That\'s bomping.</string>
+    <string name="app_onboarding_step3_cta">Start</string>
+    <string name="app_onboarding_step3_demo_description">Sharing a saved audio out to a chat.</string>
+    <!-- Decorative labels inside the demo illustrations (not announced; the step description carries meaning) -->
+    <string name="app_onboarding_share_with">Share with</string>
+    <string name="app_onboarding_dest_bomp">Bomp</string>
+    <string name="app_onboarding_dest_chat">Chat</string>
+    <string name="app_onboarding_dest_group">Group</string>
+    <string name="app_onboarding_dest_more">More</string>
+    <string name="app_onboarding_chip_all">All</string>
+    <string name="app_onboarding_chip_collection">Recipes</string>
+    <string name="app_onboarding_demo_card_pinned">Grandma\'s laugh</string>
+    <string name="app_onboarding_demo_card_other">Client quote</string>
+    <string name="app_onboarding_demo_card_send">Happy birthday, genius</string>
 </resources>

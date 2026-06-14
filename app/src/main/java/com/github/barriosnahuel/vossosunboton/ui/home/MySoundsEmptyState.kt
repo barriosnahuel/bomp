@@ -22,6 +22,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,11 +40,13 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
  * welcome sticker has been consumed (so the list is genuinely empty). Continues the voice from
  * the welcome audio: keep close the voices that matter, hear them whenever you want. Owns the one
  * import imperative for this state — [onImportClick] opens the same add-a-Bomp Hub as the FAB,
- * which the host suppresses here so there is exactly one call to action.
+ * which the host suppresses here so there is exactly one call to action. [onShowOnboarding] is the
+ * soft secondary exit below it — a low-commitment "see how it works" that opens the tour.
  */
 @Composable
 internal fun MySoundsEmptyState(
     onImportClick: () -> Unit,
+    onShowOnboarding: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rippleColor = MaterialTheme.colorScheme.primary
@@ -119,6 +122,12 @@ internal fun MySoundsEmptyState(
                     ),
             ) {
                 Text(text = stringResource(R.string.app_my_sounds_empty_cta))
+            }
+            Spacer(Modifier.height(Spacing.SM))
+            // Text tier (ADR 0010): a low-commitment secondary below the single Import imperative —
+            // inherits `primary`, no container, so it never competes with the filled CTA above.
+            TextButton(onClick = onShowOnboarding) {
+                Text(text = stringResource(R.string.app_my_sounds_empty_secondary))
             }
         }
     }

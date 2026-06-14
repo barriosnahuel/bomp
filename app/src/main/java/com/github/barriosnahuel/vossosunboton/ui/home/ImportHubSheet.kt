@@ -47,17 +47,19 @@ private val HUB_ICON_TILE = 44.dp
 private val HUB_TILE_RADIUS = 12.dp
 
 /**
- * The import Hub — a [ModalBottomSheet] opened by the + FAB on My Bomps. Two paths: a live
- * "import audio from your device" row ([onImport]) and a visible-but-inert "record" row badged
- * "Soon" (its destination is a later release; designing it now means enabling it later won't
- * reshape the sheet). The "see how it works" row is intentionally absent until onboarding exists.
+ * The import Hub — a [ModalBottomSheet] opened by the + FAB on My Bomps. Three paths: a live "import
+ * audio from your device" row ([onImport]); a visible-but-inert "record" row badged "Soon" (its
+ * destination is a later release; designing it now means enabling it later won't reshape the sheet);
+ * and a "see how it works" row ([onHowItWorks]) that opens the onboarding tour, re-openable any time.
  *
- * Presentational only: the caller dismisses on [onImport]/[onDismiss] and owns the file picker.
+ * Presentational only: the caller dismisses on [onImport]/[onHowItWorks]/[onDismiss] and owns the
+ * file picker and the tour state.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ImportHubSheet(
     onImport: () -> Unit,
+    onHowItWorks: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -108,6 +110,21 @@ internal fun ImportHubSheet(
                 iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 badge = stringResource(R.string.app_hub_record_badge),
                 onClick = null,
+            )
+            // Soft secondary helper — neutral tile (not acid) so it never competes with the import
+            // primary. Animate the sheet closed first, then hand off, mirroring the import row.
+            HubRow(
+                iconPainter = painterResource(R.drawable.app_ic_play_arrow),
+                title = stringResource(R.string.app_hub_how),
+                subtitle = stringResource(R.string.app_hub_how_sub),
+                tileColor = MaterialTheme.colorScheme.surfaceVariant,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                onClick = {
+                    scope.launch {
+                        sheetState.hide()
+                        onHowItWorks()
+                    }
+                },
             )
         }
     }

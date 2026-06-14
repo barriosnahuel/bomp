@@ -32,7 +32,7 @@ internal class MySoundsEmptyStateTest : AbstractRobolectricTest() {
         val body = context.getString(R.string.app_my_sounds_empty_body)
 
         composeTestRule.setContent {
-            MaterialTheme { MySoundsEmptyState(onImportClick = {}) }
+            MaterialTheme { MySoundsEmptyState(onImportClick = {}, onShowOnboarding = {}) }
         }
 
         composeTestRule.onNodeWithText(headline).assertIsDisplayed()
@@ -46,7 +46,7 @@ internal class MySoundsEmptyStateTest : AbstractRobolectricTest() {
         var imports = 0
 
         composeTestRule.setContent {
-            MaterialTheme { MySoundsEmptyState(onImportClick = { imports++ }) }
+            MaterialTheme { MySoundsEmptyState(onImportClick = { imports++ }, onShowOnboarding = {}) }
         }
 
         composeTestRule.onNodeWithText(cta).assertIsDisplayed()
@@ -54,5 +54,21 @@ internal class MySoundsEmptyStateTest : AbstractRobolectricTest() {
         composeTestRule.onNodeWithText(cta).performClick()
 
         assertThat(imports).isEqualTo(1)
+    }
+
+    @Test
+    fun `MySoundsEmptyState secondary invokes onShowOnboarding when tapped`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val secondary = context.getString(R.string.app_my_sounds_empty_secondary)
+        var tours = 0
+
+        composeTestRule.setContent {
+            MaterialTheme { MySoundsEmptyState(onImportClick = {}, onShowOnboarding = { tours++ }) }
+        }
+
+        composeTestRule.onNodeWithText(secondary).assertHasClickAction()
+        composeTestRule.onNodeWithText(secondary).performClick()
+
+        assertThat(tours).isEqualTo(1)
     }
 }

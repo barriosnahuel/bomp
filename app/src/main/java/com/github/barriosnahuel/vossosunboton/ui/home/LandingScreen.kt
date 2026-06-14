@@ -116,6 +116,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // Import Hub open state. Saveable so an Activity recreate (rotation, theme, system kill) while
     // the sheet is open does not silently rewind the user back to the list (§ Stateful Composables).
     var isHubVisible by rememberSaveable { mutableStateOf(false) }
+    // Onboarding tour: null = closed, 0..2 = open at that step. One nullable Int captures both
+    // "is it open" and the step, so an Activity recreate mid-tour cannot rewind the user to step 0
+    // (§ Stateful Composables). On-demand only — no first-run auto-open, no "seen" flag.
+    var onboardingStep by rememberSaveable { mutableStateOf<Int?>(null) }
     // System file picker for the Hub's "import audio" path. OpenDocument(arrayOf("audio/*")) opens the
     // full SAF browser filtered to audio (non-audio files are not selectable) — better at surfacing
     // on-device audio across OEMs than GetContent's "Recent" view. We copy the audio at save time, so we
@@ -128,9 +132,12 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             uri?.let { context.startActivity(AddButtonActivity.createIntent(context, it)) }
         }
 
-    LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible) {
+    // Key on the open/closed boolean, not the raw step: advancing or going back within the tour must
+    // not re-emit screen_view=onboarding (one open = one screen view, like the other overlays).
+    LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible, onboardingStep != null) {
         val name =
             when {
+                onboardingStep != null -> CanonicalScreenName.ONBOARDING
                 isSearchVisible -> CanonicalScreenName.SEARCH_SOUND
                 isAboutVisible -> CanonicalScreenName.ABOUT
                 manageRequest != null -> CanonicalScreenName.MANAGE_COLLECTIONS
@@ -145,7 +152,12 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     }
 
     BackHandler(
-        enabled = !isAboutVisible && manageRequest == null && immersiveListenSoundId == null && tabBackStack.isNotEmpty(),
+        enabled =
+            !isAboutVisible &&
+                manageRequest == null &&
+                immersiveListenSoundId == null &&
+                onboardingStep == null &&
+                tabBackStack.isNotEmpty(),
     ) {
         viewModel.selectTab(tabBackStack.removeAt(tabBackStack.lastIndex))
     }
@@ -177,7 +189,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // and UI tests neither reach nor double-match nodes hidden behind the opaque overlay (e.g. a
     // collection name shown both in the chip row and in the Manage list). Drawing is untouched, so
     // the gesture still reveals the live list visually.
-    val subScreenOpen = isAboutVisible || manageRequest != null || immersiveListenSoundId != null
+    val subScreenOpen = isAboutVisible || manageRequest != null || immersiveListenSoundId != null || onboardingStep != null
     ScaffoldedLanding(
         modifier = if (subScreenOpen) Modifier.clearAndSetSemantics {} else Modifier,
         viewModel = viewModel,
@@ -208,6 +220,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             if (!sound.isPlaying) viewModel.playOrStop(sound)
         },
         onCreateClick = { isHubVisible = true },
+        onShowOnboarding = { onboardingStep = 0 },
     )
 
     // Exactly one sub-screen overlays the list at a time (About wins over Manage, preserving the
@@ -257,7 +270,30 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     importPicker.launch(arrayOf("audio/*"))
                 }
             },
+            onHowItWorks = {
+                isHubVisible = false
+                onboardingStep = 0
+            },
             onDismiss = { isHubVisible = false },
+        )
+    }
+
+    // On-demand onboarding tour overlaying everything (opened from the Hub or the empty state). The
+    // final "start" CTA lands on the Hub so the user can import right away ("Empezá cae al Hub").
+    onboardingStep?.let { current ->
+        com.github.barriosnahuel.vossosunboton.feature.onboarding.OnboardingTour(
+            step = current,
+            onAdvance = {
+                onboardingStep =
+                    ((onboardingStep ?: 0) + 1)
+                        .coerceAtMost(com.github.barriosnahuel.vossosunboton.feature.onboarding.ONBOARDING_STEP_COUNT - 1)
+            },
+            onStepBack = { onboardingStep = ((onboardingStep ?: 0) - 1).coerceAtLeast(0) },
+            onSkip = { onboardingStep = null },
+            onFinish = {
+                onboardingStep = null
+                isHubVisible = true
+            },
         )
     }
 
@@ -375,6 +411,7 @@ private fun ScaffoldedLanding(
     onActiveFilterEditClick: (String) -> Unit,
     onImmersivePlay: (Sound) -> Unit,
     onCreateClick: () -> Unit,
+    onShowOnboarding: () -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
@@ -453,6 +490,7 @@ private fun ScaffoldedLanding(
                     allCollections = collections,
                     onActiveFilterEditClick = onActiveFilterEditClick,
                     onImportClick = onCreateClick,
+                    onShowOnboarding = onShowOnboarding,
                     viewModel = viewModel,
                     context = context,
                 )
@@ -868,6 +906,7 @@ private fun MySoundsBody(
     allCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
     onActiveFilterEditClick: (String) -> Unit,
     onImportClick: () -> Unit,
+    onShowOnboarding: () -> Unit,
     viewModel: SoundsViewModel,
     context: Context,
 ) {
@@ -913,7 +952,11 @@ private fun MySoundsBody(
                 // weight(1f) so the centered group fills the space *below* the chips row, not the
                 // full viewport — without it the empty state's fillMaxSize requests the whole height
                 // (Column gives non-weighted children the full max), pushing the CTA below the fold.
-                MySoundsEmptyState(onImportClick = onImportClick, modifier = Modifier.weight(1f))
+                MySoundsEmptyState(
+                    onImportClick = onImportClick,
+                    onShowOnboarding = onShowOnboarding,
+                    modifier = Modifier.weight(1f),
+                )
             else ->
                 SoundsList(
                     sounds = sounds,
