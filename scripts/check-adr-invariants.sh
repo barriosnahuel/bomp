@@ -257,6 +257,38 @@ KDoc = contract + invariants/gotchas + grep anchors; decision rationale belongs 
 fi
 
 # ============================================================================
+# runBlocking-await ratchet — see CONTRIBUTING.md § "Awaiting multiple async inputs"
+# An unbounded `runBlocking { … .first/.collect/.await/.single … }` in a test hangs
+# forever if the value never arrives; CI only kills it after the 10-min no-output
+# timeout, with a useless generic message (the #1186 hang). withTimeout makes the
+# await fail in seconds, by name. This guard freezes the baseline: a NEW file may not
+# introduce one, and a grandfathered file may not grow past its count. It does NOT
+# sweep the existing offenders — that cleanup ratchets the counts down (handoff: sweep
+# the runBlocking-await baseline). Single-line awaits only; multi-line `runBlocking {`
+# openings are out of scope (most are legit `runBlocking { repo.save() }` setup →
+# false positives). Escape hatch: a trailing `// await-ok` on the line.
+# ============================================================================
+RUNBLOCKING_AWAIT_BASELINE="27 app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/SoundsViewModelCollectionsTest.kt
+19 app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/SoundsViewModelAnalyticsTest.kt
+1 app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/SoundsViewModelLifecycleTest.kt
+1 app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/LandingScreenTest.kt
+1 app/src/androidTest/java/com/github/barriosnahuel/vossosunboton/TestData.kt"
+runblocking_await_violations=$(
+    find $TEST_DIRS -name '*.kt' 2>/dev/null | while IFS= read -r f; do
+        actual=$(awk '/runBlocking[[:space:]]*\{.*\.(first|collect|await|single)/ && !/withTimeout/ && !/\/\/ await-ok/ {c++} END {print c + 0}' "$f")
+        baseline=$(awk -v f="$f" '$2 == f {print $1; ok = 1} END {if (!ok) print 0}' <<<"$RUNBLOCKING_AWAIT_BASELINE")
+        if [ "$actual" -gt "$baseline" ]; then
+            echo "$f (found $actual, baseline $baseline)"
+        fi
+    done || true
+)
+if [ -n "$runblocking_await_violations" ]; then
+    fail "Unbounded runBlocking await over baseline in test sources:
+$runblocking_await_violations
+A test's runBlocking { … .first/.collect/.await/.single … } must be bounded by withTimeout(…) so it fails in seconds, not after the 10-min CI no-output timeout (the #1186 hang). Wrap the await in withTimeout(TIMEOUT_MS) — see CONTRIBUTING.md § Awaiting multiple async inputs — or justify a one-off with a trailing // await-ok. The grandfathered baseline only shrinks (handoff: sweep the runBlocking-await baseline), never grows."
+fi
+
+# ============================================================================
 if [ "$errors" -gt 0 ]; then
     echo
     echo "$errors ADR invariant(s) violated. See messages above for which ADR(s) to revisit." >&2
