@@ -23,27 +23,15 @@ import com.github.barriosnahuel.vossosunboton.WAIT_TIMEOUT_MS
 import com.github.barriosnahuel.vossosunboton.awaitNode
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
-import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 internal class SearchOverlayTest : AbstractUiTest() {
     @Test
-    fun searchFabShowsOnMySoundsWhenOnlyTheGlobalCatalogCrossesTheThreshold() {
-        // Regression: the FAB used to gate on the *currently visible tab's* filtered list, so My
-        // Sounds with only a couple of custom sounds hid it — even though search is global and the
-        // bundled Explore catalog (always ≥ SEARCH_FAB_MIN_SOUNDS in debug) is searchable from here.
-        // Seed two custom sounds: My Sounds shows two (below the threshold on its own) while the
-        // global library is well above it. The FAB must be present on My Sounds.
-        assumeTrue(
-            "Needs a bundled catalog large enough that the global library crosses the FAB threshold " +
-                "while My Sounds stays sparse (bundled raw audio is a best-effort, uncommitted copy).",
-            SOUNDS_BELOW_TAB_THRESHOLD + PackagedAudios.get(context).size >= SOUNDS_FOR_VISIBLE_FAB,
-        )
-        TestData.seedCustomSounds(context, count = SOUNDS_BELOW_TAB_THRESHOLD)
-
+    fun searchActionIsPresentInTheTopAppBarOnMySounds() {
+        // Search lives in the top app bar as persistent chrome — present on every tab regardless of
+        // library size. Seed nothing: even an empty My Sounds shows the search action.
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).assertIsDisplayed()
         }
@@ -55,7 +43,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
         // now carries an origin tag. A *private* collection name is the unambiguous probe: it is
         // never a My Sounds filter chip and its audio is hidden from My Sounds, so the name can only
         // surface on the search result's tag (proving the result wiring, not the underlying list).
-        val sounds = TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB + 1)
+        val sounds = TestData.seedCustomSounds(context, count = SEEDED_SOUNDS + 1)
         val privateAudio = sounds.last()
         TestData.seedPrivateCollection(context, name = PRIVATE_COLLECTION, audioIds = listOf(privateAudio.id))
         TestData.markVaultOpen()
@@ -68,8 +56,8 @@ internal class SearchOverlayTest : AbstractUiTest() {
     }
 
     @Test
-    fun fabOpensSearchOverlay() {
-        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
+    fun searchActionOpensSearchOverlay() {
+        TestData.seedCustomSounds(context, count = SEEDED_SOUNDS)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -80,7 +68,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun typingQueryFiltersResultsToMatchingSound() {
-        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
+        TestData.seedCustomSounds(context, count = SEEDED_SOUNDS)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -98,7 +86,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun queryWithNoMatchShowsZeroResultsMessage() {
-        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
+        TestData.seedCustomSounds(context, count = SEEDED_SOUNDS)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -109,7 +97,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun trailingClearIconClearsQueryWithoutClosingOverlay() {
-        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
+        TestData.seedCustomSounds(context, count = SEEDED_SOUNDS)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -125,29 +113,29 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun backArrowClosesOverlay() {
-        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
+        TestData.seedCustomSounds(context, count = SEEDED_SOUNDS)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
             composeRule.awaitNodeWithContentDescription(closeSearchLabel()).performClick()
             composeRule.waitForIdle()
             composeRule.onNodeWithContentDescription(closeSearchLabel()).assertIsNotDisplayed()
-            // FAB returns to view → we are back on Landing.
+            // The top-bar search action returns to view → we are back on Landing.
             composeRule.onNodeWithContentDescription(searchLabel()).assertIsDisplayed()
         }
     }
 
     @Test
     fun systemBackClosesOverlay() {
-        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
+        TestData.seedCustomSounds(context, count = SEEDED_SOUNDS)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
             // Wait for overlay to be on screen before pressing back, otherwise pressBack closes the Activity instead.
             composeRule.awaitNodeWithContentDescription(closeSearchLabel()).assertIsDisplayed()
             Espresso.pressBack()
-            // pressBack is deterministic; flush the back-handler recomposition so the FAB is
-            // settled in the next frame before assertIsDisplayed checks visibility.
+            // pressBack is deterministic; flush the back-handler recomposition so the search action
+            // is settled in the next frame before assertIsDisplayed checks visibility.
             composeRule.waitForIdle()
             composeRule.awaitNodeWithContentDescription(searchLabel()).assertIsDisplayed()
         }
@@ -155,7 +143,7 @@ internal class SearchOverlayTest : AbstractUiTest() {
 
     @Test
     fun searchOverlayExposesA11yContentDescriptions() {
-        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
+        TestData.seedCustomSounds(context, count = SEEDED_SOUNDS)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
@@ -176,14 +164,9 @@ internal class SearchOverlayTest : AbstractUiTest() {
     private fun clearSearchLabel() = context.getString(R.string.app_search_clear)
 
     private companion object {
-        // Matches SEARCH_FAB_MIN_SOUNDS in LandingScreen.kt — the FAB stays hidden until the global
-        // library crosses this threshold, so any test that needs to tap it must seed at least this
-        // many sounds (or rely on the always-present bundled catalog).
-        const val SOUNDS_FOR_VISIBLE_FAB = 7
-
-        // Below the threshold for the My Sounds tab on its own — the FAB only appears because the
-        // global library (these + the bundled Explore catalog) crosses SEARCH_FAB_MIN_SOUNDS.
-        const val SOUNDS_BELOW_TAB_THRESHOLD = 2
+        // A handful of searchable sounds so the overlay has content to filter — search itself is
+        // always reachable from the top app bar regardless of count.
+        const val SEEDED_SOUNDS = 7
 
         // A private collection name: never a My Sounds filter chip, so it can only appear on a
         // search result's origin tag — the unambiguous probe for the collection-tag wiring.

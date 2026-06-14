@@ -6,7 +6,6 @@
 package com.github.barriosnahuel.vossosunboton.feature.vault
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
@@ -84,13 +83,10 @@ internal class VaultTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun unlockedVaultShowsTheSearchFab() {
-        // The Vault tab now offers the global Search FAB (it replaced the dedicated "new private
-        // collection" FAB — creating one still lives on the chip row's "+ Nueva"). markVaultOpen
-        // lands us on the body directly, where the FAB shows like on every other tab.
-        // Seed past SEARCH_FAB_MIN_SOUNDS explicitly so the FAB gate is satisfied by the seeded
-        // library alone, not the (uncommitted, best-effort) bundled catalog.
-        TestData.seedCustomSounds(context, count = SOUNDS_FOR_VISIBLE_FAB)
+    fun unlockedVaultShowsTheSearchAction() {
+        // Search lives in the top app bar on every tab. markVaultOpen lands us on the unlocked Vault
+        // body directly, where the search action shows like on every other tab.
+        TestData.seedCustomSounds(context, count = SEEDED_SOUNDS)
         TestData.markVaultOpen()
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -100,20 +96,35 @@ internal class VaultTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun lockedVaultHidesTheSearchFab() {
-        // While the Vault is locked the unlock gate is the whole screen — the Search FAB stays
-        // hidden until unlock, matching the create FAB it replaced (also visible only when unlocked).
+    fun lockedVaultStillShowsTheSearchAction() {
+        // Search moved to the top app bar (persistent chrome), so it stays present even while the
+        // Vault is locked — the unlock gate fills the body, but the bar keeps the search action.
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithText(vaultLabel()).performClick()
             composeRule.awaitNodeWithText(unlockCta()).assertIsDisplayed()
             composeRule.waitForIdle()
-            composeRule.onNodeWithContentDescription(searchLabel()).assertDoesNotExist()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun searchOpensFromTheLockedVaultTab() {
+        // The search action is newly reachable on the locked Vault tab; tapping it opens the same
+        // full-screen overlay as on any other tab (the overlay keeps its own biometric gate for
+        // vault content, so this entry point exposes nothing private before unlock).
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithText(vaultLabel()).performClick()
+            composeRule.awaitNodeWithText(unlockCta()).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(searchLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(closeSearchLabel()).assertIsDisplayed()
         }
     }
 
     private fun vaultLabel() = context.getString(R.string.app_navigation_menu_item_vault)
 
     private fun searchLabel() = context.getString(R.string.app_search)
+
+    private fun closeSearchLabel() = context.getString(R.string.app_search_close)
 
     private fun unlockCta() = context.getString(R.string.app_vault_unlock_cta)
 
@@ -124,8 +135,8 @@ internal class VaultTabFlowTest : AbstractUiTest() {
     private fun zrpEmphasis() = context.getString(R.string.app_vault_zrp_headline_emphasis)
 
     private companion object {
-        // Mirrors SEARCH_FAB_MIN_SOUNDS in LandingScreen.kt — seeding this many guarantees the
-        // global library crosses the Search FAB threshold without relying on the bundled catalog.
-        const val SOUNDS_FOR_VISIBLE_FAB = 7
+        // A few searchable sounds so the unlocked Vault body has content — the search action itself
+        // is always present regardless of count.
+        const val SEEDED_SOUNDS = 7
     }
 }

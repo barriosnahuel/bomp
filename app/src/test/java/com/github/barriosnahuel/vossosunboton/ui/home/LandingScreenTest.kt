@@ -15,7 +15,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import io.mockk.every
 import io.mockk.mockkObject
@@ -86,7 +85,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `Search FAB is hidden when the global library is empty`() {
+    fun `Search action is shown in the top app bar even when the library is empty`() {
         val viewModel = givenAViewModel()
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
@@ -94,33 +93,8 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         viewModel.injectLibrary(emptyList())
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithContentDescription("Search").assertDoesNotExist()
-    }
-
-    @Test
-    fun `Search FAB is hidden when the global library has 6 sounds`() {
-        val viewModel = givenAViewModel()
-
-        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
-        composeTestRule.waitForIdle()
-        viewModel.injectLibrary(stubSounds(count = 6))
-        composeTestRule.waitForIdle()
-
-        composeTestRule.onNodeWithContentDescription("Search").assertDoesNotExist()
-    }
-
-    @Test
-    fun `Search FAB is shown when the global library has 7 sounds`() {
-        val viewModel = givenAViewModel()
-
-        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
-        composeTestRule.waitForIdle()
-        // `_sounds` (the My Sounds tab list) stays empty here — nothing custom is seeded — so this
-        // also pins the headline behaviour: the FAB shows on an otherwise-empty My Sounds tab once
-        // the *global* library crosses the threshold, which the old per-tab gate would have hidden.
-        viewModel.injectLibrary(stubSounds(count = 7))
-        composeTestRule.waitForIdle()
-
+        // Search now lives in the top app bar as persistent chrome — present on every tab regardless
+        // of library size (it replaced the count-gated Search FAB).
         composeTestRule.onNodeWithContentDescription("Search").assertIsDisplayed()
     }
 
@@ -158,10 +132,9 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
             .let { (it.get(this) as MutableStateFlow<Boolean>).value = value }
     }
 
-    // The Search FAB gates on the global library (allSoundsCache), not the tab-filtered `_sounds` —
-    // search spans every surface. The debug build's loadSounds primes allSoundsCache with the
-    // bundled catalog, so injecting AFTER waitForIdle (once that cascade settles, same reasoning as
-    // injectHasBundledSounds) is the only way to drive the count below the threshold.
+    // Drives the global library (allSoundsCache) to a known value. The debug build's loadSounds
+    // primes allSoundsCache with the bundled catalog, so injecting AFTER waitForIdle (once that
+    // cascade settles, same reasoning as injectHasBundledSounds) is the only way to empty it.
     private fun SoundsViewModel.injectLibrary(value: List<Sound>) {
         SoundsViewModel::class.java
             .getDeclaredField("allSoundsCache")
@@ -169,6 +142,4 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
             // Safe: allSoundsCache is always MutableStateFlow<List<Sound>> — type parameter erased at runtime
             .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = value }
     }
-
-    private fun stubSounds(count: Int): List<Sound> = List(count) { testSound(name = "stub-$it", file = "/tmp/stub-$it.mp3") }
 }

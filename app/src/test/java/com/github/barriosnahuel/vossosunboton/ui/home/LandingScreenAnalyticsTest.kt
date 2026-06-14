@@ -110,7 +110,7 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
 
     /**
      * Regression for the assumption documented next to `SoundsViewModel.currentSurface`: while About is the active
-     * destination the FAB and the sound list (the only entry points for `playOrStop` / `share`) must be
+     * destination the search action and the sound list (the only entry points for `playOrStop` / `share`) must be
      * unreachable, so `surface` and the latest `screen_name` cannot disagree.
      */
     @Test
@@ -126,8 +126,9 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
         composeTestRule.onNodeWithText(context.getString(R.string.app_about)).performClick()
         composeTestRule.waitForIdle()
 
-        // About is the active destination — proven by both the screen_view emission and the absence of the FAB
-        // (which is the only entry point into `playOrStop` / `share` from the home shell).
+        // About is the active destination — proven by both the screen_view emission and the absence of the
+        // home shell's chrome. The shell's search action (top app bar) and sound list are the only entry
+        // points into `playOrStop` / `share`, and the open sub-screen clears them from the semantics tree.
         fake.assertScreenView(CanonicalScreenName.ABOUT)
         composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_search)).assertDoesNotExist()
     }
