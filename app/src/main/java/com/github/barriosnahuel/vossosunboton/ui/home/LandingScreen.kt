@@ -390,12 +390,12 @@ private fun ScaffoldedLanding(
         // welcome-empty state, where MySoundsEmptyState carries the one "Import" CTA instead — a single
         // imperative, not two routes to the same Hub.
         floatingActionButton = {
-            // Mirror MySoundsBody's `showWelcomeEmptyState` exactly so the FAB and the inline CTA are
-            // never both shown: welcome-empty = My Bomps, no audios, and no *resolvable* active filter
-            // (an unresolved/stale filter id collapses to the welcome-empty state, not the filter one).
+            // Mirror MySoundsBody's `showWelcomeEmptyState` so the FAB and the inline CTA are never
+            // both shown: the list is welcome-empty when there are no audios and no *resolvable*
+            // active filter (an unresolved/stale filter id collapses to the welcome-empty state, not
+            // the filter one). The MY_SOUNDS guard below scopes it to that tab.
             val showsWelcomeEmpty =
-                selectedTab == AppTab.MY_SOUNDS &&
-                    sounds.isEmpty() &&
+                sounds.isEmpty() &&
                     !(activeFilter != null && publicCollections.any { it.id == activeFilter })
             if (selectedTab == AppTab.MY_SOUNDS && !showsWelcomeEmpty) {
                 FloatingActionButton(

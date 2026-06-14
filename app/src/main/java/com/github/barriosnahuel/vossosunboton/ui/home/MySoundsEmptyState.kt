@@ -7,11 +7,13 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -46,73 +48,78 @@ internal fun MySoundsEmptyState(
 ) {
     val rippleColor = MaterialTheme.colorScheme.primary
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                // Scrollable so the CTA stays reachable when the centered group is taller than the
-                // space left below the chips row (short screens / large font scale) — without it the
-                // button clips below the fold.
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.XXL),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        // Concentric ripples — a voice resonating into a quiet room. Alphas descend from inner
-        // to outer so the eye anchors on the pulse and reads outward as a fade.
-        Canvas(modifier = Modifier.size(RIPPLE_SIZE)) {
-            val center = Offset(size.width / 2f, size.height / 2f)
-            val strokePx = RIPPLE_STROKE.toPx()
-            drawCircle(
-                color = rippleColor.copy(alpha = INNER_RIPPLE_ALPHA),
-                radius = INNER_RIPPLE_RADIUS.toPx(),
-                center = center,
-                style = Stroke(strokePx),
-            )
-            drawCircle(
-                color = rippleColor.copy(alpha = MID_RIPPLE_ALPHA),
-                radius = MID_RIPPLE_RADIUS.toPx(),
-                center = center,
-                style = Stroke(strokePx),
-            )
-            drawCircle(
-                color = rippleColor.copy(alpha = OUTER_RIPPLE_ALPHA),
-                radius = OUTER_RIPPLE_RADIUS.toPx(),
-                center = center,
-                style = Stroke(strokePx),
-            )
-        }
-        Spacer(Modifier.height(Spacing.XL))
-        Text(
-            text = stringResource(R.string.app_my_sounds_empty_headline),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(Spacing.MD))
-        Text(
-            text = stringResource(R.string.app_my_sounds_empty_body),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            // `onSurfaceVariant` is the M3 role for secondary body text and is validated by
-            // `AppThemeContrastTest` to meet WCAG AA. An alpha-modified `onSurface` would push
-            // light-mode contrast below 4.5:1 for normal-size text — outside the audit's reach.
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(Spacing.XL))
-        // Filled-primary tier (ADR 0010): the single main action of an otherwise empty screen.
-        // Opens the import Hub — the same destination the FAB carries when the list is non-empty.
-        Button(
-            onClick = onImportClick,
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ),
+    // heightIn(min = maxHeight) keeps the group vertically centered while it fits the viewport (the
+    // common case — "the copy paints the room"), and lets the Column grow past it so verticalScroll
+    // makes the CTA reachable when it doesn't fit (short screen / large font scale). Plain
+    // fillMaxSize + verticalScroll would defeat Arrangement.Center (scroll measures content with
+    // unbounded height, leaving no free space to distribute) and top-align the group.
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(min = maxHeight)
+                    .padding(horizontal = Spacing.XXL),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Text(text = stringResource(R.string.app_my_sounds_empty_cta))
+            // Concentric ripples — a voice resonating into a quiet room. Alphas descend from inner
+            // to outer so the eye anchors on the pulse and reads outward as a fade.
+            Canvas(modifier = Modifier.size(RIPPLE_SIZE)) {
+                val center = Offset(size.width / 2f, size.height / 2f)
+                val strokePx = RIPPLE_STROKE.toPx()
+                drawCircle(
+                    color = rippleColor.copy(alpha = INNER_RIPPLE_ALPHA),
+                    radius = INNER_RIPPLE_RADIUS.toPx(),
+                    center = center,
+                    style = Stroke(strokePx),
+                )
+                drawCircle(
+                    color = rippleColor.copy(alpha = MID_RIPPLE_ALPHA),
+                    radius = MID_RIPPLE_RADIUS.toPx(),
+                    center = center,
+                    style = Stroke(strokePx),
+                )
+                drawCircle(
+                    color = rippleColor.copy(alpha = OUTER_RIPPLE_ALPHA),
+                    radius = OUTER_RIPPLE_RADIUS.toPx(),
+                    center = center,
+                    style = Stroke(strokePx),
+                )
+            }
+            Spacer(Modifier.height(Spacing.XL))
+            Text(
+                text = stringResource(R.string.app_my_sounds_empty_headline),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(Spacing.MD))
+            Text(
+                text = stringResource(R.string.app_my_sounds_empty_body),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                // `onSurfaceVariant` is the M3 role for secondary body text and is validated by
+                // `AppThemeContrastTest` to meet WCAG AA. An alpha-modified `onSurface` would push
+                // light-mode contrast below 4.5:1 for normal-size text — outside the audit's reach.
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(Spacing.XL))
+            // Filled-primary tier (ADR 0010): the single main action of an otherwise empty screen.
+            // Opens the import Hub — the same destination the FAB carries when the list is non-empty.
+            Button(
+                onClick = onImportClick,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
+            ) {
+                Text(text = stringResource(R.string.app_my_sounds_empty_cta))
+            }
         }
     }
 }
