@@ -259,9 +259,8 @@
     <string name="app_onboarding_dest_chat">Chat</string>
     <string name="app_onboarding_dest_group">Grupo</string>
     <string name="app_onboarding_dest_more">Más</string>
-    <string name="app_onboarding_chip_all">Todo</string>
     <string name="app_onboarding_chip_collection">Recetas</string>
-    <string name="app_onboarding_demo_card_pinned">La risa de la abuela</string>
-    <string name="app_onboarding_demo_card_other">Cotización al cliente</string>
+    <string name="app_onboarding_demo_collection_family">Familia</string>
+    <string name="app_onboarding_demo_organize_cue">a tu manera</string>
     <string name="app_onboarding_demo_card_send">Feliz cumple, genia</string>
 </resources>
