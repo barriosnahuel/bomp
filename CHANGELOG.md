@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### Added
 - A "+" button on My Bomps opens a sheet to bring in a new Bomp — pick any audio from your device and it becomes yours; recording your own is coming soon
 - A "Share Bomp" option in the top menu lets you recommend the app with a link, so the people you send it to can get it too
+- A short, reopenable tour that shows how to bring in a voice, keep it your way, and bomp it to whoever needs to hear it — open it any time from the add-a-Bomp sheet or the empty My Bomps screen
 
 ### Changed
 - Search now lives as a magnifier in the top bar, on every tab, instead of a floating button — so you can search your audios any time, even before your collection grows

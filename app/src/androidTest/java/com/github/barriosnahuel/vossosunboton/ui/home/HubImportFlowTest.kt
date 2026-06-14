@@ -84,11 +84,24 @@ internal class HubImportFlowTest : AbstractUiTest() {
         }
     }
 
+    @Test
+    fun hubExposesSeeHowItWorksEntryPoint() {
+        // PR4: the onboarding entry point now has a live destination, so it joins the Hub as an
+        // actionable row. The full open→tour flow (with its looping demo animations) is covered by the
+        // reduce-motion Robolectric suite; here we only assert the new tappable thing is reachable.
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithContentDescription(fabLabel()).performClick()
+            composeRule.awaitNodeWithText(howLabel()).assertHasClickAction()
+        }
+    }
+
     private fun fabLabel() = context.getString(R.string.app_hub_fab_description)
 
     private fun hubTitle() = context.getString(R.string.app_hub_title)
 
     private fun importLabel() = context.getString(R.string.app_hub_import)
+
+    private fun howLabel() = context.getString(R.string.app_hub_how)
 
     companion object {
         private val PICKED_AUDIO: Uri = Uri.parse("content://test/picked-audio.mp3")

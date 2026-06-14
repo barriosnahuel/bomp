@@ -91,6 +91,7 @@
     <string name="app_my_sounds_empty_headline">Acá viven las voces que te importan.</string>
     <string name="app_my_sounds_empty_body">Una risa, un \"feliz cumple\", el \"estoy llegando\" del que querés. Compartí cualquier audio desde WhatsApp, Telegram o donde sea — se queda guardado y lo escuchás cuando quieras.</string>
     <string name="app_my_sounds_empty_cta">Importar</string>
+    <string name="app_my_sounds_empty_secondary">Ver cómo funciona</string>
 
     <!-- Sticker Cero (variante de bienvenida, fresh install) -->
     <string name="app_welcome_sticker_title">Tu primer audio-abrazo</string>
@@ -227,4 +228,36 @@
     <string name="app_hub_record">Grabar tu primer Bomp</string>
     <string name="app_hub_record_sub">Apretá y hablá. Lo estamos cocinando.</string>
     <string name="app_hub_record_badge">Pronto</string>
+    <string name="app_hub_how">Ver cómo funciona</string>
+    <string name="app_hub_how_sub">Un minuto y le tomás la mano.</string>
+
+    <!-- Onboarding (tour de 3 pasos, on-demand desde el Hub y el estado vacío) -->
+    <string name="app_onboarding_skip">Saltar</string>
+    <string name="app_onboarding_progress_description">Paso %1$d de %2$d</string>
+    <string name="app_onboarding_step1_eyebrow">Sumar</string>
+    <string name="app_onboarding_step1_title">Traé las voces que ya tenés.</string>
+    <string name="app_onboarding_step1_body">Una nota de voz de WhatsApp, Telegram, lo que sea. Compartila a Bomp y se queda guardada.</string>
+    <string name="app_onboarding_step1_cta">Dale</string>
+    <string name="app_onboarding_step1_demo_description">Compartir una nota de voz de otra app hacia Bomp.</string>
+    <string name="app_onboarding_step2_eyebrow">Guardar</string>
+    <string name="app_onboarding_step2_title">Guardalas para siempre, a tu manera.</string>
+    <string name="app_onboarding_step2_body">Deslizá para fijar las que más usás y ordenalas en colecciones o en el Baúl. Acá no caducan ni se borran: son tuyas para siempre.</string>
+    <string name="app_onboarding_step2_cta">Sigo</string>
+    <string name="app_onboarding_step2_demo_description">Deslizar un audio guardado para fijarlo, con colecciones y el Baúl abajo.</string>
+    <string name="app_onboarding_step3_eyebrow">Bompear</string>
+    <string name="app_onboarding_step3_title">Mandala a quien la tiene que escuchar.</string>
+    <string name="app_onboarding_step3_body">El audio justo, en el chat justo, en el momento justo. Eso es bompear.</string>
+    <string name="app_onboarding_step3_cta">Empezá</string>
+    <string name="app_onboarding_step3_demo_description">Compartir un audio guardado hacia un chat.</string>
+    <!-- Etiquetas decorativas dentro de las ilustraciones del demo (no se anuncian; el sentido lo lleva la descripción del paso) -->
+    <string name="app_onboarding_share_with">Compartir con</string>
+    <string name="app_onboarding_dest_bomp">Bomp</string>
+    <string name="app_onboarding_dest_chat">Chat</string>
+    <string name="app_onboarding_dest_group">Grupo</string>
+    <string name="app_onboarding_dest_more">Más</string>
+    <string name="app_onboarding_chip_all">Todo</string>
+    <string name="app_onboarding_chip_collection">Recetas</string>
+    <string name="app_onboarding_demo_card_pinned">La risa de la abuela</string>
+    <string name="app_onboarding_demo_card_other">Cotización al cliente</string>
+    <string name="app_onboarding_demo_card_send">Feliz cumple, genia</string>
 </resources>

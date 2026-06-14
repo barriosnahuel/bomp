@@ -33,6 +33,9 @@ object CanonicalScreenName {
     /** Manage Collections screen — canonical home for rename / delete / create across both scopes. */
     const val MANAGE_COLLECTIONS = "manage_collections"
 
+    /** On-demand onboarding tour (3 steps) opened from the import Hub or the My Bomps empty state. */
+    const val ONBOARDING = "onboarding"
+
     val ALL: List<String> =
         listOf(
             MY_SOUNDS,
@@ -46,5 +49,6 @@ object CanonicalScreenName {
             VAULT_UNLOCK,
             COLLECTION_CREATE,
             MANAGE_COLLECTIONS,
+            ONBOARDING,
         )
 }

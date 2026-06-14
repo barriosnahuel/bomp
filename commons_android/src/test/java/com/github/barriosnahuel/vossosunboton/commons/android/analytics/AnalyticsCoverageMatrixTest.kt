@@ -104,6 +104,7 @@ internal class AnalyticsCoverageMatrixTest {
                 CanonicalScreenName.VAULT_UNLOCK,
                 CanonicalScreenName.COLLECTION_CREATE,
                 CanonicalScreenName.MANAGE_COLLECTIONS,
+                CanonicalScreenName.ONBOARDING,
             )
 
         private val USER_PROPERTIES_WITH_REGRESSION_TEST: Set<String> =

@@ -53,23 +53,32 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `hub does not offer the see-how-it-works row yet`() {
-        // PR4 guard: the onboarding entry point ("Ver cómo funciona") only joins the Hub once
-        // onboarding exists. Until then it must not leak into this sheet.
+    fun `hub offers the see-how-it-works row`() {
+        // PR4: the onboarding entry point now has a destination, so it joins the Hub as an enabled row.
         setHub()
 
-        composeTestRule
-            .onNodeWithText("how it works", substring = true, ignoreCase = true)
-            .assertDoesNotExist()
+        composeTestRule.onNodeWithText("See how it works").assertIsDisplayed()
+    }
+
+    @Test
+    fun `tapping the see-how-it-works row invokes onHowItWorks`() {
+        var opened = false
+        setHub(onHowItWorks = { opened = true })
+
+        composeTestRule.onNodeWithText("See how it works").performClick()
+        composeTestRule.waitForIdle() // the row animates the sheet closed before invoking the callback
+
+        assertThat(opened).isTrue()
     }
 
     private fun setHub(
         onImport: () -> Unit = {},
+        onHowItWorks: () -> Unit = {},
         onDismiss: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             AppTheme {
-                ImportHubSheet(onImport = onImport, onDismiss = onDismiss)
+                ImportHubSheet(onImport = onImport, onHowItWorks = onHowItWorks, onDismiss = onDismiss)
             }
         }
         composeTestRule.waitForIdle()
