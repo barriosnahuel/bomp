@@ -179,6 +179,36 @@ internal class AppThemeContrastTest {
         assertTextAA(DarkColors.onSurfaceVariant, DarkColors.surface, "dark: onSurfaceVariant / surface")
     }
 
+    // --- Onboarding step 01 "Ilustración de marca" — zone accents over their own tinted background ---
+    // The foreign-app (WhatsApp) accent reads as text (label) and as a 2dp border/wave; it must meet
+    // ≥4.5:1 on the green zone tint composited over each mode's surface. Bright green clears that on
+    // the near-black dark surface but fails on light paper, where it must darken to WhatsApp's brand
+    // teal — both proven here so the rememberOnboardingIllustrationColors mapping can't regress.
+
+    @Test
+    fun `dark foreign-app accent on its green zone passes AA`() {
+        val zone = WhatsAppGreenBright.copy(alpha = FOREIGN_ZONE_ALPHA).compositeOver(DarkColors.surface)
+        assertTextAA(WhatsAppGreenBright, zone, "dark: WhatsApp accent / green zone")
+    }
+
+    @Test
+    fun `light foreign-app accent on its green zone passes AA`() {
+        val zone = WhatsAppGreenBright.copy(alpha = FOREIGN_ZONE_ALPHA).compositeOver(LightColors.surface)
+        assertTextAA(WhatsAppGreenDeep, zone, "light: WhatsApp accent / green zone")
+    }
+
+    @Test
+    fun `dark Bomp accent on its acid zone passes AA`() {
+        val zone = DarkColors.primaryContainer.copy(alpha = BOMP_ZONE_ALPHA_FOR_TEST).compositeOver(DarkColors.surface)
+        assertTextAA(DarkColors.primary, zone, "dark: Bomp accent / acid zone")
+    }
+
+    @Test
+    fun `light Bomp accent on its acid zone passes AA`() {
+        val zone = LightColors.primaryContainer.copy(alpha = BOMP_ZONE_ALPHA_FOR_TEST).compositeOver(LightColors.surface)
+        assertTextAA(LightColors.primary, zone, "light: Bomp accent / acid zone")
+    }
+
     // --- MySoundsEmptyState ripple pairs ---
     // Lock the inner-ring composite (primary @ INNER_RIPPLE_ALPHA over surface) to ≥3:1 non-text
     // in both modes. Guards against future alpha drift in MySoundsEmptyState.kt.
@@ -203,6 +233,9 @@ internal class AppThemeContrastTest {
 }
 
 private const val INNER_RIPPLE_ALPHA_FOR_TEST = 0.85f
+
+// Mirrors BOMP_ZONE_ALPHA in OnboardingDemos.kt (feature package, not visible here). Keep in sync.
+private const val BOMP_ZONE_ALPHA_FOR_TEST = 0.12f
 
 private fun Color.compositeOver(bg: Color): Color =
     Color(
