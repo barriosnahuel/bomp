@@ -116,12 +116,15 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // Import Hub open state. Saveable so an Activity recreate (rotation, theme, system kill) while
     // the sheet is open does not silently rewind the user back to the list (§ Stateful Composables).
     var isHubVisible by rememberSaveable { mutableStateOf(false) }
-    // System file picker for the Hub's "import audio" path. GetContent = import-a-copy: we copy the
-    // audio at save time, so transient read access is the right contract; cancel returns null → no-op,
-    // no message. The picked content URI reaches AddButtonActivity through the same inbound validator
-    // as the share sheet — AddButtonActivity.createIntent forwards the read grant to that Activity.
+    // System file picker for the Hub's "import audio" path. OpenDocument(arrayOf("audio/*")) opens the
+    // full SAF browser filtered to audio (non-audio files are not selectable) — better at surfacing
+    // on-device audio across OEMs than GetContent's "Recent" view. We copy the audio at save time, so we
+    // never take persistable permission; cancel returns null → no-op, no message. The picked content URI
+    // reaches AddButtonActivity through the same inbound validator as the share sheet — createIntent
+    // forwards the read grant to that Activity. (App-private media like WhatsApp voice notes is not
+    // browsable by any SAF picker on Android 11+; that content arrives via the share sheet instead.)
     val importPicker =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             uri?.let { context.startActivity(AddButtonActivity.createIntent(context, it)) }
         }
 
@@ -251,7 +254,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onImport = {
                 if (isHubVisible) {
                     isHubVisible = false
-                    importPicker.launch("audio/*")
+                    importPicker.launch(arrayOf("audio/*"))
                 }
             },
             onDismiss = { isHubVisible = false },

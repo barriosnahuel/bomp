@@ -47,7 +47,7 @@ internal class HubImportFlowTest : AbstractUiTest() {
     fun importRowLaunchesSystemAudioPicker() {
         // Stub the picker as cancelled — the design says a cancel returns the user silently to where
         // they were. We only assert the GetContent intent was fired with the audio MIME filter.
-        intending(hasAction(Intent.ACTION_GET_CONTENT))
+        intending(hasAction(Intent.ACTION_OPEN_DOCUMENT))
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null))
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -55,7 +55,7 @@ internal class HubImportFlowTest : AbstractUiTest() {
             composeRule.awaitNodeWithText(importLabel()).performClick()
             composeRule.waitForIdle()
 
-            intended(hasAction(Intent.ACTION_GET_CONTENT))
+            intended(hasAction(Intent.ACTION_OPEN_DOCUMENT))
         }
     }
 
@@ -63,7 +63,7 @@ internal class HubImportFlowTest : AbstractUiTest() {
     fun pickingAnAudioLaunchesAddButtonActivity() {
         // Picker returns a content URI → the Hub forwards it to AddButtonActivity (Create). Stub both
         // hops so neither the system picker nor the Create screen actually open.
-        intending(hasAction(Intent.ACTION_GET_CONTENT))
+        intending(hasAction(Intent.ACTION_OPEN_DOCUMENT))
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, Intent().setData(PICKED_AUDIO)))
         intending(hasComponent(hasClassName(ADD_BUTTON_ACTIVITY)))
             .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
