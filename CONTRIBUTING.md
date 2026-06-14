@@ -239,7 +239,7 @@ Instrumented UI/functional tests live under `app/src/androidTest/`. They drive a
 ./scripts/run-instrumented-tests.sh
 ```
 
-The wrapper cold-boots the AVD with wiped userdata, waits for it, then runs `./gradlew :app:connectedDebugAndroidTest` against that emulator only (it pins the serial, so a physical device attached at the same time is ignored).
+The wrapper cold-boots the AVD with wiped userdata, waits for it, then runs `./gradlew :app:connectedDebugAndroidTest` against that emulator only (it pins the serial, so a physical device attached at the same time is ignored). The cold boot launches with `-gpu host` and widened resources (`-cores 6 -memory 4096`) so the guest renders on the host GPU instead of in software — faster and less flaky than the AVD defaults. Override per run with `EMULATOR_GPU` (use `auto` if `host` misbehaves on your machine), `EMULATOR_CORES`, `EMULATOR_MEMORY`.
 
 **Always go through the wrapper — do not run `./gradlew :app:connectedDebugAndroidTest` against an already-running emulator.** A warm emulator degrades across back-to-back runs (`system_server` watchdog ANRs, hundreds of skipped frames), which surfaces as `ComposeTimeoutException` / `ComposeNotIdleException` flakes or an outright `Process crashed`. A cold boot resets that — a clean run finishes in ~3 min; a degraded one takes 15+ min or never completes. Rationale: [ADR 0001 § *Cold boot per run*](docs/adr/0001-local-ui-test-suite.md).
 
