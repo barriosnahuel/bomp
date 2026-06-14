@@ -37,17 +37,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import com.github.barriosnahuel.vossosunboton.ui.theme.OnboardingIllustrationColors
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
+import com.github.barriosnahuel.vossosunboton.ui.theme.rememberOnboardingIllustrationColors
 
 // Live-gesture demos for the onboarding tour. Each step paints a scaled-down slice of the product's
 // own UI with a gesture indicator on top — the anti-carousel stance from the design (teach the real,
@@ -278,9 +282,12 @@ private fun MiniCard(
     }
 }
 
-/** A small waveform strip — the editorial stand-in for a received voice note. */
+/** A flat waveform strip — explicitly NOT a control (no play circle), tinted to its zone's accent. */
 @Composable
-private fun Waveform(modifier: Modifier = Modifier) {
+private fun Waveform(
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         WAVE.forEach { h ->
             Box(
@@ -290,93 +297,164 @@ private fun Waveform(modifier: Modifier = Modifier) {
                         .width(2.dp)
                         .height(h.dp)
                         .clip(RoundedCornerShape(percent = 50))
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant),
+                        .background(color),
             )
         }
     }
 }
 
-// ── Step 1 — SUMAR: a voice note arrives from another app; Bomp is the highlighted destination, the
-// audio travels INTO it. Mirror of step 3 (where Bomp is the source). ───────────────────────────────
+// Acid tint behind the Bomp destination zone — a one-off translucent fill, named per § Design system.
+private const val BOMP_ZONE_ALPHA = 0.12f
+private val ZONE_RADIUS = 18.dp
+private val APP_TILE = 30.dp
+
+// Zone widths — the origin slightly wider than the destination, offset to read as "from here to there".
+private const val FOREIGN_ZONE_WIDTH = 0.86f
+private const val BOMP_ZONE_WIDTH = 0.82f
+
+// ── Step 1 — SUMAR · "Ilustración de marca" (post user-test). Two flat color ZONES — a WhatsApp-green
+// origin and a Bomp-acid destination — with the audio travelling between them. No play button, no
+// realistic share sheet: the test showed a faithful UI got tapped and hid that the audio lived in
+// another app. The chromatic split (foreign green → Bomp acid) IS the lesson. Decorative: the stage
+// clears these from the semantics tree. Design: 2c · Opción A.
 @Composable
 internal fun OnboardingImportDemo(
     reduceMotion: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        // Received, long-pressed (selected) voice note — acid hairline = "selected".
-        Box(contentAlignment = Alignment.CenterEnd) {
-            Row(
-                modifier =
-                    Modifier
-                        .clip(RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(2.dp, MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp))
-                        .padding(horizontal = Spacing.MD, vertical = Spacing.SM),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(26.dp)
-                            .clip(RoundedCornerShape(percent = 50))
-                            .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.app_ic_play_arrow),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(13.dp),
-                    )
-                }
-                Spacer(Modifier.width(Spacing.SM))
-                Waveform()
-                Spacer(Modifier.width(Spacing.SM))
-                MonoLabel("0:08")
-            }
-            TouchDot(reduceMotion = reduceMotion, modifier = Modifier.offset(x = (-12).dp))
-        }
-        FlowChevron(rotationDegrees = 90f, modifier = Modifier.padding(vertical = Spacing.XS).size(26.dp))
-        // System share sheet — Bomp is the highlighted destination the audio lands in.
+    val illustration = rememberOnboardingIllustrationColors()
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.XS),
+    ) {
+        ForeignAppZone(colors = illustration, reduceMotion = reduceMotion, modifier = Modifier.align(Alignment.Start))
+        ShareCue()
+        BompZone(modifier = Modifier.align(Alignment.End))
+    }
+}
+
+/** The origin zone: a green-tinted card bordered in the foreign-app accent, holding a voice note. */
+@Composable
+private fun ForeignAppZone(
+    colors: OnboardingIllustrationColors,
+    reduceMotion: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.fillMaxWidth(FOREIGN_ZONE_WIDTH), contentAlignment = Alignment.CenterEnd) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(HAIRLINE, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(ZONE_RADIUS))
+                    .background(colors.foreignZone)
+                    .border(2.dp, colors.foreignAccent, RoundedCornerShape(ZONE_RADIUS))
                     .padding(Spacing.MD),
+            verticalArrangement = Arrangement.spacedBy(Spacing.SM),
         ) {
-            MonoLabel(stringResourceUpper(R.string.app_onboarding_share_with))
-            Spacer(Modifier.height(Spacing.SM))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                ShareTile(label = stringResourceUpper(R.string.app_onboarding_dest_bomp), highlight = true) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(14.dp)
-                                .clip(RoundedCornerShape(percent = 50))
-                                .background(MaterialTheme.colorScheme.onPrimaryContainer),
-                    )
-                }
-                ShareTile(label = stringResourceUpper(R.string.app_onboarding_dest_chat), highlight = false) {
-                    Icon(
-                        painter = painterResource(R.drawable.app_ic_share),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                ShareTile(label = stringResourceUpper(R.string.app_onboarding_dest_more), highlight = false) {
-                    Icon(
-                        painter = painterResource(R.drawable.app_ic_more_vert),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.SM)) {
+                // The foreign app's icon tile + name — a green app badge, the way it reads in a chat header.
+                Box(modifier = Modifier.size(APP_TILE).clip(RoundedCornerShape(percent = 30)).background(colors.foreignAccent))
+                Text(
+                    text = stringResourceUpper(R.string.app_onboarding_demo_foreign_app),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 9.5.sp,
+                    letterSpacing = 1.4.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.foreignAccent,
+                )
+                Text(
+                    text = stringResource(R.string.app_onboarding_demo_foreign_sender),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                )
             }
+            // Received voice note — flat, no play button: an accent-outlined dot + flat wave + duration.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.SM),
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(4.dp, 14.dp, 14.dp, 14.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = Spacing.MD, vertical = Spacing.SM),
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .clip(RoundedCornerShape(percent = 50))
+                            .border(2.dp, colors.foreignAccent, RoundedCornerShape(percent = 50)),
+                )
+                Waveform(color = colors.foreignAccent)
+                MonoLabel(stringResource(R.string.app_onboarding_demo_voice_duration))
+            }
+        }
+        TouchDot(reduceMotion = reduceMotion, modifier = Modifier.offset(x = Spacing.MD))
+    }
+}
+
+/** The travel cue between the zones: a down chevron + a soft "share" word in the acid voice. */
+@Composable
+private fun ShareCue() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.XS)) {
+        FlowChevron(rotationDegrees = 90f, modifier = Modifier.size(22.dp))
+        Text(
+            text = stringResource(R.string.app_onboarding_demo_share_cue),
+            style = MaterialTheme.typography.titleMedium,
+            fontStyle = FontStyle.Italic,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+/** The destination zone: an acid-tinted card with the Bomp mark and "it stays here". */
+@Composable
+private fun BompZone(modifier: Modifier = Modifier) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth(BOMP_ZONE_WIDTH)
+                .clip(RoundedCornerShape(ZONE_RADIUS))
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = BOMP_ZONE_ALPHA))
+                .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(ZONE_RADIUS))
+                .padding(Spacing.MD),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.MD),
+    ) {
+        // The Bomp logo: acid tile + play triangle — the only "play" mark here, and it's a brand mark.
+        Box(
+            modifier =
+                Modifier
+                    .size(
+                        APP_TILE + Spacing.SM,
+                    ).clip(RoundedCornerShape(percent = 28))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.app_ic_play_arrow),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Column {
+            Text(
+                text = stringResource(R.string.app_onboarding_demo_destination),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResourceUpper(R.string.app_onboarding_demo_destination_sub),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 9.sp,
+                letterSpacing = 1.2.sp,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

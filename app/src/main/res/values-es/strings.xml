@@ -250,8 +250,12 @@
     <string name="app_onboarding_step3_cta">Empezá</string>
     <string name="app_onboarding_step3_demo_description">Compartir un audio guardado hacia un chat.</string>
     <!-- Etiquetas decorativas dentro de las ilustraciones del demo (no se anuncian; el sentido lo lleva la descripción del paso) -->
-    <string name="app_onboarding_share_with">Compartir con</string>
-    <string name="app_onboarding_dest_bomp">Bomp</string>
+    <string name="app_onboarding_demo_foreign_app">WhatsApp</string>
+    <string name="app_onboarding_demo_foreign_sender">Mamá</string>
+    <string name="app_onboarding_demo_voice_duration">0:08</string>
+    <string name="app_onboarding_demo_share_cue">compartir</string>
+    <string name="app_onboarding_demo_destination">Se queda acá</string>
+    <string name="app_onboarding_demo_destination_sub">En tu Bomp</string>
     <string name="app_onboarding_dest_chat">Chat</string>
     <string name="app_onboarding_dest_group">Grupo</string>
     <string name="app_onboarding_dest_more">Más</string>
