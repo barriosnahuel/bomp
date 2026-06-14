@@ -7,12 +7,15 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.os.Build
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.robolectric.annotation.Config
@@ -29,10 +32,27 @@ internal class MySoundsEmptyStateTest : AbstractRobolectricTest() {
         val body = context.getString(R.string.app_my_sounds_empty_body)
 
         composeTestRule.setContent {
-            MaterialTheme { MySoundsEmptyState() }
+            MaterialTheme { MySoundsEmptyState(onImportClick = {}) }
         }
 
         composeTestRule.onNodeWithText(headline).assertIsDisplayed()
         composeTestRule.onNodeWithText(body).assertIsDisplayed()
+    }
+
+    @Test
+    fun `MySoundsEmptyState Import CTA invokes the callback when tapped`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val cta = context.getString(R.string.app_my_sounds_empty_cta)
+        var imports = 0
+
+        composeTestRule.setContent {
+            MaterialTheme { MySoundsEmptyState(onImportClick = { imports++ }) }
+        }
+
+        composeTestRule.onNodeWithText(cta).assertIsDisplayed()
+        composeTestRule.onNodeWithText(cta).assertHasClickAction()
+        composeTestRule.onNodeWithText(cta).performClick()
+
+        assertThat(imports).isEqualTo(1)
     }
 }

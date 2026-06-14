@@ -386,9 +386,18 @@ private fun ScaffoldedLanding(
             )
         },
         // FAB only on My Bomps (design "regla por tab"): Explore is a consumption surface and Vault's
-        // job is to listen — both stay FAB-less. The single + opens the import Hub.
+        // job is to listen — both stay FAB-less. The single + opens the import Hub. Suppressed in the
+        // welcome-empty state, where MySoundsEmptyState carries the one "Import" CTA instead — a single
+        // imperative, not two routes to the same Hub.
         floatingActionButton = {
-            if (selectedTab == AppTab.MY_SOUNDS) {
+            // Mirror MySoundsBody's `showWelcomeEmptyState` exactly so the FAB and the inline CTA are
+            // never both shown: welcome-empty = My Bomps, no audios, and no *resolvable* active filter
+            // (an unresolved/stale filter id collapses to the welcome-empty state, not the filter one).
+            val showsWelcomeEmpty =
+                selectedTab == AppTab.MY_SOUNDS &&
+                    sounds.isEmpty() &&
+                    !(activeFilter != null && publicCollections.any { it.id == activeFilter })
+            if (selectedTab == AppTab.MY_SOUNDS && !showsWelcomeEmpty) {
                 FloatingActionButton(
                     onClick = onCreateClick,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -443,6 +452,7 @@ private fun ScaffoldedLanding(
                     collectionsByAudio = collectionsByAudio,
                     allCollections = collections,
                     onActiveFilterEditClick = onActiveFilterEditClick,
+                    onImportClick = onCreateClick,
                     viewModel = viewModel,
                     context = context,
                 )
@@ -857,6 +867,7 @@ private fun MySoundsBody(
     collectionsByAudio: Map<String, List<String>>,
     allCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
     onActiveFilterEditClick: (String) -> Unit,
+    onImportClick: () -> Unit,
     viewModel: SoundsViewModel,
     context: Context,
 ) {
@@ -899,7 +910,10 @@ private fun MySoundsBody(
             showFilterEmptyState && activeCollection != null ->
                 MySoundsFilterEmptyState(collectionName = activeCollection.name)
             showWelcomeEmptyState ->
-                MySoundsEmptyState()
+                // weight(1f) so the centered group fills the space *below* the chips row, not the
+                // full viewport — without it the empty state's fillMaxSize requests the whole height
+                // (Column gives non-weighted children the full max), pushing the CTA below the fold.
+                MySoundsEmptyState(onImportClick = onImportClick, modifier = Modifier.weight(1f))
             else ->
                 SoundsList(
                     sounds = sounds,

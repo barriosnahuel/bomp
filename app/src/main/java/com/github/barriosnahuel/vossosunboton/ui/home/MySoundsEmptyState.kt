@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,17 +35,25 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 /**
  * Heart-first empty state for MY_SOUNDS. Renders only when the user has no custom sounds AND the
  * welcome sticker has been consumed (so the list is genuinely empty). Continues the voice from
- * the welcome audio: keep close the voices that matter, hear them whenever you want. Absent on
- * purpose: any imperative CTA — the FAB does the asking, the copy paints the room.
+ * the welcome audio: keep close the voices that matter, hear them whenever you want. Owns the one
+ * import imperative for this state — [onImportClick] opens the same add-a-Bomp Hub as the FAB,
+ * which the host suppresses here so there is exactly one call to action.
  */
 @Composable
-internal fun MySoundsEmptyState(modifier: Modifier = Modifier) {
+internal fun MySoundsEmptyState(
+    onImportClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val rippleColor = MaterialTheme.colorScheme.primary
 
     Column(
         modifier =
             modifier
                 .fillMaxSize()
+                // Scrollable so the CTA stays reachable when the centered group is taller than the
+                // space left below the chips row (short screens / large font scale) — without it the
+                // button clips below the fold.
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.XXL),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -89,6 +101,19 @@ internal fun MySoundsEmptyState(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
         )
+        Spacer(Modifier.height(Spacing.XL))
+        // Filled-primary tier (ADR 0010): the single main action of an otherwise empty screen.
+        // Opens the import Hub — the same destination the FAB carries when the list is non-empty.
+        Button(
+            onClick = onImportClick,
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
+        ) {
+            Text(text = stringResource(R.string.app_my_sounds_empty_cta))
+        }
     }
 }
 

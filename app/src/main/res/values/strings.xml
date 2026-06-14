@@ -96,6 +96,7 @@
     <!-- My Sounds empty state (welcome consumed, no custom sounds yet) -->
     <string name="app_my_sounds_empty_headline">This is where the voices live.</string>
     <string name="app_my_sounds_empty_body">A laugh, a "happy birthday", an "on my way" from someone who matters. Share any voice note from WhatsApp, Telegram, or wherever — it\'ll wait right here, ready when you are.</string>
+    <string name="app_my_sounds_empty_cta">Import</string>
 
     <!-- Welcome sticker (Sticker Cero, fresh-install variant) -->
     <string name="app_welcome_sticker_title">Your first voice-hug</string>

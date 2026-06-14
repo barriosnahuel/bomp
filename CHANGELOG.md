@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Audios you share now arrive ready to play inline in more chat apps, instead of as a file the other person has to download first
 - Sharing an audio now adds a short, warm invite and a link, so whoever receives it can have Bomp too
 - The app opens faster in the first launches after installing or updating — the entry screen's startup code is now precompiled, so it reaches interactive sooner, most noticeably on lower-tier devices
+- When your audio list is empty, the screen now offers an Import button that opens the add-a-Bomp sheet right there, so adding your first voice is one tap away
 
 ### For nerds 🤓
 
