@@ -104,6 +104,15 @@ it kills the AVD, relaunches it with `-no-snapshot -wipe-data`, waits for boot, 
 the suite — repeating the cold boot before each pass when `RUNS` > 1. Do **not** invoke
 `./gradlew :app:connectedDebugAndroidTest` directly against an already-running emulator.
 
+The cold boot also passes `-gpu host -cores 6 -memory 4096`, overriding the AVD's
+`hardware-qemu.ini` so the guest renders on the host GPU (MoltenVK/Vulkan on Apple Silicon)
+instead of in software and stops starving on too few cores/RAM — the standard AVD defaults
+(software GPU, ~2-4 cores, 2 GB) are a primary contributor to the very watchdog ANRs and
+frozen frames this cold boot fights. All three are env-overridable (`EMULATOR_GPU`,
+`EMULATOR_CORES`, `EMULATOR_MEMORY`); fall back to `EMULATOR_GPU=auto` if `host` misbehaves on
+a given machine. `-no-audio` is deliberately *not* added: this is a soundboard whose suite
+exercises playback, so the guest keeps its audio device.
+
 The wrapper resets *guest* (emulator) state — it cannot reset *host* state. The emulator is
 a VM, and a saturated host (high load average from other heavy work, or from running the
 suite dozens of times back-to-back) makes even a freshly booted guest janky enough to flake

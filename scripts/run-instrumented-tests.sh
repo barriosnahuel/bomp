@@ -26,7 +26,8 @@
 #   RUNS=3 ./scripts/run-instrumented-tests.sh
 #       three runs, each preceded by its own cold boot (use to hunt flakes)
 #
-# Environment overrides: AVD_NAME, RUNS, EMULATOR_PORT, BOOT_TIMEOUT_SECONDS.
+# Environment overrides: AVD_NAME, RUNS, EMULATOR_PORT, BOOT_TIMEOUT_SECONDS,
+# EMULATOR_GPU, EMULATOR_CORES, EMULATOR_MEMORY.
 #
 # Requires the Android SDK CLI on PATH (emulator, adb) and the AVD created by
 # ./scripts/setup-test-emulator.sh.
@@ -38,6 +39,16 @@ RUNS="${RUNS:-1}"
 EMULATOR_PORT="${EMULATOR_PORT:-5554}"
 BOOT_TIMEOUT_SECONDS="${BOOT_TIMEOUT_SECONDS:-300}"
 EMULATOR_SERIAL="emulator-${EMULATOR_PORT}"
+
+# Hardware/GPU knobs for the cold boot. The defaults stop the AVD from rendering
+# in software and starving on too few cores/RAM (the main source of the watchdog
+# ANRs / frozen frames the cold boot already fights). See docs/adr/0001 § Cold boot.
+#   EMULATOR_GPU=host : host GPU (MoltenVK/Vulkan on Apple Silicon); "auto" is the safe fallback.
+#   EMULATOR_CORES    : virtual CPU cores (AVD default is typically 2-4).
+#   EMULATOR_MEMORY   : guest RAM in MB (AVD default is typically 2048).
+EMULATOR_GPU="${EMULATOR_GPU:-host}"
+EMULATOR_CORES="${EMULATOR_CORES:-6}"
+EMULATOR_MEMORY="${EMULATOR_MEMORY:-4096}"
 
 # Auto-discover the Android SDK and prepend its tool dirs to PATH (mirrors
 # scripts/setup-test-emulator.sh) so the script works with only cmdline-tools on PATH.
@@ -94,9 +105,14 @@ cold_boot_emulator() {
   # -no-snapshot  : ignore any saved snapshot and don't save one on exit — boot from scratch
   # -wipe-data    : reset userdata, the part that accumulates the cruft this wrapper exists to avoid
   # -no-boot-anim : shave a few seconds off the boot
+  # -gpu/-cores/-memory : override the AVD's hardware-qemu.ini so the guest renders on the host
+  #   GPU and gets enough CPU/RAM (defaults above). No -no-audio: this is a soundboard and the
+  #   suite exercises playback, so the guest keeps its audio device.
   # stdout/stderr -> $EMULATOR_LOG so a failed boot is diagnosable instead of silent.
   nohup emulator -avd "$AVD_NAME" -port "$EMULATOR_PORT" \
-    -no-snapshot -wipe-data -no-boot-anim >"$EMULATOR_LOG" 2>&1 &
+    -no-snapshot -wipe-data -no-boot-anim \
+    -gpu "$EMULATOR_GPU" -cores "$EMULATOR_CORES" -memory "$EMULATOR_MEMORY" \
+    >"$EMULATOR_LOG" 2>&1 &
 
   ANDROID_SERIAL="$EMULATOR_SERIAL" adb wait-for-device
   local waited=0
