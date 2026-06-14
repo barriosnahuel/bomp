@@ -246,9 +246,13 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 
     if (isHubVisible) {
         ImportHubSheet(
+            // Guard on isHubVisible so a double-tap on the import row (both taps land before the
+            // sheet's hide animation recomposes it away) launches the picker once, not twice.
             onImport = {
-                isHubVisible = false
-                importPicker.launch("audio/*")
+                if (isHubVisible) {
+                    isHubVisible = false
+                    importPicker.launch("audio/*")
+                }
             },
             onDismiss = { isHubVisible = false },
         )
@@ -692,7 +696,7 @@ private const val DELETE_ANIMATION_DURATION_MS = 300
 private val WELCOME_BORDER_WIDTH = 1.5.dp
 
 // Reserve room below the last card on My Bomps so it scrolls clear of the + FAB (56dp FAB + margin).
-// Other surfaces keep the default Spacing.SM — same mechanism the Vault tab uses for its ExtendedFAB.
+// Other surfaces keep the default Spacing.SM.
 private val FAB_LIST_BOTTOM_PADDING = 88.dp
 
 @Composable

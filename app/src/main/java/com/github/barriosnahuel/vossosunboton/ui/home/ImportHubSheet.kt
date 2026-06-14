@@ -91,8 +91,8 @@ internal fun ImportHubSheet(
                 subtitle = stringResource(R.string.app_hub_import_sub),
                 tileColor = MaterialTheme.colorScheme.primaryContainer,
                 iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                // Animate the sheet closed before handing off, mirroring CollectionSheetHost /
-                // InlineCollectionCreateSheet — the host then clears state + launches the picker.
+                // Animate the sheet closed before handing off, mirroring InlineCollectionCreateSheet
+                // (sheetState.hide() then the callback) — the host then clears state + launches the picker.
                 onClick = {
                     scope.launch {
                         sheetState.hide()
