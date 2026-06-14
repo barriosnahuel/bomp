@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ## \[unreleased] (v2.2.0)
 
 ### Added
+- A "+" button on My Bomps opens a sheet to bring in a new Bomp — pick any audio from your device and it becomes yours; recording your own is coming soon
 - A "Share Bomp" option in the top menu lets you recommend the app with a link, so the people you send it to can get it too
 
 ### Changed

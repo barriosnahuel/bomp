@@ -8,6 +8,8 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 import android.content.Context
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.spring
@@ -26,6 +28,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +66,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareAppIntent
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
@@ -108,6 +112,18 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // overlay survives an Activity recreate (rotation, theme, system kill); the host re-resolves
     // the Sound from `library` on the way back.
     var immersiveListenSoundId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Import Hub open state. Saveable so an Activity recreate (rotation, theme, system kill) while
+    // the sheet is open does not silently rewind the user back to the list (§ Stateful Composables).
+    var isHubVisible by rememberSaveable { mutableStateOf(false) }
+    // System file picker for the Hub's "import audio" path. GetContent = import-a-copy: we copy the
+    // audio at save time, so transient read access is the right contract; cancel returns null → no-op,
+    // no message. The picked content URI reaches AddButtonActivity through the same inbound validator
+    // as the share sheet — AddButtonActivity.createIntent forwards the read grant to that Activity.
+    val importPicker =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let { context.startActivity(AddButtonActivity.createIntent(context, it)) }
+        }
 
     LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible) {
         val name =
@@ -188,6 +204,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             immersiveListenSoundId = sound.id
             if (!sound.isPlaying) viewModel.playOrStop(sound)
         },
+        onCreateClick = { isHubVisible = true },
     )
 
     // Exactly one sub-screen overlays the list at a time (About wins over Manage, preserving the
@@ -226,6 +243,16 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 
     com.github.barriosnahuel.vossosunboton.feature.collections
         .CollectionDeleteDialog(viewModel = viewModel)
+
+    if (isHubVisible) {
+        ImportHubSheet(
+            onImport = {
+                isHubVisible = false
+                importPicker.launch("audio/*")
+            },
+            onDismiss = { isHubVisible = false },
+        )
+    }
 
     if (isSearchVisible) {
         SearchOverlayHost(
@@ -340,6 +367,7 @@ private fun ScaffoldedLanding(
     onManageCollectionsClick: () -> Unit,
     onActiveFilterEditClick: (String) -> Unit,
     onImmersivePlay: (Sound) -> Unit,
+    onCreateClick: () -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
@@ -349,6 +377,22 @@ private fun ScaffoldedLanding(
                 onAboutClick = onAboutClick,
                 onManageCollectionsClick = onManageCollectionsClick,
             )
+        },
+        // FAB only on My Bomps (design "regla por tab"): Explore is a consumption surface and Vault's
+        // job is to listen — both stay FAB-less. The single + opens the import Hub.
+        floatingActionButton = {
+            if (selectedTab == AppTab.MY_SOUNDS) {
+                FloatingActionButton(
+                    onClick = onCreateClick,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.app_ic_add),
+                        contentDescription = stringResource(R.string.app_hub_fab_description),
+                    )
+                }
+            }
         },
         bottomBar = {
             // Vault is always visible (spec § 2.1) — no `hasBundledSounds` gating. The Explore
@@ -647,6 +691,10 @@ private fun AppBottomBar(
 private const val DELETE_ANIMATION_DURATION_MS = 300
 private val WELCOME_BORDER_WIDTH = 1.5.dp
 
+// Reserve room below the last card on My Bomps so it scrolls clear of the + FAB (56dp FAB + margin).
+// Other surfaces keep the default Spacing.SM — same mechanism the Vault tab uses for its ExtendedFAB.
+private val FAB_LIST_BOTTOM_PADDING = 88.dp
+
 @Composable
 internal fun SoundsList(
     sounds: List<Sound>,
@@ -854,6 +902,7 @@ private fun MySoundsBody(
                     listState = listState,
                     collectionsByAudio = collectionsByAudio,
                     allCollections = allCollections,
+                    bottomContentPadding = if (isOnMySounds) FAB_LIST_BOTTOM_PADDING else Spacing.SM,
                     filterIsActive = selectedTab == AppTab.MY_SOUNDS && activeFilterId != null,
                     onPlayClick = { sound -> viewModel.playOrStop(sound) },
                     onSeek = { positionMs -> viewModel.seekTo(positionMs) },

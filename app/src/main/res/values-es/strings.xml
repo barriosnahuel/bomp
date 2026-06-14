@@ -216,4 +216,14 @@
     <string name="app_addbutton_collections_private_unprotected_hint">Tus colecciones del Baúl aparecen acá porque este teléfono no tiene huella ni bloqueo de pantalla.</string>
     <string name="app_addbutton_collections_new_chip">+ Nueva colección</string>
     <string name="app_addbutton_collections_new_private_chip">+ Nuevo Baúl</string>
+
+    <!-- Import Hub (the + FAB on My Bomps opens this bottom sheet) -->
+    <string name="app_hub_fab_description">Sumar un Bomp</string>
+    <string name="app_hub_title">¿Cómo la sumás?</string>
+    <string name="app_hub_subtitle">Una voz se guarda y la tenés cerca, para escucharla cuando quieras.</string>
+    <string name="app_hub_import">Importar audio del dispositivo</string>
+    <string name="app_hub_import_sub">Notas de voz, grabaciones, lo que ya tengas guardado.</string>
+    <string name="app_hub_record">Grabar tu primer Bomp</string>
+    <string name="app_hub_record_sub">Apretá y hablá. Lo estamos cocinando.</string>
+    <string name="app_hub_record_badge">Pronto</string>
 </resources>

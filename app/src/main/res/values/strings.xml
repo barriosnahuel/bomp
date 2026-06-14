@@ -222,4 +222,14 @@
     <string name="app_addbutton_collections_private_unprotected_hint">Your Vault shows up here because this device has no fingerprint or screen lock.</string>
     <string name="app_addbutton_collections_new_chip">+ New collection</string>
     <string name="app_addbutton_collections_new_private_chip">+ New in Vault</string>
+
+    <!-- Import Hub (the + FAB on My Bomps opens this bottom sheet) -->
+    <string name="app_hub_fab_description">Add a Bomp</string>
+    <string name="app_hub_title">How do you add one?</string>
+    <string name="app_hub_subtitle">A voice gets saved and stays close, ready whenever you want to hear it.</string>
+    <string name="app_hub_import">Import audio from your device</string>
+    <string name="app_hub_import_sub">Voice notes, recordings, whatever you already have saved.</string>
+    <string name="app_hub_record">Record your first Bomp</string>
+    <string name="app_hub_record_sub">Press and talk. We\'re cooking it up.</string>
+    <string name="app_hub_record_badge">Soon</string>
 </resources>

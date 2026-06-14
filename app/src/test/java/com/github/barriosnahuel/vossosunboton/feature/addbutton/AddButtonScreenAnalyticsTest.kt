@@ -121,6 +121,21 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `saving a Bomp imported from the Hub tags sound_add with the import source`() {
+        // Create launched via AddButtonActivity.createIntent (the import Hub) must thread
+        // SOURCE_IMPORT all the way to the sound_add event, not fall back to the share default.
+        ActivityScenario.launch<AddButtonActivity>(AddButtonActivity.createIntent(context, SAMPLE_URI)).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
+            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+            composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) { fake.events.isNotEmpty() }
+
+            val event = fake.assertEmitted("sound_add")
+            assertThat(event.params["source"]).isEqualTo(AddButtonActivity.SOURCE_IMPORT)
+        }
+    }
+
+    @Test
     fun `renaming an existing button emits sound_edit and does not emit sound_add`() {
         ActivityScenario.launch<AddButtonActivity>(editIntent()).use {
             composeTestRule.waitForIdle()
