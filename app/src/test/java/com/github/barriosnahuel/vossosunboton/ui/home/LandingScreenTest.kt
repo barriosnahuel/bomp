@@ -7,6 +7,7 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.os.Build
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -107,6 +108,75 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
 
         composeTestRule.onNodeWithContentDescription("More options").performClick()
         composeTestRule.onNodeWithText("Share Bomp").assertIsDisplayed()
+    }
+
+    @Test
+    fun `add-a-Bomp FAB is shown on My Bomps`() {
+        val viewModel = givenAViewModel()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").assertIsDisplayed()
+    }
+
+    @Test
+    fun `add-a-Bomp FAB is hidden on the Vault tab`() {
+        val viewModel = givenAViewModel()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        viewModel.selectTab(AppTab.VAULT)
+        composeTestRule.waitForIdle()
+
+        // Vault's job is to listen — it stays FAB-less (design "regla por tab").
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").assertDoesNotExist()
+    }
+
+    @Test
+    fun `add-a-Bomp FAB is hidden on the Explore tab`() {
+        val viewModel = givenAViewModel()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        viewModel.injectHasBundledSounds(true)
+        composeTestRule.waitForIdle()
+        viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+        composeTestRule.waitForIdle()
+
+        // Explore is a consumption surface — no create affordance there.
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").assertDoesNotExist()
+    }
+
+    @Test
+    fun `tapping the FAB opens the import Hub`() {
+        val viewModel = givenAViewModel()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("How do you add one?").assertIsDisplayed()
+    }
+
+    @Test
+    fun `open import Hub survives an Activity recreate`() {
+        // § Stateful Composables: an opened sheet is durable progress — a recreate (rotation, theme,
+        // system kill) must not silently rewind the user back to the list. `isHubVisible` is
+        // rememberSaveable; StateRestorationTester emulates the save/restore round-trip.
+        val viewModel = givenAViewModel()
+        val restorationTester = StateRestorationTester(composeTestRule)
+        restorationTester.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("How do you add one?").assertIsDisplayed()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("How do you add one?").assertIsDisplayed()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

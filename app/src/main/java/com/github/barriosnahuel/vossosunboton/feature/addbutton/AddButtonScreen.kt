@@ -94,6 +94,9 @@ import kotlinx.coroutines.withContext
 fun AddButtonScreen(
     context: Context,
     mode: AddButtonMode,
+    // Surface that opened this Create flow, forwarded to the `sound_add` event. Defaults to share
+    // (the manifest ACTION_SEND path); the import Hub passes SOURCE_IMPORT. Ignored in Edit mode.
+    source: String = AddButtonActivity.SOURCE_SHARE,
     onSaved: (String) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
@@ -203,7 +206,7 @@ fun AddButtonScreen(
                             ).await()
                     if (feedbackId == R.string.app_addbutton_feedback_saved_ok) {
                         stopActivePreviewPlayback()
-                        trackSoundAdd(context, trimmedName, tracker)
+                        trackSoundAdd(context, trimmedName, source, tracker)
                         saveOutcome = SaveOutcome.Success(trimmedName)
                     } else {
                         pendingErrorReason = mapFeedbackToReason(feedbackId)
@@ -515,12 +518,13 @@ private fun mapFeedbackToReason(
 private suspend fun trackSoundAdd(
     context: Context,
     trimmedName: String,
+    source: String,
     tracker: AnalyticsTracker,
 ) {
     val totalSounds = SoundsRepository(context).sounds.first().size
     tracker.log(
         AnalyticsEvent.SoundAdd(
-            source = AddButtonActivity.SOURCE_SHARE,
+            source = source,
             nameLength = trimmedName.length,
             nameWordCount = trimmedName.split(WORD_SPLIT_REGEX).count(),
             nameHitLimit = trimmedName.length == MAX_NAME_LENGTH,

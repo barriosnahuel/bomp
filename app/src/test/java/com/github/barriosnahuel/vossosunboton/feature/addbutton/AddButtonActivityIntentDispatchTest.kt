@@ -129,6 +129,33 @@ internal class AddButtonActivityIntentDispatchTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `import intent from the Hub logs add_sound with the import source`() {
+        // The in-app import Hub starts Create via AddButtonActivity.createIntent, which tags the
+        // intent SOURCE_IMPORT. The screen_view + sound_add funnel must attribute it to import, not
+        // the share-sheet default — otherwise FAB-driven imports are invisible against shares.
+        val activity = launch(AddButtonActivity.createIntent(context, SAMPLE_URI))
+
+        val addScreen =
+            fake.screens.lastOrNull { it.name == CanonicalScreenName.ADD_SOUND }
+                ?: error("createIntent did not log ADD_SOUND. Recorded: ${fake.screens.map { it.name }}")
+        assertThat(addScreen.extras["source"]).isEqualTo(AddButtonActivity.SOURCE_IMPORT)
+        assertThat(activity.intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java))
+            .isEqualTo(SAMPLE_URI)
+    }
+
+    @Test
+    fun `createIntent forwards a read grant for the picked URI`() {
+        // Security-load-bearing: the grant rides on the intent DATA (not an extra), so the same-app
+        // AddButtonActivity gets its own read permission for the SAF content URI. Dropping either the
+        // data assignment or the flag would still pass the source/EXTRA_STREAM tests but fail to read
+        // the audio on a real device.
+        val intent = AddButtonActivity.createIntent(context, SAMPLE_URI)
+
+        assertThat(intent.data).isEqualTo(SAMPLE_URI)
+        assertThat(intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION).isNotEqualTo(0)
+    }
+
+    @Test
     fun `malformed onNewIntent finishes the Activity even when a valid mode was alive`() {
         // Option A guard: the most recent intent always wins, including a malformed one. Without
         // this, a buggy share-receiver caller could leave the user stuck on a stale Edit screen

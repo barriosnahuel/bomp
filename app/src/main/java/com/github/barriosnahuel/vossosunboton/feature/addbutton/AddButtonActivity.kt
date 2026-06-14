@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -65,7 +66,10 @@ class AddButtonActivity : FragmentActivity() {
             finish()
             return
         }
-        launchCreateAddButtonMode(uri)
+        // Default to share: the manifest ACTION_SEND filter carries no source extra. The in-app
+        // import Hub sets SOURCE_IMPORT via createIntent so the funnel is attributed honestly.
+        val source = intent.getStringExtra(EXTRA_SOURCE) ?: SOURCE_SHARE
+        launchCreateAddButtonMode(uri, source)
     }
 
     private fun launchEditAddButtonMode(sound: Sound) {
@@ -82,23 +86,48 @@ class AddButtonActivity : FragmentActivity() {
         AnalyticsTrackerProvider.get(this).logScreen(CanonicalScreenName.EDIT_SOUND)
     }
 
-    private fun launchCreateAddButtonMode(uri: Uri) {
+    private fun launchCreateAddButtonMode(
+        uri: Uri,
+        source: String,
+    ) {
         setContent {
             AppTheme {
                 AddButtonScreen(
                     context = this,
                     mode = AddButtonMode.Create(uri),
+                    source = source,
                     onSaved = { finish() },
                     onNavigateUp = { finish() },
                 )
             }
         }
-        val extras = Bundle().apply { putString("source", SOURCE_SHARE) }
+        val extras = Bundle().apply { putString("source", source) }
         AnalyticsTrackerProvider.get(this).logScreen(CanonicalScreenName.ADD_SOUND, extras)
     }
 
     companion object {
-        /** Source param for `screen_view {add_sound}` and `sound_add`. Today every Create flow comes from share. */
+        /** Source param for `screen_view {add_sound}` and `sound_add`: the surface that opened Create. */
         const val SOURCE_SHARE = "share"
+        const val SOURCE_IMPORT = "import"
+
+        private const val EXTRA_SOURCE = "com.github.barriosnahuel.vossosunboton.extra.SOURCE"
+
+        /**
+         * Builds an explicit intent to start the Create flow from an audio [uri] the user picked
+         * in-app (the import Hub). [Intent.FLAG_GRANT_READ_URI_PERMISSION] + [Intent.setData]
+         * forward the SAF read grant to this Activity so the copy at save time can read the stream
+         * even if the launching screen is killed first. The URI still flows through the same inbound
+         * validator (`AddButtonFeature`) as the share-sheet path — see CLAUDE.md § Security boundaries.
+         */
+        fun createIntent(
+            context: Context,
+            uri: Uri,
+        ): Intent =
+            Intent(context, AddButtonActivity::class.java).apply {
+                data = uri
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(EXTRA_SOURCE, SOURCE_IMPORT)
+            }
     }
 }
