@@ -48,7 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.github.barriosnahuel.vossosunboton.R
-import com.github.barriosnahuel.vossosunboton.ui.AppIcons
+import com.github.barriosnahuel.vossosunboton.ui.theme.BOMP_ZONE_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.OnboardingIllustrationColors
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import com.github.barriosnahuel.vossosunboton.ui.theme.rememberOnboardingIllustrationColors
@@ -190,7 +190,6 @@ private fun ShareTile(
 private fun MiniCard(
     name: String,
     modifier: Modifier = Modifier,
-    pinned: Boolean = false,
     showShare: Boolean = false,
     highlightShare: Boolean = false,
 ) {
@@ -217,14 +216,6 @@ private fun MiniCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (pinned) {
-                    Icon(
-                        imageVector = AppIcons.PushPin,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
                 if (showShare) {
                     Box(
                         modifier =
@@ -305,8 +296,6 @@ private fun Waveform(
     }
 }
 
-// Acid tint behind the Bomp destination zone — a one-off translucent fill, named per § Design system.
-private const val BOMP_ZONE_ALPHA = 0.12f
 private val ZONE_RADIUS = 18.dp
 private val APP_TILE = 30.dp
 
@@ -512,7 +501,7 @@ internal fun OnboardingOrganizeDemo(
     }
 }
 
-/** A flat audio "sticker": no play button — an accent-outlined dot + flat wave. Anti-affordance. */
+/** A flat audio "sticker": an accent-outlined play glyph (not a filled, tappable button) + flat wave. */
 @Composable
 private fun AudioSticker(
     accent: Color,
