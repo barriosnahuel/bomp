@@ -179,34 +179,48 @@ internal class AppThemeContrastTest {
         assertTextAA(DarkColors.onSurfaceVariant, DarkColors.surface, "dark: onSurfaceVariant / surface")
     }
 
-    // --- Onboarding step 01 "Ilustración de marca" — zone accents over their own tinted background ---
-    // The foreign-app (WhatsApp) accent reads as text (label) and as a 2dp border/wave; it must meet
-    // ≥4.5:1 on the green zone tint composited over each mode's surface. Bright green clears that on
-    // the near-black dark surface but fails on light paper, where it must darken to WhatsApp's brand
-    // teal — both proven here so the rememberOnboardingIllustrationColors mapping can't regress.
+    // --- Onboarding step 01/02 illustrations — zone accents over their own tint, on the stage ---
+    // The translucent zone tints composite over the DemoStage's `surfaceVariant` background (not bare
+    // surface), so the assertions use surfaceVariant as the base — the real render stack. The
+    // foreign-app (WhatsApp) accent reads as text (label) + a 2dp border/wave and must meet ≥4.5:1:
+    // bright green clears it on the near-black dark stage but fails on the light one, where it darkens
+    // to WhatsApp's brand teal — both proven so rememberOnboardingIllustrationColors can't regress.
 
     @Test
     fun `dark foreign-app accent on its green zone passes AA`() {
-        val zone = WhatsAppGreenBright.copy(alpha = FOREIGN_ZONE_ALPHA).compositeOver(DarkColors.surface)
+        val zone = WhatsAppGreenBright.copy(alpha = FOREIGN_ZONE_ALPHA).compositeOver(DarkColors.surfaceVariant)
         assertTextAA(WhatsAppGreenBright, zone, "dark: WhatsApp accent / green zone")
     }
 
     @Test
     fun `light foreign-app accent on its green zone passes AA`() {
-        val zone = WhatsAppGreenBright.copy(alpha = FOREIGN_ZONE_ALPHA).compositeOver(LightColors.surface)
+        val zone = WhatsAppGreenBright.copy(alpha = FOREIGN_ZONE_ALPHA).compositeOver(LightColors.surfaceVariant)
         assertTextAA(WhatsAppGreenDeep, zone, "light: WhatsApp accent / green zone")
     }
 
     @Test
     fun `dark Bomp accent on its acid zone passes AA`() {
-        val zone = DarkColors.primaryContainer.copy(alpha = BOMP_ZONE_ALPHA_FOR_TEST).compositeOver(DarkColors.surface)
+        val zone = DarkColors.primaryContainer.copy(alpha = BOMP_ZONE_ALPHA).compositeOver(DarkColors.surfaceVariant)
         assertTextAA(DarkColors.primary, zone, "dark: Bomp accent / acid zone")
     }
 
     @Test
     fun `light Bomp accent on its acid zone passes AA`() {
-        val zone = LightColors.primaryContainer.copy(alpha = BOMP_ZONE_ALPHA_FOR_TEST).compositeOver(LightColors.surface)
+        val zone = LightColors.primaryContainer.copy(alpha = BOMP_ZONE_ALPHA).compositeOver(LightColors.surfaceVariant)
         assertTextAA(LightColors.primary, zone, "light: Bomp accent / acid zone")
+    }
+
+    // The step-02 neutral collection folder's 2dp `outline` border separates a `surface` card from the
+    // `surfaceVariant` stage — guard the thinner of the two adjacencies (outline / surfaceVariant).
+
+    @Test
+    fun `light neutral folder border on stage passes non-text AA`() {
+        assertNonTextAA(LightColors.outline, LightColors.surfaceVariant, "light: outline / surfaceVariant (folder border)")
+    }
+
+    @Test
+    fun `dark neutral folder border on stage passes non-text AA`() {
+        assertNonTextAA(DarkColors.outline, DarkColors.surfaceVariant, "dark: outline / surfaceVariant (folder border)")
     }
 
     // --- MySoundsEmptyState ripple pairs ---
@@ -233,9 +247,6 @@ internal class AppThemeContrastTest {
 }
 
 private const val INNER_RIPPLE_ALPHA_FOR_TEST = 0.85f
-
-// Mirrors BOMP_ZONE_ALPHA in OnboardingDemos.kt (feature package, not visible here). Keep in sync.
-private const val BOMP_ZONE_ALPHA_FOR_TEST = 0.12f
 
 private fun Color.compositeOver(bg: Color): Color =
     Color(

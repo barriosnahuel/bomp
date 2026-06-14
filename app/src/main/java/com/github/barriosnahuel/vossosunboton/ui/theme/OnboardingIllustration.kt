@@ -20,12 +20,17 @@ import androidx.compose.ui.graphics.Color
 //     the component) honors § Design system "never add isDark in component files".
 //
 // Both accents are AA-verified against their own (zone-tinted) background by OnboardingContrastTest.
-internal val WhatsAppGreenBright = Color(0xFF25D366) // 8.8:1 on Ink1000 zone — dark-mode accent + zone tint
-internal val WhatsAppGreenDeep = Color(0xFF075E54) // 6.6:1 on Paper zone — WhatsApp's brand teal, light-mode accent
+internal val WhatsAppGreenBright = Color(0xFF25D366) // dark-mode accent (AA on the dark zone) + zone tint
+internal val WhatsAppGreenDeep = Color(0xFF075E54) // WhatsApp's brand teal — light-mode accent (AA on the light zone)
+// (both AA ratios asserted over the real zone background by AppThemeContrastTest)
 
 // Subtle so the zone reads as a tint, never a filled control. Bright green in both modes (decorative,
 // keeps the "WhatsApp" association); the AA-required accent (border/label/wave) is what adapts.
 internal const val FOREIGN_ZONE_ALPHA = 0.12f
+
+// Acid tint behind the Bomp destination zone (step 01) and the highlighted collection folder (step 02).
+// Lives here so AppThemeContrastTest can import the exact value it asserts — no hand-copied mirror.
+internal const val BOMP_ZONE_ALPHA = 0.12f
 
 /** Per-mode colors for the foreign-app (WhatsApp) zone of onboarding step 01. */
 internal data class OnboardingIllustrationColors(

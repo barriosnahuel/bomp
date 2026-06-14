@@ -243,7 +243,7 @@
     <string name="app_onboarding_step2_title">Guardalas para siempre, a tu manera.</string>
     <string name="app_onboarding_step2_body">Deslizá para fijar las que más usás y ordenalas en colecciones o en el Baúl. Acá no caducan ni se borran: son tuyas para siempre.</string>
     <string name="app_onboarding_step2_cta">Sigo</string>
-    <string name="app_onboarding_step2_demo_description">Deslizar un audio guardado para fijarlo, con colecciones y el Baúl abajo.</string>
+    <string name="app_onboarding_step2_demo_description">Arrastrar un audio guardado a una de tus colecciones, con el Baúl al lado.</string>
     <string name="app_onboarding_step3_eyebrow">Bompear</string>
     <string name="app_onboarding_step3_title">Mandala a quien la tiene que escuchar.</string>
     <string name="app_onboarding_step3_body">El audio justo, en el chat justo, en el momento justo. Eso es bompear.</string>

@@ -249,7 +249,7 @@
     <string name="app_onboarding_step2_title">Keep them forever, your way.</string>
     <string name="app_onboarding_step2_body">Swipe to pin the ones you use most, and sort them into collections or the Vault. Here they don\'t expire or get deleted — they\'re yours for good.</string>
     <string name="app_onboarding_step2_cta">Next</string>
-    <string name="app_onboarding_step2_demo_description">Swiping a saved audio to pin it, with collections and the Vault below.</string>
+    <string name="app_onboarding_step2_demo_description">Dragging a saved audio into one of your collections, with the Vault alongside.</string>
     <string name="app_onboarding_step3_eyebrow">Bomp</string>
     <string name="app_onboarding_step3_title">Send it to whoever needs to hear it.</string>
     <string name="app_onboarding_step3_body">The right audio, in the right chat, at the right moment. That\'s bomping.</string>
