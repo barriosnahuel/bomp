@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
@@ -179,6 +180,50 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         composeTestRule.onNodeWithText("How do you add one?").assertIsDisplayed()
     }
 
+    @Test
+    fun `empty My Bomps hides the FAB and shows the Import CTA instead`() {
+        val viewModel = givenAViewModel()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        viewModel.injectSounds(emptyList())
+        composeTestRule.waitForIdle()
+
+        // Welcome-empty state owns the single imperative: the inline "Import" CTA, not the FAB
+        // (design "estado vacío": fab=null + CTA Importar).
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Import").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `non-empty My Bomps shows the FAB and no inline Import CTA`() {
+        // Reverse of the empty-state swap: with audios present (a fresh install seeds the welcome
+        // sticker, so the list is non-empty), the FAB is the create affordance and the empty-state
+        // CTA must not appear.
+        val viewModel = givenAViewModel()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Import").assertDoesNotExist()
+    }
+
+    @Test
+    fun `tapping the empty-state Import CTA opens the import Hub`() {
+        val viewModel = givenAViewModel()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        viewModel.injectSounds(emptyList())
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Import").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        // Same destination the FAB carries (design: "mismo sheet desde el CTA del estado vacío").
+        composeTestRule.onNodeWithText("How do you add one?").assertIsDisplayed()
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun givenAViewModel(): SoundsViewModel {
         val vm =
@@ -210,6 +255,17 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
             .getDeclaredField("allSoundsCache")
             .also { it.isAccessible = true }
             // Safe: allSoundsCache is always MutableStateFlow<List<Sound>> — type parameter erased at runtime
+            .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = value }
+    }
+
+    // Drives the rendered list (`_sounds`) directly. A fresh install seeds it with the welcome
+    // sticker, so emptying it is the only way to reach the welcome-empty state once init's load
+    // has settled (inject AFTER waitForIdle, same cascade reasoning as injectLibrary).
+    private fun SoundsViewModel.injectSounds(value: List<Sound>) {
+        SoundsViewModel::class.java
+            .getDeclaredField("_sounds")
+            .also { it.isAccessible = true }
+            // Safe: _sounds is always MutableStateFlow<List<Sound>> — type parameter erased at runtime
             .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = value }
     }
 }
