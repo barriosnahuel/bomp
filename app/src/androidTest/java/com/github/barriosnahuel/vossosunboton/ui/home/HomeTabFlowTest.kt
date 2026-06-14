@@ -140,10 +140,9 @@ internal class HomeTabFlowTest : AbstractUiTest() {
 
     @Test
     fun homeScreenExposesA11yContentDescriptionsForKeyControls() {
-        // 7 mirrors SEARCH_FAB_MIN_SOUNDS in LandingScreen.kt — below that, the Search FAB is
-        // hidden by design, so seeding fewer items would make the searchLabel() assertion fail.
-        // Per-sound controls (play/share/pin) match once per row, so the assertions use onFirst().
-        TestData.seedCustomSounds(context, count = 7)
+        // The search action lives in the top app bar and is always present; the per-sound controls
+        // (play/share/pin) just need at least one row to exist, matched once per row via onFirst().
+        TestData.seedCustomSounds(context, count = 1)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(searchLabel()).assertHasClickAction()

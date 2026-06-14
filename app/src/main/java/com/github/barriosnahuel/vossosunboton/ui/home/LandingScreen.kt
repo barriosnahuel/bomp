@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -84,11 +83,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun LandingScreen(viewModel: SoundsViewModel) {
     val sounds by viewModel.sounds.collectAsState()
-    // Full catalog across every surface (custom + bundled), independent of the visible tab — the
-    // Search FAB gates on this because search itself is global. `sounds` is the tab-filtered list
-    // and would wrongly hide the FAB on a sparse tab (e.g. My Sounds with a couple of audios) while
-    // the rest of the library is searchable.
-    val library by viewModel.library.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     val hasBundledSounds by viewModel.hasBundledSounds.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
@@ -169,7 +163,6 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         modifier = if (subScreenOpen) Modifier.clearAndSetSemantics {} else Modifier,
         viewModel = viewModel,
         sounds = sounds,
-        librarySize = library.size,
         selectedTab = selectedTab,
         hasBundledSounds = hasBundledSounds,
         playbackProgress = playbackProgress,
@@ -328,7 +321,6 @@ private fun ScaffoldedLanding(
     modifier: Modifier = Modifier,
     viewModel: SoundsViewModel,
     sounds: List<Sound>,
-    librarySize: Int,
     selectedTab: AppTab,
     hasBundledSounds: Boolean,
     playbackProgress: PlaybackProgress?,
@@ -349,14 +341,11 @@ private fun ScaffoldedLanding(
     onActiveFilterEditClick: (String) -> Unit,
     onImmersivePlay: (Sound) -> Unit,
 ) {
-    // The Search FAB now renders on the Vault tab too, but only once it's unlocked (its audio list
-    // is on screen) — the locked unlock screen stays focused, matching the old create-collection FAB
-    // which was also only visible inside the unlocked Vault.
-    val vaultOpen by VaultSessionState.flow.collectAsState()
     Scaffold(
         modifier = modifier,
         topBar = {
             AppTopBar(
+                onSearchClick = { viewModel.showSearch() },
                 onAboutClick = onAboutClick,
                 onManageCollectionsClick = onManageCollectionsClick,
             )
@@ -378,24 +367,6 @@ private fun ScaffoldedLanding(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            // Search spans every surface, so the FAB gates on the global library size (not the
-            // tab-filtered `sounds`) — a sparse current tab must not hide a FAB that searches the
-            // whole catalog. It shows on every tab; on the Vault tab only once unlocked, so the
-            // locked unlock screen stays uncluttered.
-            if ((selectedTab != AppTab.VAULT || vaultOpen) && librarySize >= SEARCH_FAB_MIN_SOUNDS) {
-                FloatingActionButton(
-                    onClick = { viewModel.showSearch() },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.app_ic_search),
-                        contentDescription = stringResource(R.string.app_search),
-                    )
-                }
-            }
-        },
     ) { innerPadding ->
         when (selectedTab) {
             AppTab.VAULT ->
@@ -558,6 +529,7 @@ private fun SnackbarEffects(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppTopBar(
+    onSearchClick: () -> Unit,
     onAboutClick: () -> Unit,
     onManageCollectionsClick: () -> Unit,
 ) {
@@ -566,6 +538,12 @@ private fun AppTopBar(
     TopAppBar(
         title = { Text(stringResource(R.string.app_name)) },
         actions = {
+            IconButton(onClick = onSearchClick) {
+                Icon(
+                    painter = painterResource(R.drawable.app_ic_search),
+                    contentDescription = stringResource(R.string.app_search),
+                )
+            }
             IconButton(onClick = { isMenuExpanded = true }) {
                 Icon(
                     painter = painterResource(R.drawable.app_ic_more_vert),
@@ -665,12 +643,6 @@ private fun AppBottomBar(
         }
     }
 }
-
-// 7 is the lower bound of the UX-research "ambiguous band" (7–15 items) where search starts to
-// out-perform scanning on mobile. Below 7, IME open + typing cost > scan time (NN/g "search vs.
-// browse", Baymard on mobile filter thresholds). We anchor at the lower bound because Bomp names
-// are short (fast to scan) and the dominant search task is find-specific, not browse-to-discover.
-private const val SEARCH_FAB_MIN_SOUNDS = 7
 
 private const val DELETE_ANIMATION_DURATION_MS = 300
 private val WELCOME_BORDER_WIDTH = 1.5.dp

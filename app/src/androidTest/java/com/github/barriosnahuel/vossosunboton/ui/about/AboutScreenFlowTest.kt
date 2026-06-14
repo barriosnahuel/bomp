@@ -53,7 +53,7 @@ internal class AboutScreenFlowTest : AbstractUiTest() {
         ActivityScenario.launch(LandingActivity::class.java).use {
             openAbout()
             composeRule.onNodeWithContentDescription(backLabel()).performClick()
-            // Overflow menu is the Landing sentinel (absent on About); the Search FAB is unusable here since it is gated on sound count.
+            // Overflow menu is the Landing sentinel — it lives in the home top app bar, absent on About.
             composeRule.awaitNodeWithContentDescription(context.getString(R.string.app_overflow_menu)).assertIsDisplayed()
         }
     }
