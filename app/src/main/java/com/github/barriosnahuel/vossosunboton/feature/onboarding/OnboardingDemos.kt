@@ -73,8 +73,10 @@ private const val RING_ALPHA_TO = 0f
 private const val RING_STATIC_SCALE = 1.4f
 private const val RING_STATIC_ALPHA = 0.5f
 
-// The second, non-pinned card in the organize demo sits behind the gesture, dimmed.
-private const val DIMMED_CARD_ALPHA = 0.5f
+// Collection folders in the step-02 "drag to a collection" illustration.
+private const val FOLDER_DOT_COUNT = 3
+private val FOLDER_HEIGHT = 76.dp
+private val FOLDER_DOT = 8.dp
 
 /** Mono metadata is rendered ALL CAPS per the design's casing rule; locale-uppercased from a resource. */
 @Composable
@@ -459,47 +461,135 @@ private fun BompZone(modifier: Modifier = Modifier) {
     }
 }
 
-// ── Step 2 — GUARDAR: swipe a card to pin it; collections + the Baúl below. ──────────────────────────
+// ── Step 2 — GUARDAR · "Colecciones (arrastrar)": drag an audio sticker into a collection. The
+// sticker is flat (no play button — anti-affordance, same stance as step 01); an acid drag path
+// leads to the highlighted folder, the drop target. Teaches "ordenala a tu manera". Design: 2c ·
+// Paso 02 · Toma 3. ──────────────────────────────────────────────────────────────────────────────
 @Composable
 internal fun OnboardingOrganizeDemo(
     reduceMotion: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.SM)) {
-            DemoChip(label = stringResource(R.string.app_onboarding_chip_all), active = true)
-            DemoChip(label = stringResource(R.string.app_onboarding_chip_collection), active = false)
-            DemoChip(label = stringResource(R.string.app_vault_baul_name), active = false, locked = true)
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.SM),
+    ) {
+        // The dragged audio, with the finger on it.
+        Box(contentAlignment = Alignment.CenterEnd) {
+            AudioSticker(accent = MaterialTheme.colorScheme.primary)
+            TouchDot(reduceMotion = reduceMotion, modifier = Modifier.offset(x = (-6).dp))
         }
-        Spacer(Modifier.height(Spacing.MD))
-        // Swipe-to-pin: the acid pin reveal peeks from the left as the card slides right.
-        Box {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(MINI_CARD_RADIUS))
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.CenterStart,
-            ) {
+        // Drag path + the "your way" cue.
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.XS)) {
+            FlowChevron(rotationDegrees = 90f, modifier = Modifier.size(22.dp))
+            Text(
+                text = stringResource(R.string.app_onboarding_demo_organize_cue),
+                style = MaterialTheme.typography.titleMedium,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        // Three collections — the highlighted "Familia" is where the audio lands.
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.SM)) {
+            CollectionFolder(
+                label = stringResource(R.string.app_onboarding_demo_collection_family),
+                highlight = true,
+                modifier = Modifier.weight(1f),
+            )
+            CollectionFolder(
+                label = stringResource(R.string.app_onboarding_chip_collection),
+                highlight = false,
+                modifier = Modifier.weight(1f),
+            )
+            CollectionFolder(
+                label = stringResource(R.string.app_vault_baul_name),
+                highlight = false,
+                locked = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/** A flat audio "sticker": no play button — an accent-outlined dot + flat wave. Anti-affordance. */
+@Composable
+private fun AudioSticker(
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(MINI_CARD_RADIUS))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(2.dp, accent, RoundedCornerShape(MINI_CARD_RADIUS))
+                .padding(horizontal = Spacing.MD, vertical = Spacing.SM),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.SM),
+    ) {
+        Box(
+            modifier = Modifier.size(22.dp).clip(RoundedCornerShape(percent = 50)).border(2.dp, accent, RoundedCornerShape(percent = 50)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.app_ic_play_arrow),
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(11.dp),
+            )
+        }
+        Waveform(color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** A collection folder card: a dot cluster + label. [highlight] = the acid drop target. */
+@Composable
+private fun CollectionFolder(
+    label: String,
+    highlight: Boolean,
+    modifier: Modifier = Modifier,
+    locked: Boolean = false,
+) {
+    val accent = if (highlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+    Column(
+        modifier =
+            modifier
+                .height(FOLDER_HEIGHT)
+                .clip(RoundedCornerShape(MINI_CARD_RADIUS))
+                .background(
+                    if (highlight) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = BOMP_ZONE_ALPHA)
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+                ).border(2.dp, accent, RoundedCornerShape(MINI_CARD_RADIUS))
+                .padding(Spacing.SM),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.SM, Alignment.CenterVertically),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.XS)) {
+            repeat(FOLDER_DOT_COUNT) {
+                Box(Modifier.size(FOLDER_DOT).clip(RoundedCornerShape(percent = 50)).background(accent))
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.XS)) {
+            if (locked) {
                 Icon(
-                    imageVector = AppIcons.PushPin,
+                    painter = painterResource(R.drawable.app_ic_lock),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(start = Spacing.LG).size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(11.dp),
                 )
             }
-            MiniCard(name = stringResource(R.string.app_onboarding_demo_card_pinned), modifier = Modifier.offset(x = 56.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TouchDot(reduceMotion = reduceMotion)
-            FlowChevron(rotationDegrees = 0f, modifier = Modifier.size(22.dp))
-        }
-        MiniCard(
-            name = stringResource(R.string.app_onboarding_demo_card_other),
-            modifier = Modifier.graphicsLayer { alpha = DIMMED_CARD_ALPHA },
-        )
     }
 }
 
@@ -529,39 +619,5 @@ internal fun OnboardingBompearDemo(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun DemoChip(
-    label: String,
-    active: Boolean,
-    locked: Boolean = false,
-) {
-    Row(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(percent = 50))
-                .background(if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
-                .border(
-                    HAIRLINE,
-                    if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.outline,
-                    RoundedCornerShape(percent = 50),
-                ).padding(horizontal = Spacing.MD, vertical = Spacing.XS),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (locked) {
-            Icon(
-                painter = painterResource(R.drawable.app_ic_lock),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = Spacing.XS).size(11.dp),
-            )
-        }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-        )
     }
 }

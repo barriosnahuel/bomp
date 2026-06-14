@@ -265,9 +265,8 @@
     <string name="app_onboarding_dest_chat">Chat</string>
     <string name="app_onboarding_dest_group">Group</string>
     <string name="app_onboarding_dest_more">More</string>
-    <string name="app_onboarding_chip_all">All</string>
     <string name="app_onboarding_chip_collection">Recipes</string>
-    <string name="app_onboarding_demo_card_pinned">Grandma\'s laugh</string>
-    <string name="app_onboarding_demo_card_other">Client quote</string>
+    <string name="app_onboarding_demo_collection_family">Family</string>
+    <string name="app_onboarding_demo_organize_cue">your way</string>
     <string name="app_onboarding_demo_card_send">Happy birthday, genius</string>
 </resources>
