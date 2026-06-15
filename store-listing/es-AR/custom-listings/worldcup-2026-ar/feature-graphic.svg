@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" width="1024" height="500">
+  <!--
+    Feature graphic 1024x500 — Argentina custom store listing, seasonal "El grito".
+    Bomp brand mark (blob + play triangle) as hero — same identity as the canonical feature graphic.
+    "El grito" energy = ECHO rings (translucent from the first, ramp 0.36→0.08) + a red heat core, plus
+    soft diagonal sparks (no cardinal rays, to avoid a crosshair/radar read). The mark is the only solid acid.
+    Football lives in the tagline, not a generic ball. No wordmark.
+    Export: rsvg-convert -w 1024 -h 500 feature-graphic.svg -o feature-graphic-1024x500-es-AR.png
+  -->
+  <defs>
+    <radialGradient id="fg-acid" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#D7FF3A" stop-opacity="0.42"/>
+      <stop offset="50%" stop-color="#D7FF3A" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#D7FF3A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="fg-heat" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F26163" stop-opacity="0.75"/>
+      <stop offset="60%" stop-color="#F26163" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#F26163" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1024" height="500" fill="#0B0B0C"/>
+
+  <g transform="translate(215 250)">
+    <circle r="230" fill="url(#fg-acid)"/>
+    <circle r="150" fill="url(#fg-heat)"/>
+
+    <!-- soft diagonal sparks only (no cardinal rays) -->
+    <g stroke="#D7FF3A" stroke-linecap="round">
+      <g opacity="0.3" transform="rotate(45)">
+        <line x1="0" y1="-125" x2="0" y2="-195" stroke-width="6"/>
+        <line x1="0" y1="125" x2="0" y2="195" stroke-width="6"/>
+        <line x1="-125" y1="0" x2="-195" y2="0" stroke-width="6"/>
+        <line x1="125" y1="0" x2="195" y2="0" stroke-width="6"/>
+      </g>
+      <g opacity="0.2" transform="rotate(22.5)">
+        <line x1="0" y1="-130" x2="0" y2="-182" stroke-width="4"/>
+        <line x1="0" y1="130" x2="0" y2="182" stroke-width="4"/>
+        <line x1="-130" y1="0" x2="-182" y2="0" stroke-width="4"/>
+        <line x1="130" y1="0" x2="182" y2="0" stroke-width="4"/>
+      </g>
+      <g opacity="0.2" transform="rotate(67.5)">
+        <line x1="0" y1="-130" x2="0" y2="-182" stroke-width="4"/>
+        <line x1="0" y1="130" x2="0" y2="182" stroke-width="4"/>
+        <line x1="-130" y1="0" x2="-182" y2="0" stroke-width="4"/>
+        <line x1="130" y1="0" x2="182" y2="0" stroke-width="4"/>
+      </g>
+    </g>
+
+    <!-- echo rings: translucent from the first one, thin -->
+    <g fill="none" stroke="#D7FF3A">
+      <circle r="138" stroke-width="8" opacity="0.36"/>
+      <circle r="165" stroke-width="6" opacity="0.24"/>
+      <circle r="192" stroke-width="5" opacity="0.15"/>
+      <circle r="219" stroke-width="4" opacity="0.08"/>
+    </g>
+  </g>
+
+  <g transform="translate(103 138) scale(7)">
+    <path d="M10.24 0 A21.76 9.6 0 0 1 32 9.6 A22.4 22.4 0 0 1 9.6 32 A9.6 22.4 0 0 1 0 9.6 A10.24 9.6 0 0 1 10.24 0 Z" fill="#D7FF3A"/>
+    <path d="M10 8 L10 24 L23 16 Z" fill="#0B0B0C"/>
+  </g>
+
+  <g fill="#FAFAF7" font-family="Inter, Roboto, system-ui, sans-serif" font-weight="600" font-size="56">
+    <text x="440" y="195">Guardá</text>
+    <text x="440" y="265">el grito de gol</text>
+    <text x="440" y="335">de los tuyos.</text>
+  </g>
+</svg>
