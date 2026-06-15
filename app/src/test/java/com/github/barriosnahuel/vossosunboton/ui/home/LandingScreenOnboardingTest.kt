@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -170,7 +171,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
                 ioDispatcher = UnconfinedTestDispatcher(),
             )
         createdViewModels += vm
-        runBlocking { vm.isInitialLoadComplete.first { it } }
+        runBlocking { withTimeout(AWAIT_TIMEOUT_MS) { vm.isInitialLoadComplete.first { it } } }
         return vm
     }
 
@@ -183,6 +184,9 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
     }
 
     private companion object {
+        // Bounds the init-load await so a missed signal fails in seconds, not at CI's no-output
+        // timeout (ADR ratchet on unbounded runBlocking flow-awaits in tests).
+        const val AWAIT_TIMEOUT_MS = 5_000L
         const val HUB_TITLE = "How do you add one?"
         const val SECONDARY_LABEL = "See how it works"
         const val STEP1_TITLE = "Bring in the voices you already have."
