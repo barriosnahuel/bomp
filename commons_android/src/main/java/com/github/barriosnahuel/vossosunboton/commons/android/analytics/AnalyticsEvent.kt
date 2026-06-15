@@ -411,6 +411,12 @@ sealed class AnalyticsEvent(
      * Funnel: import_hub_opened → import_hub_import_selected → `sound_add {source=import}`.
      * Hub abandonment = opened − import_selected; picker/naming drop-off = import_selected −
      * sound_add(source=import). No dedicated cancel event by design — it is derivable by subtraction.
+     *
+     * For an *import-intent* funnel, scope the denominator to proactive opens
+     * (`source IN ("fab", "my_sounds_empty_state")`) and treat `"onboarding_finish"` as its own
+     * cohort: the tour drops the user on the Hub, so folding it into the total inflates `opened`
+     * vs `import_selected`. Its own conversion (does landing them on the Hub post-tour convert?)
+     * is a separate, deliberate question.
      */
     data class ImportHubOpened(
         val source: String,
