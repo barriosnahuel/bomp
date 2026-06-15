@@ -6,7 +6,7 @@
 package com.github.barriosnahuel.vossosunboton
 
 import android.content.Context
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.test.espresso.accessibility.AccessibilityChecks
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.matcher.ViewMatchers.withClassName
