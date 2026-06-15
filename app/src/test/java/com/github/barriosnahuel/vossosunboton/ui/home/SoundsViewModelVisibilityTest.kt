@@ -117,6 +117,11 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         runBlocking {
             withTimeout(TIMEOUT_MS) {
                 vm.collections.first { it.isNotEmpty() }
+                // Await the reactive loadSounds priming allSoundsCache with "hideme" BEFORE toggling
+                // visibility. Without it, on a loaded CI machine setAudioVisibleInMySounds runs
+                // against an empty cache and the toggle is lost, so the sounds-contains-hideme await
+                // below times out (CLAUDE.md § JVM tests — await every async input).
+                vm.library.first { lib -> lib.any { it.name == "hideme" } }
                 vm.setAudioVisibleInMySounds("custom:hideme", "hideme", visible = true)
                 vm.sounds.first { list -> list.any { it.name == "hideme" } }
             }
