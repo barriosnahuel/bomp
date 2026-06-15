@@ -142,12 +142,17 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         openTourFromHub()
         composeTestRule.onNodeWithText("Go on").performClick()
         composeTestRule.onNodeWithText(STEP2_TITLE).assertIsDisplayed()
+        val stepViewsBeforeRestore = fake.events.count { it.name == "onboarding_step_viewed" }
 
         restorationTester.emulateSavedInstanceStateRestore()
         composeTestRule.waitForIdle()
 
         // The step index is rememberSaveable in the host: a recreate must not rewind to step 1.
         composeTestRule.onNodeWithText(STEP2_TITLE).assertIsDisplayed()
+        // …and must NOT emit a phantom onboarding_step_viewed (the `lastLoggedStep` guard): a rotation
+        // mid-tour would otherwise inflate the funnel and mis-attribute the re-view to method=open.
+        val stepViewsAfterRestore = fake.events.count { it.name == "onboarding_step_viewed" }
+        assertThat(stepViewsAfterRestore).isEqualTo(stepViewsBeforeRestore)
     }
 
     private fun openTourFromHub() {

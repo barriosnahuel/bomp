@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsNavMethod
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsOnboardingStep
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.ui.rememberReduceMotionEnabled
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
@@ -84,7 +86,7 @@ private data class OnboardingStepContent(
 private val ONBOARDING_STEPS =
     listOf(
         OnboardingStepContent(
-            key = "import",
+            key = AnalyticsOnboardingStep.IMPORT,
             number = "01",
             eyebrow = R.string.app_onboarding_step1_eyebrow,
             title = R.string.app_onboarding_step1_title,
@@ -93,7 +95,7 @@ private val ONBOARDING_STEPS =
             demoDescription = R.string.app_onboarding_step1_demo_description,
         ),
         OnboardingStepContent(
-            key = "organize",
+            key = AnalyticsOnboardingStep.ORGANIZE,
             number = "02",
             eyebrow = R.string.app_onboarding_step2_eyebrow,
             title = R.string.app_onboarding_step2_title,
@@ -102,7 +104,7 @@ private val ONBOARDING_STEPS =
             demoDescription = R.string.app_onboarding_step2_demo_description,
         ),
         OnboardingStepContent(
-            key = "bompear",
+            key = AnalyticsOnboardingStep.BOMPEAR,
             number = "03",
             eyebrow = R.string.app_onboarding_step3_eyebrow,
             title = R.string.app_onboarding_step3_title,
@@ -134,12 +136,32 @@ internal fun OnboardingTour(
     val context = LocalContext.current
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
 
+    val stepCount = ONBOARDING_STEPS.size
+
     // The method that triggered the upcoming step change, read by the step-viewed effect below.
     // Defaults to "open" so the first step view (on first composition) is attributed to the open.
     var pendingMethod by remember { mutableStateOf(AnalyticsNavMethod.OPEN) }
+    // Emit step_viewed only when the step actually changes — never on a bare recompose or an Activity
+    // recreate. `lastLoggedStep` is rememberSaveable so after a rotation/restore it already equals the
+    // restored step and the effect skips, avoiding a phantom step_viewed mis-attributed to "open".
+    var lastLoggedStep by rememberSaveable { mutableStateOf(-1) }
     LaunchedEffect(safeStep) {
-        tracker.log(AnalyticsEvent.OnboardingStepViewed(step = safeStep + 1, stepKey = content.key, method = pendingMethod))
+        if (safeStep != lastLoggedStep) {
+            tracker.log(
+                AnalyticsEvent.OnboardingStepViewed(
+                    step = safeStep + 1,
+                    stepKey = content.key,
+                    stepCount = stepCount,
+                    method = pendingMethod,
+                ),
+            )
+            lastLoggedStep = safeStep
+        }
     }
+
+    // One-shot latch: a rapid double-tap (or button + tap) on the last step must not log two
+    // Completed / two Dismissed. A fresh tour instance per open resets it naturally.
+    var terminated by remember { mutableStateOf(false) }
 
     // Navigation helpers: each records the method (tap / button / back) so the funnel can compare
     // the "stories" gesture vs the explicit controls. Finishing logs Completed; dismissing logs
@@ -155,12 +177,23 @@ internal fun OnboardingTour(
     }
 
     fun finish(method: String) {
-        tracker.log(AnalyticsEvent.OnboardingCompleted(method = method))
+        if (terminated) return
+        terminated = true
+        tracker.log(AnalyticsEvent.OnboardingCompleted(stepKey = content.key, stepCount = stepCount, method = method))
         onFinish()
     }
 
     fun dismiss(method: String) {
-        tracker.log(AnalyticsEvent.OnboardingDismissed(step = safeStep + 1, stepKey = content.key, method = method))
+        if (terminated) return
+        terminated = true
+        tracker.log(
+            AnalyticsEvent.OnboardingDismissed(
+                step = safeStep + 1,
+                stepKey = content.key,
+                stepCount = stepCount,
+                method = method,
+            ),
+        )
         onSkip()
     }
 

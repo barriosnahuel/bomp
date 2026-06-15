@@ -83,6 +83,7 @@ internal class OnboardingTourTest : AbstractRobolectricTest() {
         val event = fake.assertEmitted("onboarding_step_viewed")
         assertThat(event.params["step"]).isEqualTo(1)
         assertThat(event.params["step_key"]).isEqualTo("import")
+        assertThat(event.params["step_count"]).isEqualTo(3)
         assertThat(event.params["method"]).isEqualTo("open")
     }
 
@@ -178,7 +179,23 @@ internal class OnboardingTourTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
 
         assertThat(finished).isTrue()
-        assertThat(fake.assertEmitted("onboarding_completed").params["method"]).isEqualTo("tap")
+        val completed = fake.assertEmitted("onboarding_completed")
+        assertThat(completed.params["method"]).isEqualTo("tap")
+        assertThat(completed.params["step_key"]).isEqualTo("bompear")
+        assertThat(completed.params["step_count"]).isEqualTo(3)
+    }
+
+    @Test
+    fun `a double-tap off the last step logs completed only once`() {
+        // The host's onFinish is a no-op flag here, so the tour stays composed and the second tap
+        // exercises the `terminated` latch — a fast double-tap must not double-count completion.
+        setTour(initialStep = 2)
+
+        composeTestRule.onNodeWithTag(ONBOARDING_TAP_NEXT).performTouchInput { click() }
+        composeTestRule.onNodeWithTag(ONBOARDING_TAP_NEXT).performTouchInput { click() }
+        composeTestRule.waitForIdle()
+
+        assertThat(fake.events.count { it.name == "onboarding_completed" }).isEqualTo(1)
     }
 
     private fun pressBack() {
