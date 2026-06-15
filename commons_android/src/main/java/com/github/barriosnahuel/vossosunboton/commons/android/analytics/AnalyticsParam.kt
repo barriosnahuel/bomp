@@ -36,7 +36,20 @@ object AnalyticsParam {
     const val REASON = "reason"
     const val STEP = "step"
     const val STEP_KEY = "step_key"
+    const val STEP_COUNT = "step_count"
     const val METHOD = "method"
+}
+
+/**
+ * Canonical, stable `step_key` values for the onboarding funnel — the CONCEPT each step teaches,
+ * independent of its display position. Keying queries on these (not the 1/2/3 index) keeps the funnel
+ * meaningful if the steps are ever reordered. Referenced by `ONBOARDING_STEPS` so a rename can't
+ * silently drift the emitter away from what queries filter on.
+ */
+object AnalyticsOnboardingStep {
+    const val IMPORT = "import"
+    const val ORGANIZE = "organize"
+    const val BOMPEAR = "bompear"
 }
 
 /**

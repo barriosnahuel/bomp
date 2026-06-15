@@ -323,8 +323,16 @@ sealed class AnalyticsEvent(
         AnalyticsEvent(name = "vault_search_unlock_cta_shown", hasFirstVariant = false)
 
     /**
-     * The onboarding tour was opened. [source] is the entry point ([AnalyticsParam.IMPORT_HUB] vs
-     * [AnalyticsParam.EMPTY_STATE]). `hasFirstVariant = true` so dashboards isolate first-ever opens.
+     * Onboarding funnel · ENTRY. [source] = which surface opened it (IMPORT_HUB vs EMPTY_STATE).
+     * `hasFirstVariant = true` so first-ever opens are isolable.
+     *
+     * Funnel query guide (whole funnel; each sibling event adds its own notes):
+     *  - started vs finished = count(onboarding_opened) vs count(onboarding_completed) — aggregate only;
+     *    there is no per-open id by design, so a single open can't be joined to its own end.
+     *  - abandonment = opened - completed - dismissed (dismissed = explicit exits only; backgrounding
+     *    the app fires nothing); the abandon step = that open's last onboarding_step_viewed.step_key.
+     *  - GA4: register source/step_key/method (custom dimensions) + step/step_count (custom metrics)
+     *    before they appear in Explorations — NOT retroactive. The BigQuery export has every param raw.
      */
     data class OnboardingOpened(
         val source: String,
@@ -333,46 +341,63 @@ sealed class AnalyticsEvent(
     }
 
     /**
-     * A tour step became visible — the funnel signal. [step] is the 1-indexed display position;
-     * [stepKey] is the stable concept slug (import / organize / bompear), robust to a future reorder;
-     * [method] is how the user got there ([AnalyticsNavMethod]). High-frequency → no first variant.
+     * Onboarding funnel · STEP REACH (one per step entry). [step] = 1-indexed position; [stepKey] =
+     * stable concept ([AnalyticsOnboardingStep]); [stepCount] = total steps (the denominator, survives
+     * a future step-count change); [method] = how they arrived ([AnalyticsNavMethod]). No first variant.
+     * QUERY: fires on back / re-entry too, so raw COUNT overcounts — use COUNT(DISTINCT user) or
+     * first-touch per user, or filter by [method]. method=open marks the open's first view (a recreate
+     * does NOT re-emit). Build the funnel on step_key, not step (positions can be reordered).
      */
     data class OnboardingStepViewed(
         val step: Int,
         val stepKey: String,
+        val stepCount: Int,
         val method: String,
     ) : AnalyticsEvent(name = "onboarding_step_viewed", hasFirstVariant = false) {
         override fun params(): Bundle =
             Bundle().apply {
                 putInt(AnalyticsParam.STEP, step)
                 putString(AnalyticsParam.STEP_KEY, stepKey)
+                putInt(AnalyticsParam.STEP_COUNT, stepCount)
                 putString(AnalyticsParam.METHOD, method)
             }
     }
 
     /**
-     * The user reached the end and finished the tour (CTA or tapping forward off the last step).
-     * [method] distinguishes the explicit button from the "stories" tap. `hasFirstVariant = true`.
+     * Onboarding funnel · SUCCESS (reached + finished the last step). completion rate =
+     * count(completed) / count(opened). [stepKey] / [stepCount] = the last step's concept + total (so
+     * it's queryable standalone and stays correct under a reorder); [method] = button (CTA) vs tap
+     * (stories). `hasFirstVariant = true`.
      */
     data class OnboardingCompleted(
+        val stepKey: String,
+        val stepCount: Int,
         val method: String,
     ) : AnalyticsEvent(name = "onboarding_completed", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.METHOD, method) }
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString(AnalyticsParam.STEP_KEY, stepKey)
+                putInt(AnalyticsParam.STEP_COUNT, stepCount)
+                putString(AnalyticsParam.METHOD, method)
+            }
     }
 
     /**
-     * The user left the tour before finishing (Skip or device-back from the first step). [step] /
-     * [stepKey] mark where they dropped; [method] is how. The drop-off counterpart to the funnel.
+     * Onboarding funnel · EXPLICIT EXIT (Skip, or device-back from step 1) — NOT "all non-completers"
+     * (backgrounding fires nothing; see the abandonment recipe on [OnboardingOpened]). [step] /
+     * [stepKey] / [stepCount] mark where they left; [method] is how. No first variant.
      */
     data class OnboardingDismissed(
         val step: Int,
         val stepKey: String,
+        val stepCount: Int,
         val method: String,
     ) : AnalyticsEvent(name = "onboarding_dismissed", hasFirstVariant = false) {
         override fun params(): Bundle =
             Bundle().apply {
                 putInt(AnalyticsParam.STEP, step)
                 putString(AnalyticsParam.STEP_KEY, stepKey)
+                putInt(AnalyticsParam.STEP_COUNT, stepCount)
                 putString(AnalyticsParam.METHOD, method)
             }
     }
