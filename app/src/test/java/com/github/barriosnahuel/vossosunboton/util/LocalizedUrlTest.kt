@@ -20,49 +20,49 @@ internal class LocalizedUrlTest {
 
     @Test
     fun `Argentine Spanish maps to es-AR`() {
-        assertThat(toSupportedHl(Locale("es", "AR"))).isEqualTo("es-AR")
+        assertThat(toSupportedHl(Locale.of("es", "AR"))).isEqualTo("es-AR")
     }
 
     @Test
     fun `Spain Spanish maps to es-ES`() {
-        assertThat(toSupportedHl(Locale("es", "ES"))).isEqualTo("es-ES")
+        assertThat(toSupportedHl(Locale.of("es", "ES"))).isEqualTo("es-ES")
     }
 
     @Test
     fun `Latin American Spanish countries fall back to es-419`() {
         listOf("MX", "CL", "UY", "CO", "PE", "BO", "419").forEach { country ->
-            assertThat(toSupportedHl(Locale("es", country))).isEqualTo("es-419")
+            assertThat(toSupportedHl(Locale.of("es", country))).isEqualTo("es-419")
         }
     }
 
     @Test
     fun `Spanish without country falls back to es-419`() {
-        assertThat(toSupportedHl(Locale("es"))).isEqualTo("es-419")
+        assertThat(toSupportedHl(Locale.of("es"))).isEqualTo("es-419")
     }
 
     @Test
     fun `English of any country maps to en`() {
         listOf("US", "GB", "AU", "IN", "CA").forEach { country ->
-            assertThat(toSupportedHl(Locale("en", country))).isEqualTo("en")
+            assertThat(toSupportedHl(Locale.of("en", country))).isEqualTo("en")
         }
-        assertThat(toSupportedHl(Locale("en"))).isEqualTo("en")
+        assertThat(toSupportedHl(Locale.of("en"))).isEqualTo("en")
     }
 
     @Test
     fun `Portuguese of any country maps to pt-BR`() {
         listOf("BR", "PT", "AO", "MZ").forEach { country ->
-            assertThat(toSupportedHl(Locale("pt", country))).isEqualTo("pt-BR")
+            assertThat(toSupportedHl(Locale.of("pt", country))).isEqualTo("pt-BR")
         }
     }
 
     @Test
     fun `unsupported languages fall back to en`() {
         listOf(
-            Locale("ja", "JP"),
-            Locale("fr", "FR"),
-            Locale("de", "DE"),
-            Locale("zh", "CN"),
-            Locale("it", "IT"),
+            Locale.of("ja", "JP"),
+            Locale.of("fr", "FR"),
+            Locale.of("de", "DE"),
+            Locale.of("zh", "CN"),
+            Locale.of("it", "IT"),
             Locale.ROOT,
         ).forEach { locale ->
             assertThat(toSupportedHl(locale)).isEqualTo("en")
@@ -83,10 +83,10 @@ internal class LocalizedUrlTest {
 
     @Test
     fun `withDeviceHl uses the JVM default locale`() {
-        Locale.setDefault(Locale("pt", "BR"))
+        Locale.setDefault(Locale.of("pt", "BR"))
         assertThat("https://example.com/p".withDeviceHl()).isEqualTo("https://example.com/p?hl=pt-BR")
 
-        Locale.setDefault(Locale("ja", "JP"))
+        Locale.setDefault(Locale.of("ja", "JP"))
         assertThat("https://example.com/p".withDeviceHl()).isEqualTo("https://example.com/p?hl=en")
     }
 }

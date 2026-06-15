@@ -9,6 +9,7 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
@@ -37,7 +38,7 @@ internal class ScreenLockSettingsTest : AbstractRobolectricTest() {
 
     @Test
     fun `isAvailable is true when an activity resolves the intent`() {
-        shadowOf(context.packageManager).addResolveInfoForIntent(ScreenLockSettings.intent(), settingsResolveInfo())
+        context.packageManager.registerSettingsResolver()
 
         assertThat(ScreenLockSettings.isAvailable(context)).isTrue()
     }
@@ -50,7 +51,7 @@ internal class ScreenLockSettingsTest : AbstractRobolectricTest() {
     @Test
     fun `open launches the set-new-password screen`() {
         val activity = Robolectric.buildActivity(Activity::class.java).create().get()
-        shadowOf(activity.packageManager).addResolveInfoForIntent(ScreenLockSettings.intent(), settingsResolveInfo())
+        activity.packageManager.registerSettingsResolver()
 
         val launched = ScreenLockSettings.open(activity)
 
@@ -70,6 +71,12 @@ internal class ScreenLockSettingsTest : AbstractRobolectricTest() {
         assertThat(launched).isFalse()
         verify(exactly = 1) { Tracker.track(any()) }
     }
+
+    // Robolectric 4.16.1 deprecated every ShadowPackageManager resolve-info setter with no lightweight
+    // replacement; the installPackage-based alternative would rewrite this boundary test's setup.
+    @Suppress("DEPRECATION")
+    private fun PackageManager.registerSettingsResolver() =
+        shadowOf(this).addResolveInfoForIntent(ScreenLockSettings.intent(), settingsResolveInfo())
 
     private fun settingsResolveInfo() =
         ResolveInfo().apply {
