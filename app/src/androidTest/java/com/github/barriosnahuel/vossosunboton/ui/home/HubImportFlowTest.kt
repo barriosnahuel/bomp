@@ -21,8 +21,10 @@ import androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -33,6 +35,16 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 internal class HubImportFlowTest : AbstractUiTest() {
+    @Before
+    override fun setUp() {
+        super.setUp()
+        // The + FAB only renders when MY_SOUNDS is non-empty — the welcome-empty state swaps it for
+        // an inline Import CTA instead (LandingScreen.kt:452). Seed one audio so the FAB these tests
+        // drive actually exists; clearAll() now correctly hides the welcome, so without a seed the
+        // list would be empty and every fabLabel() lookup would time out.
+        TestData.seedCustomSounds(context, count = 1)
+    }
+
     @Test
     fun fabOpensImportHub() {
         ActivityScenario.launch(LandingActivity::class.java).use {
