@@ -246,8 +246,8 @@
     <string name="app_onboarding_step1_cta">Go on</string>
     <string name="app_onboarding_step1_demo_description">Sharing a voice note from another app into Bomp.</string>
     <string name="app_onboarding_step2_eyebrow">Keep</string>
-    <string name="app_onboarding_step2_title">Keep them forever, your way.</string>
-    <string name="app_onboarding_step2_body">Swipe to pin the ones you use most, and sort them into collections or the Vault. Here they don\'t expire or get deleted — they\'re yours for good.</string>
+    <string name="app_onboarding_step2_title">Keep them your way.</string>
+    <string name="app_onboarding_step2_body">Sort them into collections — or the Vault, for your more private ones.</string>
     <string name="app_onboarding_step2_cta">Next</string>
     <string name="app_onboarding_step2_demo_description">Dragging a saved audio into one of your collections, with the Vault alongside.</string>
     <string name="app_onboarding_step3_eyebrow">Bomp</string>

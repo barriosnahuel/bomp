@@ -240,8 +240,8 @@
     <string name="app_onboarding_step1_cta">Dale</string>
     <string name="app_onboarding_step1_demo_description">Compartir una nota de voz de otra app hacia Bomp.</string>
     <string name="app_onboarding_step2_eyebrow">Guardar</string>
-    <string name="app_onboarding_step2_title">Guardalas para siempre, a tu manera.</string>
-    <string name="app_onboarding_step2_body">Deslizá para fijar las que más usás y ordenalas en colecciones o en el Baúl. Acá no caducan ni se borran: son tuyas para siempre.</string>
+    <string name="app_onboarding_step2_title">Guardalas a tu manera.</string>
+    <string name="app_onboarding_step2_body">Ordenalas en colecciones, o en el Baúl las más privadas.</string>
     <string name="app_onboarding_step2_cta">Sigo</string>
     <string name="app_onboarding_step2_demo_description">Arrastrar un audio guardado a una de tus colecciones, con el Baúl al lado.</string>
     <string name="app_onboarding_step3_eyebrow">Bompear</string>

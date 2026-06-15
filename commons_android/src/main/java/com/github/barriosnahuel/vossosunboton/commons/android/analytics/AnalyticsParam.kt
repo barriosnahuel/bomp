@@ -34,6 +34,21 @@ object AnalyticsParam {
     const val NAME_CHANGED = "name_changed"
     const val CURRENT_SOUNDS = "current_sounds"
     const val REASON = "reason"
+    const val STEP = "step"
+    const val STEP_KEY = "step_key"
+    const val METHOD = "method"
+}
+
+/**
+ * Canonical values for the onboarding `method` param — HOW the user moved through / out of the tour:
+ * the "stories" edge-tap, the explicit button (CTA / Skip), the device back, or the initial open.
+ * Lets product compare gesture adoption vs button use from day one.
+ */
+object AnalyticsNavMethod {
+    const val OPEN = "open"
+    const val TAP = "tap"
+    const val BUTTON = "button"
+    const val BACK = "back"
 }
 
 /**
@@ -61,4 +76,8 @@ object AnalyticsSource {
     const val MANAGE = "manage"
     const val MY_SOUNDS_FILTER = "my_sounds_filter"
     const val SEARCH = "search"
+
+    /** Onboarding entry points — the import Hub "see how it works" row vs the empty My Bomps CTA. */
+    const val IMPORT_HUB = "import_hub"
+    const val EMPTY_STATE = "my_sounds_empty_state"
 }
