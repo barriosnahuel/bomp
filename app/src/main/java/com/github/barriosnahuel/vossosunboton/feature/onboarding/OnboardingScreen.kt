@@ -208,13 +208,18 @@ internal fun OnboardingTour(
                     .padding(innerPadding)
                     .padding(horizontal = Spacing.XL),
         ) {
-            Row(
+            // Progress centered at the top — the "stories" convention (Instagram / WhatsApp): the
+            // top-left is mentally reserved for back, so a left-aligned indicator there reads as a
+            // control. Skip stays top-right, overlaid on the same row.
+            Box(
                 modifier = Modifier.fillMaxWidth().height(Spacing.XXL + Spacing.XL),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                contentAlignment = Alignment.Center,
             ) {
                 OnboardingProgress(step = safeStep)
-                TextButton(onClick = { dismiss(AnalyticsNavMethod.BUTTON) }) {
+                TextButton(
+                    onClick = { dismiss(AnalyticsNavMethod.BUTTON) },
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                ) {
                     Text(stringResource(R.string.app_onboarding_skip))
                 }
             }
