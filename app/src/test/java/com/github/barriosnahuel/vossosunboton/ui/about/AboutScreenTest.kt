@@ -268,7 +268,7 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
 
     @Test
     fun `cafecito button is displayed when locale country is AR`() {
-        Locale.setDefault(Locale("es", "AR"))
+        Locale.setDefault(Locale.of("es", "AR"))
         launch()
         composeTestRule
             .onNodeWithText(context.getString(R.string.app_about_gratitude_cafecito_button))
@@ -298,7 +298,7 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
 
     @Test
     fun `tap on cafecito emits about_gratitude_cafecito_open after intent succeeds`() {
-        Locale.setDefault(Locale("es", "AR"))
+        Locale.setDefault(Locale.of("es", "AR"))
         launch()
         composeTestRule
             .onNodeWithText(context.getString(R.string.app_about_gratitude_cafecito_button))

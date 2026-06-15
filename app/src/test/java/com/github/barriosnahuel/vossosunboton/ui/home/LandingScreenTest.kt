@@ -239,6 +239,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         return vm
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun SoundsViewModel.injectHasBundledSounds(value: Boolean) {
         SoundsViewModel::class.java
             .getDeclaredField("_hasBundledSounds")
@@ -250,6 +251,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     // Drives the global library (allSoundsCache) to a known value. The debug build's loadSounds
     // primes allSoundsCache with the bundled catalog, so injecting AFTER waitForIdle (once that
     // cascade settles, same reasoning as injectHasBundledSounds) is the only way to empty it.
+    @Suppress("UNCHECKED_CAST")
     private fun SoundsViewModel.injectLibrary(value: List<Sound>) {
         SoundsViewModel::class.java
             .getDeclaredField("allSoundsCache")
@@ -261,6 +263,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     // Drives the rendered list (`_sounds`) directly. A fresh install seeds it with the welcome
     // sticker, so emptying it is the only way to reach the welcome-empty state once init's load
     // has settled (inject AFTER waitForIdle, same cascade reasoning as injectLibrary).
+    @Suppress("UNCHECKED_CAST")
     private fun SoundsViewModel.injectSounds(value: List<Sound>) {
         SoundsViewModel::class.java
             .getDeclaredField("_sounds")

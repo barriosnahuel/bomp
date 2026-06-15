@@ -175,6 +175,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         return vm
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun SoundsViewModel.injectSounds(value: List<Sound>) {
         SoundsViewModel::class.java
             .getDeclaredField("_sounds")
