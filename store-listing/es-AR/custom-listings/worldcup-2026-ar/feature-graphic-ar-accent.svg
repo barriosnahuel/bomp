@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" width="1024" height="500">
+  <!--
+    Feature graphic 1024x500 — Argentina custom listing, "El grito" + SUBTLE AR accent variant.
+    Identical to feature-graphic.svg (echo rings, no cardinal rays) but with a small celeste/white/celeste
+    tri-stripe under the tagline (an Argentine nod WITHOUT a literal flag). Celeste #75AADB.
+    Export: rsvg-convert -w 1024 -h 500 feature-graphic-ar-accent.svg -o feature-graphic-ar-accent-1024x500-es-AR.png
+  -->
+  <defs>
+    <radialGradient id="fa-acid" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#D7FF3A" stop-opacity="0.42"/>
+      <stop offset="50%" stop-color="#D7FF3A" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#D7FF3A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="fa-heat" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F26163" stop-opacity="0.75"/>
+      <stop offset="60%" stop-color="#F26163" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#F26163" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1024" height="500" fill="#0B0B0C"/>
+
+  <g transform="translate(215 250)">
+    <circle r="230" fill="url(#fa-acid)"/>
+    <circle r="150" fill="url(#fa-heat)"/>
+
+    <g stroke="#D7FF3A" stroke-linecap="round">
+      <g opacity="0.3" transform="rotate(45)">
+        <line x1="0" y1="-125" x2="0" y2="-195" stroke-width="6"/>
+        <line x1="0" y1="125" x2="0" y2="195" stroke-width="6"/>
+        <line x1="-125" y1="0" x2="-195" y2="0" stroke-width="6"/>
+        <line x1="125" y1="0" x2="195" y2="0" stroke-width="6"/>
+      </g>
+      <g opacity="0.2" transform="rotate(22.5)">
+        <line x1="0" y1="-130" x2="0" y2="-182" stroke-width="4"/>
+        <line x1="0" y1="130" x2="0" y2="182" stroke-width="4"/>
+        <line x1="-130" y1="0" x2="-182" y2="0" stroke-width="4"/>
+        <line x1="130" y1="0" x2="182" y2="0" stroke-width="4"/>
+      </g>
+      <g opacity="0.2" transform="rotate(67.5)">
+        <line x1="0" y1="-130" x2="0" y2="-182" stroke-width="4"/>
+        <line x1="0" y1="130" x2="0" y2="182" stroke-width="4"/>
+        <line x1="-130" y1="0" x2="-182" y2="0" stroke-width="4"/>
+        <line x1="130" y1="0" x2="182" y2="0" stroke-width="4"/>
+      </g>
+    </g>
+
+    <g fill="none" stroke="#D7FF3A">
+      <circle r="138" stroke-width="8" opacity="0.36"/>
+      <circle r="165" stroke-width="6" opacity="0.24"/>
+      <circle r="192" stroke-width="5" opacity="0.15"/>
+      <circle r="219" stroke-width="4" opacity="0.08"/>
+    </g>
+  </g>
+
+  <g transform="translate(103 138) scale(7)">
+    <path d="M10.24 0 A21.76 9.6 0 0 1 32 9.6 A22.4 22.4 0 0 1 9.6 32 A9.6 22.4 0 0 1 0 9.6 A10.24 9.6 0 0 1 10.24 0 Z" fill="#D7FF3A"/>
+    <path d="M10 8 L10 24 L23 16 Z" fill="#0B0B0C"/>
+  </g>
+
+  <g fill="#FAFAF7" font-family="Inter, Roboto, system-ui, sans-serif" font-weight="600" font-size="56">
+    <text x="440" y="195">Guardá</text>
+    <text x="440" y="265">el grito de gol</text>
+    <text x="440" y="335">de los tuyos.</text>
+  </g>
+
+  <!-- Subtle AR accent: celeste / white / celeste tri-stripe under the tagline (no literal flag). -->
+  <g transform="translate(442 356)">
+    <rect x="0" y="0"  width="314" height="10" rx="3" fill="#75AADB"/>
+    <rect x="0" y="13" width="314" height="10" rx="3" fill="#FAFAF7"/>
+    <rect x="0" y="26" width="314" height="10" rx="3" fill="#75AADB"/>
+  </g>
+</svg>
