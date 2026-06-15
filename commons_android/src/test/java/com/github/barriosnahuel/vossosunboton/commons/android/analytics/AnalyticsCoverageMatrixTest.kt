@@ -93,6 +93,8 @@ internal class AnalyticsCoverageMatrixTest {
                 "OnboardingStepViewed",
                 "OnboardingCompleted",
                 "OnboardingDismissed",
+                "ImportHubOpened",
+                "ImportHubImportSelected",
             )
 
         private val SCREEN_VIEWS_WITH_REGRESSION_TEST: Set<String> =

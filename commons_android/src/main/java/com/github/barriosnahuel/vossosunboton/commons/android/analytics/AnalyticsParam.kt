@@ -93,4 +93,11 @@ object AnalyticsSource {
     /** Onboarding entry points — the import Hub "see how it works" row vs the empty My Bomps CTA. */
     const val IMPORT_HUB = "import_hub"
     const val EMPTY_STATE = "my_sounds_empty_state"
+
+    /**
+     * Import-Hub open entry points — the `+` FAB on My Bomps vs the onboarding tour's closing
+     * "Start" drop. The empty My Bomps "Import" CTA reuses [EMPTY_STATE] (same physical surface).
+     */
+    const val FAB = "fab"
+    const val ONBOARDING_FINISH = "onboarding_finish"
 }
