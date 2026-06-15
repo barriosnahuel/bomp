@@ -332,7 +332,7 @@ Apply exactly **one type label** (`a:*` or `an:*`) + **zero or more concern labe
 
 - **Type — user-facing** (appear in CHANGELOG `### Added/Changed/Fixed/Removed`): `a:feature`, `a:fix`, `an:enhancement`.
 - **Type — internal** (under `### For nerds 🤓` or omitted): `a:refactor`, `a:test`, `a:build`, `a:docs`.
-- **Concern — cross-cutting** (stackable): `c:accessibility`, `c:performance`, `c:security`, `c:i18n`, `c:observability`, `c:dependencies`.
+- **Concern — cross-cutting** (stackable): `c:accessibility`, `c:performance`, `c:security`, `c:i18n`, `c:aso`, `c:observability`, `c:dependencies`.
 - **Issues/lifecycle:** `a:bug`, `a:feature-request`, `stale`.
 
 Full "when to use" per label + worked combinations: CONTRIBUTING.md § *Labels & milestone examples*.
