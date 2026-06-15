@@ -401,4 +401,28 @@ sealed class AnalyticsEvent(
                 putString(AnalyticsParam.METHOD, method)
             }
     }
+
+    /**
+     * Import-Hub funnel · ENTRY. The add-a-Bomp Hub bottom sheet opened. [source] = which surface
+     * opened it: `"fab"` (the `+` on My Bomps), `"my_sounds_empty_state"` (the empty-state Import
+     * CTA), or `"onboarding_finish"` (the tour's closing "Start" drops the user here).
+     * `hasFirstVariant = true` so first-ever opens are isolable.
+     *
+     * Funnel: import_hub_opened → import_hub_import_selected → `sound_add {source=import}`.
+     * Hub abandonment = opened − import_selected; picker/naming drop-off = import_selected −
+     * sound_add(source=import). No dedicated cancel event by design — it is derivable by subtraction.
+     */
+    data class ImportHubOpened(
+        val source: String,
+    ) : AnalyticsEvent(name = "import_hub_opened", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SOURCE, source) }
+    }
+
+    /**
+     * Import-Hub funnel · INTENT. The user tapped the live "import audio from your device" row,
+     * committing to pick a file (the system picker launches next). The genuine middle funnel step:
+     * separates "opened the Hub but never engaged its CTA" from "engaged but bailed in the picker /
+     * naming screen". `hasFirstVariant = true`. The inert "record" row (badged "Soon") emits nothing.
+     */
+    object ImportHubImportSelected : AnalyticsEvent(name = "import_hub_import_selected", hasFirstVariant = true)
 }

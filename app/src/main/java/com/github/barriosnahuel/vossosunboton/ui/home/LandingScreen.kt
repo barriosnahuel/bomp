@@ -133,6 +133,16 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             uri?.let { context.startActivity(AddButtonActivity.createIntent(context, it)) }
         }
 
+    // Single import-Hub entry point: logs the funnel's ENTRY with the [source] surface, then opens.
+    // The `!isHubVisible` guard makes the open idempotent so a rapid double-tap on a trigger can't
+    // double-count `import_hub_opened`.
+    val openHub = { source: String ->
+        if (!isHubVisible) {
+            tracker.log(AnalyticsEvent.ImportHubOpened(source = source))
+            isHubVisible = true
+        }
+    }
+
     // Key on the open/closed boolean, not the raw step: advancing or going back within the tour must
     // not re-emit screen_view=onboarding (one open = one screen view, like the other overlays).
     LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible, onboardingStep != null) {
@@ -220,7 +230,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             immersiveListenSoundId = sound.id
             if (!sound.isPlaying) viewModel.playOrStop(sound)
         },
-        onCreateClick = { isHubVisible = true },
+        onCreateClick = openHub,
         onShowOnboarding = {
             tracker.log(AnalyticsEvent.OnboardingOpened(source = AnalyticsSource.EMPTY_STATE))
             onboardingStep = 0
@@ -270,6 +280,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             // sheet's hide animation recomposes it away) launches the picker once, not twice.
             onImport = {
                 if (isHubVisible) {
+                    tracker.log(AnalyticsEvent.ImportHubImportSelected)
                     isHubVisible = false
                     importPicker.launch(arrayOf("audio/*"))
                 }
@@ -297,7 +308,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onSkip = { onboardingStep = null },
             onFinish = {
                 onboardingStep = null
-                isHubVisible = true
+                openHub(AnalyticsSource.ONBOARDING_FINISH)
             },
         )
     }
@@ -415,7 +426,9 @@ private fun ScaffoldedLanding(
     onManageCollectionsClick: () -> Unit,
     onActiveFilterEditClick: (String) -> Unit,
     onImmersivePlay: (Sound) -> Unit,
-    onCreateClick: () -> Unit,
+    // Opens the import Hub, carrying the funnel `source` of the surface that triggered it (the FAB
+    // vs the empty-state CTA), so `import_hub_opened` is attributed honestly.
+    onCreateClick: (String) -> Unit,
     onShowOnboarding: () -> Unit,
 ) {
     Scaffold(
@@ -441,7 +454,7 @@ private fun ScaffoldedLanding(
                     !(activeFilter != null && publicCollections.any { it.id == activeFilter })
             if (selectedTab == AppTab.MY_SOUNDS && !showsWelcomeEmpty) {
                 FloatingActionButton(
-                    onClick = onCreateClick,
+                    onClick = { onCreateClick(AnalyticsSource.FAB) },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ) {
@@ -494,7 +507,7 @@ private fun ScaffoldedLanding(
                     collectionsByAudio = collectionsByAudio,
                     allCollections = collections,
                     onActiveFilterEditClick = onActiveFilterEditClick,
-                    onImportClick = onCreateClick,
+                    onImportClick = { onCreateClick(AnalyticsSource.EMPTY_STATE) },
                     onShowOnboarding = onShowOnboarding,
                     viewModel = viewModel,
                     context = context,
