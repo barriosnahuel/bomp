@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +23,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -70,6 +73,9 @@ private val STAGE_RADIUS = 24.dp
 private val CTA_HEIGHT = 56.dp
 private val DOT_HEIGHT = 7.dp
 private val DOT_ACTIVE_WIDTH = 22.dp
+
+// Min height the demo keeps when the layout switches to its scrollable (landscape) variant.
+private val DEMO_MIN_HEIGHT = 200.dp
 
 private data class OnboardingStepContent(
     // Stable concept slug for analytics — survives a future reorder of the display positions, so the
@@ -201,128 +207,145 @@ internal fun OnboardingTour(
     BackHandler { if (safeStep > 0) back(AnalyticsNavMethod.BACK) else dismiss(AnalyticsNavMethod.BACK) }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.surface) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = Spacing.XL),
-        ) {
-            // Progress centered at the top — the "stories" convention (Instagram / WhatsApp): the
-            // top-left is mentally reserved for back, so a left-aligned indicator there reads as a
-            // control. Skip stays top-right, overlaid on the same row.
-            Box(
-                modifier = Modifier.fillMaxWidth().height(Spacing.XXL + Spacing.XL),
-                contentAlignment = Alignment.Center,
+        // Portrait has room to pin the CTA (the demo takes the flexible middle via weight). When the
+        // window is short — landscape, split-screen, large fonts — switch to a scrollable column so the
+        // copy + CTA stay reachable, matching the rest of the app (AboutScreen, the empty state). A
+        // proper landscape / large-screen redesign is a separate epic (backlog future-06).
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            // Landscape (and other wide-but-short windows) can't fit the pinned-CTA layout, so it
+            // becomes scrollable. Portrait keeps the demo's weight + pinned CTA. Orientation, not a
+            // height threshold, so test viewports (portrait) keep the pinned path deterministically.
+            val cramped = maxWidth > maxHeight
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(if (cramped) Modifier.verticalScroll(rememberScrollState()) else Modifier.fillMaxHeight())
+                        .padding(horizontal = Spacing.XL),
             ) {
-                OnboardingProgress(step = safeStep)
-                TextButton(
-                    onClick = { dismiss(AnalyticsNavMethod.BUTTON) },
-                    modifier = Modifier.align(Alignment.CenterEnd),
+                // Progress centered at the top — the "stories" convention (Instagram / WhatsApp): the
+                // top-left is mentally reserved for back, so a left-aligned indicator there reads as a
+                // control. Skip stays top-right, overlaid on the same row.
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(Spacing.XXL + Spacing.XL),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(stringResource(R.string.app_onboarding_skip))
+                    OnboardingProgress(step = safeStep)
+                    TextButton(
+                        onClick = { dismiss(AnalyticsNavMethod.BUTTON) },
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                    ) {
+                        Text(stringResource(R.string.app_onboarding_skip))
+                    }
                 }
-            }
 
-            // The demo stage takes the flexible middle (shrinks on short screens / large fonts) so the
-            // copy + acid CTA below stay pinned and reachable without a page scroll. Two invisible
-            // "stories" tap halves sit over it: tap the left side → previous step, right side → next
-            // (or finish off the last step). They're inside the 24dp content padding, so their outer
-            // edge clears the system back-gesture zone; taps (not swipes) never trigger system back.
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                DemoStage(
-                    step = safeStep,
-                    reduceMotion = reduceMotion,
-                    demoDescription = stringResource(content.demoDescription),
-                    modifier = Modifier.fillMaxSize(),
-                )
-                Row(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .testTag(ONBOARDING_TAP_PREV)
-                                .semantics(mergeDescendants = true) {}
-                                .pointerInput(safeStep) {
-                                    detectTapGestures { if (safeStep > 0) back(AnalyticsNavMethod.TAP) }
-                                },
+                // The demo stage takes the flexible middle (shrinks on short screens / large fonts) so the
+                // copy + acid CTA below stay pinned and reachable without a page scroll. Two invisible
+                // "stories" tap halves sit over it: tap the left side → previous step, right side → next
+                // (or finish off the last step). They're inside the 24dp content padding, so their outer
+                // edge clears the system back-gesture zone; taps (not swipes) never trigger system back.
+                Box(
+                    modifier =
+                        if (cramped) {
+                            Modifier.fillMaxWidth().heightIn(min = DEMO_MIN_HEIGHT)
+                        } else {
+                            Modifier.weight(1f).fillMaxWidth()
+                        },
+                ) {
+                    DemoStage(
+                        step = safeStep,
+                        reduceMotion = reduceMotion,
+                        demoDescription = stringResource(content.demoDescription),
+                        modifier = Modifier.fillMaxSize(),
                     )
-                    Box(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .testTag(ONBOARDING_TAP_NEXT)
-                                .semantics(mergeDescendants = true) {}
-                                .pointerInput(safeStep, isLast) {
-                                    detectTapGestures {
-                                        if (isLast) finish(AnalyticsNavMethod.TAP) else advance(AnalyticsNavMethod.TAP)
-                                    }
-                                },
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .testTag(ONBOARDING_TAP_PREV)
+                                    .semantics(mergeDescendants = true) {}
+                                    .pointerInput(safeStep) {
+                                        detectTapGestures { if (safeStep > 0) back(AnalyticsNavMethod.TAP) }
+                                    },
+                        )
+                        Box(
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .testTag(ONBOARDING_TAP_NEXT)
+                                    .semantics(mergeDescendants = true) {}
+                                    .pointerInput(safeStep, isLast) {
+                                        detectTapGestures {
+                                            if (isLast) finish(AnalyticsNavMethod.TAP) else advance(AnalyticsNavMethod.TAP)
+                                        }
+                                    },
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(Spacing.LG))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = content.number,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.width(Spacing.SM))
+                    Text(
+                        text = stringResource(content.eyebrow).uppercase(),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                        letterSpacing = 1.6.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-
-            Spacer(Modifier.height(Spacing.LG))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.height(Spacing.SM))
                 Text(
-                    text = content.number,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    color = MaterialTheme.colorScheme.primary,
+                    text = stringResource(content.title),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-                Spacer(Modifier.width(Spacing.SM))
+                Spacer(Modifier.height(Spacing.MD))
                 Text(
-                    text = stringResource(content.eyebrow).uppercase(),
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
-                    letterSpacing = 1.6.sp,
+                    text = stringResource(content.body),
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            Spacer(Modifier.height(Spacing.SM))
-            Text(
-                text = stringResource(content.title),
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(Spacing.MD))
-            Text(
-                text = stringResource(content.body),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
 
-            Spacer(Modifier.height(Spacing.XL))
-            // Filled-primary tier (ADR 0010): the single forward action of the screen. Tall acid pill.
-            Button(
-                onClick = { if (isLast) finish(AnalyticsNavMethod.BUTTON) else advance(AnalyticsNavMethod.BUTTON) },
-                modifier = Modifier.fillMaxWidth().height(CTA_HEIGHT),
-                shape = RoundedCornerShape(percent = 50),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    ),
-            ) {
-                Text(
-                    text = stringResource(content.cta),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                if (isLast) {
-                    Spacer(Modifier.width(Spacing.SM))
-                    Icon(
-                        painter = painterResource(R.drawable.app_ic_keyboard_arrow_right),
-                        contentDescription = null,
-                        modifier = Modifier.height(Spacing.XL),
+                Spacer(Modifier.height(Spacing.XL))
+                // Filled-primary tier (ADR 0010): the single forward action of the screen. Tall acid pill.
+                Button(
+                    onClick = { if (isLast) finish(AnalyticsNavMethod.BUTTON) else advance(AnalyticsNavMethod.BUTTON) },
+                    modifier = Modifier.fillMaxWidth().height(CTA_HEIGHT),
+                    shape = RoundedCornerShape(percent = 50),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                ) {
+                    Text(
+                        text = stringResource(content.cta),
+                        style = MaterialTheme.typography.titleMedium,
                     )
+                    if (isLast) {
+                        Spacer(Modifier.width(Spacing.SM))
+                        Icon(
+                            painter = painterResource(R.drawable.app_ic_keyboard_arrow_right),
+                            contentDescription = null,
+                            modifier = Modifier.height(Spacing.XL),
+                        )
+                    }
                 }
+                Spacer(Modifier.height(Spacing.XL))
             }
-            Spacer(Modifier.height(Spacing.XL))
         }
     }
 }
