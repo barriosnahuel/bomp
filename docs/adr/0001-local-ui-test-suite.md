@@ -120,6 +120,29 @@ timing-sensitive tests. If a cold-booted run is still slow or flaky, check the h
 before suspecting a test: close other heavy work and re-run, rather than chasing a
 non-existent test bug.
 
+### Not every red is the emulator — deterministic vs. degradation reds
+
+The *Cold boot per run* note above explains the reds that **are** the emulator. There is a
+second class that looks similar but is the opposite — a real code/data bug — and must not be
+re-run away. Triage by determinism and timing before blaming the AVD:
+
+- **Degradation reds** (emulator): `ComposeTimeoutException`, `ComposeNotIdleException`,
+  `Process crashed`. Non-deterministic, vary run to run, often on a slow run; a clean cold
+  boot makes them pass. Re-running is the right move.
+- **Deterministic reds** (code/data): `Failed to inject touch input. Reason: Expected
+  exactly '1' node but found '2'` and `assertCountEquals` count mismatches. These fail
+  **instantly and identically every run**, on a fresh cold boot too. The `inject touch`
+  wording is misleading: Compose resolves the single target node *before* sending any input,
+  so the assertion throws in the test process and the emulator's input pipeline is never
+  invoked. The cause is matcher ambiguity — two real nodes in the semantics tree (read the
+  node dump: two distinct list rows) — which means a **test-isolation / seeding bug**, not
+  the AVD. Re-running never helps; fix the data the test renders.
+
+A worked instance: a one-time persistence migration in `SoundsViewModel.init` re-armed by
+the test fixture resurrected a second MY_SOUNDS row, turning every "exactly one play/share
+button" assertion into a `found '2' nodes` red that read, wrongly, as "the emulator can't
+inject gestures."
+
 ### History note: dynamic feature workaround (removed)
 
 The `:feature_addbutton` module used to be a dynamic feature with
