@@ -34,9 +34,9 @@ internal class DurationFormatterTest {
     @Test
     fun `fullDate is uppercase and carries day and year regardless of locale`() {
         val epoch = epochOf(2024, Calendar.DECEMBER, 24)
-        val formatted = fullDate(epoch, Locale("es", "AR"))
+        val formatted = fullDate(epoch, Locale.of("es", "AR"))
         // Month abbreviation text varies by JVM locale data, so assert structure, not exact MMM.
-        assertThat(formatted).isEqualTo(formatted.uppercase(Locale("es", "AR")))
+        assertThat(formatted).isEqualTo(formatted.uppercase(Locale.of("es", "AR")))
         assertThat(formatted).contains("24")
         assertThat(formatted).contains("2024")
     }

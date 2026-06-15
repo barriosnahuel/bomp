@@ -21,6 +21,7 @@ import io.mockk.verify
 import io.mockk.verifyOrder
 import io.mockk.verifySequence
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
@@ -531,6 +532,7 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
      * before the test method moves to its `verify {}` block. UnconfinedTestDispatcher resumes the
      * continuation on the calling thread, so withContext(ioDispatcher) does not actually schedule.
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun controllerForTest(mp: MediaPlayer): PlayerControllerImpl {
         val dispatcher = UnconfinedTestDispatcher()
         return PlayerControllerImpl(

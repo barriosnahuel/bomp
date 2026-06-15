@@ -162,7 +162,7 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
         // Released near the right edge → a fraction well into the second half of the clip.
         assertThat(seeked).isNotNull()
         assertThat(seeked!!).isAtLeast(0.5f)
-        assertThat(seeked!!).isAtMost(1f)
+        assertThat(seeked).isAtMost(1f)
     }
 
     @Test

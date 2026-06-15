@@ -38,6 +38,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 #### Changed
 - Scroll benchmark now seeds a controlled corpus and runs across three list sizes (20 / 50 / 200) so the sound-list frame timing exposes whether scroll jank scales with item count
 - The instrumented UI test wrapper now cold-boots the emulator with host-GPU rendering and widened CPU/RAM (`-gpu host -cores 6 -memory 4096`, env-overridable), so the suite runs faster and less flaky than on the software-rendered AVD defaults
+- Migrated unit tests off deprecated JDK/Kotlin APIs — `Locale.of(...)` replaces the deprecated `Locale(...)` constructor, and a redundant non-null assertion was removed
+- Acknowledged the test-only warnings that have no supported replacement — opt-in annotations for the experimental coroutine-test dispatcher and `@Suppress` for the reflection unchecked-casts and the deprecated-in-4.16.1 Robolectric resolve-info setter, consistent with the existing test-suite convention
 
 ## \[v2.1.0] - 2026-05-25
 

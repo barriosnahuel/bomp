@@ -528,6 +528,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun `a concurrent repo write while a delete is pending does not resurrect the sound`() {
         // Companion to the fix above. fix #1's flush persists the previous deletion, and that write
         // fires the reactive `repo.sounds` collector, which re-runs loadSounds. loadSounds must keep
