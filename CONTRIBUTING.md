@@ -833,7 +833,8 @@ The *rule* (one type label + optional concern labels; how to derive the mileston
 | `c:accessibility` | WCAG: contrast, content descriptions, touch targets, screen reader |
 | `c:performance` | User-perceivable performance (cold start, scroll, app size, frame budget) |
 | `c:security` | Security boundaries: input validation, exported components, backup hygiene |
-| `c:i18n` | Localization: translations, store listings per locale, locale-aware copy |
+| `c:i18n` | Localization: translations, locale-aware copy, adding/maintaining a locale (a new locale's store listing is `c:i18n` + `c:aso`) |
+| `c:aso` | App Store Optimization: store-listing copy, feature graphic, screenshots, keywords, custom listings — the store *presence* itself, in any locale |
 | `c:observability` | Analytics instrumentation, Crashlytics, logging, BigQuery |
 | `c:dependencies` | Library / plugin / Gradle-wrapper version bumps (auto-applied by Dependabot with `a:build`) |
 
@@ -855,6 +856,8 @@ The *rule* (one type label + optional concern labels; how to derive the mileston
 - New Firebase Analytics event: `a:build` + `c:observability`
 - Flaky test stabilization: `a:test`
 - README rewrite: `a:docs`
+- Seasonal custom store listing (existing locale): `a:docs` + `c:aso`
+- New locale's full store listing: `a:docs` + `c:i18n` + `c:aso`
 
 ## Third-party notices 📜
 
