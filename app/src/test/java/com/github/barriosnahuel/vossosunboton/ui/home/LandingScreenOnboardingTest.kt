@@ -84,6 +84,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
 
         composeTestRule.onNodeWithText(STEP1_TITLE).assertIsDisplayed()
         fake.assertScreenView(CanonicalScreenName.ONBOARDING)
+        assertThat(fake.assertEmitted("onboarding_opened").params["source"]).isEqualTo("import_hub")
     }
 
     @Test
@@ -98,6 +99,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText(STEP1_TITLE).assertIsDisplayed()
+        assertThat(fake.assertEmitted("onboarding_opened").params["source"]).isEqualTo("my_sounds_empty_state")
     }
 
     @Test
@@ -179,6 +181,6 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         const val HUB_TITLE = "How do you add one?"
         const val SECONDARY_LABEL = "See how it works"
         const val STEP1_TITLE = "Bring in the voices you already have."
-        const val STEP2_TITLE = "Keep them forever, your way."
+        const val STEP2_TITLE = "Keep them your way."
     }
 }

@@ -89,6 +89,10 @@ internal class AnalyticsCoverageMatrixTest {
                 "VaultUnlock",
                 "VaultUnprotectedWarningShown",
                 "VaultSearchUnlockCtaShown",
+                "OnboardingOpened",
+                "OnboardingStepViewed",
+                "OnboardingCompleted",
+                "OnboardingDismissed",
             )
 
         private val SCREEN_VIEWS_WITH_REGRESSION_TEST: Set<String> =

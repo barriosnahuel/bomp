@@ -9,11 +9,13 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,22 +31,38 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsNavMethod
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.ui.rememberReduceMotionEnabled
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
 internal const val ONBOARDING_STEP_COUNT = 3
+
+// Test tags for the invisible "stories" tap zones (test-only metadata; not announced by TalkBack).
+internal const val ONBOARDING_TAP_PREV = "onboarding_tap_prev"
+internal const val ONBOARDING_TAP_NEXT = "onboarding_tap_next"
 
 private val STAGE_RADIUS = 24.dp
 private val CTA_HEIGHT = 56.dp
@@ -52,6 +70,9 @@ private val DOT_HEIGHT = 7.dp
 private val DOT_ACTIVE_WIDTH = 22.dp
 
 private data class OnboardingStepContent(
+    // Stable concept slug for analytics — survives a future reorder of the display positions, so the
+    // funnel keys on "what the step teaches", not its (mutable) 1/2/3 index. NOT user-facing.
+    val key: String,
     val number: String,
     @StringRes val eyebrow: Int,
     @StringRes val title: Int,
@@ -63,6 +84,7 @@ private data class OnboardingStepContent(
 private val ONBOARDING_STEPS =
     listOf(
         OnboardingStepContent(
+            key = "import",
             number = "01",
             eyebrow = R.string.app_onboarding_step1_eyebrow,
             title = R.string.app_onboarding_step1_title,
@@ -71,6 +93,7 @@ private val ONBOARDING_STEPS =
             demoDescription = R.string.app_onboarding_step1_demo_description,
         ),
         OnboardingStepContent(
+            key = "organize",
             number = "02",
             eyebrow = R.string.app_onboarding_step2_eyebrow,
             title = R.string.app_onboarding_step2_title,
@@ -79,6 +102,7 @@ private val ONBOARDING_STEPS =
             demoDescription = R.string.app_onboarding_step2_demo_description,
         ),
         OnboardingStepContent(
+            key = "bompear",
             number = "03",
             eyebrow = R.string.app_onboarding_step3_eyebrow,
             title = R.string.app_onboarding_step3_title,
@@ -107,9 +131,41 @@ internal fun OnboardingTour(
     val safeStep = step.coerceIn(0, ONBOARDING_STEPS.lastIndex)
     val content = ONBOARDING_STEPS[safeStep]
     val isLast = safeStep == ONBOARDING_STEPS.lastIndex
+    val context = LocalContext.current
+    val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
+
+    // The method that triggered the upcoming step change, read by the step-viewed effect below.
+    // Defaults to "open" so the first step view (on first composition) is attributed to the open.
+    var pendingMethod by remember { mutableStateOf(AnalyticsNavMethod.OPEN) }
+    LaunchedEffect(safeStep) {
+        tracker.log(AnalyticsEvent.OnboardingStepViewed(step = safeStep + 1, stepKey = content.key, method = pendingMethod))
+    }
+
+    // Navigation helpers: each records the method (tap / button / back) so the funnel can compare
+    // the "stories" gesture vs the explicit controls. Finishing logs Completed; dismissing logs
+    // Dismissed with the step the user left from. The host owns the actual step state.
+    fun advance(method: String) {
+        pendingMethod = method
+        onAdvance()
+    }
+
+    fun back(method: String) {
+        pendingMethod = method
+        onStepBack()
+    }
+
+    fun finish(method: String) {
+        tracker.log(AnalyticsEvent.OnboardingCompleted(method = method))
+        onFinish()
+    }
+
+    fun dismiss(method: String) {
+        tracker.log(AnalyticsEvent.OnboardingDismissed(step = safeStep + 1, stepKey = content.key, method = method))
+        onSkip()
+    }
 
     // Back steps the tour backwards; from the first step it dismisses (returns where the user was).
-    BackHandler { if (safeStep > 0) onStepBack() else onSkip() }
+    BackHandler { if (safeStep > 0) back(AnalyticsNavMethod.BACK) else dismiss(AnalyticsNavMethod.BACK) }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.surface) { innerPadding ->
         Column(
@@ -125,19 +181,50 @@ internal fun OnboardingTour(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 OnboardingProgress(step = safeStep)
-                TextButton(onClick = onSkip) {
+                TextButton(onClick = { dismiss(AnalyticsNavMethod.BUTTON) }) {
                     Text(stringResource(R.string.app_onboarding_skip))
                 }
             }
 
             // The demo stage takes the flexible middle (shrinks on short screens / large fonts) so the
-            // copy + acid CTA below stay pinned and reachable without a page scroll.
-            DemoStage(
-                step = safeStep,
-                reduceMotion = reduceMotion,
-                demoDescription = stringResource(content.demoDescription),
-                modifier = Modifier.weight(1f),
-            )
+            // copy + acid CTA below stay pinned and reachable without a page scroll. Two invisible
+            // "stories" tap halves sit over it: tap the left side → previous step, right side → next
+            // (or finish off the last step). They're inside the 24dp content padding, so their outer
+            // edge clears the system back-gesture zone; taps (not swipes) never trigger system back.
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                DemoStage(
+                    step = safeStep,
+                    reduceMotion = reduceMotion,
+                    demoDescription = stringResource(content.demoDescription),
+                    modifier = Modifier.fillMaxSize(),
+                )
+                Row(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .testTag(ONBOARDING_TAP_PREV)
+                                .semantics(mergeDescendants = true) {}
+                                .pointerInput(safeStep) {
+                                    detectTapGestures { if (safeStep > 0) back(AnalyticsNavMethod.TAP) }
+                                },
+                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .testTag(ONBOARDING_TAP_NEXT)
+                                .semantics(mergeDescendants = true) {}
+                                .pointerInput(safeStep, isLast) {
+                                    detectTapGestures {
+                                        if (isLast) finish(AnalyticsNavMethod.TAP) else advance(AnalyticsNavMethod.TAP)
+                                    }
+                                },
+                    )
+                }
+            }
 
             Spacer(Modifier.height(Spacing.LG))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -175,7 +262,7 @@ internal fun OnboardingTour(
             Spacer(Modifier.height(Spacing.XL))
             // Filled-primary tier (ADR 0010): the single forward action of the screen. Tall acid pill.
             Button(
-                onClick = { if (isLast) onFinish() else onAdvance() },
+                onClick = { if (isLast) finish(AnalyticsNavMethod.BUTTON) else advance(AnalyticsNavMethod.BUTTON) },
                 modifier = Modifier.fillMaxWidth().height(CTA_HEIGHT),
                 shape = RoundedCornerShape(percent = 50),
                 colors =

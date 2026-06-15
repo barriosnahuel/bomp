@@ -100,6 +100,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
     val tabBackStack = remember { mutableStateListOf<AppTab>() }
     // Saveable so a rotation while About / Manage are open does not silently bounce the user back
     // to the sound list — those screens swap out the Scaffold body via a `when` below, and losing
@@ -220,7 +221,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             if (!sound.isPlaying) viewModel.playOrStop(sound)
         },
         onCreateClick = { isHubVisible = true },
-        onShowOnboarding = { onboardingStep = 0 },
+        onShowOnboarding = {
+            tracker.log(AnalyticsEvent.OnboardingOpened(source = AnalyticsSource.EMPTY_STATE))
+            onboardingStep = 0
+        },
     )
 
     // Exactly one sub-screen overlays the list at a time (About wins over Manage, preserving the
@@ -271,6 +275,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                 }
             },
             onHowItWorks = {
+                tracker.log(AnalyticsEvent.OnboardingOpened(source = AnalyticsSource.IMPORT_HUB))
                 isHubVisible = false
                 onboardingStep = 0
             },

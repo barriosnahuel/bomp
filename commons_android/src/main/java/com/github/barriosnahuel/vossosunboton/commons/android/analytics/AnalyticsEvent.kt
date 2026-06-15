@@ -321,4 +321,59 @@ sealed class AnalyticsEvent(
      */
     object VaultSearchUnlockCtaShown :
         AnalyticsEvent(name = "vault_search_unlock_cta_shown", hasFirstVariant = false)
+
+    /**
+     * The onboarding tour was opened. [source] is the entry point ([AnalyticsParam.IMPORT_HUB] vs
+     * [AnalyticsParam.EMPTY_STATE]). `hasFirstVariant = true` so dashboards isolate first-ever opens.
+     */
+    data class OnboardingOpened(
+        val source: String,
+    ) : AnalyticsEvent(name = "onboarding_opened", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SOURCE, source) }
+    }
+
+    /**
+     * A tour step became visible — the funnel signal. [step] is the 1-indexed display position;
+     * [stepKey] is the stable concept slug (import / organize / bompear), robust to a future reorder;
+     * [method] is how the user got there ([AnalyticsNavMethod]). High-frequency → no first variant.
+     */
+    data class OnboardingStepViewed(
+        val step: Int,
+        val stepKey: String,
+        val method: String,
+    ) : AnalyticsEvent(name = "onboarding_step_viewed", hasFirstVariant = false) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putInt(AnalyticsParam.STEP, step)
+                putString(AnalyticsParam.STEP_KEY, stepKey)
+                putString(AnalyticsParam.METHOD, method)
+            }
+    }
+
+    /**
+     * The user reached the end and finished the tour (CTA or tapping forward off the last step).
+     * [method] distinguishes the explicit button from the "stories" tap. `hasFirstVariant = true`.
+     */
+    data class OnboardingCompleted(
+        val method: String,
+    ) : AnalyticsEvent(name = "onboarding_completed", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.METHOD, method) }
+    }
+
+    /**
+     * The user left the tour before finishing (Skip or device-back from the first step). [step] /
+     * [stepKey] mark where they dropped; [method] is how. The drop-off counterpart to the funnel.
+     */
+    data class OnboardingDismissed(
+        val step: Int,
+        val stepKey: String,
+        val method: String,
+    ) : AnalyticsEvent(name = "onboarding_dismissed", hasFirstVariant = false) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putInt(AnalyticsParam.STEP, step)
+                putString(AnalyticsParam.STEP_KEY, stepKey)
+                putString(AnalyticsParam.METHOD, method)
+            }
+    }
 }
