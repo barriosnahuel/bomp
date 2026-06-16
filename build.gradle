@@ -33,6 +33,17 @@ allprojects {
     }
 }
 
+// Binary, unconditional: every Kotlin compiler warning fails the build, so warnings can't
+// accumulate. All-or-nothing — the compile log must stay at zero `w:` (see docs/adr/0017).
+// Documented escape if the upgrade treadmill ever reddens untouched-code PRs: a CI-property gate.
+subprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask).configureEach {
+        compilerOptions {
+            allWarningsAsErrors.set(true)
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
