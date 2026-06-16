@@ -179,6 +179,11 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
             listOf(privateCollection("col_priv", "vault", audioIds = listOf(privateAudio.id))),
         )
         viewModel.onSearchQueryChange("Mama")
+        // Same paused-looper hazard as the post-flip assert below: the search recompute runs on the
+        // VM's viewModelScope collector (Dispatchers.Main), so the injected private-collection
+        // membership hasn't been applied when we read searchResults.value synchronously — under CI
+        // load the filter lags and the private audio leaks in. Flush the looper before asserting.
+        shadowOf(Looper.getMainLooper()).idle()
         // Pre-condition: while locked, the private audio is filtered out.
         assertThat(viewModel.searchResults.value.map { it.id }).doesNotContain(privateAudio.id)
 
