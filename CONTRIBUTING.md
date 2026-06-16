@@ -253,6 +253,13 @@ RUNS=3 ./scripts/run-instrumented-tests.sh
 
 HTML report: `app/build/reports/androidTests/connected/debug/index.html`. Raw XML: `app/build/outputs/androidTest-results/connected/debug/`.
 
+#### Is the red the emulator, or a real bug?
+
+Before re-running, classify by **determinism and timing** — not every red is the degraded emulator:
+
+- **Emulator flake** — `ComposeTimeoutException`, `ComposeNotIdleException`, `Process crashed`. Non-deterministic, varies run to run, usually on a slow pass. A clean cold boot (or freeing host load) makes it pass. Re-run via the wrapper.
+- **Deterministic bug** — `Failed to inject touch input. Reason: Expected exactly '1' node but found '2'`, or an `assertCountEquals` mismatch. Fails **instantly and identically every run**, cold boot included. The `inject touch` wording is misleading: Compose resolves the single target node *before* sending input, so this throws in the test process and the emulator is never invoked. It means matcher ambiguity — two real nodes in the tree (read the dump: two distinct rows) — i.e. a **test-isolation / seeding bug**, not the AVD. **Re-running never helps.** Fix the data the test renders. Rationale: [ADR 0001 § *Not every red is the emulator*](docs/adr/0001-local-ui-test-suite.md).
+
 #### Run a single test class
 
 Any extra arguments are passed straight through to Gradle:

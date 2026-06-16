@@ -62,6 +62,12 @@ internal object TestData {
             // Hide welcome by default in instrumented tests; opt-in via [enableWelcomeSticker].
             val welcome = WelcomeStickerStore(context)
             welcome.clearForTest()
+            // Pre-run the one-time persistence migration so its guard is set before consume().
+            // clearForTest() wipes that guard, so without this the Activity's SoundsViewModel.init
+            // re-runs migrateToPersistentIfNeeded() and resets consumed=false — resurrecting the
+            // welcome as a second MY_SOUNDS row and breaking the "exactly one share/play button"
+            // assumption every other instrumented test relies on.
+            welcome.migrateToPersistentIfNeeded()
             welcome.consume()
         }
         // Process-scoped singleton — survives across tests in the same instrumentation process,
