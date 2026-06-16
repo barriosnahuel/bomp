@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
 
+## \[unreleased]
+
+### For nerds 🤓
+
+#### Changed
+- Kotlin compiler warnings now fail the build (`allWarningsAsErrors`, binary/unconditional) so they can't accumulate
+
 ## \[v2.2.0] - 2026-06-15
 
 ### Added
