@@ -9,7 +9,9 @@ import android.os.Build
 import android.os.Bundle
 import com.google.common.truth.Truth.assertThat
 import com.google.firebase.analytics.FirebaseAnalytics
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -37,7 +39,7 @@ internal class FirebaseAnalyticsTrackerTest {
     @Test
     fun `log emits the base event with its params`() {
         val captured = slot<Bundle>()
-        every { firebase.logEvent(any(), capture(captured)) } answers { Unit }
+        every { firebase.logEvent(any(), capture(captured)) } just Runs
 
         tracker.log(AnalyticsEvent.SoundPlay(surface = "my_sounds"))
 
@@ -92,7 +94,7 @@ internal class FirebaseAnalyticsTrackerTest {
     @Test
     fun `log propagates SoundAdd params verbatim into the bundle`() {
         val captured = slot<Bundle>()
-        every { firebase.logEvent("sound_add", capture(captured)) } answers { Unit }
+        every { firebase.logEvent("sound_add", capture(captured)) } just Runs
 
         tracker.log(
             AnalyticsEvent.SoundAdd(
@@ -116,7 +118,7 @@ internal class FirebaseAnalyticsTrackerTest {
     @Test
     fun `logScreen emits SCREEN_VIEW with the canonical screen name`() {
         val captured = slot<Bundle>()
-        every { firebase.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, capture(captured)) } answers { Unit }
+        every { firebase.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, capture(captured)) } just Runs
 
         tracker.logScreen("my_sounds")
 
@@ -126,7 +128,7 @@ internal class FirebaseAnalyticsTrackerTest {
     @Test
     fun `logScreen merges extras into the screen view bundle`() {
         val captured = slot<Bundle>()
-        every { firebase.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, capture(captured)) } answers { Unit }
+        every { firebase.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, capture(captured)) } just Runs
 
         val extras = Bundle().apply { putString("source", "share") }
         tracker.logScreen("add_sound", extras)

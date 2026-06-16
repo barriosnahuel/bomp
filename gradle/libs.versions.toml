@@ -110,6 +110,7 @@ androidx-test-rules               = { module = "androidx.test:rules",       vers
 robolectric                       = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 truth                             = { module = "com.google.truth:truth",    version.ref = "truth" }
 mockk                             = { module = "io.mockk:mockk",            version.ref = "mockk" }
+kotlin-reflect                    = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 espresso-core                     = { module = "androidx.test.espresso:espresso-core",          version.ref = "espresso" }
 espresso-intents                  = { module = "androidx.test.espresso:espresso-intents",       version.ref = "espresso" }
 espresso-accessibility            = { module = "androidx.test.espresso:espresso-accessibility", version.ref = "espresso" }

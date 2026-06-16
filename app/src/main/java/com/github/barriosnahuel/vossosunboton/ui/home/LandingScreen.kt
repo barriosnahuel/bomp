@@ -964,7 +964,7 @@ private fun MySoundsBody(
             )
         }
         when {
-            showFilterEmptyState && activeCollection != null ->
+            showFilterEmptyState ->
                 MySoundsFilterEmptyState(collectionName = activeCollection.name)
             showWelcomeEmptyState ->
                 // weight(1f) so the centered group fills the space *below* the chips row, not the
