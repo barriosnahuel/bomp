@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
 
-## \[unreleased] (v2.2.0)
+## \[v2.2.0] - 2026-06-15
 
 ### Added
 - A "+" button on My Bomps opens a sheet to bring in a new Bomp — pick any audio from your device and it becomes yours; recording your own is coming soon
