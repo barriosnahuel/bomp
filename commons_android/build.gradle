@@ -53,4 +53,7 @@ dependencies {
     testImplementation libs.mockk
     testImplementation libs.robolectric
     testImplementation libs.androidx.test.core
+    // AnalyticsCoverageMatrixTest enumerates AnalyticsEvent::class.sealedSubclasses; kotlin-reflect
+    // is the runtime backing for that reflection call (otherwise resolved only transitively).
+    testImplementation libs.kotlin.reflect
 }

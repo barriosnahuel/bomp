@@ -24,6 +24,11 @@ TEST_APK=macrobenchmark/build/outputs/apk/benchmark/macrobenchmark-benchmark.apk
 DEST=app/src/main/baseline-prof.txt
 REMOTE="/storage/emulated/0/Android/media/$TEST_PKG/BaselineProfileGenerator_generate-baseline-prof.txt"
 
+# Fail fast (before the build) if the profiling build types still carry the scrubbed CI google-services
+# dummy — otherwise nonMinifiedRelease crashes on Firebase init and the run dies with the cryptic
+# "never flushed profiles". The guard explains how to seed the real config.
+./scripts/check-profileable-google-services.sh
+
 # Resolve a single target device unless ANDROID_SERIAL is already set. Read `adb devices` ONCE so a
 # device (dis)connecting between the count and the pick can't leave us with an empty serial.
 if [ -z "${ANDROID_SERIAL:-}" ]; then

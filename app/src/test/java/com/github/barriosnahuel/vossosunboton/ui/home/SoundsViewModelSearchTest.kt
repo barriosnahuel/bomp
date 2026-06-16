@@ -134,6 +134,11 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         )
 
         viewModel.onSearchQueryChange("Mama")
+        // Same paused-looper hazard as the mid-search-flip sibling's pre-condition assert: the
+        // recompute settles on the VM's Dispatchers.Main collector, so the injected private-collection
+        // membership can lag under CI load. Flush before reading searchResults.value (CLAUDE.md § await
+        // every async input).
+        shadowOf(Looper.getMainLooper()).idle()
 
         assertThat(viewModel.searchResults.value.map { it.id }).contains(publicAudio.id)
         assertThat(viewModel.searchResults.value.map { it.id }).doesNotContain(privateAudio.id)
@@ -158,6 +163,11 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         )
 
         viewModel.onSearchQueryChange("carlos")
+        // Same paused-looper hazard as the mid-search-flip sibling's pre-condition assert: the
+        // recompute settles on the VM's Dispatchers.Main collector, so the injected cross-tagged
+        // membership can lag under CI load. Flush before reading searchResults.value (CLAUDE.md § await
+        // every async input).
+        shadowOf(Looper.getMainLooper()).idle()
 
         assertThat(viewModel.searchResults.value.map { it.id }).contains(crossTagged.id)
     }

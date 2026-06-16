@@ -201,7 +201,16 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking { SoundsRepository(context).save(testSound("coach", file = "c.mp3")) }
         val vm = givenAViewModel()
-        runBlocking { withTimeout(TIMEOUT_MS) { vm.collections.first { it.isNotEmpty() } } }
+        runBlocking {
+            withTimeout(TIMEOUT_MS) {
+                vm.collections.first { it.isNotEmpty() }
+                // Await the reactive loadSounds priming allSoundsCache with "coach" BEFORE applyAssignment:
+                // evaluateAssignCloseEffects early-returns when the cache lacks the audio, so on a loaded CI
+                // machine the dual-home coach never fires and the await below times out (CLAUDE.md § JVM
+                // tests — await every async input).
+                vm.library.first { lib -> lib.any { it.name == "coach" } }
+            }
+        }
 
         // "Listo" with the audio staged into the Baúl while staying visible → the dual-home coach.
         vm.applyAssignment(
@@ -230,7 +239,15 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking { SoundsRepository(context).save(testSound("moved", file = "m.mp3")) }
         val vm = givenAViewModel()
-        runBlocking { withTimeout(TIMEOUT_MS) { vm.collections.first { it.isNotEmpty() } } }
+        runBlocking {
+            withTimeout(TIMEOUT_MS) {
+                vm.collections.first { it.isNotEmpty() }
+                // Await allSoundsCache priming with "moved" before applyAssignment — evaluateAssignCloseEffects
+                // early-returns on an unprimed cache, so the moved-to-vault event never fires on a loaded CI
+                // machine (CLAUDE.md § JVM tests — await every async input).
+                vm.library.first { lib -> lib.any { it.name == "moved" } }
+            }
+        }
 
         vm.applyAssignment(
             "custom:moved",
