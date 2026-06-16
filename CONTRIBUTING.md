@@ -36,6 +36,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
     > ./gradlew check
 
     It must return **`BUILD SUCCESS`**.
+4. *(Optional)* To let Claude Code diagnose CI failures, set up the CircleCI MCP server — see [§ Continuous Integration](#continuous-integration-). An agent can wire it up; you provide the token and restart Claude Code.
 
 ## Directory structure 🎄
 - [app/](/app) Android application module which depends on all other submodules to be the great app you're building. The Add Button flow lives at `app/src/main/java/com/github/barriosnahuel/vossosunboton/feature/addbutton/`.
@@ -67,6 +68,11 @@ We use Circle CI, so if you're gonna change the [config.yml](.circleci/config.ym
 - https://circleci.com/docs/2.0/local-cli
 
 > circleci config validate
+
+### Diagnosing CI failures from Claude Code
+Claude Code can read remote pipeline/job logs via the official [CircleCI MCP server](https://github.com/CircleCI-Public/mcp-server-circleci) (`@circleci/mcp-server-circleci`). Setup is **per-user, not committed**: a personal CircleCI API token in your env (carries full account access — treat as a secret) + `claude mcp add -s local …`. Follow the package README for the current commands, or just ask an agent to wire it up.
+
+**Gotcha:** the token resolves at Claude Code launch. If you get `401`, fully quit and relaunch Claude Code from a shell that has the token exported — a `/mcp` reconnect reuses the old env and won't pick it up.
 
 ### Instrumented UI tests are local-only
 The instrumented suite under `app/src/androidTest/` is **intentionally not run on CircleCI**. It needs a booted emulator and is meant to replace manual end-to-end QA on the contributor's machine. Setup, run commands, and synchronization helpers live in [Testing → Local UI test suite](#testing-); rationale lives in [ADR 0001](docs/adr/0001-local-ui-test-suite.md).
