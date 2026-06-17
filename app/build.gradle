@@ -19,8 +19,8 @@ android {
         applicationId "com.github.barriosnahuel.vossosunboton"
         minSdkVersion 23
         targetSdkVersion 37
-        versionCode 7
-        versionName '2.2.0'
+        versionCode 8
+        versionName '2.3.0'
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Keep capture/utility drivers out of the default suite (connectedDebugAndroidTest /
         // run-instrumented-tests.sh). The store-screenshot driver still runs via
