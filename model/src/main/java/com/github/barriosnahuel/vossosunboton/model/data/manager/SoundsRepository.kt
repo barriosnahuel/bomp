@@ -260,16 +260,35 @@ class SoundsRepository(
     }
 
     /**
-     * Decodes the `sounds_json` payload element-by-element so a single bad record can never wipe the
-     * whole list (the failure mode that lost a real user's audio — ADR 0008 → 0018). The list is
-     * parsed once to a tree; each element is healed + decoded independently; an element that cannot
-     * be recovered is dropped while its siblings survive. Derived ids are de-duplicated keep-first.
+     * Decodes the `sounds_json` payload, recovering legacy/partially-corrupt data instead of wiping
+     * the list (ADR 0008 → 0018).
      *
-     * Only a corrupt root (not valid JSON, or a non-array) degrades to an empty list with an
-     * `onError`; per-element drops are silent recovery.
+     * Fast path (every post-migration install — the overwhelming majority): a clean payload decodes
+     * in a single streaming pass with no intermediate JSON tree. The element-by-element recovery
+     * (tree parse + per-element heal/decode + de-dup) runs only when the fast path proves the payload
+     * is not clean — it threw, or it decoded but carries a blank `id` (which only legacy/corrupt data
+     * produces). So new users never pay the recovery cost, and old users still get fully healed.
      */
     private fun decodeSafely(raw: String?): List<StoredSound> {
         if (raw.isNullOrEmpty()) return emptyList()
+        return try {
+            val decoded = json.decodeFromString(SOUNDS_SERIALIZER, raw)
+            if (decoded.none { it.id.isBlank() }) decoded else recoverElementwise(raw)
+        } catch (e: SerializationException) {
+            recoverElementwise(raw)
+        } catch (e: IllegalArgumentException) {
+            recoverElementwise(raw)
+        }
+    }
+
+    /**
+     * Slow path: parse the list to a tree once, heal + decode each element independently, drop any
+     * that cannot be recovered (a single bad record can never wipe the rest — the failure mode that
+     * lost a real user's audio), and de-duplicate derived ids keep-first. Only a corrupt root (not
+     * valid JSON, or a non-array) degrades to an empty list with an `onError`; per-element drops are
+     * silent recovery.
+     */
+    private fun recoverElementwise(raw: String): List<StoredSound> {
         val root =
             try {
                 json.parseToJsonElement(raw)
