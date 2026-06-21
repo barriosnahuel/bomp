@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased] (v2.3.0)
 
+### Fixed
+- Bomps saved before an earlier update no longer disappear when you open the app — audios stored under the old format are recovered instead of the whole list silently emptying
+
 ### For nerds 🤓
 
 #### Changed

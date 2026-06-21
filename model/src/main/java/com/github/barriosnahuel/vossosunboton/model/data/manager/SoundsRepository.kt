@@ -31,6 +31,11 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import timber.log.Timber
 
 /**
@@ -257,7 +262,7 @@ class SoundsRepository(
     private fun decodeSafely(raw: String?): List<StoredSound> {
         if (raw.isNullOrEmpty()) return emptyList()
         return try {
-            json.decodeFromString(SOUNDS_SERIALIZER, raw)
+            json.decodeFromJsonElement(SOUNDS_SERIALIZER, migrateLegacySchema(json.parseToJsonElement(raw)))
         } catch (e: SerializationException) {
             onError(RuntimeException("Malformed sounds_json payload, recovering with empty list", e))
             emptyList()
@@ -265,6 +270,29 @@ class SoundsRepository(
             onError(RuntimeException("Invalid sounds_json structure, recovering with empty list", e))
             emptyList()
         }
+    }
+
+    /**
+     * Heals payloads written before [StoredSound.id] became a required field (ADR 0008 → 0018).
+     * For each element missing a usable `id`, derives `"custom:<name>"` from the element's pre-0008
+     * name identity (ADR 0007) — a stable, deterministic key — so the user's audio is recovered
+     * instead of the whole list degrading to empty. This reconstructs identity from the only stable
+     * field a legacy record has; it is not the production custom-id format (those are UUIDs minted at
+     * save time). An element with neither `id` nor `name` is unrecoverable and is dropped, leaving its
+     * siblings intact. A non-array root is returned untouched for strict decode to handle (or reject).
+     * Healed ids persist on the next [mutate]; see ADR 0018 for the bundled-stub limitation and
+     * revisit criteria.
+     */
+    private fun migrateLegacySchema(root: JsonElement): JsonElement {
+        if (root !is JsonArray) return root
+        return JsonArray(
+            root.mapNotNull { element ->
+                val obj = element as? JsonObject ?: return@mapNotNull element
+                if (!(obj["id"] as? JsonPrimitive)?.contentOrNull.isNullOrBlank()) return@mapNotNull obj
+                val name = (obj["name"] as? JsonPrimitive)?.contentOrNull
+                if (name.isNullOrBlank()) null else JsonObject(obj + ("id" to JsonPrimitive("custom:$name")))
+            },
+        )
     }
 
     private fun mergeWithBundled(
