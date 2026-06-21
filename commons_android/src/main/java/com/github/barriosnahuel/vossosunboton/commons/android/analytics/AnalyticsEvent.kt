@@ -431,4 +431,14 @@ sealed class AnalyticsEvent(
      * naming screen". `hasFirstVariant = true`. The inert "record" row (badged "Soon") emits nothing.
      */
     object ImportHubImportSelected : AnalyticsEvent(name = "import_hub_import_selected", hasFirstVariant = true)
+
+    /**
+     * Pre-stable-id `sounds_json` data was found on disk and recovered on read — the install carried
+     * audio saved before sound records had a stable id (ADR 0008 → 0018), which now heals on read
+     * instead of wiping the list. Gated one-shot via `tracker.markFiredOnce("legacy_sounds_recovered")`
+     * so the per-read recovery doesn't flood dashboards; `hasFirstVariant = false` because the marker
+     * is already one-shot. Makes the legacy population countable, so ADR 0018's retirement criterion
+     * ("retire the migration once the population reaches zero") is actually verifiable.
+     */
+    object LegacySoundsRecovered : AnalyticsEvent(name = "legacy_sounds_recovered", hasFirstVariant = false)
 }

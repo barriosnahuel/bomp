@@ -56,6 +56,15 @@ class SoundsRepository(
      * non-fatals in the dashboard.
      */
     private val onError: (Throwable) -> Unit = { Timber.w(it) },
+    /**
+     * Invoked when a read recovered legacy/corrupt `sounds_json` data (a pre-stable-id payload that
+     * was healed, or any element that had to be dropped). May fire on more than one read until the
+     * healed data is persisted, so callers must gate it (e.g. `markFiredOnce`) before emitting
+     * telemetry. Decoupled from analytics exactly as [onError] is from Crashlytics; `:app` wires the
+     * one-shot `legacy_sounds_recovered` event so the population stays observable (ADR 0018). Default
+     * no-op.
+     */
+    private val onLegacyRecovery: () -> Unit = {},
 ) {
     private val storedSounds: Flow<List<StoredSound>> =
         context.bompsStore.data
@@ -306,7 +315,13 @@ class SoundsRepository(
             return emptyList()
         }
         val seenIds = HashSet<String>()
-        return root.mapNotNull { decodeElement(it) }.filter { seenIds.add(it.id) }
+        val recovered = root.mapNotNull { decodeElement(it) }.filter { seenIds.add(it.id) }
+        // Reaching here means the fast path rejected the payload (threw or had a blank id) yet the
+        // root is a valid array — i.e. legacy/corrupt data we just healed. Signal it (gated by the
+        // caller) so the legacy population stays observable; a malformed/non-array root returned
+        // above without firing.
+        onLegacyRecovery()
+        return recovered
     }
 
     /**

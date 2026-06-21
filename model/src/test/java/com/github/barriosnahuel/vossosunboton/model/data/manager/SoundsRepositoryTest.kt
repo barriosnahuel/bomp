@@ -375,6 +375,32 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
         }
 
     @Test
+    fun `onLegacyRecovery fires when a legacy payload is recovered`() =
+        runTest {
+            var recoveries = 0
+            val observed =
+                SoundsRepository(context, onError = { recordedErrors += it }, onLegacyRecovery = { recoveries++ })
+            observed.setRawJsonForTest("""[{"name":"bell","file":"bell.mp3"}]""")
+
+            observed.sounds.first()
+
+            assertThat(recoveries).isAtLeast(1)
+        }
+
+    @Test
+    fun `onLegacyRecovery does not fire for a clean modern payload`() =
+        runTest {
+            var recoveries = 0
+            val observed =
+                SoundsRepository(context, onError = { recordedErrors += it }, onLegacyRecovery = { recoveries++ })
+            observed.save(testSound("bell", "bell.mp3"))
+
+            observed.sounds.first()
+
+            assertThat(recoveries).isEqualTo(0)
+        }
+
+    @Test
     fun `legacy element missing both id and name is dropped without wiping the list`() =
         runTest {
             repo.setRawJsonForTest(

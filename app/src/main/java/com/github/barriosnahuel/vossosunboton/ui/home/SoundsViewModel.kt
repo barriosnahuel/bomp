@@ -120,7 +120,18 @@ class SoundsViewModel(
             .DualHomeCoachStore(application),
 ) : AndroidViewModel(application),
     PlayerControllerListener {
-    private val repo = SoundsRepository(application, onError = Tracker::track)
+    private val repo =
+        SoundsRepository(
+            application,
+            onError = Tracker::track,
+            // Pre-stable-id data was healed on read (ADR 0018). Gate to one event per install so the
+            // per-read recovery doesn't flood; lets the legacy population be counted for retirement.
+            onLegacyRecovery = {
+                if (tracker.markFiredOnce("legacy_sounds_recovered")) {
+                    tracker.log(AnalyticsEvent.LegacySoundsRecovered)
+                }
+            },
+        )
 
     // Default `false` — flipped to `true` asynchronously by the IO coroutine in `init` after
     // reading the suspend `welcomeStore.isActive()`. Sub-frame in practice; same accepted
