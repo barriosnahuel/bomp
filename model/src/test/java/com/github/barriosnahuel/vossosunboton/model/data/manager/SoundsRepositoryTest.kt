@@ -312,6 +312,22 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
         }
 
     @Test
+    fun `two legacy elements sharing a name collapse to one recovered sound keep-first`() =
+        runTest {
+            // Same derived id "custom:bell" for both — without de-dup this crashes id-keyed Compose
+            // lists; keep-first drops the second, leaving the first ("a.mp3") addressable.
+            repo.setRawJsonForTest(
+                """[{"name":"bell","file":"a.mp3"},{"name":"bell","file":"b.mp3"}]""",
+            )
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list).hasSize(1)
+            assertThat(list.single().id).isEqualTo("custom:bell")
+            assertThat(list.single().file).isEqualTo("a.mp3")
+        }
+
+    @Test
     fun `legacy element preserves its persisted flags through the migration`() =
         runTest {
             repo.setRawJsonForTest(

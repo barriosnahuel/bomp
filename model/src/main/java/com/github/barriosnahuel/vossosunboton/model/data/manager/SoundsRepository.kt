@@ -280,17 +280,31 @@ class SoundsRepository(
      * field a legacy record has; it is not the production custom-id format (those are UUIDs minted at
      * save time). An element with neither `id` nor `name` is unrecoverable and is dropped, leaving its
      * siblings intact. A non-array root is returned untouched for strict decode to handle (or reject).
+     *
+     * Derived ids are de-duplicated keep-first: a repeated pre-0008 `name` would otherwise mint two
+     * identical `"custom:<name>"` ids, and `id`-keyed Compose lists (`LazyColumn(key = sound.id)`)
+     * crash on a duplicate key — so the recovery for a user with such data would turn the old silent
+     * wipe into a launch crash. Keep-first degrades that worst case to dropping the duplicate.
+     *
      * Healed ids persist on the next [mutate]; see ADR 0018 for the bundled-stub limitation and
      * revisit criteria.
      */
     private fun migrateLegacySchema(root: JsonElement): JsonElement {
         if (root !is JsonArray) return root
+        val seenIds = HashSet<String>()
         return JsonArray(
             root.mapNotNull { element ->
                 val obj = element as? JsonObject ?: return@mapNotNull element
-                if (!(obj["id"] as? JsonPrimitive)?.contentOrNull.isNullOrBlank()) return@mapNotNull obj
-                val name = (obj["name"] as? JsonPrimitive)?.contentOrNull
-                if (name.isNullOrBlank()) null else JsonObject(obj + ("id" to JsonPrimitive("custom:$name")))
+                val healed =
+                    if (!(obj["id"] as? JsonPrimitive)?.contentOrNull.isNullOrBlank()) {
+                        obj
+                    } else {
+                        val name = (obj["name"] as? JsonPrimitive)?.contentOrNull
+                        if (name.isNullOrBlank()) return@mapNotNull null
+                        JsonObject(obj + ("id" to JsonPrimitive("custom:$name")))
+                    }
+                val id = (healed["id"] as? JsonPrimitive)?.contentOrNull
+                if (id != null && !seenIds.add(id)) null else healed
             },
         )
     }
