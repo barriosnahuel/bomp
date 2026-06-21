@@ -282,10 +282,11 @@ class SoundsRepository(
         if (raw.isNullOrEmpty()) return emptyList()
         return try {
             val decoded = json.decodeFromString(SOUNDS_SERIALIZER, raw)
+            // A blank id only comes from legacy/corrupt data → recover; otherwise the fast result wins.
             if (decoded.none { it.id.isBlank() }) decoded else recoverElementwise(raw)
-        } catch (e: SerializationException) {
+        } catch (ignored: SerializationException) {
             recoverElementwise(raw)
-        } catch (e: IllegalArgumentException) {
+        } catch (ignored: IllegalArgumentException) {
             recoverElementwise(raw)
         }
     }
@@ -298,30 +299,35 @@ class SoundsRepository(
      * silent recovery.
      */
     private fun recoverElementwise(raw: String): List<StoredSound> {
+        val array = parseSoundsArray(raw) ?: return emptyList()
+        val seenIds = HashSet<String>()
+        val recovered = array.mapNotNull { decodeElement(it) }.filter { seenIds.add(it.id) }
+        // Reaching here means the fast path rejected the payload (threw or had a blank id) yet the
+        // root is a valid array — i.e. legacy/corrupt data we just healed. Signal it (gated by the
+        // caller) so the legacy population stays observable; a malformed/non-array root returned a
+        // null array above without firing.
+        onLegacyRecovery()
+        return recovered
+    }
+
+    /** Parses [raw] to a [JsonArray], or null (with an `onError`) if it is not valid JSON or not an array. */
+    private fun parseSoundsArray(raw: String): JsonArray? {
         val root =
             try {
                 json.parseToJsonElement(raw)
             } catch (e: SerializationException) {
                 onError(RuntimeException("Malformed sounds_json payload, recovering with empty list", e))
-                return emptyList()
+                return null
             }
-        if (root !is JsonArray) {
+        return root as? JsonArray ?: run {
             onError(
                 RuntimeException(
                     "Invalid sounds_json structure, recovering with empty list",
                     IllegalArgumentException("sounds_json root is not a JSON array"),
                 ),
             )
-            return emptyList()
+            null
         }
-        val seenIds = HashSet<String>()
-        val recovered = root.mapNotNull { decodeElement(it) }.filter { seenIds.add(it.id) }
-        // Reaching here means the fast path rejected the payload (threw or had a blank id) yet the
-        // root is a valid array — i.e. legacy/corrupt data we just healed. Signal it (gated by the
-        // caller) so the legacy population stays observable; a malformed/non-array root returned
-        // above without firing.
-        onLegacyRecovery()
-        return recovered
     }
 
     /**
@@ -331,13 +337,12 @@ class SoundsRepository(
      * that element; callers keep the rest.
      */
     private fun decodeElement(element: JsonElement): StoredSound? {
-        val obj = element as? JsonObject ?: return null
-        val healed = healLegacyId(obj) ?: return null
+        val healed = (element as? JsonObject)?.let { healLegacyId(it) } ?: return null
         return try {
             json.decodeFromJsonElement(StoredSound.serializer(), healed)
-        } catch (e: SerializationException) {
+        } catch (ignored: SerializationException) {
             null
-        } catch (e: IllegalArgumentException) {
+        } catch (ignored: IllegalArgumentException) {
             null
         }
     }
