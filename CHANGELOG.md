@@ -10,8 +10,12 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### For nerds 🤓
 
+#### Added
+- `legacy_sounds_recovered` analytics event (one-shot per install) so the pre-stable-id population is countable and the migration's retirement is verifiable (ADR 0018)
+
 #### Changed
 - Kotlin compiler warnings now fail the build (`allWarningsAsErrors`, binary/unconditional) so they can't accumulate
+- `sounds_json` decoding is now element-by-element with id de-dup and a fast path, so one corrupt record can't wipe the list and clean payloads pay no recovery cost (ADR 0018)
 
 ## \[v2.2.0] - 2026-06-15
 
