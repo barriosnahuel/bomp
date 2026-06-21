@@ -204,7 +204,7 @@ Hard rules:
 
 SQL post-mortem on crash history: CONTRIBUTING.md § *BigQuery export*. Releases-only — `bomp-prod` exports Crashlytics/Analytics/Performance to BigQuery (`us`, daily). `bomp-debug` does not export.
 
-**Reading a specific crash's stack:** BQ frames are R8-obfuscated (`r8-map-id-…`, `ki2.q`); read the deobfuscated trace in **Crashlytics** (Console or the Firebase MCP, § *Local setup*). Use BQ for aggregation/counts/JOINs only — detail in CONTRIBUTING.md § *BigQuery export*.
+**Reading a specific crash's stack:** BQ frames are R8-obfuscated (`r8-map-id-…`, `ki2.q`); read the stack in **Crashlytics** (Console / Firebase MCP), which deobfuscates only when the build's R8 mapping was uploaded — often missing today (§ *Release builds*). BQ for aggregation/counts/JOINs only — detail in CONTRIBUTING.md § *BigQuery export*.
 
 ## StrictMode debug audit
 

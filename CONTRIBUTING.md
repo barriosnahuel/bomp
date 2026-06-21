@@ -587,8 +587,9 @@ After the checklist above is green and the version bump is merged to `develop`:
    `<versionCode>` is the value in `app/build.gradle`. Add a footer line linking to the full `CHANGELOG.md` on `develop` if the notes file omits it.
 3. **Attach nothing else.** The mapping is a backup for offline `retrace`; **never** attach the keystore, `secure.properties`, the real `google-services.json`, or the `.aab` (the `.aab` carries no mapping anyway).
 4. **Verify the asset landed** — `gh release view vX.Y.Z --json assets -q '.assets[].name'` must list `mapping.txt`. Print an explicit line for the maintainer to confirm, e.g. `✅ mapping.txt attached to vX.Y.Z` (or ⚠️ + re-run `gh release upload vX.Y.Z app/build/outputs/mapping/release/mapping.txt` if missing).
+5. **Verify Firebase actually got the mapping** — the build log must show `uploadCrashlyticsMappingFileRelease` *ran* (not skipped). Within minutes, a fresh crash on this version should de-obfuscate in the Console / via the Firebase MCP (real frames, **not** `r8-map-id-…`). This step exists because past releases shipped **without** the mapping (§ *BigQuery export* → *Stack frames come R8-obfuscated*) — so Crashlytics couldn't deobfuscate them either.
 
-Why archive the mapping: Firebase already holds it for Console/MCP de-obfuscation, but a GitHub-release copy keyed to the tag is a durable offline backup for `retrace`, independent of Firebase retention.
+Why archive the mapping: even when Firebase holds it for Console/MCP de-obfuscation, a GitHub-release copy keyed to the tag is a durable offline `retrace` backup independent of Firebase retention — and the safety net for exactly the case above, where the Firebase upload didn't happen.
 
 ## Bundled audio files 🔊
 
@@ -841,9 +842,11 @@ The Console is still right for: real-time DebugView, alert configuration, single
 
 ### Stack frames come R8-obfuscated — read the trace in Crashlytics, not BQ
 
-The export stores frames **raw**: `blame_frame.file` = `r8-map-id-…` (the mapping id, not a source path), symbols = R8-renamed (`ki2.q`, `et2.n`). Only the exception **message** is human-readable. The Crashlytics **Console** (and the Firebase MCP — § *Local setup*) de-obfuscate server-side via the mapping the release build uploads; the BQ export does not. This is a Firebase limitation (export = raw, Console/MCP = deobfuscated), **not** a misconfiguration.
+Frames carry `blame_frame.file` = `r8-map-id-…` (a mapping UUID, not a source path) and R8-renamed symbols (`ki2.q`, `et2.n`). Crashlytics — Console **and** the Firebase MCP (§ *Local setup*) — de-obfuscate server-side, **but only if the R8 mapping for that build was uploaded to Firebase.**
 
-So to read a *single crash's stack*, use the **Console or the Firebase MCP** — never BQ. BQ stays for aggregation / trends / JOINs (above). The diagnostic that triggered this note (a `sounds_json` crash) was only root-causable because the exception *message* carried the real FQN + field; a generic message would have left the BQ export near-useless.
+**Today it usually isn't.** CI excludes the mapping upload (§ *Release builds*) and release builds haven't been reliably uploading it, so shipped crashes read `r8-map-id-…` frames **even in Crashlytics / the MCP** — verified live on the 2.1.0 `sounds_json` issue: `at x83.a(r8-map-id-…:42)`. Only the exception **message** is human-readable (a static `Tracker.track` wrapper message — which is the *only* reason that crash was diagnosable). So the fix is **not** "use the MCP instead of BQ" — it's making every release **upload + verify** its mapping (§ *Release builds* → *Creating the GitHub release*). Once the mapping is in Firebase, the Console/MCP show real frames; the BQ export never deobfuscates regardless.
+
+Tooling division (once mappings are present): **reading a single crash's stack** → Console or Firebase MCP (the agent-accessible path); **aggregation / trends / JOINs** → BQ.
 
 **Wiring the Firebase MCP (one-time, per-user — not committed):**
 
