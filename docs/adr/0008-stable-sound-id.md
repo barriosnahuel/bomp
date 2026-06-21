@@ -1,6 +1,6 @@
 # ADR 0008 — Sound identity is a stable internal id, not the display name
 
-- **Status:** Accepted
+- **Status:** Accepted (decision #5 / Option A amended by [ADR 0018](0018-legacy-sounds-schema-migration.md))
 - **Date:** 2026-05-15
 - **Supersedes:** The "Why `Sound.name` as the cache key" section of [ADR 0007](0007-sound-playback-pause-resume.md) and the name-as-identity weakness it called out. The rest of ADR 0007 — pause/resume semantics, position cache, listener changes — stands; the cache key migrates from `Sound.name` to `Sound.id`.
 
@@ -22,7 +22,7 @@ The app **has no users yet** — the `StoredSound` JSON schema can be broken wit
 2. **Stable across installs for bundled sounds.** Reinstalling the app must not invalidate a pinned-bundled flag persisted via the new id.
 3. **Minimum-churn migration to call sites.** The convenience constructor `Sound(name, rawRes)` for bundled sounds must keep its signature so `PackagedAudios.java` and `welcomeSticker()` need no edits. The new id is derived inside that constructor.
 4. **No regressions in `StateFlow` recomposition.** The VM intentionally re-emits the same logical sound with flipped `isPlaying`/`isPinned`. Identity must not bleed into structural equality (see *Why structural `equals` is preserved* below).
-5. **No data migration.** No-users window; old-schema JSON degrades to empty list via `decodeSafely`.
+5. **No data migration.** No-users window; old-schema JSON degrades to empty list via `decodeSafely`. **(Amended by [ADR 0018](0018-legacy-sounds-schema-migration.md): the no-users premise proved false — production Crashlytics shows a real user whose pre-id payload degraded to empty, silently wiping their saved audio. A read-time migration now derives the missing id instead of dropping the list.)**
 
 ## Decision
 

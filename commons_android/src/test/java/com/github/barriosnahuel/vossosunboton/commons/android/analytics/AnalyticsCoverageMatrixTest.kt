@@ -95,6 +95,7 @@ internal class AnalyticsCoverageMatrixTest {
                 "OnboardingDismissed",
                 "ImportHubOpened",
                 "ImportHubImportSelected",
+                "LegacySoundsRecovered",
             )
 
         private val SCREEN_VIEWS_WITH_REGRESSION_TEST: Set<String> =

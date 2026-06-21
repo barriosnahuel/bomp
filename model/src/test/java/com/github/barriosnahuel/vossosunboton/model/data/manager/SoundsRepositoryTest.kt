@@ -262,17 +262,155 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
         }
 
     @Test
-    fun `legacy JSON without an id field returns empty list and reports via onError`() =
+    fun `legacy JSON without an id field recovers the custom sound by deriving a stable id`() =
         runTest {
-            // Pre-stable-id schema: valid JSON, but StoredSound.id is now a required field.
-            // No data migration ships (the app had no users) — the read degrades to an empty list.
+            // Pre-stable-id schema (ADR 0008 → 0018): valid JSON, but StoredSound.id is now required.
+            // A real user updated with this on disk; the migration derives id from name, recovering it.
             repo.setRawJsonForTest("""[{"name":"bell","file":"bell.mp3"}]""")
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list).hasSize(1)
+            assertThat(list.single().name).isEqualTo("bell")
+            assertThat(list.single().file).isEqualTo("bell.mp3")
+            // Recovery is graceful: not reported as a malformed-payload error.
+            assertThat(recordedErrors).isEmpty()
+        }
+
+    @Test
+    fun `legacy element with a blank id string is healed from its name`() =
+        runTest {
+            repo.setRawJsonForTest("""[{"id":"","name":"bell","file":"bell.mp3"}]""")
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list.single().name).isEqualTo("bell")
+            assertThat(recordedErrors).isEmpty()
+        }
+
+    @Test
+    fun `non-array JSON root returns empty list and reports via onError`() =
+        runTest {
+            repo.setRawJsonForTest("""{"name":"bell","file":"bell.mp3"}""")
 
             val list = repo.sounds.first().filter { !it.isBundled() }
 
             assertThat(list).isEmpty()
             assertThat(recordedErrors).hasSize(1)
-            assertThat(recordedErrors.single().message).contains("Malformed sounds_json")
+        }
+
+    @Test
+    fun `legacy element without id does not wipe sibling valid elements`() =
+        runTest {
+            repo.setRawJsonForTest(
+                """[{"name":"old","file":"old.mp3"},{"id":"custom:new","name":"new","file":"new.mp3"}]""",
+            )
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list.map { it.name }).containsExactly("old", "new")
+        }
+
+    @Test
+    fun `two legacy elements sharing a name collapse to one recovered sound keep-first`() =
+        runTest {
+            // Same derived id "custom:bell" for both — without de-dup this crashes id-keyed Compose
+            // lists; keep-first drops the second, leaving the first ("a.mp3") addressable.
+            repo.setRawJsonForTest(
+                """[{"name":"bell","file":"a.mp3"},{"name":"bell","file":"b.mp3"}]""",
+            )
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list).hasSize(1)
+            assertThat(list.single().id).isEqualTo("custom:bell")
+            assertThat(list.single().file).isEqualTo("a.mp3")
+        }
+
+    @Test
+    fun `legacy element preserves its persisted flags through the migration`() =
+        runTest {
+            repo.setRawJsonForTest(
+                """[{"name":"bell","file":"bell.mp3","isPinned":true,"isFavorite":true}]""",
+            )
+
+            val recovered = repo.sounds.first().first { it.name == "bell" }
+
+            assertThat(recovered.isPinned).isTrue()
+            assertThat(recovered.isFavorite).isTrue()
+        }
+
+    @Test
+    fun `recovered legacy sound is addressable by its derived id on the next write`() =
+        runTest {
+            repo.setRawJsonForTest("""[{"name":"bell","file":"bell.mp3"}]""")
+
+            repo.rename("custom:bell", "doorbell")
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+            assertThat(list.single().name).isEqualTo("doorbell")
+        }
+
+    @Test
+    fun `a non-object array element is dropped without wiping valid siblings`() =
+        runTest {
+            repo.setRawJsonForTest("""[5,{"id":"custom:keep","name":"keep","file":"keep.mp3"}]""")
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list.map { it.name }).containsExactly("keep")
+            assertThat(recordedErrors).isEmpty()
+        }
+
+    @Test
+    fun `an element with a valid id but missing the required name is dropped without wiping siblings`() =
+        runTest {
+            repo.setRawJsonForTest(
+                """[{"id":"custom:x","file":"x.mp3"},{"id":"custom:keep","name":"keep","file":"keep.mp3"}]""",
+            )
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list.map { it.name }).containsExactly("keep")
+        }
+
+    @Test
+    fun `onLegacyRecovery fires when a legacy payload is recovered`() =
+        runTest {
+            var recoveries = 0
+            val observed =
+                SoundsRepository(context, onError = { recordedErrors += it }, onLegacyRecovery = { recoveries++ })
+            observed.setRawJsonForTest("""[{"name":"bell","file":"bell.mp3"}]""")
+
+            observed.sounds.first()
+
+            assertThat(recoveries).isAtLeast(1)
+        }
+
+    @Test
+    fun `onLegacyRecovery does not fire for a clean modern payload`() =
+        runTest {
+            var recoveries = 0
+            val observed =
+                SoundsRepository(context, onError = { recordedErrors += it }, onLegacyRecovery = { recoveries++ })
+            observed.save(testSound("bell", "bell.mp3"))
+
+            observed.sounds.first()
+
+            assertThat(recoveries).isEqualTo(0)
+        }
+
+    @Test
+    fun `legacy element missing both id and name is dropped without wiping the list`() =
+        runTest {
+            repo.setRawJsonForTest(
+                """[{"file":"orphan.mp3"},{"id":"custom:keep","name":"keep","file":"keep.mp3"}]""",
+            )
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list.map { it.name }).containsExactly("keep")
+            assertThat(recordedErrors).isEmpty()
         }
 
     // ── isVisibleInMySounds (ADR 0012) ──────────────────────────────────────────────────────

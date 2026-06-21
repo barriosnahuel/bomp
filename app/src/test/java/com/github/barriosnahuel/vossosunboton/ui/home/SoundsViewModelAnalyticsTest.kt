@@ -81,6 +81,25 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `legacy_sounds_recovered emits when the store holds pre-stable-id data`() {
+        runBlocking {
+            SoundsRepository(ApplicationProvider.getApplicationContext())
+                .setRawJsonForTest("""[{"name":"bell","file":"bell.mp3"}]""")
+        }
+
+        givenAViewModel()
+
+        fake.assertEmitted("legacy_sounds_recovered")
+    }
+
+    @Test
+    fun `legacy_sounds_recovered does not emit for a clean store`() {
+        givenAViewModel()
+
+        fake.assertNotEmitted("legacy_sounds_recovered")
+    }
+
+    @Test
     fun `togglePin emits pin_toggle with the resulting pinned state`() {
         val viewModel = givenAViewModel()
         val sound = testSound("test", file = "test.mp3")
