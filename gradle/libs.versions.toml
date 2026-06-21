@@ -16,7 +16,7 @@ annotation                = "1.10.0"
 activityCompose           = "1.13.0"
 coreSplashscreen          = "1.2.0"
 composeBom                = "2026.06.00"
-lifecycleCompose          = "2.10.0"
+lifecycleCompose          = "2.11.0"
 material                  = "1.14.0"
 
 # Firebase
