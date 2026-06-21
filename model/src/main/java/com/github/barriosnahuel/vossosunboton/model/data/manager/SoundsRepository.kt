@@ -31,6 +31,11 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import timber.log.Timber
 
 /**
@@ -51,6 +56,15 @@ class SoundsRepository(
      * non-fatals in the dashboard.
      */
     private val onError: (Throwable) -> Unit = { Timber.w(it) },
+    /**
+     * Invoked when a read recovered legacy/corrupt `sounds_json` data (a pre-stable-id payload that
+     * was healed, or any element that had to be dropped). May fire on more than one read until the
+     * healed data is persisted, so callers must gate it (e.g. `markFiredOnce`) before emitting
+     * telemetry. Decoupled from analytics exactly as [onError] is from Crashlytics; `:app` wires the
+     * one-shot `legacy_sounds_recovered` event so the population stays observable (ADR 0018). Default
+     * no-op.
+     */
+    private val onLegacyRecovery: () -> Unit = {},
 ) {
     private val storedSounds: Flow<List<StoredSound>> =
         context.bompsStore.data
@@ -254,17 +268,98 @@ class SoundsRepository(
         }
     }
 
+    /**
+     * Decodes the `sounds_json` payload, recovering legacy/partially-corrupt data instead of wiping
+     * the list (ADR 0008 → 0018).
+     *
+     * Fast path (every post-migration install — the overwhelming majority): a clean payload decodes
+     * in a single streaming pass with no intermediate JSON tree. The element-by-element recovery
+     * (tree parse + per-element heal/decode + de-dup) runs only when the fast path proves the payload
+     * is not clean — it threw, or it decoded but carries a blank `id` (which only legacy/corrupt data
+     * produces). So new users never pay the recovery cost, and old users still get fully healed.
+     */
     private fun decodeSafely(raw: String?): List<StoredSound> {
         if (raw.isNullOrEmpty()) return emptyList()
         return try {
-            json.decodeFromString(SOUNDS_SERIALIZER, raw)
-        } catch (e: SerializationException) {
-            onError(RuntimeException("Malformed sounds_json payload, recovering with empty list", e))
-            emptyList()
-        } catch (e: IllegalArgumentException) {
-            onError(RuntimeException("Invalid sounds_json structure, recovering with empty list", e))
-            emptyList()
+            val decoded = json.decodeFromString(SOUNDS_SERIALIZER, raw)
+            // A blank id only comes from legacy/corrupt data → recover; otherwise the fast result wins.
+            if (decoded.none { it.id.isBlank() }) decoded else recoverElementwise(raw)
+        } catch (ignored: SerializationException) {
+            recoverElementwise(raw)
+        } catch (ignored: IllegalArgumentException) {
+            recoverElementwise(raw)
         }
+    }
+
+    /**
+     * Slow path: parse the list to a tree once, heal + decode each element independently, drop any
+     * that cannot be recovered (a single bad record can never wipe the rest — the failure mode that
+     * lost a real user's audio), and de-duplicate derived ids keep-first. Only a corrupt root (not
+     * valid JSON, or a non-array) degrades to an empty list with an `onError`; per-element drops are
+     * silent recovery.
+     */
+    private fun recoverElementwise(raw: String): List<StoredSound> {
+        val array = parseSoundsArray(raw) ?: return emptyList()
+        val seenIds = HashSet<String>()
+        val recovered = array.mapNotNull { decodeElement(it) }.filter { seenIds.add(it.id) }
+        // Reaching here means the fast path rejected the payload (threw or had a blank id) yet the
+        // root is a valid array — i.e. legacy/corrupt data we just healed. Signal it (gated by the
+        // caller) so the legacy population stays observable; a malformed/non-array root returned a
+        // null array above without firing.
+        onLegacyRecovery()
+        return recovered
+    }
+
+    /** Parses [raw] to a [JsonArray], or null (with an `onError`) if it is not valid JSON or not an array. */
+    private fun parseSoundsArray(raw: String): JsonArray? {
+        val root =
+            try {
+                json.parseToJsonElement(raw)
+            } catch (e: SerializationException) {
+                onError(RuntimeException("Malformed sounds_json payload, recovering with empty list", e))
+                return null
+            }
+        return root as? JsonArray ?: run {
+            onError(
+                RuntimeException(
+                    "Invalid sounds_json structure, recovering with empty list",
+                    IllegalArgumentException("sounds_json root is not a JSON array"),
+                ),
+            )
+            null
+        }
+    }
+
+    /**
+     * Decodes one array element into a [StoredSound], or null if it is unrecoverable (a non-object,
+     * an object with no usable `id` and no `name` to derive one from, or an object that still fails
+     * strict decode — e.g. a non-string `id` or a missing required field). Returning null drops just
+     * that element; callers keep the rest.
+     */
+    private fun decodeElement(element: JsonElement): StoredSound? {
+        val healed = (element as? JsonObject)?.let { healLegacyId(it) } ?: return null
+        return try {
+            json.decodeFromJsonElement(StoredSound.serializer(), healed)
+        } catch (ignored: SerializationException) {
+            null
+        } catch (ignored: IllegalArgumentException) {
+            null
+        }
+    }
+
+    /**
+     * Heals a record written before [StoredSound.id] became required (ADR 0008 → 0018): when `id` is
+     * missing or blank, derives `"custom:<name>"` from the element's pre-0008 name identity (ADR 0007)
+     * — a stable, deterministic key reconstructed from the only stable field a legacy record has (not
+     * the production custom-id format, which is a random UUID minted at save time). Returns the object
+     * unchanged when it already has a usable `id`, or null when there is no `name` to derive one from.
+     * Healed ids persist on the next [mutate]; see ADR 0018 for the bundled-stub limitation.
+     */
+    private fun healLegacyId(obj: JsonObject): JsonObject? {
+        val id = (obj["id"] as? JsonPrimitive)?.contentOrNull
+        if (!id.isNullOrBlank()) return obj
+        val name = (obj["name"] as? JsonPrimitive)?.contentOrNull
+        return if (name.isNullOrBlank()) null else JsonObject(obj + ("id" to JsonPrimitive("custom:$name")))
     }
 
     private fun mergeWithBundled(
