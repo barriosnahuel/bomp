@@ -352,6 +352,29 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
         }
 
     @Test
+    fun `a non-object array element is dropped without wiping valid siblings`() =
+        runTest {
+            repo.setRawJsonForTest("""[5,{"id":"custom:keep","name":"keep","file":"keep.mp3"}]""")
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list.map { it.name }).containsExactly("keep")
+            assertThat(recordedErrors).isEmpty()
+        }
+
+    @Test
+    fun `an element with a valid id but missing the required name is dropped without wiping siblings`() =
+        runTest {
+            repo.setRawJsonForTest(
+                """[{"id":"custom:x","file":"x.mp3"},{"id":"custom:keep","name":"keep","file":"keep.mp3"}]""",
+            )
+
+            val list = repo.sounds.first().filter { !it.isBundled() }
+
+            assertThat(list.map { it.name }).containsExactly("keep")
+        }
+
+    @Test
     fun `legacy element missing both id and name is dropped without wiping the list`() =
         runTest {
             repo.setRawJsonForTest(

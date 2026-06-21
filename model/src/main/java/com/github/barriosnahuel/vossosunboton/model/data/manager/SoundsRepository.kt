@@ -259,54 +259,68 @@ class SoundsRepository(
         }
     }
 
+    /**
+     * Decodes the `sounds_json` payload element-by-element so a single bad record can never wipe the
+     * whole list (the failure mode that lost a real user's audio — ADR 0008 → 0018). The list is
+     * parsed once to a tree; each element is healed + decoded independently; an element that cannot
+     * be recovered is dropped while its siblings survive. Derived ids are de-duplicated keep-first.
+     *
+     * Only a corrupt root (not valid JSON, or a non-array) degrades to an empty list with an
+     * `onError`; per-element drops are silent recovery.
+     */
     private fun decodeSafely(raw: String?): List<StoredSound> {
         if (raw.isNullOrEmpty()) return emptyList()
+        val root =
+            try {
+                json.parseToJsonElement(raw)
+            } catch (e: SerializationException) {
+                onError(RuntimeException("Malformed sounds_json payload, recovering with empty list", e))
+                return emptyList()
+            }
+        if (root !is JsonArray) {
+            onError(
+                RuntimeException(
+                    "Invalid sounds_json structure, recovering with empty list",
+                    IllegalArgumentException("sounds_json root is not a JSON array"),
+                ),
+            )
+            return emptyList()
+        }
+        val seenIds = HashSet<String>()
+        return root.mapNotNull { decodeElement(it) }.filter { seenIds.add(it.id) }
+    }
+
+    /**
+     * Decodes one array element into a [StoredSound], or null if it is unrecoverable (a non-object,
+     * an object with no usable `id` and no `name` to derive one from, or an object that still fails
+     * strict decode — e.g. a non-string `id` or a missing required field). Returning null drops just
+     * that element; callers keep the rest.
+     */
+    private fun decodeElement(element: JsonElement): StoredSound? {
+        val obj = element as? JsonObject ?: return null
+        val healed = healLegacyId(obj) ?: return null
         return try {
-            json.decodeFromJsonElement(SOUNDS_SERIALIZER, migrateLegacySchema(json.parseToJsonElement(raw)))
+            json.decodeFromJsonElement(StoredSound.serializer(), healed)
         } catch (e: SerializationException) {
-            onError(RuntimeException("Malformed sounds_json payload, recovering with empty list", e))
-            emptyList()
+            null
         } catch (e: IllegalArgumentException) {
-            onError(RuntimeException("Invalid sounds_json structure, recovering with empty list", e))
-            emptyList()
+            null
         }
     }
 
     /**
-     * Heals payloads written before [StoredSound.id] became a required field (ADR 0008 → 0018).
-     * For each element missing a usable `id`, derives `"custom:<name>"` from the element's pre-0008
-     * name identity (ADR 0007) — a stable, deterministic key — so the user's audio is recovered
-     * instead of the whole list degrading to empty. This reconstructs identity from the only stable
-     * field a legacy record has; it is not the production custom-id format (those are UUIDs minted at
-     * save time). An element with neither `id` nor `name` is unrecoverable and is dropped, leaving its
-     * siblings intact. A non-array root is returned untouched for strict decode to handle (or reject).
-     *
-     * Derived ids are de-duplicated keep-first: a repeated pre-0008 `name` would otherwise mint two
-     * identical `"custom:<name>"` ids, and `id`-keyed Compose lists (`LazyColumn(key = sound.id)`)
-     * crash on a duplicate key — so the recovery for a user with such data would turn the old silent
-     * wipe into a launch crash. Keep-first degrades that worst case to dropping the duplicate.
-     *
-     * Healed ids persist on the next [mutate]; see ADR 0018 for the bundled-stub limitation and
-     * revisit criteria.
+     * Heals a record written before [StoredSound.id] became required (ADR 0008 → 0018): when `id` is
+     * missing or blank, derives `"custom:<name>"` from the element's pre-0008 name identity (ADR 0007)
+     * — a stable, deterministic key reconstructed from the only stable field a legacy record has (not
+     * the production custom-id format, which is a random UUID minted at save time). Returns the object
+     * unchanged when it already has a usable `id`, or null when there is no `name` to derive one from.
+     * Healed ids persist on the next [mutate]; see ADR 0018 for the bundled-stub limitation.
      */
-    private fun migrateLegacySchema(root: JsonElement): JsonElement {
-        if (root !is JsonArray) return root
-        val seenIds = HashSet<String>()
-        return JsonArray(
-            root.mapNotNull { element ->
-                val obj = element as? JsonObject ?: return@mapNotNull element
-                val healed =
-                    if (!(obj["id"] as? JsonPrimitive)?.contentOrNull.isNullOrBlank()) {
-                        obj
-                    } else {
-                        val name = (obj["name"] as? JsonPrimitive)?.contentOrNull
-                        if (name.isNullOrBlank()) return@mapNotNull null
-                        JsonObject(obj + ("id" to JsonPrimitive("custom:$name")))
-                    }
-                val id = (healed["id"] as? JsonPrimitive)?.contentOrNull
-                if (id != null && !seenIds.add(id)) null else healed
-            },
-        )
+    private fun healLegacyId(obj: JsonObject): JsonObject? {
+        val id = (obj["id"] as? JsonPrimitive)?.contentOrNull
+        if (!id.isNullOrBlank()) return obj
+        val name = (obj["name"] as? JsonPrimitive)?.contentOrNull
+        return if (name.isNullOrBlank()) null else JsonObject(obj + ("id" to JsonPrimitive("custom:$name")))
     }
 
     private fun mergeWithBundled(
