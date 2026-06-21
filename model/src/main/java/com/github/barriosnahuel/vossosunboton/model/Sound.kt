@@ -35,12 +35,19 @@ data class Sound(
      * Defaults to `true`; a sound created straight into the Vault flow is the only born-`false` case.
      */
     val isVisibleInMySounds: Boolean = true,
+    /**
+     * Internal provenance (ADR 0019). Defaults to [SoundSource.IMPORTED] — the case for every audio
+     * created via the import path (`Sound(id, name, file)`); the bundled constructor below sets
+     * [SoundSource.BUNDLED], and the recorder save path sets [SoundSource.RECORDED]. No UI branches
+     * on it yet.
+     */
+    val source: SoundSource = SoundSource.IMPORTED,
 ) : Parcelable {
     constructor(id: String, name: String, file: String?) : this(id, name, file, 0, false, false)
     constructor(
         name: String,
         @RawRes rawRes: Int = 0,
-    ) : this("bundled:$rawRes", name, null, rawRes, false, false)
+    ) : this("bundled:$rawRes", name, null, rawRes, false, false, source = SoundSource.BUNDLED)
 
     /**
      * Indicates whether or not this sound is bundled in the app or is a user's custom sound.

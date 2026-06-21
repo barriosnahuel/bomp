@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### For nerds 🤓
 
 #### Added
+- Internal `SoundSource` provenance (`RECORDED` / `IMPORTED` / `BUNDLED`) on saved audios — derived on read (existing audios decode as imported, bundled audio as bundled) and persisted for recordings, with no backfill migration needed. Groundwork for the in-app recorder — no UI change yet (ADR 0019)
 - `legacy_sounds_recovered` analytics event (one-shot per install) so the pre-stable-id population is countable and the migration's retirement is verifiable (ADR 0018)
 - Documented the GitHub release procedure (tag from develop, notes from the store change file, R8 mapping archived as the sole asset) and the Firebase CLI/MCP path for reading deobfuscated Crashlytics stacks
 
