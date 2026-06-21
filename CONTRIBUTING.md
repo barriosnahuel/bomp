@@ -575,7 +575,7 @@ A **seed** — expand it as the release process is formalized (store rollout ste
 
 After the checklist above is green and the version bump is merged to `develop`:
 
-1. **Build the release bundle** — `./gradlew app:bundleRelease`. Besides the AAB, this runs `uploadCrashlyticsMappingFileRelease`, uploading the R8 mapping to Firebase — the source the Crashlytics Console/MCP use to de-obfuscate stacks (§ *BigQuery export* → *Stack frames come R8-obfuscated*). **Caveats:** CI never uploads it (the CircleCI `bundle` job excludes the task with `-x uploadCrashlyticsMappingFileRelease`), so this **local** build is the only mapping upload; and the upload needs the **real** release `google-services.json` present (skip-worktree) — on the scrubbed dummy it 400s.
+1. **Build the release bundle** — `./gradlew app:bundleRelease` (or `app:bundle`). The Crashlytics Gradle plugin auto-wires `uploadCrashlyticsMappingFileRelease` into this task (verify: `./gradlew :app:bundleRelease --dry-run | grep Crashlytics`), so with the **real** `google-services.json` active it uploads the R8 mapping to Firebase as part of the build — no separate command. **Do NOT pass `-x uploadCrashlyticsMappingFileRelease`** when cutting a real release: that flag is **CI-only** (CI builds against the scrubbed dummy config, where the upload 400s). Passing it — or building without the real `google-services.json` — is the most likely cause of past releases shipping obfuscated: `injectCrashlyticsMappingFileIdRelease` still embeds the `r8-map-id` into the app, but the matching `mapping.txt` never lands in Firebase, so Crashlytics/MCP can't de-obfuscate (§ *BigQuery export* → *Stack frames come R8-obfuscated*).
 2. **Create the release + tag from `develop`**, notes from the store change file, attaching **only** the R8 mapping as the single asset:
 
    ```bash
@@ -856,7 +856,16 @@ claude mcp add -s local firebase -- firebase experimental:mcp --dir .
 firebase login          # interactive (browser) — run via the ! prefix in Claude Code
 ```
 
-Restart Claude Code so it loads the server's tools. The MCP auto-detects the Android Crashlytics SDK and exposes read tools that return **deobfuscated** issues/traces (select the `bomp-prod` project). `firebase login` is per-user auth, like the CircleCI token (§ *Continuous Integration*).
+Restart Claude Code so it loads the server's tools. The MCP auto-detects the Android Crashlytics SDK and exposes read tools (`crashlytics_get_report`, `crashlytics_batch_get_events`, `crashlytics_get_issue`, `crashlytics_list_events`, …) that return frames **deobfuscated when the mapping is present** (else still `r8-map-id-…`). `firebase login` is per-user auth, like the CircleCI token (§ *Continuous Integration*).
+
+Those tools need the **Firebase App Id** (not a secret — it ships inside the APK; the secret is the API key in `google-services.json`):
+
+| Project | App Id | Package |
+|---|---|---|
+| `bomp-prod` (release) | `1:383291838647:android:8f96908ee8b49821da3d32` | `com.github.barriosnahuel.vossosunboton` |
+| `bomp-debug` (debug) | `1:947596384148:android:1ecfa2fa66603e42e52181` | `com.github.barriosnahuel.vossosunboton.debug` |
+
+`bomp-debug` does not export to BQ and rarely has real crashes; for crash triage use the `bomp-prod` App Id.
 
 ## Labels & milestone examples 🏷️
 
