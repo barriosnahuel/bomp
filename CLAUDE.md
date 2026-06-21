@@ -204,6 +204,8 @@ Hard rules:
 
 SQL post-mortem on crash history: CONTRIBUTING.md § *BigQuery export*. Releases-only — `bomp-prod` exports Crashlytics/Analytics/Performance to BigQuery (`us`, daily). `bomp-debug` does not export.
 
+**Reading a specific crash's stack:** BQ frames are R8-obfuscated (`r8-map-id-…`, `ki2.q`); read the deobfuscated trace in **Crashlytics** (Console or the Firebase MCP, § *Local setup*). Use BQ for aggregation/counts/JOINs only — detail in CONTRIBUTING.md § *BigQuery export*.
+
 ## StrictMode debug audit
 
 Source of truth: `app/src/debug/.../StrictModeConfigurator.kt` (debug-only, never reaches release). Unknown violations crash debug + instrumented runs by design — `Tracker.track(StrictModeException(violation))` with a static wrapper `"StrictMode: <ViolationClassName>"`.

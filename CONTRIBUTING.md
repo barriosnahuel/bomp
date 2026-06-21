@@ -37,6 +37,7 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 
     It must return **`BUILD SUCCESS`**.
 4. *(Optional)* To let Claude Code diagnose CI failures, set up the CircleCI MCP server — see [§ Continuous Integration](#continuous-integration-). An agent can wire it up; you provide the token and restart Claude Code.
+5. *(Optional)* To let Claude Code read **deobfuscated** Crashlytics stacks, install the Firebase CLI (`npm install -g firebase-tools`) and wire the Firebase MCP — per-user, not committed (`claude mcp add -s local firebase -- firebase experimental:mcp --dir .`), then `firebase login` + restart Claude Code. An agent can wire it up; you provide the login. When to use it (deobfuscated traces) vs BQ (aggregation): [§ BigQuery export](#bigquery-export-).
 
 ## Directory structure 🎄
 - [app/](/app) Android application module which depends on all other submodules to be the great app you're building. The Add Button flow lives at `app/src/main/java/com/github/barriosnahuel/vossosunboton/feature/addbutton/`.
@@ -567,7 +568,27 @@ A **seed** — expand it as the release process is formalized (store rollout ste
 - [ ] **Bump `versionCode` + `versionName`** in `app/build.gradle` to match the milestone.
 - [ ] **Release lint gate** — `./gradlew app:lintVitalRelease` green.
 - [ ] **Build the AAB** — `./gradlew app:bundle`.
+- [ ] **Write the store change notes** — `store-listing/{en-US,es-AR}/changelog-<versionCode>.txt`; the GitHub release notes are sourced from the en-US file (§ *Creating the GitHub release*).
 - [ ] **Manual analytics smoke** — verify events in DebugView before merging (§ *Analytics events*); aggregated Reports lag 24–48 h.
+
+### Creating the GitHub release
+
+After the checklist above is green and the version bump is merged to `develop`:
+
+1. **Build the release bundle** — `./gradlew app:bundleRelease`. Besides the AAB, this runs `uploadCrashlyticsMappingFileRelease`, uploading the R8 mapping to Firebase — the source the Crashlytics Console/MCP use to de-obfuscate stacks (§ *BigQuery export* → *Stack frames come R8-obfuscated*). **Caveats:** CI never uploads it (the CircleCI `bundle` job excludes the task with `-x uploadCrashlyticsMappingFileRelease`), so this **local** build is the only mapping upload; and the upload needs the **real** release `google-services.json` present (skip-worktree) — on the scrubbed dummy it 400s.
+2. **Create the release + tag from `develop`**, notes from the store change file, attaching **only** the R8 mapping as the single asset:
+
+   ```bash
+   gh release create vX.Y.Z --target develop --title "vX.Y.Z" \
+     --notes-file store-listing/en-US/changelog-<versionCode>.txt \
+     app/build/outputs/mapping/release/mapping.txt
+   ```
+
+   `<versionCode>` is the value in `app/build.gradle`. Add a footer line linking to the full `CHANGELOG.md` on `develop` if the notes file omits it.
+3. **Attach nothing else.** The mapping is a backup for offline `retrace`; **never** attach the keystore, `secure.properties`, the real `google-services.json`, or the `.aab` (the `.aab` carries no mapping anyway).
+4. **Verify the asset landed** — `gh release view vX.Y.Z --json assets -q '.assets[].name'` must list `mapping.txt`. Print an explicit line for the maintainer to confirm, e.g. `✅ mapping.txt attached to vX.Y.Z` (or ⚠️ + re-run `gh release upload vX.Y.Z app/build/outputs/mapping/release/mapping.txt` if missing).
+
+Why archive the mapping: Firebase already holds it for Console/MCP de-obfuscation, but a GitHub-release copy keyed to the tag is a durable offline backup for `retrace`, independent of Firebase retention.
 
 ## Bundled audio files 🔊
 
@@ -817,6 +838,22 @@ Returns `0` early on if no crashes — that's a feature, not a bug.
 - Performance regressions across releases — easier to diff trace medians via `WITH` clauses than to flip between Console screens.
 
 The Console is still right for: real-time DebugView, alert configuration, single-issue triage. BQ is for *retrospectives* across N events / users / days.
+
+### Stack frames come R8-obfuscated — read the trace in Crashlytics, not BQ
+
+The export stores frames **raw**: `blame_frame.file` = `r8-map-id-…` (the mapping id, not a source path), symbols = R8-renamed (`ki2.q`, `et2.n`). Only the exception **message** is human-readable. The Crashlytics **Console** (and the Firebase MCP — § *Local setup*) de-obfuscate server-side via the mapping the release build uploads; the BQ export does not. This is a Firebase limitation (export = raw, Console/MCP = deobfuscated), **not** a misconfiguration.
+
+So to read a *single crash's stack*, use the **Console or the Firebase MCP** — never BQ. BQ stays for aggregation / trends / JOINs (above). The diagnostic that triggered this note (a `sounds_json` crash) was only root-causable because the exception *message* carried the real FQN + field; a generic message would have left the BQ export near-useless.
+
+**Wiring the Firebase MCP (one-time, per-user — not committed):**
+
+```bash
+npm install -g firebase-tools
+claude mcp add -s local firebase -- firebase experimental:mcp --dir .
+firebase login          # interactive (browser) — run via the ! prefix in Claude Code
+```
+
+Restart Claude Code so it loads the server's tools. The MCP auto-detects the Android Crashlytics SDK and exposes read tools that return **deobfuscated** issues/traces (select the `bomp-prod` project). `firebase login` is per-user auth, like the CircleCI token (§ *Continuous Integration*).
 
 ## Labels & milestone examples 🏷️
 

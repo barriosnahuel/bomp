@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### For nerds 🤓
 
+#### Added
+- Documented the GitHub release procedure (tag from develop, notes from the store change file, R8 mapping archived as the sole asset) and the Firebase CLI/MCP path for reading deobfuscated Crashlytics stacks
+
 #### Changed
 - Kotlin compiler warnings now fail the build (`allWarningsAsErrors`, binary/unconditional) so they can't accumulate
 
