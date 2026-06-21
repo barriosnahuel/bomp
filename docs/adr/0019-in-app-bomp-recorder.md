@@ -89,13 +89,19 @@ is recorded **internally** so a future PR can decide on a UI treatment without a
 - New enum `SoundSource { RECORDED, IMPORTED, BUNDLED }` on `Sound` and (persisted) `StoredSound`,
   defaulting to `IMPORTED`. With `encodeDefaults = false` (existing `SoundsRepository.json` config),
   pre-existing payloads carry no `source` field and decode as `IMPORTED` — correct, since *all*
-  pre-recorder user content was imported. Bundled audio is `BUNDLED` (derivable: `file == null`).
-  The recorder save path sets `RECORDED`.
-- A one-shot `migrateSourceIfNeeded()` sweeps existing records on next app open and persists the
-  marking (file-backed → `IMPORTED`, file-less stub → `BUNDLED`, preserving any `RECORDED`), guarded
-  by a `source_migrated_v1` key. This mirrors `migrateVisibilityIfNeeded` exactly (ADR 0012) and rides
-  the recovery machinery of ADR 0018 (a missing/unknown enum coerces to the default via
-  `coerceInputValues = true`, so it can never wipe the list).
+  pre-recorder user content was imported. Bundled audio is `BUNDLED` (derivable: `file == null`, set
+  by the bundled constructor and re-derived in `mergeWithBundled`). The recorder save path sets
+  `RECORDED`. A missing/unknown enum coerces to the default via `coerceInputValues = true`, so the
+  field can never break ADR 0018's recovery.
+- **No backfill migration.** Unlike `isVisibleInMySounds` (ADR 0012), where the correct legacy value
+  (`false` for private-only) differs from the default (`true`) and *must* be seeded, `source`'s
+  correct legacy value (`IMPORTED`) **equals** the default — so every existing audio already reads the
+  right value with no sweep (file-backed → `IMPORTED` default; bundled → constructor). A
+  `migrateSourceIfNeeded()` was prototyped and dropped: it rewrote bytes nothing reads (the only value
+  it persisted, `BUNDLED` on file-less stubs, is never read — bundled domain `Sound`s come from
+  `PackagedAudios`). The default-on-read mechanism is the same one the codebase already trusts for
+  `durationMs`/`isFavorite`/`isPinned`. If a future need to pin a physical value arises (e.g. a default
+  change, or a raw out-of-app reader), add a targeted migration then.
 
 ### Out of scope (v1)
 Background/foreground-service recording (a Bomp is short and foreground), trimming (that's the
@@ -128,13 +134,13 @@ trimmer's waveform lib when it lands — preview is play/pause + timer for now).
   unreleased recorder can hold the mic globally until reboot on some Samsung/Xiaomi devices); audio
   focus loss must auto-stop. The Activity smoke test covers `onStop` with an active recorder.
 - **Device iteration is unavoidable and unaccelerable** — mic gain/quality across OEMs needs a human
-  ear (spec § 9.3). Headless tests cover the model/migration, permission-denial logic, and state
-  machine; the capture/preview loop is verified on a real device in a supervised pass.
+  ear (spec § 9.3). Headless tests cover the model + `source` provenance, permission-denial logic, and
+  state machine; the capture/preview loop is verified on a real device in a supervised pass.
 - **Ship gate (legal, not technical):** `privacy-policy.html` + `data-safety.html` in
   `push-me-ghpages` must be updated to disclose mic capture **before** release. Coordinate that merge
   with the ship.
-- **`RECORDED` has no producer until the recorder PR** — the enum value and migration land first
-  (model groundwork) so the recorder PR only sets `source = RECORDED`.
+- **`RECORDED` has no producer until the recorder PR** — the enum value + the `source` field land
+  first (model groundwork) so the recorder PR only sets `source = RECORDED`.
 
 ## Invariants
 
@@ -157,9 +163,9 @@ trimmer's waveform lib when it lands — preview is play/pause + timer for now).
 
 - Backlog spec: `../push-me-backlog/backlog/v2.3.0-03-bomp-recorder.md` (the "why" + estimates).
 - [ADR 0012](0012-explicit-my-sounds-visibility.md) (`migrateVisibilityIfNeeded`, the one-shot
-  backfill precedent) and [ADR 0018](0018-legacy-sounds-schema-migration.md) (the read-time recovery
-  the `source` default rides on).
-- [ADR 0008](0008-stable-sound-id.md) (the `Sound.id` scheme the migration keys on).
+  backfill precedent this decision deliberately diverges from) and
+  [ADR 0018](0018-legacy-sounds-schema-migration.md) (the read-time recovery the `source` default
+  rides on).
 - `WaveformExtractor.kt` (the Vault Visualizer/`RECORD_AUDIO` note this ADR clarifies).
 - `MediaRecorder`: https://developer.android.com/reference/android/media/MediaRecorder ;
   runtime permissions: https://developer.android.com/training/permissions/requesting
