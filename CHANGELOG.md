@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - `legacy_sounds_recovered` analytics event (one-shot per install) so the pre-stable-id population is countable and the migration's retirement is verifiable (ADR 0018)
 - Documented the GitHub release procedure (tag from develop, notes from the store change file, R8 mapping archived as the sole asset) and the Firebase CLI/MCP path for reading deobfuscated Crashlytics stacks
 
+#### Fixed
+- Shortened seven collection/Vault user property names that exceeded Firebase's 24-character limit and were being dropped before reaching BigQuery, and added a build-time guard so over-length names can't ship again
+
 #### Changed
 - Kotlin compiler warnings now fail the build (`allWarningsAsErrors`, binary/unconditional) so they can't accumulate
 - `sounds_json` decoding is now element-by-element with id de-dup and a fast path, so one corrupt record can't wipe the list and clean payloads pay no recovery cost (ADR 0018)

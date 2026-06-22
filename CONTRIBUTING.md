@@ -737,6 +737,10 @@ manually.
 
 - `snake_case` lowercase. Reserved Firebase event names are forbidden — check
   <https://firebase.google.com/docs/analytics/events> before naming.
+- **Length limits.** User property names ≤ **24** chars; event and param names
+  ≤ 40. Firebase drops an over-length name silently (`E/FA Name is too long…`)
+  so it never reaches BigQuery — invisible until someone reads logcat.
+  `AnalyticsUserPropertyNameTest` enforces the user-property bound at build time.
 - Describe the **product fact**, not the **UI mechanic**: `about_credits_open`,
   not `about_credits_expand`.
 - `screen_view` for full destinations; custom events for discrete actions.
