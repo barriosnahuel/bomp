@@ -6,10 +6,12 @@
 package com.github.barriosnahuel.vossosunboton.commons.android.analytics
 
 /**
- * Canonical Firebase user property names emitted by [AnalyticsTracker.setUserProperty]. The two `lifetime_*`
- * properties also double as keys into the [CounterStore], so the same constant must be used on both sides — that's
- * exactly what this object enforces. The regression net (`AnalyticsCoverageMatrixTest`) enumerates these and fails
- * when a new entry is added without a matching call-site test.
+ * Canonical Firebase user property names emitted by [AnalyticsTracker.setUserProperty]. Every `lifetime_*` property
+ * also doubles as a key into the [CounterStore], so the same constant must be used on both sides — that's exactly
+ * what this object enforces. Names must satisfy Firebase's constraints (≤ 24 chars, allowed charset, no reserved
+ * prefix); `AnalyticsUserPropertyNameTest` fails the build otherwise — an over-length name is dropped silently and
+ * never reaches BigQuery. `AnalyticsCoverageMatrixTest` enumerates these and fails when a new entry is added without
+ * a matching call-site test.
  */
 object AnalyticsUserProperty {
     /** Snapshot of the user-created sound count. Updated on add/delete. */
@@ -19,13 +21,13 @@ object AnalyticsUserProperty {
     const val CURRENT_PINNED = "current_pinned"
 
     /** Snapshot — number of public (My Sounds) user collections. System collections excluded. */
-    const val CURRENT_COLLECTIONS_PUBLIC = "current_collections_public"
+    const val CURRENT_COLLECTIONS_PUBLIC = "current_public_colls"
 
     /** Snapshot — number of Vault (private) user collections. Seeded "Baúl" system collection excluded. */
-    const val CURRENT_COLLECTIONS_PRIVATE = "current_collections_private"
+    const val CURRENT_COLLECTIONS_PRIVATE = "current_private_colls"
 
     /** Snapshot — number of audios that belong to at least one user collection. Engagement signal. */
-    const val CURRENT_AUDIOS_IN_COLLECTIONS = "current_audios_in_collections"
+    const val CURRENT_AUDIOS_IN_COLLECTIONS = "current_audios_in_colls"
 
     // Four mutually-exclusive snapshots that classify every user audio by where it lives. They sum
     // to the total user-created (non-bundled) audio count, so the dashboard reads as a pie of how
@@ -52,16 +54,16 @@ object AnalyticsUserProperty {
     const val LIFETIME_PLAYS = "lifetime_plays"
 
     /** Monotonic counter — total collections the user has created over the lifetime of the install. */
-    const val LIFETIME_COLLECTION_CREATES = "lifetime_collection_creates"
+    const val LIFETIME_COLLECTION_CREATES = "lifetime_coll_creates"
 
     /** Monotonic counter — total collections the user has deleted over the lifetime of the install. */
-    const val LIFETIME_COLLECTION_DELETES = "lifetime_collection_deletes"
+    const val LIFETIME_COLLECTION_DELETES = "lifetime_coll_deletes"
 
     /** Monotonic counter — total collection renames over the lifetime of the install. */
-    const val LIFETIME_COLLECTION_RENAMES = "lifetime_collection_renames"
+    const val LIFETIME_COLLECTION_RENAMES = "lifetime_coll_renames"
 
     /** Monotonic counter — total assign + unassign toggles via the assign-to-collection sheet. */
-    const val LIFETIME_COLLECTION_ASSIGNS = "lifetime_collection_assigns"
+    const val LIFETIME_COLLECTION_ASSIGNS = "lifetime_coll_assigns"
 
     /** Monotonic counter — total successful Vault biometric unlocks. */
     const val LIFETIME_VAULT_UNLOCKS = "lifetime_vault_unlocks"
