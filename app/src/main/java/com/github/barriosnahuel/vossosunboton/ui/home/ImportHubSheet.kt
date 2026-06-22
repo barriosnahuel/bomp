@@ -39,26 +39,26 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
-// Dim applied to the inert "Grabar" row's icon + text. Standard Material disabled opacity; a
-// disabled control is exempt from the WCAG 1.4.3 contrast minimum (§ Accessibility). The acid
-// "Pronto" badge stays at full strength so it reads as "coming", not "broken".
+// Dim applied to a disabled row's icon + text. Standard Material disabled opacity; a disabled
+// control is exempt from the WCAG 1.4.3 contrast minimum (§ Accessibility). All Hub rows are live
+// today; the nullable-onClick path is kept for future inert rows.
 private const val HUB_DISABLED_ALPHA = 0.38f
 private val HUB_ICON_TILE = 44.dp
 private val HUB_TILE_RADIUS = 12.dp
 
 /**
- * The import Hub — a [ModalBottomSheet] opened by the + FAB on My Bomps. Three paths: a live "import
- * audio from your device" row ([onImport]); a visible-but-inert "record" row badged "Soon" (its
- * destination is a later release; designing it now means enabling it later won't reshape the sheet);
- * and a "see how it works" row ([onHowItWorks]) that opens the onboarding tour, re-openable any time.
+ * The import Hub — a [ModalBottomSheet] opened by the + FAB on My Bomps. Three creation paths: "import
+ * audio from your device" ([onImport]), "record" a new Bomp in-app ([onRecord], ADR 0019), and "see how
+ * it works" ([onHowItWorks]) that opens the onboarding tour, re-openable any time.
  *
- * Presentational only: the caller dismisses on [onImport]/[onHowItWorks]/[onDismiss] and owns the
- * file picker and the tour state.
+ * Presentational only: the caller dismisses on [onImport]/[onRecord]/[onHowItWorks]/[onDismiss] and owns
+ * the file picker, the recorder Activity, and the tour state.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ImportHubSheet(
     onImport: () -> Unit,
+    onRecord: () -> Unit,
     onHowItWorks: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -108,8 +108,12 @@ internal fun ImportHubSheet(
                 subtitle = stringResource(R.string.app_hub_record_sub),
                 tileColor = MaterialTheme.colorScheme.surfaceVariant,
                 iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                badge = stringResource(R.string.app_hub_record_badge),
-                onClick = null,
+                onClick = {
+                    scope.launch {
+                        sheetState.hide()
+                        onRecord()
+                    }
+                },
             )
             // Soft secondary helper — neutral tile (not acid) so it never competes with the import
             // primary. Animate the sheet closed first, then hand off, mirroring the import row.
@@ -138,7 +142,6 @@ private fun HubRow(
     tileColor: Color,
     iconColor: Color,
     onClick: (() -> Unit)?,
-    badge: String? = null,
 ) {
     val enabled = onClick != null
     val contentAlpha = if (enabled) 1f else HUB_DISABLED_ALPHA
@@ -183,18 +186,6 @@ private fun HubRow(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
-            )
-        }
-        if (badge != null) {
-            Text(
-                text = badge,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier =
-                    Modifier
-                        .clip(RoundedCornerShape(percent = 50))
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .padding(horizontal = Spacing.MD, vertical = Spacing.XS),
             )
         }
     }

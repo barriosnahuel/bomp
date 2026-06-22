@@ -428,9 +428,16 @@ sealed class AnalyticsEvent(
      * Import-Hub funnel · INTENT. The user tapped the live "import audio from your device" row,
      * committing to pick a file (the system picker launches next). The genuine middle funnel step:
      * separates "opened the Hub but never engaged its CTA" from "engaged but bailed in the picker /
-     * naming screen". `hasFirstVariant = true`. The inert "record" row (badged "Soon") emits nothing.
+     * naming screen". `hasFirstVariant = true`.
      */
     object ImportHubImportSelected : AnalyticsEvent(name = "import_hub_import_selected", hasFirstVariant = true)
+
+    /**
+     * Import-Hub funnel · INTENT (record). The user tapped the live "record" row, committing to the
+     * in-app recorder (ADR 0019). Sibling of [ImportHubImportSelected]; together they split Hub intent
+     * between the two creation channels. `hasFirstVariant = true`.
+     */
+    object ImportHubRecordSelected : AnalyticsEvent(name = "import_hub_record_selected", hasFirstVariant = true)
 
     /**
      * Pre-stable-id `sounds_json` data was found on disk and recovered on read — the install carried

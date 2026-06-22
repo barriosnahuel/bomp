@@ -68,6 +68,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
+import com.github.barriosnahuel.vossosunboton.feature.recorder.RecordingActivity
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareAppIntent
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.feature.vault.requestUnlock
@@ -283,6 +284,13 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     tracker.log(AnalyticsEvent.ImportHubImportSelected)
                     isHubVisible = false
                     importPicker.launch(arrayOf("audio/*"))
+                }
+            },
+            onRecord = {
+                if (isHubVisible) {
+                    tracker.log(AnalyticsEvent.ImportHubRecordSelected)
+                    isHubVisible = false
+                    context.startActivity(RecordingActivity.createIntent(context))
                 }
             },
             onHowItWorks = {

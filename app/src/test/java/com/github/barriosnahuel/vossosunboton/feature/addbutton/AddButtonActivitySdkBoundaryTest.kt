@@ -15,6 +15,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.google.common.truth.Truth.assertThat
@@ -106,6 +107,7 @@ internal class AddButtonActivitySdkBoundaryTest : AbstractRobolectricTest() {
             uri: String,
             publicCollectionIds: Set<String>,
             privateCollectionIds: Set<String>,
+            source: SoundSource,
         ): Deferred<Int> = CompletableDeferred(0)
 
         override fun renameButtonAsync(

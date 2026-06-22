@@ -24,6 +24,7 @@ import com.github.barriosnahuel.vossosunboton.feature.playback.PlaybackState
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerController
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import io.mockk.every
@@ -131,6 +132,7 @@ internal class AddButtonScreenPlaybackTest : AbstractRobolectricTest() {
                     uri: String,
                     publicCollectionIds: Set<String>,
                     privateCollectionIds: Set<String>,
+                    source: SoundSource,
                 ): Deferred<Int> = CompletableDeferred(R.string.app_addbutton_feedback_save_failed)
 
                 override fun renameButtonAsync(
@@ -193,6 +195,7 @@ internal class AddButtonScreenPlaybackTest : AbstractRobolectricTest() {
             uri: String,
             publicCollectionIds: Set<String>,
             privateCollectionIds: Set<String>,
+            source: SoundSource,
         ): Deferred<Int> = CompletableDeferred(R.string.app_addbutton_feedback_saved_ok)
 
         override fun renameButtonAsync(

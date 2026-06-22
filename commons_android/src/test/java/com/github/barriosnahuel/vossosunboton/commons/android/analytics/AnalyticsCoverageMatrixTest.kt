@@ -95,6 +95,7 @@ internal class AnalyticsCoverageMatrixTest {
                 "OnboardingDismissed",
                 "ImportHubOpened",
                 "ImportHubImportSelected",
+                "ImportHubRecordSelected",
                 "LegacySoundsRecovered",
             )
 
@@ -112,6 +113,7 @@ internal class AnalyticsCoverageMatrixTest {
                 CanonicalScreenName.COLLECTION_CREATE,
                 CanonicalScreenName.MANAGE_COLLECTIONS,
                 CanonicalScreenName.ONBOARDING,
+                CanonicalScreenName.RECORD_SOUND,
             )
 
         private val USER_PROPERTIES_WITH_REGRESSION_TEST: Set<String> =

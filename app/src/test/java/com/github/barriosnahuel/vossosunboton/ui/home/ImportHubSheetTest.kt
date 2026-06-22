@@ -7,7 +7,6 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.os.Build
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -43,13 +42,15 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `record row is present, badged Soon, and disabled`() {
-        setHub()
+    fun `tapping the record row invokes onRecord`() {
+        var recorded = false
+        setHub(onRecord = { recorded = true })
 
-        composeTestRule.onNodeWithText("Record your first Bomp").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Soon").assertIsDisplayed()
-        // Inert by design: the merged row node carries the disabled semantic so TalkBack announces it.
-        composeTestRule.onNodeWithText("Record your first Bomp").assertIsNotEnabled()
+        composeTestRule.onNodeWithText("Record a Bomp").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Record a Bomp").performClick()
+        composeTestRule.waitForIdle() // the row animates the sheet closed before invoking onRecord
+
+        assertThat(recorded).isTrue()
     }
 
     @Test
@@ -73,12 +74,18 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
 
     private fun setHub(
         onImport: () -> Unit = {},
+        onRecord: () -> Unit = {},
         onHowItWorks: () -> Unit = {},
         onDismiss: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             AppTheme {
-                ImportHubSheet(onImport = onImport, onHowItWorks = onHowItWorks, onDismiss = onDismiss)
+                ImportHubSheet(
+                    onImport = onImport,
+                    onRecord = onRecord,
+                    onHowItWorks = onHowItWorks,
+                    onDismiss = onDismiss,
+                )
             }
         }
         composeTestRule.waitForIdle()

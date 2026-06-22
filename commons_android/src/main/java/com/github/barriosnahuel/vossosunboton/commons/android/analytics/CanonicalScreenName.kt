@@ -36,6 +36,9 @@ object CanonicalScreenName {
     /** On-demand onboarding tour (3 steps) opened from the import Hub or the My Bomps empty state. */
     const val ONBOARDING = "onboarding"
 
+    /** Immersive in-app recorder opened from the import Hub's Record row (ADR 0019). */
+    const val RECORD_SOUND = "record_sound"
+
     val ALL: List<String> =
         listOf(
             MY_SOUNDS,
@@ -50,5 +53,6 @@ object CanonicalScreenName {
             COLLECTION_CREATE,
             MANAGE_COLLECTIONS,
             ONBOARDING,
+            RECORD_SOUND,
         )
 }

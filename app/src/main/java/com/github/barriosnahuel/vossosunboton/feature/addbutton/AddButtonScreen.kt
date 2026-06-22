@@ -81,6 +81,7 @@ import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGa
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
+import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performRejectHaptic
@@ -195,6 +196,14 @@ fun AddButtonScreen(
             val feature = AddButtonFeatureProvider.get()
             when (val m = mode) {
                 is AddButtonMode.Create -> {
+                    // A recording carries its provenance into persistence; every other entry point is
+                    // an import (ADR 0019). The same `source` string keeps feeding `trackSoundAdd`.
+                    val provenance =
+                        if (source == AddButtonActivity.SOURCE_RECORD) {
+                            SoundSource.RECORDED
+                        } else {
+                            SoundSource.IMPORTED
+                        }
                     val feedbackId =
                         feature
                             .saveNewButtonAsync(
@@ -203,6 +212,7 @@ fun AddButtonScreen(
                                 uri = m.uri.toString(),
                                 publicCollectionIds = collectionsState.publicSelection.value,
                                 privateCollectionIds = collectionsState.privateSelection.value,
+                                source = provenance,
                             ).await()
                     if (feedbackId == R.string.app_addbutton_feedback_saved_ok) {
                         stopActivePreviewPlayback()

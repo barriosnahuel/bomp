@@ -14,6 +14,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.model.SoundSource
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
@@ -21,6 +23,7 @@ import io.mockk.mockkConstructor
 import io.mockk.spyk
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Test
@@ -48,6 +51,41 @@ internal class AddButtonFeatureTest : AbstractRobolectricTest() {
             }
 
         assertThat(result).isEqualTo(R.string.app_addbutton_feedback_saved_ok)
+    }
+
+    @Test
+    fun `saveNewButtonAsync tags a recorded clip with the RECORDED source`() {
+        val uri = Uri.parse("content://test/recorded-clip")
+        val context = contextWith(uri, mime = "audio/mp4", sizeBytes = 1024L)
+
+        val saved =
+            runBlocking {
+                SoundsRepository(realContext).clearForTest()
+                AddButtonFeature.instance
+                    .saveNewButtonAsync(context, "rec", uri.toString(), source = SoundSource.RECORDED)
+                    .await()
+                SoundsRepository(realContext).sounds.first().first { it.name == "rec" }
+            }
+
+        assertThat(saved.source).isEqualTo(SoundSource.RECORDED)
+    }
+
+    @Test
+    fun `saveNewButtonAsync derives the destination extension from the MIME`() {
+        val cases = mapOf("audio/mp4" to ".m4a", "audio/mpeg" to ".mp3", "audio/opus" to ".opus")
+        cases.forEach { (mime, expectedExt) ->
+            val uri = Uri.parse("content://test/ext-${mime.substringAfter('/')}")
+            val context = contextWith(uri, mime = mime, sizeBytes = 1024L)
+
+            val saved =
+                runBlocking {
+                    SoundsRepository(realContext).clearForTest()
+                    AddButtonFeature.instance.saveNewButtonAsync(context, "ext", uri.toString()).await()
+                    SoundsRepository(realContext).sounds.first().first { it.name == "ext" }
+                }
+
+            assertThat(saved.file).endsWith(expectedExt)
+        }
     }
 
     /** OWASP MASVS-CODE-4 / CWE-434 (Unrestricted Upload of File with Dangerous Type — non-audio MIME). */

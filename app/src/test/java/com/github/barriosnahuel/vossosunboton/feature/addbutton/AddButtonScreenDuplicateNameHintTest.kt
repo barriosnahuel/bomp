@@ -31,6 +31,7 @@ import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlaybackState
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
@@ -375,6 +376,7 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
             uri: String,
             publicCollectionIds: Set<String>,
             privateCollectionIds: Set<String>,
+            source: SoundSource,
         ): Deferred<Int> {
             saveNewCalls += 1
             return CompletableDeferred(saveNewFeedback)
