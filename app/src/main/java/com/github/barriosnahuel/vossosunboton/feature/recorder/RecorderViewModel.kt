@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.feature.recorder
 
 import android.app.Application
+import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -38,10 +39,11 @@ sealed interface RecorderState {
         val amplitude: Float,
     ) : RecorderState
 
-    /** A captured clip awaiting review. Holds the raw [file]; the host turns it into a content URI
-     *  (FileProvider) for preview + handoff, keeping this ViewModel free of Android URI plumbing. */
+    /** A captured clip awaiting review. The content [uri] is resolved off the main thread when the
+     *  clip is produced (FileProvider's first `getUriForFile` reads the paths XML from disk), so the
+     *  host never touches FileProvider on the UI thread — see ADR 0019 / the stop-crash fix. */
     data class Review(
-        val file: File,
+        val uri: Uri,
         val durationMs: Long,
     ) : RecorderState
 }
@@ -53,9 +55,9 @@ sealed interface RecorderEvent {
         @StringRes val messageRes: Int,
     ) : RecorderEvent
 
-    /** The user kept the clip: hand [file] to the save flow and finish. */
+    /** The user kept the clip: hand its content [uri] to the save flow and finish. */
     data class Handoff(
-        val file: File,
+        val uri: Uri,
     ) : RecorderEvent
 }
 
@@ -68,6 +70,9 @@ class RecorderViewModel(
     application: Application,
     private val engine: RecorderEngine,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    // Resolves the captured file to a shareable content URI. Default uses FileProvider; injected in
+    // tests to avoid FileProvider's disk/manifest dependency under Robolectric. Always invoked off-main.
+    private val uriProvider: (File) -> Uri = { RecorderTempFiles.contentUriFor(application, it) },
 ) : AndroidViewModel(application) {
     private val mutableState = MutableStateFlow<RecorderState>(RecorderState.Ready)
     val state: StateFlow<RecorderState> = mutableState.asStateFlow()
@@ -130,7 +135,7 @@ class RecorderViewModel(
     fun onUseClip() {
         val review = mutableState.value as? RecorderState.Review ?: return
         handedOff = true
-        emit(RecorderEvent.Handoff(review.file))
+        emit(RecorderEvent.Handoff(review.uri))
     }
 
     /** Back while a clip exists (recording or review): drop it and return to ready. */
@@ -169,7 +174,8 @@ class RecorderViewModel(
             if (!preserve) emit(RecorderEvent.Message(R.string.app_recorder_feedback_too_short))
             return
         }
-        mutableState.value = RecorderState.Review(file = file, durationMs = elapsed)
+        val uri = withContext(ioDispatcher) { uriProvider(file) }
+        mutableState.value = RecorderState.Review(uri = uri, durationMs = elapsed)
     }
 
     private fun startPolling() {

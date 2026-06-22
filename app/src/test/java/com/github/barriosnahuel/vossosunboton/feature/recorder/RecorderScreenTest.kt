@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.recorder
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -16,7 +17,6 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
-import java.io.File
 
 internal class RecorderScreenTest : AbstractRobolectricTest() {
     @get:Rule
@@ -42,7 +42,7 @@ internal class RecorderScreenTest : AbstractRobolectricTest() {
 
     @Test
     fun `review state offers use and re-record`() {
-        val review = RecorderState.Review(File("clip.m4a"), durationMs = 4_000)
+        val review = RecorderState.Review(Uri.parse("content://clip"), durationMs = 4_000)
         composeTestRule.setContent { AppTheme { recorder(review) } }
 
         composeTestRule.onNodeWithText("Use this").assertIsDisplayed()

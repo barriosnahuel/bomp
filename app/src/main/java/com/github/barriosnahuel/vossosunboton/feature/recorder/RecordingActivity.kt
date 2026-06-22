@@ -88,8 +88,7 @@ class RecordingActivity : FragmentActivity() {
 
         val state by viewModel.state.collectAsStateWithLifecycle()
         val playback by PlayerControllerFactory.instance.playbackState.collectAsStateWithLifecycle()
-        val reviewFile = (state as? RecorderState.Review)?.file
-        val reviewUri = remember(reviewFile) { reviewFile?.let { RecorderTempFiles.contentUriFor(this, it) } }
+        val reviewUri = (state as? RecorderState.Review)?.uri
         val isPreviewPlaying = playback?.let { it.isPlaying && it.uri == reviewUri } == true
 
         LaunchedEffect(Unit) {
@@ -97,8 +96,7 @@ class RecordingActivity : FragmentActivity() {
                 when (event) {
                     is RecorderEvent.Message -> snackbarHostState.showSnackbar(getString(event.messageRes))
                     is RecorderEvent.Handoff -> {
-                        val uri = RecorderTempFiles.contentUriFor(this@RecordingActivity, event.file)
-                        startActivity(AddButtonActivity.createIntent(this@RecordingActivity, uri, AddButtonActivity.SOURCE_RECORD))
+                        startActivity(AddButtonActivity.createIntent(this@RecordingActivity, event.uri, AddButtonActivity.SOURCE_RECORD))
                         finish()
                     }
                 }

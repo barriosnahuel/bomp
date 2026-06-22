@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.feature.recorder
 
 import android.app.Application
+import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.google.common.truth.Truth.assertThat
@@ -41,7 +42,7 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = RecorderViewModel(application, engine, dispatcher)
+    private fun viewModel() = RecorderViewModel(application, engine, dispatcher, uriProvider = { Uri.parse("content://test/${it.name}") })
 
     @Test
     fun `tapping record moves to Recording and starts the engine`() =
