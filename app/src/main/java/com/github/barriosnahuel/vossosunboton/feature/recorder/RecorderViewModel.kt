@@ -86,7 +86,8 @@ class RecorderViewModel(
 
     init {
         // Clear clips a prior session handed off (already copied by the save pipeline) or abandoned.
-        RecorderTempFiles.purge(application)
+        // Off the main thread — listing/deleting cache files is disk I/O (StrictMode).
+        viewModelScope.launch(ioDispatcher) { RecorderTempFiles.purge(application) }
         engine.onMaxDurationReached = { viewModelScope.launch { finishRecording(preserve = true) } }
         engine.onInterrupted = { viewModelScope.launch { finishRecording(preserve = true) } }
     }
@@ -100,7 +101,8 @@ class RecorderViewModel(
             return
         }
         viewModelScope.launch {
-            val file = RecorderTempFiles.newTempFile(context)
+            // newTempFile does mkdirs() (disk write) and engine.start touches the file — both off-main.
+            val file = withContext(ioDispatcher) { RecorderTempFiles.newTempFile(context) }
             val started =
                 runCatching { withContext(ioDispatcher) { engine.start(file) } }
                     .onFailure {
@@ -108,7 +110,7 @@ class RecorderViewModel(
                         Tracker.track(RuntimeException("Recorder could not start capturing audio", it))
                     }.isSuccess
             if (!started) {
-                file.delete()
+                withContext(ioDispatcher) { file.delete() }
                 emit(RecorderEvent.Message(R.string.app_recorder_feedback_mic_busy))
                 return@launch
             }
@@ -192,8 +194,12 @@ class RecorderViewModel(
     }
 
     private fun discardTemp() {
-        tempFile?.delete()
+        val file = tempFile ?: return
         tempFile = null
+        // File.delete is disk I/O — keep it off the main thread (StrictMode forbids disk on main, and
+        // the debug build crashes on it). Called from onCleared the scope is already cancelled, so this
+        // no-ops and the leftover temp is reclaimed by the purge-on-entry the next time the recorder opens.
+        viewModelScope.launch(ioDispatcher) { file.delete() }
     }
 
     private fun emit(event: RecorderEvent) {

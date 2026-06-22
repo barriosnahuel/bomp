@@ -60,7 +60,10 @@ class RecordingActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Recording is foreground-only: free the mic if backgrounded mid-capture, and stop any preview.
+        // A config-change recreate (rotation is handled in-place via configChanges; locale/theme still
+        // recreate) also routes through onStop — don't treat it as backgrounding, or the recording would
+        // be auto-stopped on every such change. Only a genuine background frees the mic + stops preview.
+        if (isChangingConfigurations) return
         viewModel.onHostStopped()
         PlayerControllerFactory.instance.stopPlayingSound()
     }

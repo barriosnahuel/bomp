@@ -88,6 +88,7 @@
              intent; it hands the captured clip to AddButtonActivity for naming + save. -->
         <activity
             android:name=".feature.recorder.RecordingActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
