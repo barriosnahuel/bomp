@@ -46,7 +46,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,6 +57,8 @@ import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.theme.ImmersiveListenTheme
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
+import kotlin.math.abs
+import kotlin.math.sin
 
 /**
  * The immersive recorder (ADR 0019) — the listen screen "in reverse". Stateless: driven by
@@ -66,6 +70,7 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 internal fun RecorderScreen(
     state: RecorderState,
     isPreviewPlaying: Boolean,
+    previewPositionMs: Long,
     onRecordTap: () -> Unit,
     onStopTap: () -> Unit,
     onPreviewToggle: () -> Unit,
@@ -83,8 +88,8 @@ internal fun RecorderScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                RecorderHeadline(state)
-                RecorderVisual(state)
+                RecorderHeadline(state, isPreviewPlaying, previewPositionMs)
+                RecorderVisual(state, previewPositionMs)
                 RecorderTransport(
                     state = state,
                     isPreviewPlaying = isPreviewPlaying,
@@ -113,7 +118,11 @@ private fun RecorderTopBar(onClose: () -> Unit) {
 }
 
 @Composable
-private fun RecorderHeadline(state: RecorderState) {
+private fun RecorderHeadline(
+    state: RecorderState,
+    isPreviewPlaying: Boolean,
+    previewPositionMs: Long,
+) {
     val timerDescription = stringResource(R.string.app_recorder_cd_timer)
     Box(modifier = Modifier.height(HEADLINE_HEIGHT), contentAlignment = Alignment.Center) {
         when (state) {
@@ -127,20 +136,13 @@ private fun RecorderHeadline(state: RecorderState) {
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.error),
                     )
-                    Text(
-                        text = formatDuration(state.elapsedMs.toInt()),
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.semantics { contentDescription = timerDescription },
-                    )
+                    HeadlineTimer(state.elapsedMs, timerDescription)
                 }
             is RecorderState.Review ->
-                Text(
-                    text = formatDuration(state.durationMs.toInt()),
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onBackground,
+                // While previewing, follow the playback position; otherwise rest at the clip length.
+                HeadlineTimer(
+                    millis = if (isPreviewPlaying) previewPositionMs else state.durationMs,
+                    description = timerDescription,
                 )
             RecorderState.Ready -> Unit
         }
@@ -148,11 +150,75 @@ private fun RecorderHeadline(state: RecorderState) {
 }
 
 @Composable
-private fun RecorderVisual(state: RecorderState) {
+private fun HeadlineTimer(
+    millis: Long,
+    description: String,
+) {
+    Text(
+        text = formatDuration(millis.toInt()),
+        style = MaterialTheme.typography.displayMedium,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier.semantics { contentDescription = description },
+    )
+}
+
+@Composable
+private fun RecorderVisual(
+    state: RecorderState,
+    previewPositionMs: Long,
+) {
     Box(modifier = Modifier.fillMaxWidth().height(WAVEFORM_HEIGHT), contentAlignment = Alignment.Center) {
         when (state) {
             is RecorderState.Recording -> LiveWaveform(amplitude = state.amplitude, tick = state.elapsedMs)
-            else -> LiveWaveform(amplitude = 0f, tick = 0L)
+            is RecorderState.Review ->
+                ReviewWaveform(
+                    progress = if (state.durationMs > 0L) previewPositionMs.toFloat() / state.durationMs else 0f,
+                )
+            RecorderState.Ready -> LiveWaveform(amplitude = 0f, tick = 0L)
+        }
+    }
+}
+
+/**
+ * Playback-progress waveform for the review state: a fixed decorative bar shape whose left portion
+ * fills with `primary` as the preview plays (the rest dimmed), mirroring the listen screen's fill +
+ * exposing [progress] via semantics. Distinct from [LiveWaveform] (the live input meter).
+ */
+@Composable
+private fun ReviewWaveform(
+    progress: Float,
+    modifier: Modifier = Modifier,
+) {
+    val fraction = progress.coerceIn(0f, 1f)
+    val playedColor = MaterialTheme.colorScheme.primary
+    val unplayedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = WAVEFORM_UNPLAYED_ALPHA)
+    val label = stringResource(R.string.app_recorder_cd_waveform)
+    Canvas(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(WAVEFORM_HEIGHT)
+                .semantics {
+                    contentDescription = label
+                    progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f)
+                },
+    ) {
+        val slot = size.width / WAVEFORM_BARS
+        val barWidth = slot * WAVEFORM_BAR_FILL
+        val centerY = size.height / 2f
+        val corner = CornerRadius(barWidth / 2f, barWidth / 2f)
+        for (i in 0 until WAVEFORM_BARS) {
+            val amplitude = (abs(sin(i * WAVE_SHAPE_FREQ)) * WAVE_SHAPE_RANGE + WAVE_SHAPE_BASE).toFloat()
+            val barHeight = amplitude.coerceIn(WAVEFORM_MIN_FRACTION, 1f) * size.height
+            val played = (i + WAVEFORM_BAR_CENTER) / WAVEFORM_BARS <= fraction
+            val x = i * slot + (slot - barWidth) / 2f
+            drawRoundRect(
+                color = if (played) playedColor else unplayedColor,
+                topLeft = Offset(x, centerY - barHeight / 2f),
+                size = Size(barWidth, barHeight),
+                cornerRadius = corner,
+            )
         }
     }
 }
@@ -436,6 +502,13 @@ private val WAVEFORM_HEIGHT = 120.dp
 private const val WAVEFORM_BARS = 48
 private const val WAVEFORM_BAR_FILL = 0.5f
 private const val WAVEFORM_MIN_FRACTION = 0.06f
+private const val WAVEFORM_UNPLAYED_ALPHA = 0.30f
+private const val WAVEFORM_BAR_CENTER = 0.5f
+
+// Fixed decorative envelope for the review waveform (deterministic — no randomness).
+private const val WAVE_SHAPE_FREQ = 1.7
+private const val WAVE_SHAPE_RANGE = 0.7
+private const val WAVE_SHAPE_BASE = 0.2
 private const val GLOW_CENTER_ALPHA = 0.16f
 private const val GLOW_MID_ALPHA = 0.04f
 private const val GLOW_STOP_CENTER = 0.0f

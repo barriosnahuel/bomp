@@ -7,7 +7,9 @@ package com.github.barriosnahuel.vossosunboton.feature.recorder
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -68,14 +70,50 @@ internal class RecorderScreenTest : AbstractRobolectricTest() {
         assertThat(imported).isTrue()
     }
 
+    @Test
+    fun `review timer follows the playback position while previewing`() {
+        val review = RecorderState.Review(Uri.parse("content://clip"), durationMs = 5_000)
+        composeTestRule.setContent {
+            AppTheme { recorder(review, isPreviewPlaying = true, previewPositionMs = 2_000) }
+        }
+
+        // Progress, not the static final duration (the stuck-timer bug).
+        composeTestRule.onNodeWithText("0:02").assertIsDisplayed()
+    }
+
+    @Test
+    fun `review timer shows the clip duration when not previewing`() {
+        val review = RecorderState.Review(Uri.parse("content://clip"), durationMs = 5_000)
+        composeTestRule.setContent {
+            AppTheme { recorder(review, isPreviewPlaying = false, previewPositionMs = 0) }
+        }
+
+        composeTestRule.onNodeWithText("0:05").assertIsDisplayed()
+    }
+
+    @Test
+    fun `review waveform reflects the playback progress`() {
+        val review = RecorderState.Review(Uri.parse("content://clip"), durationMs = 5_000)
+        composeTestRule.setContent {
+            AppTheme { recorder(review, isPreviewPlaying = true, previewPositionMs = 2_000) }
+        }
+
+        composeTestRule
+            .onNodeWithContentDescription("Playback progress")
+            .assertRangeInfoEquals(ProgressBarRangeInfo(0.4f, 0f..1f))
+    }
+
     @Composable
     private fun recorder(
         state: RecorderState,
+        isPreviewPlaying: Boolean = false,
+        previewPositionMs: Long = 0L,
         onRecordTap: () -> Unit = {},
     ) {
         RecorderScreen(
             state = state,
-            isPreviewPlaying = false,
+            isPreviewPlaying = isPreviewPlaying,
+            previewPositionMs = previewPositionMs,
             onRecordTap = onRecordTap,
             onStopTap = {},
             onPreviewToggle = {},

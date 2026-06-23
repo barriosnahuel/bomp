@@ -92,7 +92,9 @@ class RecordingActivity : FragmentActivity() {
         val state by viewModel.state.collectAsStateWithLifecycle()
         val playback by PlayerControllerFactory.instance.playbackState.collectAsStateWithLifecycle()
         val reviewUri = (state as? RecorderState.Review)?.uri
-        val isPreviewPlaying = playback?.let { it.isPlaying && it.uri == reviewUri } == true
+        val preview = playback?.takeIf { it.uri == reviewUri }
+        val isPreviewPlaying = preview?.isPlaying == true
+        val previewPositionMs = preview?.positionMs?.toLong() ?: 0L
 
         LaunchedEffect(Unit) {
             viewModel.events.collect { event ->
@@ -115,6 +117,7 @@ class RecordingActivity : FragmentActivity() {
                         RecorderScreen(
                             state = state,
                             isPreviewPlaying = isPreviewPlaying,
+                            previewPositionMs = previewPositionMs,
                             onRecordTap = viewModel::onRecordTapped,
                             onStopTap = viewModel::onStopTapped,
                             onPreviewToggle = { togglePreview(reviewUri) },

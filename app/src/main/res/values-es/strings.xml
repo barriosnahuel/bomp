@@ -237,6 +237,7 @@
     <string name="app_recorder_cd_stop">Detener la grabación</string>
     <string name="app_recorder_cd_close">Cerrar</string>
     <string name="app_recorder_cd_timer">Tiempo de grabación</string>
+    <string name="app_recorder_cd_waveform">Progreso de reproducción</string>
     <string name="app_recorder_use">Usar este</string>
     <string name="app_recorder_rerecord">Regrabar</string>
     <string name="app_recorder_cd_play">Reproducir</string>
