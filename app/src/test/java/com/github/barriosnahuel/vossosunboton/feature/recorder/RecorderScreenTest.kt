@@ -108,12 +108,14 @@ internal class RecorderScreenTest : AbstractRobolectricTest() {
         state: RecorderState,
         isPreviewPlaying: Boolean = false,
         previewPositionMs: Long = 0L,
+        peaks: FloatArray? = null,
         onRecordTap: () -> Unit = {},
     ) {
         RecorderScreen(
             state = state,
             isPreviewPlaying = isPreviewPlaying,
             previewPositionMs = previewPositionMs,
+            peaks = peaks,
             onRecordTap = onRecordTap,
             onStopTap = {},
             onPreviewToggle = {},

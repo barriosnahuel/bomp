@@ -41,6 +41,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.feature.vault.WaveformExtractor
 import com.github.barriosnahuel.vossosunboton.ui.theme.ImmersiveListenTheme
 
 /**
@@ -96,6 +97,16 @@ class RecordingActivity : FragmentActivity() {
         val isPreviewPlaying = preview?.isPlaying == true
         val previewPositionMs = preview?.positionMs?.toLong() ?: 0L
 
+        // Real amplitude envelope of the recorded clip — decoded off the main thread (a neutral
+        // placeholder shows until it arrives), reusing the listen screen's extractor. Re-keyed per
+        // clip so a re-record (new URI) re-decodes and discards the previous wave.
+        var peaks by remember(reviewUri) { mutableStateOf(reviewUri?.let { WaveformExtractor.cached(it.toString()) }) }
+        LaunchedEffect(reviewUri) {
+            if (reviewUri != null && peaks == null) {
+                peaks = WaveformExtractor.extract(this@RecordingActivity, reviewUri, RECORDER_WAVEFORM_BARS)
+            }
+        }
+
         LaunchedEffect(Unit) {
             viewModel.events.collect { event ->
                 when (event) {
@@ -118,6 +129,7 @@ class RecordingActivity : FragmentActivity() {
                             state = state,
                             isPreviewPlaying = isPreviewPlaying,
                             previewPositionMs = previewPositionMs,
+                            peaks = peaks,
                             onRecordTap = viewModel::onRecordTapped,
                             onStopTap = viewModel::onStopTapped,
                             onPreviewToggle = { togglePreview(reviewUri) },
