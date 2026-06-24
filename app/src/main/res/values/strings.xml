@@ -262,6 +262,9 @@
     <string name="app_recorder_discard_message">You\'ll lose what you just recorded.</string>
     <string name="app_recorder_discard_confirm">Discard</string>
     <string name="app_recorder_discard_keep">Keep recording</string>
+    <string name="app_recorder_draft_banner_message">You have an unsaved recording</string>
+    <string name="app_recorder_draft_continue">Continue</string>
+    <string name="app_recorder_draft_discard">Discard</string>
 
     <!-- Onboarding tour (3 steps, on-demand from the Hub and the empty state) -->
     <string name="app_onboarding_skip">Skip</string>

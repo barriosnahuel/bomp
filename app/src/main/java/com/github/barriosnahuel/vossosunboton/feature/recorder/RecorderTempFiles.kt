@@ -24,11 +24,17 @@ object RecorderTempFiles {
     private const val EXTENSION = ".m4a"
     private val authority = BuildConfig.APPLICATION_ID + ".fileprovider"
 
+    /** The capture directory (`cacheDir/recordings/`), created if absent. */
+    fun dir(context: Context): File = File(context.cacheDir, DIR).apply { mkdirs() }
+
+    /** Resolves a capture [fileName] (as persisted in a draft) back to its file under [dir]. */
+    fun resolve(
+        context: Context,
+        fileName: String,
+    ): File = File(dir(context), fileName)
+
     /** A fresh, empty target file under `cacheDir/recordings/` (directory created if absent). */
-    fun newTempFile(context: Context): File {
-        val dir = File(context.cacheDir, DIR).apply { mkdirs() }
-        return File(dir, "$PREFIX${System.currentTimeMillis()}$EXTENSION")
-    }
+    fun newTempFile(context: Context): File = File(dir(context), "$PREFIX${System.currentTimeMillis()}$EXTENSION")
 
     /** Content URI for [file] under the shared FileProvider authority. */
     fun contentUriFor(
@@ -37,11 +43,14 @@ object RecorderTempFiles {
     ): Uri = FileProvider.getUriForFile(context, authority, file)
 
     /**
-     * Deletes every leftover capture. Called on recorder entry to clear clips a prior session handed
-     * off (the save pipeline has already copied those) or abandoned. Only one recording exists at a
-     * time, so a blanket purge is safe.
+     * Deletes leftover captures on recorder entry — clips a prior session handed off (already copied by
+     * the save pipeline) or abandoned. [keep] (the restored draft's file, ADR 0019 § Draft recovery) is
+     * spared; pass `null` for a fresh entry that should retain nothing.
      */
-    fun purge(context: Context) {
-        File(context.cacheDir, DIR).listFiles()?.forEach { it.delete() }
+    fun purge(
+        context: Context,
+        keep: File? = null,
+    ) {
+        dir(context).listFiles()?.forEach { if (it != keep) it.delete() }
     }
 }

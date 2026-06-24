@@ -74,6 +74,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
+import com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraftStoreProvider
 import com.github.barriosnahuel.vossosunboton.feature.vault.bumpVaultUnlockCounter
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGateResult
@@ -216,6 +217,11 @@ fun AddButtonScreen(
                             ).await()
                     if (feedbackId == R.string.app_addbutton_feedback_saved_ok) {
                         stopActivePreviewPlayback()
+                        // The recording is now a persisted Sound — forget its recoverable draft so the
+                        // Landing banner doesn't re-offer an already-saved clip (ADR 0019 § Draft recovery).
+                        if (source == AddButtonActivity.SOURCE_RECORD) {
+                            RecorderDraftStoreProvider.get(context).clear()
+                        }
                         trackSoundAdd(context, trimmedName, source, tracker)
                         saveOutcome = SaveOutcome.Success(trimmedName)
                     } else {

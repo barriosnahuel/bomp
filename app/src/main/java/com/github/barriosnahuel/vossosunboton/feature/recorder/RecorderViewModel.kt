@@ -70,6 +70,7 @@ class RecorderViewModel(
     application: Application,
     private val engine: RecorderEngine,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val draftStore: RecorderDraftStore = RecorderDraftStoreProvider.get(application),
     // Resolves the captured file to a shareable content URI. Default uses FileProvider; injected in
     // tests to avoid FileProvider's disk/manifest dependency under Robolectric. Always invoked off-main.
     private val uriProvider: (File) -> Uri = { RecorderTempFiles.contentUriFor(application, it) },
@@ -82,41 +83,76 @@ class RecorderViewModel(
 
     private var tempFile: File? = null
     private var pollJob: Job? = null
-    private var handedOff = false
+    private var entered = false
+
+    // Guards the start ↔ stop transition across its suspension points so a rapid double-tap (or a stop
+    // racing onHostStopped) can't run the transition twice — leaking a second MediaRecorder or deleting
+    // a valid clip down the discard branch.
+    private var transitioning = false
 
     init {
-        // Clear clips a prior session handed off (already copied by the save pipeline) or abandoned.
-        // Off the main thread — listing/deleting cache files is disk I/O (StrictMode).
-        viewModelScope.launch(ioDispatcher) { RecorderTempFiles.purge(application) }
         engine.onMaxDurationReached = { viewModelScope.launch { finishRecording(preserve = true) } }
         engine.onInterrupted = { viewModelScope.launch { finishRecording(preserve = true) } }
     }
 
+    /**
+     * Called once by the host on first creation (ADR 0019 § Draft recovery). [resumeDraft] true — the
+     * Landing draft banner launched us — restores a persisted clip into `Review`, sparing its file from
+     * the purge; false starts fresh and purges every leftover capture. Guarded so a config-change
+     * recreate (which keeps this VM) does not re-run it.
+     */
+    fun onEnter(resumeDraft: Boolean) {
+        if (entered) return
+        entered = true
+        viewModelScope.launch {
+            val draft = draftStore.current()
+            // [resumeDraft] only decides whether to *restore into Review*; the draft's file is ALWAYS
+            // spared from the purge. A fresh entry (resumeDraft=false) with a pending draft must not
+            // delete the clip out from under the Landing banner — restore and preserve are independent.
+            if (resumeDraft && draft != null) {
+                val uri = withContext(ioDispatcher) { uriProvider(draft.file) }
+                tempFile = draft.file
+                mutableState.value = RecorderState.Review(uri = uri, durationMs = draft.durationMs)
+            }
+            // Off the main thread — listing/deleting cache files is disk I/O (StrictMode).
+            withContext(ioDispatcher) { RecorderTempFiles.purge(getApplication(), keep = draft?.file) }
+        }
+    }
+
     /** Hero button in `Ready`: begin capturing (after the disk + mic guards). */
     fun onRecordTapped() {
-        if (mutableState.value != RecorderState.Ready) return
+        if (mutableState.value != RecorderState.Ready || transitioning) return
+        transitioning = true
         val context = getApplication<Application>()
-        if (context.cacheDir.usableSpace < MIN_FREE_BYTES) {
-            emit(RecorderEvent.Message(R.string.app_recorder_feedback_no_space))
-            return
-        }
         viewModelScope.launch {
-            // newTempFile does mkdirs() (disk write) and engine.start touches the file — both off-main.
-            val file = withContext(ioDispatcher) { RecorderTempFiles.newTempFile(context) }
-            val started =
-                runCatching { withContext(ioDispatcher) { engine.start(file) } }
-                    .onFailure {
-                        Tracker.log("recorder.start_failed=${it.javaClass.simpleName}")
-                        Tracker.track(RuntimeException("Recorder could not start capturing audio", it))
-                    }.isSuccess
-            if (!started) {
-                withContext(ioDispatcher) { file.delete() }
-                emit(RecorderEvent.Message(R.string.app_recorder_feedback_mic_busy))
-                return@launch
+            try {
+                // usableSpace is a blocking statvfs syscall and newTempFile does mkdirs() — both disk I/O,
+                // kept off the main thread (StrictMode crashes the debug build on a main-thread read).
+                val file =
+                    withContext(ioDispatcher) {
+                        if (context.cacheDir.usableSpace < MIN_FREE_BYTES) null else RecorderTempFiles.newTempFile(context)
+                    }
+                if (file == null) {
+                    emit(RecorderEvent.Message(R.string.app_recorder_feedback_no_space))
+                    return@launch
+                }
+                val started =
+                    runCatching { withContext(ioDispatcher) { engine.start(file) } }
+                        .onFailure {
+                            Tracker.log("recorder.start_failed=${it.javaClass.simpleName}")
+                            Tracker.track(RuntimeException("Recorder could not start capturing audio", it))
+                        }.isSuccess
+                if (!started) {
+                    withContext(ioDispatcher) { file.delete() }
+                    emit(RecorderEvent.Message(R.string.app_recorder_feedback_mic_busy))
+                    return@launch
+                }
+                tempFile = file
+                mutableState.value = RecorderState.Recording(elapsedMs = 0L, amplitude = 0f)
+                startPolling()
+            } finally {
+                transitioning = false
             }
-            tempFile = file
-            mutableState.value = RecorderState.Recording(elapsedMs = 0L, amplitude = 0f)
-            startPolling()
         }
     }
 
@@ -130,24 +166,33 @@ class RecorderViewModel(
     fun onReRecord() {
         if (mutableState.value !is RecorderState.Review) return
         discardTemp()
+        draftStore.clear()
         mutableState.value = RecorderState.Ready
     }
 
     /** Review → "Use this": hand the clip to the save flow. */
     fun onUseClip() {
         val review = mutableState.value as? RecorderState.Review ?: return
-        handedOff = true
+        // Deliberately NOT clearing the draft here — the save pipeline clears it once the Sound is
+        // actually persisted (RecorderDraftSaveCleanup). Backing out of the save screen therefore leaves
+        // the clip recoverable from the Landing banner instead of silently lost.
         emit(RecorderEvent.Handoff(review.uri))
     }
 
     /** Back while a clip exists (recording or review): drop it and return to ready. */
     fun onDiscard() {
-        if (mutableState.value is RecorderState.Recording) {
-            pollJob?.cancel()
-            viewModelScope.launch { withContext(ioDispatcher) { engine.stop() } }
-        }
-        discardTemp()
+        val wasRecording = mutableState.value is RecorderState.Recording
+        pollJob?.cancel()
+        val file = tempFile
+        tempFile = null
+        draftStore.clear()
         mutableState.value = RecorderState.Ready
+        // Stop (if recording) THEN delete, in one ordered coroutine, so engine.stop() finalizing the
+        // output file can't race the delete and leave an orphan (or throw on a vanished path).
+        viewModelScope.launch(ioDispatcher) {
+            if (wasRecording) runCatching { engine.stop() }
+            file?.delete()
+        }
     }
 
     /** True when there is unsaved captured audio — the Activity gates its back discard-confirm on this. */
@@ -164,20 +209,30 @@ class RecorderViewModel(
     }
 
     private suspend fun finishRecording(preserve: Boolean) {
+        if (transitioning) return
         val recording = mutableState.value as? RecorderState.Recording ?: return
-        pollJob?.cancel()
-        val elapsed = recording.elapsedMs
-        val produced = withContext(ioDispatcher) { engine.stop() }
-        val file = tempFile
-        if (!produced || file == null || elapsed < MIN_DURATION_MS) {
-            discardTemp()
-            mutableState.value = RecorderState.Ready
-            // A deliberate too-short tap is worth a nudge; an interruption-preserve under 1 s isn't.
-            if (!preserve) emit(RecorderEvent.Message(R.string.app_recorder_feedback_too_short))
-            return
+        transitioning = true
+        try {
+            pollJob?.cancel()
+            val elapsed = recording.elapsedMs
+            val produced = withContext(ioDispatcher) { engine.stop() }
+            val file = tempFile
+            if (!produced || file == null || elapsed < MIN_DURATION_MS) {
+                discardTemp()
+                draftStore.clear()
+                mutableState.value = RecorderState.Ready
+                // A deliberate too-short tap is worth a nudge; an interruption-preserve under 1 s isn't.
+                if (!preserve) emit(RecorderEvent.Message(R.string.app_recorder_feedback_too_short))
+            } else {
+                val uri = withContext(ioDispatcher) { uriProvider(file) }
+                // Persist as a recoverable draft so a background / launcher re-entry / process death can
+                // resume this clip instead of losing it (ADR 0019 § Draft recovery).
+                draftStore.save(file, elapsed)
+                mutableState.value = RecorderState.Review(uri = uri, durationMs = elapsed)
+            }
+        } finally {
+            transitioning = false
         }
-        val uri = withContext(ioDispatcher) { uriProvider(file) }
-        mutableState.value = RecorderState.Review(uri = uri, durationMs = elapsed)
     }
 
     private fun startPolling() {
@@ -209,7 +264,10 @@ class RecorderViewModel(
     override fun onCleared() {
         pollJob?.cancel()
         engine.release()
-        if (!handedOff) discardTemp()
+        // Deliberately NOT discarding the temp file: a clip in Review is a persisted draft that must
+        // survive this Activity being destroyed (launcher clearTop, process death) so Landing can offer
+        // to resume it (ADR 0019 § Draft recovery). Explicit discard/re-record already deleted it;
+        // orphans (no draft metadata) are reclaimed by the purge-on-entry next time.
     }
 
     @androidx.annotation.VisibleForTesting

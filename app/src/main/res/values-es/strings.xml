@@ -256,6 +256,9 @@
     <string name="app_recorder_discard_message">Vas a perder lo que acabás de grabar.</string>
     <string name="app_recorder_discard_confirm">Descartar</string>
     <string name="app_recorder_discard_keep">Seguir grabando</string>
+    <string name="app_recorder_draft_banner_message">Tenés una grabación sin guardar</string>
+    <string name="app_recorder_draft_continue">Continuar</string>
+    <string name="app_recorder_draft_discard">Descartar</string>
 
     <!-- Onboarding (tour de 3 pasos, on-demand desde el Hub y el estado vacío) -->
     <string name="app_onboarding_skip">Saltar</string>

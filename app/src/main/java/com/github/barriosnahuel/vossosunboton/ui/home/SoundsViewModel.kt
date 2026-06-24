@@ -118,8 +118,27 @@ class SoundsViewModel(
     private val dualHomeCoachStore: com.github.barriosnahuel.vossosunboton.feature.collections.DualHomeCoachStore =
         com.github.barriosnahuel.vossosunboton.feature.collections
             .DualHomeCoachStore(application),
+    private val draftStore: com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraftStore =
+        com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraftStoreProvider
+            .get(application),
 ) : AndroidViewModel(application),
     PlayerControllerListener {
+    /**
+     * The pending recording draft, or null (ADR 0019 § Draft recovery). A cold flow so the Landing
+     * collector re-validates the temp file's existence on every resume — self-healing if the OS evicted
+     * the cached clip while the user was away.
+     */
+    val pendingDraft: kotlinx.coroutines.flow.Flow<com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraft?> =
+        draftStore.draft
+
+    /** Banner "Descartar": delete the draft clip and forget it. */
+    fun discardDraft() {
+        viewModelScope.launch(ioDispatcher) {
+            draftStore.current()?.file?.delete()
+            draftStore.clear()
+        }
+    }
+
     private val repo =
         SoundsRepository(
             application,

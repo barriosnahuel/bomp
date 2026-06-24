@@ -63,25 +63,23 @@ internal object WaveformExtractor {
 
     /**
      * Same envelope, decoded from a `content://`/`file://` [uri] instead of a saved [Sound] — for the
-     * recorder review, where the clip is a temp FileProvider URI not yet persisted as a Sound. Cached
-     * per URI string so a config-change recreate reuses the decode.
+     * recorder review, where the clip is a temp FileProvider URI not yet persisted as a Sound.
+     *
+     * Deliberately NOT cached: every recording is a new timestamped temp file → a unique, short-lived
+     * URI key that would accumulate in [cache] forever. The host decodes once per `reviewUri` and a
+     * config-change recreate just re-decodes the short clip — cheap, and bounded unlike a leaking cache.
      */
     suspend fun extract(
         context: Context,
         uri: Uri,
         barCount: Int,
         dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    ): FloatArray? {
-        val key = uri.toString()
-        cache[key]?.let { return it }
-        val peaks =
-            decode(barCount, dispatcher, "Recorder waveform extraction failed", "recorder") { extractor ->
-                // Content-resolver overload: handles a content:// FileProvider URI directly, where an
-                // AssetFileDescriptor's declaredLength is often UNKNOWN and would break the fd overload.
-                extractor.setDataSource(context, uri, null)
-            }
-        return peaks?.also { cache[key] = it }
-    }
+    ): FloatArray? =
+        decode(barCount, dispatcher, "Recorder waveform extraction failed", "recorder") { extractor ->
+            // Content-resolver overload: handles a content:// FileProvider URI directly, where an
+            // AssetFileDescriptor's declaredLength is often UNKNOWN and would break the fd overload.
+            extractor.setDataSource(context, uri, null)
+        }
 
     /** Visible for the cold-start / no-data fallback path and tests. */
     fun cached(soundId: String): FloatArray? = cache[soundId]

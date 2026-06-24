@@ -938,6 +938,9 @@ private fun MySoundsBody(
 ) {
     val activeCollection = publicCollections.firstOrNull { it.id == activeFilterId }
     val welcomeHintPending by viewModel.welcomeHintPending.collectAsStateWithLifecycle()
+    // Re-collected on each resume so a draft created/cleared while the user was in the recorder (or
+    // dropped by a process death) re-evaluates the banner without an explicit onResume hook (ADR 0019).
+    val pendingDraft by viewModel.pendingDraft.collectAsStateWithLifecycle(initialValue = null)
     val isOnMySounds = selectedTab == AppTab.MY_SOUNDS
     val showFilterEmptyState = isOnMySounds && activeFilterId != null && sounds.isEmpty() && activeCollection != null
     val showWelcomeEmptyState = sounds.isEmpty() && isOnMySounds && !showFilterEmptyState
@@ -947,6 +950,12 @@ private fun MySoundsBody(
     val showHeader = isOnMySounds && !showWelcomeEmptyState && !showFilterEmptyState
 
     androidx.compose.foundation.layout.Column(modifier = Modifier.padding(innerPadding)) {
+        pendingDraft?.let {
+            RecorderDraftBanner(
+                onContinue = { context.startActivity(RecordingActivity.createIntent(context, resumeDraft = true)) },
+                onDiscard = { viewModel.discardDraft() },
+            )
+        }
         if (isOnMySounds) {
             // Always rendered on My Sounds — even with no public collections the user still needs
             // the "+ Nueva" chip to bootstrap one. Hiding the whole row left the create affordance

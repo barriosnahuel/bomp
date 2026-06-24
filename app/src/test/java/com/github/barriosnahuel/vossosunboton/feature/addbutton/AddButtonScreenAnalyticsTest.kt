@@ -30,6 +30,9 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
+import com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraft
+import com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraftStore
+import com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraftStoreProvider
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.github.barriosnahuel.vossosunboton.testSound
@@ -37,11 +40,14 @@ import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.robolectric.annotation.Config
+import java.io.File
 
 @Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
@@ -52,6 +58,7 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
 
     private lateinit var fake: FakeAnalyticsTracker
     private lateinit var feature: FakeAddButtonFeature
+    private lateinit var draftStore: FakeRecorderDraftStore
 
     @Before
     fun setUp() {
@@ -59,12 +66,15 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
         AnalyticsTrackerProvider.setForTest(fake)
         feature = FakeAddButtonFeature()
         AddButtonFeatureProvider.setForTest(feature)
+        draftStore = FakeRecorderDraftStore()
+        RecorderDraftStoreProvider.setForTest(draftStore)
     }
 
     @After
     fun tearDown() {
         AnalyticsTrackerProvider.setForTest(null)
         AddButtonFeatureProvider.setForTest(null)
+        RecorderDraftStoreProvider.setForTest(null)
     }
 
     @Test
@@ -133,6 +143,31 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
 
             val event = fake.assertEmitted("sound_add")
             assertThat(event.params["source"]).isEqualTo(AddButtonActivity.SOURCE_IMPORT)
+        }
+    }
+
+    @Test
+    fun `saving a recorded Bomp clears its recovery draft so the banner won't re-offer it`() {
+        val intent = AddButtonActivity.createIntent(context, SAMPLE_URI, AddButtonActivity.SOURCE_RECORD)
+        ActivityScenario.launch<AddButtonActivity>(intent).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
+            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+            composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) { fake.events.isNotEmpty() }
+
+            assertThat(draftStore.clearCount).isAtLeast(1)
+        }
+    }
+
+    @Test
+    fun `saving an imported Bomp leaves the recorder draft untouched`() {
+        ActivityScenario.launch<AddButtonActivity>(AddButtonActivity.createIntent(context, SAMPLE_URI)).use {
+            composeTestRule.waitForIdle()
+            composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
+            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+            composeTestRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) { fake.events.isNotEmpty() }
+
+            assertThat(draftStore.clearCount).isEqualTo(0)
         }
     }
 
@@ -403,6 +438,23 @@ internal class AddButtonScreenAnalyticsTest : AbstractRobolectricTest() {
             sound: Sound,
             newName: String,
         ): Deferred<Unit> = CompletableDeferred(Unit)
+    }
+
+    /** Records whether the save pipeline cleared the recorder draft (ADR 0019 § Draft recovery). */
+    private class FakeRecorderDraftStore : RecorderDraftStore {
+        var clearCount = 0
+        override val draft: Flow<RecorderDraft?> = MutableStateFlow(null)
+
+        override suspend fun current(): RecorderDraft? = null
+
+        override fun save(
+            file: File,
+            durationMs: Long,
+        ) = Unit
+
+        override fun clear() {
+            clearCount += 1
+        }
     }
 
     private companion object {

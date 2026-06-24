@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,9 @@ class RecordingActivity : FragmentActivity() {
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
         AnalyticsTrackerProvider.get(this).logScreen(CanonicalScreenName.RECORD_SOUND)
+        // Restore a pending draft when launched from the Landing banner; otherwise start fresh. Guarded
+        // inside the VM so a config-change recreate (which keeps the VM) doesn't re-run it.
+        viewModel.onEnter(resumeDraft = intent.getBooleanExtra(EXTRA_RESUME_DRAFT, false))
         setContent { RecorderHost() }
     }
 
@@ -74,8 +78,10 @@ class RecordingActivity : FragmentActivity() {
         val context = LocalContext.current
         val snackbarHostState = remember { SnackbarHostState() }
         var granted by remember { mutableStateOf(hasMicPermission()) }
-        var permanentlyDenied by remember { mutableStateOf(false) }
-        var showDiscard by remember { mutableStateOf(false) }
+        // Saveable: durable progress (the denied/settings screen, an open discard dialog) must survive an
+        // Activity recreate — locale/theme switch, system kill (CLAUDE.md § Stateful Composables).
+        var permanentlyDenied by rememberSaveable { mutableStateOf(false) }
+        var showDiscard by rememberSaveable { mutableStateOf(false) }
 
         val permissionLauncher =
             rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
@@ -100,9 +106,9 @@ class RecordingActivity : FragmentActivity() {
         // Real amplitude envelope of the recorded clip — decoded off the main thread (a neutral
         // placeholder shows until it arrives), reusing the listen screen's extractor. Re-keyed per
         // clip so a re-record (new URI) re-decodes and discards the previous wave.
-        var peaks by remember(reviewUri) { mutableStateOf(reviewUri?.let { WaveformExtractor.cached(it.toString()) }) }
+        var peaks by remember(reviewUri) { mutableStateOf<FloatArray?>(null) }
         LaunchedEffect(reviewUri) {
-            if (reviewUri != null && peaks == null) {
+            if (reviewUri != null) {
                 peaks = WaveformExtractor.extract(this@RecordingActivity, reviewUri, RECORDER_WAVEFORM_BARS)
             }
         }
@@ -160,6 +166,9 @@ class RecordingActivity : FragmentActivity() {
                     RecorderDiscardDialog(
                         onConfirm = {
                             showDiscard = false
+                            // Durably drop the clip + its persisted draft before finishing — onCleared no
+                            // longer cleans up (a Review clip is now a recoverable draft).
+                            viewModel.onDiscard()
                             PlayerControllerFactory.instance.stopPlayingSound()
                             finish()
                         },
@@ -192,7 +201,14 @@ class RecordingActivity : FragmentActivity() {
 
     companion object {
         private const val AUDIO_MIME = "audio/*"
+        private const val EXTRA_RESUME_DRAFT = "extra_resume_draft"
 
-        fun createIntent(context: Context): Intent = Intent(context, RecordingActivity::class.java)
+        /** [resumeDraft] true (from the Landing draft banner) restores the pending recording into Review. */
+        fun createIntent(
+            context: Context,
+            resumeDraft: Boolean = false,
+        ): Intent =
+            Intent(context, RecordingActivity::class.java)
+                .putExtra(EXTRA_RESUME_DRAFT, resumeDraft)
     }
 }

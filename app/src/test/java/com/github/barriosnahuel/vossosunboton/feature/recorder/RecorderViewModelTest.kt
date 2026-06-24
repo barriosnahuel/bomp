@@ -12,6 +12,8 @@ import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -29,11 +31,13 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
     private val application: Application get() = ApplicationProvider.getApplicationContext()
     private val dispatcher = StandardTestDispatcher()
     private lateinit var engine: FakeRecorderEngine
+    private lateinit var draftStore: FakeRecorderDraftStore
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         engine = FakeRecorderEngine()
+        draftStore = FakeRecorderDraftStore()
         File(application.cacheDir, "recordings").deleteRecursively()
     }
 
@@ -42,7 +46,8 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = RecorderViewModel(application, engine, dispatcher, uriProvider = { Uri.parse("content://test/${it.name}") })
+    private fun viewModel() =
+        RecorderViewModel(application, engine, dispatcher, draftStore, uriProvider = { Uri.parse("content://test/${it.name}") })
 
     @Test
     fun `tapping record moves to Recording and starts the engine`() =
@@ -152,6 +157,135 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
 
             assertThat(engine.releaseCount).isAtLeast(1)
         }
+
+    @Test
+    fun `reaching Review persists the clip as a recoverable draft`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(1_200)
+
+            vm.onStopTapped()
+            advanceUntilIdle()
+
+            assertThat(draftStore.saved).isNotNull()
+            assertThat(draftStore.saved!!.durationMs).isAtLeast(1_000)
+        }
+
+    @Test
+    fun `re-record clears the persisted draft`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(1_200)
+            vm.onStopTapped()
+            advanceUntilIdle()
+
+            vm.onReRecord()
+
+            assertThat(draftStore.cleared).isTrue()
+        }
+
+    @Test
+    fun `using the clip keeps the draft until the save pipeline persists it`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(1_200)
+            vm.onStopTapped()
+            advanceUntilIdle()
+
+            vm.onUseClip()
+
+            // The draft survives handoff — backing out of the save screen must still be recoverable.
+            assertThat(draftStore.cleared).isFalse()
+            assertThat(vm.events.first()).isInstanceOf(RecorderEvent.Handoff::class.java)
+        }
+
+    @Test
+    fun `a too-short clip clears any persisted draft`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(400)
+
+            vm.onStopTapped()
+            advanceUntilIdle()
+
+            assertThat(draftStore.cleared).isTrue()
+        }
+
+    @Test
+    fun `onEnter with resumeDraft restores the persisted clip into Review`() =
+        runTest(dispatcher) {
+            draftStore.currentDraft = RecorderDraft(File(application.cacheDir, "recordings/clip.m4a"), durationMs = 4_000)
+            val vm = viewModel()
+
+            vm.onEnter(resumeDraft = true)
+            advanceUntilIdle()
+
+            val state = vm.state.value
+            assertThat(state).isInstanceOf(RecorderState.Review::class.java)
+            assertThat((state as RecorderState.Review).durationMs).isEqualTo(4_000)
+        }
+
+    @Test
+    fun `onEnter without resumeDraft stays Ready and purges leftovers`() =
+        runTest(dispatcher) {
+            val stray = File(application.cacheDir, "recordings").apply { mkdirs() }.let { File(it, "stray.m4a") }
+            stray.createNewFile()
+            val vm = viewModel()
+
+            vm.onEnter(resumeDraft = false)
+            advanceUntilIdle()
+
+            assertThat(vm.state.value).isEqualTo(RecorderState.Ready)
+            assertThat(stray.exists()).isFalse()
+        }
+
+    @Test
+    fun `onEnter without resumeDraft preserves an existing draft's file`() =
+        runTest(dispatcher) {
+            val draftFile = File(application.cacheDir, "recordings").apply { mkdirs() }.let { File(it, "draft.m4a") }
+            draftFile.createNewFile()
+            draftStore.currentDraft = RecorderDraft(draftFile, durationMs = 3_000)
+            val vm = viewModel()
+
+            vm.onEnter(resumeDraft = false)
+            advanceUntilIdle()
+
+            // A fresh entry must NOT delete an unsaved draft's bytes — the Landing banner still needs it.
+            assertThat(draftFile.exists()).isTrue()
+            assertThat(vm.state.value).isEqualTo(RecorderState.Ready)
+        }
+
+    @Test
+    fun `double-tapping record starts the engine only once`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+
+            vm.onRecordTapped()
+            vm.onRecordTapped()
+            advanceTimeBy(200)
+
+            assertThat(engine.startCount).isEqualTo(1)
+            vm.clearForTest()
+        }
+
+    @Test
+    fun `double-tapping stop reaches Review once without discarding the clip`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(1_200)
+
+            vm.onStopTapped()
+            vm.onStopTapped()
+            advanceUntilIdle()
+
+            assertThat(vm.state.value).isInstanceOf(RecorderState.Review::class.java)
+            assertThat(engine.stopCount).isEqualTo(1)
+        }
 }
 
 private class FakeRecorderEngine : RecorderEngine {
@@ -180,5 +314,31 @@ private class FakeRecorderEngine : RecorderEngine {
 
     override fun release() {
         releaseCount++
+    }
+}
+
+private class FakeRecorderDraftStore : RecorderDraftStore {
+    private val _draft = MutableStateFlow<RecorderDraft?>(null)
+    override val draft: Flow<RecorderDraft?> = _draft
+
+    var saved: RecorderDraft? = null
+    var cleared = false
+    var currentDraft: RecorderDraft? = null
+
+    override suspend fun current(): RecorderDraft? = currentDraft
+
+    override fun save(
+        file: File,
+        durationMs: Long,
+    ) {
+        saved = RecorderDraft(file, durationMs)
+        _draft.value = saved
+    }
+
+    override fun clear() {
+        cleared = true
+        saved = null
+        currentDraft = null
+        _draft.value = null
     }
 }
