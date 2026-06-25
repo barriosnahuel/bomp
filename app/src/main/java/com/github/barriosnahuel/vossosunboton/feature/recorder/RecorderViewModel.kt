@@ -14,6 +14,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +74,7 @@ class RecorderViewModel(
     private val engine: RecorderEngine,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val draftStore: RecorderDraftStore = RecorderDraftStoreProvider.get(application),
+    private val analytics: AnalyticsTracker = AnalyticsTrackerProvider.get(application),
     // Resolves the captured file to a shareable content URI. Default uses FileProvider; injected in
     // tests to avoid FileProvider's disk/manifest dependency under Robolectric. Always invoked off-main.
     private val uriProvider: (File) -> Uri = { RecorderTempFiles.contentUriFor(application, it) },
@@ -229,6 +233,7 @@ class RecorderViewModel(
                 // resume this clip instead of losing it (ADR 0019 § Draft recovery).
                 draftStore.save(file, elapsed)
                 mutableState.value = RecorderState.Review(uri = uri, durationMs = elapsed)
+                analytics.log(AnalyticsEvent.RecordingCompleted)
             }
         } finally {
             transitioning = false

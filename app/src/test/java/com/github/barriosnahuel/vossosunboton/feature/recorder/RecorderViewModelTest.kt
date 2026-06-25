@@ -9,6 +9,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,12 +33,14 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var engine: FakeRecorderEngine
     private lateinit var draftStore: FakeRecorderDraftStore
+    private lateinit var analytics: FakeAnalyticsTracker
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         engine = FakeRecorderEngine()
         draftStore = FakeRecorderDraftStore()
+        analytics = FakeAnalyticsTracker()
         File(application.cacheDir, "recordings").deleteRecursively()
     }
 
@@ -47,7 +50,14 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
     }
 
     private fun viewModel() =
-        RecorderViewModel(application, engine, dispatcher, draftStore, uriProvider = { Uri.parse("content://test/${it.name}") })
+        RecorderViewModel(
+            application,
+            engine,
+            dispatcher,
+            draftStore,
+            analytics,
+            uriProvider = { Uri.parse("content://test/${it.name}") },
+        )
 
     @Test
     fun `tapping record moves to Recording and starts the engine`() =
@@ -285,6 +295,32 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
 
             assertThat(vm.state.value).isInstanceOf(RecorderState.Review::class.java)
             assertThat(engine.stopCount).isEqualTo(1)
+        }
+
+    @Test
+    fun `reaching Review emits recording_completed`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(1_200)
+
+            vm.onStopTapped()
+            advanceUntilIdle()
+
+            analytics.assertEmitted("recording_completed")
+        }
+
+    @Test
+    fun `restoring a draft does not emit recording_completed`() =
+        runTest(dispatcher) {
+            draftStore.currentDraft = RecorderDraft(File(application.cacheDir, "recordings/clip.m4a"), durationMs = 4_000)
+            val vm = viewModel()
+
+            vm.onEnter(resumeDraft = true)
+            advanceUntilIdle()
+
+            // A restored draft is a recovered prior completion, not a new one — the funnel must not double-count.
+            analytics.assertNotEmitted("recording_completed")
         }
 }
 

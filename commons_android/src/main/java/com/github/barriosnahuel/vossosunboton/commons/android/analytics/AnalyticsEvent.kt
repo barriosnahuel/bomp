@@ -440,6 +440,41 @@ sealed class AnalyticsEvent(
     object ImportHubRecordSelected : AnalyticsEvent(name = "import_hub_record_selected", hasFirstVariant = true)
 
     /**
+     * In-app recorder funnel · COMPLETION (ADR 0019). A capture reached the review state — via
+     * tap-to-stop, the 60 s auto-stop, or an interruption-preserve. The missing middle between the
+     * INTENT ([ImportHubRecordSelected]) and the conversion (`sound_add {source=record}`): lets us see
+     * where users drop (granted the mic but never recorded? recorded but never saved?). Not emitted on
+     * a draft *restore* — that is a recovered prior completion, not a new one.
+     */
+    object RecordingCompleted : AnalyticsEvent(name = "recording_completed", hasFirstVariant = true)
+
+    /**
+     * Outcome of the app's first runtime permission, `RECORD_AUDIO` (ADR 0019). [granted] is true on
+     * allow, false on deny — the grant rate of the recorder's gate. No first-variant: every result
+     * counts, not just the first request.
+     */
+    data class RecordPermissionResult(
+        val granted: Boolean,
+    ) : AnalyticsEvent(name = "record_permission_result", hasFirstVariant = false) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putBoolean(AnalyticsParam.GRANTED, granted)
+            }
+    }
+
+    /**
+     * Draft recovery (ADR 0019 § Draft recovery). The resume banner was offered on My Bomps for an
+     * unsaved recording. Denominator for the resume rate ([RecordingDraftResumed] / this).
+     */
+    object RecordingDraftBannerShown : AnalyticsEvent(name = "recording_draft_banner_shown", hasFirstVariant = true)
+
+    /** Draft recovery. The user resumed an unsaved recording from the banner ("Continue"). */
+    object RecordingDraftResumed : AnalyticsEvent(name = "recording_draft_resumed", hasFirstVariant = true)
+
+    /** Draft recovery. The user discarded an unsaved recording from the banner ("Discard"). */
+    object RecordingDraftDiscarded : AnalyticsEvent(name = "recording_draft_discarded", hasFirstVariant = true)
+
+    /**
      * Pre-stable-id `sounds_json` data was found on disk and recovered on read — the install carried
      * audio saved before sound records had a stable id (ADR 0008 → 0018), which now heals on read
      * instead of wiping the list. Gated one-shot via `tracker.markFiredOnce("legacy_sounds_recovered")`

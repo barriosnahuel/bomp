@@ -96,6 +96,11 @@ internal class AnalyticsCoverageMatrixTest {
                 "ImportHubOpened",
                 "ImportHubImportSelected",
                 "ImportHubRecordSelected",
+                "RecordingCompleted",
+                "RecordPermissionResult",
+                "RecordingDraftBannerShown",
+                "RecordingDraftResumed",
+                "RecordingDraftDiscarded",
                 "LegacySoundsRecovered",
             )
 

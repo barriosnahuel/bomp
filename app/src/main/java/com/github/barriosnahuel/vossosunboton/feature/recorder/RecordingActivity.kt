@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity
@@ -86,6 +87,7 @@ class RecordingActivity : FragmentActivity() {
         val permissionLauncher =
             rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
                 granted = ok
+                AnalyticsTrackerProvider.get(this).log(AnalyticsEvent.RecordPermissionResult(granted = ok))
                 if (!ok) permanentlyDenied = !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
             }
         val importLauncher =
