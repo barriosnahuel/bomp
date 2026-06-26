@@ -8,6 +8,7 @@ package com.github.barriosnahuel.vossosunboton.feature.recorder
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -101,6 +102,20 @@ internal class RecorderScreenTest : AbstractRobolectricTest() {
         composeTestRule
             .onNodeWithContentDescription("Playback progress")
             .assertRangeInfoEquals(ProgressBarRangeInfo(0.4f, 0f..1f))
+    }
+
+    @Test
+    fun `review waveform exposes no seek action`() {
+        // The recorder review is read-only (shared EnvelopeWaveform called with onSeek = null), so it
+        // must not advertise a SetProgress action — otherwise TalkBack would offer a phantom scrub the
+        // recorder never wired. The Vault listen wave is the only seekable envelope (covered there).
+        val review = RecorderState.Review(Uri.parse("content://clip"), durationMs = 5_000)
+        composeTestRule.setContent {
+            AppTheme { recorder(review, isPreviewPlaying = true, previewPositionMs = 2_000) }
+        }
+
+        val node = composeTestRule.onNodeWithContentDescription("Playback progress").fetchSemanticsNode()
+        assertThat(node.config.contains(SemanticsActions.SetProgress)).isFalse()
     }
 
     @Composable

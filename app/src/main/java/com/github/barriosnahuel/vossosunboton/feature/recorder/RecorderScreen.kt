@@ -46,14 +46,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
-import com.github.barriosnahuel.vossosunboton.feature.vault.WaveformExtractor
+import com.github.barriosnahuel.vossosunboton.feature.waveform.EnvelopeWaveform
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.theme.ImmersiveListenTheme
@@ -173,56 +171,15 @@ private fun RecorderVisual(
         when (state) {
             is RecorderState.Recording -> LiveWaveform(amplitude = state.amplitude, tick = state.elapsedMs)
             is RecorderState.Review ->
-                ReviewWaveform(
+                EnvelopeWaveform(
                     progress = if (state.durationMs > 0L) previewPositionMs.toFloat() / state.durationMs else 0f,
                     peaks = peaks,
+                    contentDescription = stringResource(R.string.app_recorder_cd_waveform),
+                    barCount = RECORDER_WAVEFORM_BARS,
+                    barFill = WAVEFORM_BAR_FILL,
+                    modifier = Modifier.fillMaxWidth().height(WAVEFORM_HEIGHT),
                 )
             RecorderState.Ready -> LiveWaveform(amplitude = 0f, tick = 0L)
-        }
-    }
-}
-
-/**
- * Playback-progress waveform for the review state: the clip's real amplitude envelope (decoded by
- * [WaveformExtractor], same as the listen screen), whose left portion fills with `primary` as the
- * preview plays (the rest dimmed) and exposes [progress] via semantics. A neutral placeholder
- * baseline shows while [peaks] is still decoding. Distinct from [LiveWaveform] (the live input meter).
- */
-@Composable
-private fun ReviewWaveform(
-    progress: Float,
-    peaks: FloatArray?,
-    modifier: Modifier = Modifier,
-) {
-    val fraction = progress.coerceIn(0f, 1f)
-    val playedColor = MaterialTheme.colorScheme.primary
-    val unplayedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = WAVEFORM_UNPLAYED_ALPHA)
-    val label = stringResource(R.string.app_recorder_cd_waveform)
-    Canvas(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(WAVEFORM_HEIGHT)
-                .semantics {
-                    contentDescription = label
-                    progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f)
-                },
-    ) {
-        val slot = size.width / RECORDER_WAVEFORM_BARS
-        val barWidth = slot * WAVEFORM_BAR_FILL
-        val centerY = size.height / 2f
-        val corner = CornerRadius(barWidth / 2f, barWidth / 2f)
-        for (i in 0 until RECORDER_WAVEFORM_BARS) {
-            val amplitude = peaks?.getOrNull(i) ?: WAVEFORM_PLACEHOLDER_FRACTION
-            val barHeight = amplitude.coerceIn(WAVEFORM_MIN_FRACTION, 1f) * size.height
-            val played = (i + WAVEFORM_BAR_CENTER) / RECORDER_WAVEFORM_BARS <= fraction
-            val x = i * slot + (slot - barWidth) / 2f
-            drawRoundRect(
-                color = if (played) playedColor else unplayedColor,
-                topLeft = Offset(x, centerY - barHeight / 2f),
-                size = Size(barWidth, barHeight),
-                cornerRadius = corner,
-            )
         }
     }
 }
@@ -506,11 +463,6 @@ private val WAVEFORM_HEIGHT = 120.dp
 internal const val RECORDER_WAVEFORM_BARS = 48
 private const val WAVEFORM_BAR_FILL = 0.5f
 private const val WAVEFORM_MIN_FRACTION = 0.06f
-private const val WAVEFORM_UNPLAYED_ALPHA = 0.30f
-private const val WAVEFORM_BAR_CENTER = 0.5f
-
-// Neutral baseline shown while the real envelope is still decoding (matches the listen screen).
-private const val WAVEFORM_PLACEHOLDER_FRACTION = 0.12f
 private const val GLOW_CENTER_ALPHA = 0.16f
 private const val GLOW_MID_ALPHA = 0.04f
 private const val GLOW_STOP_CENTER = 0.0f

@@ -12,6 +12,8 @@ import android.media.MediaFormat
 import android.net.Uri
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
+import com.github.barriosnahuel.vossosunboton.feature.waveform.WAVEFORM_MIN_BAR
+import com.github.barriosnahuel.vossosunboton.feature.waveform.normalizeEnvelope
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -225,15 +227,14 @@ internal class PeakAccumulator(
         index++
     }
 
-    /** Normalized peaks in [MIN_BAR, 1]. Silent / empty input yields a flat [MIN_BAR] baseline. */
+    /** Normalized peaks in [WAVEFORM_MIN_BAR, 1]. Silent / empty input yields a flat baseline. */
     fun result(): FloatArray {
         val loudest = peaks.maxOrNull() ?: 0f
-        if (loudest <= 0f) return FloatArray(barCount) { MIN_BAR }
-        return FloatArray(barCount) { i -> max(MIN_BAR, peaks[i] / loudest) }
+        if (loudest <= 0f) return FloatArray(barCount) { WAVEFORM_MIN_BAR }
+        return normalizeEnvelope(peaks, loudest)
     }
 
     private companion object {
         const val SHORT_FULL_SCALE = 32_768f
-        const val MIN_BAR = 0.06f
     }
 }

@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Shortened seven collection/Vault user property names that exceeded Firebase's 24-character limit and were being dropped before reaching BigQuery, and added a build-time guard so over-length names can't ship again
 
 #### Changed
+- De-duplicated the Vault listen and recorder-review waveforms into one shared `EnvelopeWaveform` component, and the `0.06f` floor + normalize loop into a single `WaveformNormalization` helper (ADR 0020)
 - Kotlin compiler warnings now fail the build (`allWarningsAsErrors`, binary/unconditional) so they can't accumulate
 - `sounds_json` decoding is now element-by-element with id de-dup and a fast path, so one corrupt record can't wipe the list and clean payloads pay no recovery cost (ADR 0018)
 

@@ -5,13 +5,14 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.recorder
 
-import kotlin.math.max
+import com.github.barriosnahuel.vossosunboton.feature.waveform.normalizeEnvelope
 
 /**
  * Builds the recorder review envelope from the amplitude samples captured live during recording (one
  * per poll tick), so the review wave renders **instantly** without re-decoding the file — killing the
- * post-stop placeholder gap (ADR 0019). [barCount] bars normalized to loudest = 1.0 with a [MIN_BAR]
- * floor (same floor as the decoded `PeakAccumulator`, so a live-fed envelope looks like a decoded one).
+ * post-stop placeholder gap (ADR 0019). [barCount] bars normalized to loudest = 1.0 with the shared
+ * `WAVEFORM_MIN_BAR` floor (same floor as the decoded `PeakAccumulator`, so a live-fed envelope looks
+ * like a decoded one).
  *
  * Returns `null` — caller decodes the real file instead — when there is **no usable live signal**:
  * empty input, or every sample silent. The all-silent case matters because some devices' MediaRecorder
@@ -44,8 +45,5 @@ internal fun buildRecorderEnvelope(
     val loudest = raw.maxOrNull() ?: 0f
     // No usable signal (true silence, or the getMaxAmplitude()-always-0 device quirk) → null so the
     // caller decodes the real file instead of showing a fake flat line for a clip that has audio.
-    return if (loudest <= 0f) null else FloatArray(barCount) { max(MIN_BAR, raw[it] / loudest) }
+    return if (loudest <= 0f) null else normalizeEnvelope(raw, loudest)
 }
-
-/** Baseline floor for a normalized bar — matches the decoded envelope's floor (`PeakAccumulator`). */
-private const val MIN_BAR = 0.06f

@@ -5,9 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.vault
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,20 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.progressBarRangeInfo
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.feature.waveform.EnvelopeWaveform
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
@@ -203,9 +194,12 @@ internal fun ImmersiveListenScreen(
                 // Bottom half: the real waveform (scrubbable) + the position / duration readout.
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ImmersiveWaveform(
-                            progressFraction = progressFraction,
+                        EnvelopeWaveform(
+                            progress = progressFraction,
                             peaks = peaks,
+                            contentDescription = stringResource(R.string.app_vault_immersive_waveform),
+                            barCount = WAVEFORM_BARS,
+                            barFill = WAVEFORM_BAR_FILL,
                             onSeek = onSeek,
                             modifier = Modifier.fillMaxWidth().height(WAVEFORM_HEIGHT),
                         )
@@ -388,72 +382,10 @@ private fun ImmersiveControls(
     }
 }
 
-@Composable
-private fun ImmersiveWaveform(
-    progressFraction: Float,
-    peaks: FloatArray?,
-    onSeek: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    // Real amplitude envelope from [WaveformExtractor]. Until it arrives (or if decoding failed)
-    // `peaks` is null and we draw a neutral flat baseline — never a fake-looking wave. Dragging
-    // horizontally scrubs: the fill follows the finger and `onSeek` fires the fraction on release.
-    val playedColor = MaterialTheme.colorScheme.primary
-    val unplayedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = WAVEFORM_UNPLAYED_ALPHA)
-    val barCount = peaks?.size ?: WAVEFORM_BARS
-    val scrubberLabel = stringResource(R.string.app_vault_immersive_waveform)
-    var scrub by remember { mutableStateOf<Float?>(null) }
-    val displayFraction = (scrub ?: progressFraction).coerceIn(0f, 1f)
-    Canvas(
-        modifier =
-            modifier
-                .semantics {
-                    contentDescription = scrubberLabel
-                    progressBarRangeInfo = ProgressBarRangeInfo(displayFraction, 0f..1f)
-                    setProgress { target ->
-                        onSeek(target.coerceIn(0f, 1f))
-                        true
-                    }
-                }.pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { offset -> scrub = (offset.x / size.width.toFloat()).coerceIn(0f, 1f) },
-                        onHorizontalDrag = { change, _ ->
-                            change.consume()
-                            scrub = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
-                        },
-                        onDragEnd = {
-                            scrub?.let(onSeek)
-                            scrub = null
-                        },
-                        onDragCancel = { scrub = null },
-                    )
-                },
-    ) {
-        val slot = size.width / barCount
-        val barWidth = slot * WAVEFORM_BAR_FILL
-        val centerY = size.height / 2f
-        val corner = CornerRadius(barWidth / 2f, barWidth / 2f)
-        for (i in 0 until barCount) {
-            val amplitude = peaks?.getOrNull(i) ?: WAVEFORM_PLACEHOLDER_FRACTION
-            val barHeight = amplitude.coerceIn(WAVEFORM_MIN_FRACTION, 1f) * size.height
-            val played = i.toFloat() / barCount < displayFraction
-            val x = i * slot + (slot - barWidth) / 2f
-            drawRoundRect(
-                color = if (played) playedColor else unplayedColor,
-                topLeft = Offset(x, centerY - barHeight / 2f),
-                size = Size(barWidth, barHeight),
-                cornerRadius = corner,
-            )
-        }
-    }
-}
-
-// Bar count used for the placeholder + as the extractor's target resolution.
+// Bar count used for the placeholder + as the extractor's target resolution; bar width as a
+// fraction of each slot. The waveform itself is the shared [EnvelopeWaveform].
 private const val WAVEFORM_BARS = 56
 private const val WAVEFORM_BAR_FILL = 0.45f
-private const val WAVEFORM_MIN_FRACTION = 0.06f
-private const val WAVEFORM_PLACEHOLDER_FRACTION = 0.12f
-private const val WAVEFORM_UNPLAYED_ALPHA = 0.30f
 private val WAVEFORM_HEIGHT = 120.dp
 private val TOP_BAR_HEIGHT = 64.dp
 private val TOP_BAR_ICON_SLOT = 48.dp
