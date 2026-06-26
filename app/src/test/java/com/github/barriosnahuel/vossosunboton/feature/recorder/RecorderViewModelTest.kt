@@ -322,6 +322,73 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
             // A restored draft is a recovered prior completion, not a new one — the funnel must not double-count.
             analytics.assertNotEmitted("recording_completed")
         }
+
+    @Test
+    fun `reaching Review builds the live envelope so review renders without decoding`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(1_200)
+
+            vm.onStopTapped()
+            advanceUntilIdle()
+
+            val envelope = vm.capturedEnvelope
+            assertThat(envelope).isNotNull()
+            assertThat(envelope!!.size).isEqualTo(RECORDER_WAVEFORM_BARS)
+        }
+
+    @Test
+    fun `restoring a draft leaves no live envelope so the host decodes the file`() =
+        runTest(dispatcher) {
+            draftStore.currentDraft = RecorderDraft(File(application.cacheDir, "recordings/clip.m4a"), durationMs = 4_000)
+            val vm = viewModel()
+
+            vm.onEnter(resumeDraft = true)
+            advanceUntilIdle()
+
+            assertThat(vm.capturedEnvelope).isNull()
+        }
+
+    @Test
+    fun `re-record clears the live envelope`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(1_200)
+            vm.onStopTapped()
+            advanceUntilIdle()
+
+            vm.onReRecord()
+
+            assertThat(vm.capturedEnvelope).isNull()
+        }
+
+    @Test
+    fun `an all-silent capture leaves no live envelope so the host decodes the real file`() =
+        runTest(dispatcher) {
+            engine.nextAmplitude = 0f // the getMaxAmplitude()-always-0 device quirk
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(1_200)
+
+            vm.onStopTapped()
+            advanceUntilIdle()
+
+            assertThat(vm.state.value).isInstanceOf(RecorderState.Review::class.java)
+            assertThat(vm.capturedEnvelope).isNull()
+        }
+
+    @Test
+    fun `caching a decoded envelope lets a restored draft survive a recreate without re-decoding`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            val decoded = FloatArray(RECORDER_WAVEFORM_BARS) { 0.5f }
+
+            vm.cacheDecodedEnvelope(decoded)
+
+            assertThat(vm.capturedEnvelope).isSameInstanceAs(decoded)
+        }
 }
 
 private class FakeRecorderEngine : RecorderEngine {
@@ -333,6 +400,7 @@ private class FakeRecorderEngine : RecorderEngine {
     var releaseCount = 0
     var failOnStart = false
     var produced = true
+    var nextAmplitude = 0.5f
 
     override fun start(outputFile: File) {
         if (failOnStart) error("mic busy")
@@ -346,7 +414,7 @@ private class FakeRecorderEngine : RecorderEngine {
         return produced
     }
 
-    override fun maxAmplitude(): Float = 0.5f
+    override fun maxAmplitude(): Float = nextAmplitude
 
     override fun release() {
         releaseCount++

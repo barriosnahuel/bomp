@@ -89,6 +89,27 @@ class RecorderViewModel(
     private var pollJob: Job? = null
     private var entered = false
 
+    // Amplitude samples captured live during recording (one per poll tick) and the envelope built from
+    // them on stop — so the review wave renders instantly instead of re-decoding the file (ADR 0019). A
+    // restored draft has no live samples, leaving [capturedEnvelope] null so the host decodes instead.
+    private val amplitudes = mutableListOf<Float>()
+
+    /**
+     * The review envelope: live-built on stop, or backfilled (via [cacheDecodedEnvelope]) by the host's
+     * decode for a restored draft. Null until known — the host then decodes the file.
+     */
+    var capturedEnvelope: FloatArray? = null
+        private set
+
+    /**
+     * Backfills the envelope a restored draft decoded from the file, so a later config recreate reuses
+     * it instead of re-decoding (and re-flashing the placeholder). No-op on null / for a fresh recording
+     * (which already built one live); reset by [onRecordTapped] / [onReRecord].
+     */
+    fun cacheDecodedEnvelope(envelope: FloatArray?) {
+        if (envelope != null) capturedEnvelope = envelope
+    }
+
     // Guards the start ↔ stop transition across its suspension points so a rapid double-tap (or a stop
     // racing onHostStopped) can't run the transition twice — leaking a second MediaRecorder or deleting
     // a valid clip down the discard branch.
@@ -152,6 +173,8 @@ class RecorderViewModel(
                     return@launch
                 }
                 tempFile = file
+                amplitudes.clear()
+                capturedEnvelope = null
                 mutableState.value = RecorderState.Recording(elapsedMs = 0L, amplitude = 0f)
                 startPolling()
             } finally {
@@ -171,6 +194,8 @@ class RecorderViewModel(
         if (mutableState.value !is RecorderState.Review) return
         discardTemp()
         draftStore.clear()
+        amplitudes.clear()
+        capturedEnvelope = null
         mutableState.value = RecorderState.Ready
     }
 
@@ -224,11 +249,16 @@ class RecorderViewModel(
             if (!produced || file == null || elapsed < MIN_DURATION_MS) {
                 discardTemp()
                 draftStore.clear()
+                amplitudes.clear()
                 mutableState.value = RecorderState.Ready
                 // A deliberate too-short tap is worth a nudge; an interruption-preserve under 1 s isn't.
                 if (!preserve) emit(RecorderEvent.Message(R.string.app_recorder_feedback_too_short))
             } else {
                 val uri = withContext(ioDispatcher) { uriProvider(file) }
+                // Build the review envelope from the live samples BEFORE emitting Review, so the host
+                // reads it on the resulting recompose and skips the decode (instant, no placeholder gap).
+                capturedEnvelope = buildRecorderEnvelope(amplitudes, RECORDER_WAVEFORM_BARS)
+                amplitudes.clear() // the 48-bar envelope is all we keep through the Review session.
                 // Persist as a recoverable draft so a background / launcher re-entry / process death can
                 // resume this clip instead of losing it (ADR 0019 § Draft recovery).
                 draftStore.save(file, elapsed)
@@ -247,8 +277,11 @@ class RecorderViewModel(
                 while (isActive) {
                     delay(POLL_INTERVAL_MS)
                     elapsed += POLL_INTERVAL_MS
-                    mutableState.value =
-                        RecorderState.Recording(elapsedMs = elapsed, amplitude = engine.maxAmplitude())
+                    // One read per tick (maxAmplitude resets the peak) — reuse it for the live meter AND
+                    // the accumulating envelope so review can render it instantly on stop.
+                    val amplitude = engine.maxAmplitude()
+                    amplitudes.add(amplitude)
+                    mutableState.value = RecorderState.Recording(elapsedMs = elapsed, amplitude = amplitude)
                 }
             }
     }

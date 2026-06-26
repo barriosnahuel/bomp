@@ -105,13 +105,16 @@ class RecordingActivity : FragmentActivity() {
         val isPreviewPlaying = preview?.isPlaying == true
         val previewPositionMs = preview?.positionMs?.toLong() ?: 0L
 
-        // Real amplitude envelope of the recorded clip — decoded off the main thread (a neutral
-        // placeholder shows until it arrives), reusing the listen screen's extractor. Re-keyed per
-        // clip so a re-record (new URI) re-decodes and discards the previous wave.
-        var peaks by remember(reviewUri) { mutableStateOf<FloatArray?>(null) }
+        // Real amplitude envelope of the recorded clip. A fresh recording carries the live-captured
+        // envelope (instant — no placeholder gap); only a restored draft (no live samples) falls back to
+        // decoding the file off the main thread. Re-keyed per clip so a re-record swaps the wave.
+        var peaks by remember(reviewUri) { mutableStateOf(viewModel.capturedEnvelope) }
         LaunchedEffect(reviewUri) {
-            if (reviewUri != null) {
-                peaks = WaveformExtractor.extract(this@RecordingActivity, reviewUri, RECORDER_WAVEFORM_BARS)
+            if (reviewUri != null && peaks == null) {
+                val decoded = WaveformExtractor.extract(this@RecordingActivity, reviewUri, RECORDER_WAVEFORM_BARS)
+                peaks = decoded
+                // Cache it on the VM so a config recreate reuses it instead of re-decoding (restored drafts).
+                viewModel.cacheDecodedEnvelope(decoded)
             }
         }
 

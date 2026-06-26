@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 #### Added
 - In-app audio recorder (`RecordingActivity` + `MediaRecorder`, AAC/M4A, tap-to-toggle, 60s/1s bounds): the first runtime-permission surface (`RECORD_AUDIO`), reusing the existing `AddButtonFeature` save pipeline and the immersive listen look (ADR 0019)
-- Recorder review shows the clip's real amplitude envelope (reuses the listen screen's `WaveformExtractor` via a new `content://` URI overload) instead of a synthetic shape
+- Recorder review shows the clip's real amplitude envelope (reuses the listen screen's `WaveformExtractor` via a new `content://` URI overload) instead of a synthetic shape — rendered instantly from the live-captured samples (no post-stop decode flash); a restored draft still decodes the file
 - Recording draft recovery (`RecorderDraftStore`): an unsaved clip survives backgrounding, a launcher re-entry, and process death — a Landing banner resumes it into Review (ADR 0019 § Draft recovery)
 - Recorder funnel analytics: `recording_completed` (review reached), `record_permission_result` (mic grant/deny), and the draft-recovery trio `recording_draft_banner_shown` / `_resumed` / `_discarded`
 - Internal `SoundSource` provenance (`RECORDED` / `IMPORTED` / `BUNDLED`) on saved audios — derived on read (existing audios decode as imported, bundled audio as bundled), now stamped `RECORDED` by the recorder; no backfill migration needed (ADR 0019)
