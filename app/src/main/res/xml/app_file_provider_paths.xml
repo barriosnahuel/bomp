@@ -4,4 +4,8 @@
     <external-files-path
         name="buttons"
         path="Music/" />
+    <!-- In-app recorder temp clips (ADR 0019): shared to AddButtonActivity as a content:// URI. -->
+    <cache-path
+        name="recordings"
+        path="recordings/" />
 </paths>

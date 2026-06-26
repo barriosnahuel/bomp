@@ -109,25 +109,29 @@ class AddButtonActivity : FragmentActivity() {
         /** Source param for `screen_view {add_sound}` and `sound_add`: the surface that opened Create. */
         const val SOURCE_SHARE = "share"
         const val SOURCE_IMPORT = "import"
+        const val SOURCE_RECORD = "record"
 
         private const val EXTRA_SOURCE = "com.github.barriosnahuel.vossosunboton.extra.SOURCE"
 
         /**
-         * Builds an explicit intent to start the Create flow from an audio [uri] the user picked
-         * in-app (the import Hub). [Intent.FLAG_GRANT_READ_URI_PERMISSION] + [Intent.setData]
-         * forward the SAF read grant to this Activity so the copy at save time can read the stream
-         * even if the launching screen is killed first. The URI still flows through the same inbound
-         * validator (`AddButtonFeature`) as the share-sheet path — see CLAUDE.md § Security boundaries.
+         * Builds an explicit intent to start the Create flow from an audio [uri] the user produced
+         * in-app — the import Hub picker ([SOURCE_IMPORT], default) or the recorder ([SOURCE_RECORD]).
+         * [Intent.FLAG_GRANT_READ_URI_PERMISSION] + [Intent.setData] forward the read grant to this
+         * Activity so the copy at save time can read the stream even if the launching screen is killed
+         * first. The URI still flows through the same inbound validator (`AddButtonFeature`) as the
+         * share-sheet path — see CLAUDE.md § Security boundaries. [source] also tags `sound_add`'s
+         * analytics source and, for [SOURCE_RECORD], the persisted `SoundSource.RECORDED` provenance.
          */
         fun createIntent(
             context: Context,
             uri: Uri,
+            source: String = SOURCE_IMPORT,
         ): Intent =
             Intent(context, AddButtonActivity::class.java).apply {
                 data = uri
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(EXTRA_SOURCE, SOURCE_IMPORT)
+                putExtra(EXTRA_SOURCE, source)
             }
     }
 }

@@ -5,12 +5,20 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ## \[unreleased] (v2.3.0)
 
+### Added
+- Record a Bomp without leaving the app — the add sheet's "Record" option opens a full-screen recorder: tap to record, listen back on a real waveform, and save it like any other Bomp; if you leave mid-recording, a banner offers to pick it back up
+
 ### Fixed
 - Bomps saved before an earlier update no longer disappear when you open the app — audios stored under the old format are recovered instead of the whole list silently emptying
 
 ### For nerds 🤓
 
 #### Added
+- In-app audio recorder (`RecordingActivity` + `MediaRecorder`, AAC/M4A, tap-to-toggle, 60s/1s bounds): the first runtime-permission surface (`RECORD_AUDIO`), reusing the existing `AddButtonFeature` save pipeline and the immersive listen look (ADR 0019)
+- Recorder review shows the clip's real amplitude envelope (reuses the listen screen's `WaveformExtractor` via a new `content://` URI overload) instead of a synthetic shape — rendered instantly from the live-captured samples (no post-stop decode flash); a restored draft still decodes the file
+- Recording draft recovery (`RecorderDraftStore`): an unsaved clip survives backgrounding, a launcher re-entry, and process death — a Landing banner resumes it into Review (ADR 0019 § Draft recovery)
+- Recorder funnel analytics: `recording_completed` (review reached), `record_permission_result` (mic grant/deny), and the draft-recovery trio `recording_draft_banner_shown` / `_resumed` / `_discarded`
+- Internal `SoundSource` provenance (`RECORDED` / `IMPORTED` / `BUNDLED`) on saved audios — derived on read (existing audios decode as imported, bundled audio as bundled), now stamped `RECORDED` by the recorder; no backfill migration needed (ADR 0019)
 - `legacy_sounds_recovered` analytics event (one-shot per install) so the pre-stable-id population is countable and the migration's retirement is verifiable (ADR 0018)
 - Documented the GitHub release procedure (tag from develop, notes from the store change file, R8 mapping archived as the sole asset) and the Firebase CLI/MCP path for reading deobfuscated Crashlytics stacks
 

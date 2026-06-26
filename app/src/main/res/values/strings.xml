@@ -231,11 +231,40 @@
     <string name="app_hub_subtitle">A voice gets saved and stays close, ready whenever you want to hear it.</string>
     <string name="app_hub_import">Import audio from your device</string>
     <string name="app_hub_import_sub">Voice notes, recordings, whatever you already have saved.</string>
-    <string name="app_hub_record">Record your first Bomp</string>
-    <string name="app_hub_record_sub">Press and talk. We\'re cooking it up.</string>
-    <string name="app_hub_record_badge">Soon</string>
+    <string name="app_hub_record">Record a Bomp</string>
+    <string name="app_hub_record_sub">Your voice, a moment you don\'t want to lose.</string>
     <string name="app_hub_how">See how it works</string>
     <string name="app_hub_how_sub">A minute and you\'ve got it.</string>
+
+    <!-- In-app recorder (ADR 0019) -->
+    <string name="app_recorder_ready_hint">Tap to record</string>
+    <string name="app_recorder_recording_hint">Tap to stop</string>
+    <string name="app_recorder_cd_record">Start recording</string>
+    <string name="app_recorder_cd_stop">Stop recording</string>
+    <string name="app_recorder_cd_close">Close</string>
+    <string name="app_recorder_cd_timer">Recording time</string>
+    <string name="app_recorder_cd_waveform">Playback progress</string>
+    <string name="app_recorder_use">Use this</string>
+    <string name="app_recorder_rerecord">Re-record</string>
+    <string name="app_recorder_cd_play">Play</string>
+    <string name="app_recorder_cd_pause">Pause</string>
+    <string name="app_recorder_permission_title">Bomp needs your mic</string>
+    <string name="app_recorder_permission_body">Only while you record. The audio stays on your phone until you choose where it lives.</string>
+    <string name="app_recorder_permission_allow">Allow microphone</string>
+    <string name="app_recorder_permission_not_now">Not now</string>
+    <string name="app_recorder_denied_message">Microphone access is off. Turn it on in Settings to record, or import a file instead.</string>
+    <string name="app_recorder_open_settings">Open settings</string>
+    <string name="app_recorder_import_instead">Import instead</string>
+    <string name="app_recorder_feedback_too_short">Too short — give it another go</string>
+    <string name="app_recorder_feedback_no_space">Not enough space to record</string>
+    <string name="app_recorder_feedback_mic_busy">The mic is busy in another app</string>
+    <string name="app_recorder_discard_title">Discard this recording?</string>
+    <string name="app_recorder_discard_message">You\'ll lose what you just recorded.</string>
+    <string name="app_recorder_discard_confirm">Discard</string>
+    <string name="app_recorder_discard_keep">Keep recording</string>
+    <string name="app_recorder_draft_banner_message">You have an unsaved recording</string>
+    <string name="app_recorder_draft_continue">Continue</string>
+    <string name="app_recorder_draft_discard">Discard</string>
 
     <!-- Onboarding tour (3 steps, on-demand from the Hub and the empty state) -->
     <string name="app_onboarding_skip">Skip</string>

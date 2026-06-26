@@ -204,4 +204,5 @@ dependencies {
     androidTestImplementation libs.androidx.uiautomator
     androidTestImplementation libs.truth
     androidTestImplementation libs.mockk
+    androidTestImplementation testFixtures(project(':commons_android'))
 }

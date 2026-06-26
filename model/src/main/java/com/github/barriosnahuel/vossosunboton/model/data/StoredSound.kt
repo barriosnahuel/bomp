@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.model.data
 
+import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -19,4 +20,9 @@ internal data class StoredSound(
     // disk, so payloads written before this field decode as `true` — the desired post-update state
     // for every already-visible audio. The one-time migration flips private-only audios to `false`.
     val isVisibleInMySounds: Boolean = true,
+    // ADR 0019. Same `encodeDefaults = false` mechanic: pre-recorder payloads carry no `source` and
+    // decode as IMPORTED — correct, since all existing user content was imported, so no backfill
+    // migration is needed (the default already yields the right value on read). The recorder save
+    // path stores RECORDED; bundled audio derives BUNDLED from its constructor.
+    val source: SoundSource = SoundSource.IMPORTED,
 )

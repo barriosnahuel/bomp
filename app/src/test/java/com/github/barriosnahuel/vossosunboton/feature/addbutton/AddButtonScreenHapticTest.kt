@@ -25,6 +25,7 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -133,6 +134,7 @@ internal class AddButtonScreenHapticTest : AbstractRobolectricTest() {
             uri: String,
             publicCollectionIds: Set<String>,
             privateCollectionIds: Set<String>,
+            source: SoundSource,
         ): Deferred<Int> {
             saveNewCalls += 1
             return CompletableDeferred(saveNewFeedback)

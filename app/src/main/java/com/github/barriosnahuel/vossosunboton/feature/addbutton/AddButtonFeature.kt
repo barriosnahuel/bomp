@@ -16,6 +16,7 @@ import com.github.barriosnahuel.vossosunboton.commons.file.copy
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.Deferred
@@ -25,6 +26,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import org.jetbrains.annotations.NotNull
 import timber.log.Timber
+import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
@@ -37,6 +39,7 @@ interface AddButtonFeature {
         uri: String,
         publicCollectionIds: Set<String> = emptySet(),
         privateCollectionIds: Set<String> = emptySet(),
+        source: SoundSource = SoundSource.IMPORTED,
     ): Deferred<Int>
 
     fun renameButtonAsync(
@@ -57,9 +60,9 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         uri: String,
         publicCollectionIds: Set<String>,
         privateCollectionIds: Set<String>,
+        source: SoundSource,
     ): Deferred<Int> {
         val sanitizedName = name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-        val fileName = "$sanitizedName-${System.currentTimeMillis()}.mp3"
         // Mint the stable id once, at the creation site — `SoundsRepository.save` is a pure upsert
         // keyed by the id it is given, so identity must originate here, not in the repository.
         // See ADR 0008.
@@ -69,11 +72,17 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         return GlobalScope.async(Dispatchers.IO) {
             var feedbackMessage = R.string.app_addbutton_feedback_save_failed
             val parsed = Uri.parse(uri)
-            when (validateAudioUri(context, parsed)) {
-                ValidationResult.Ok -> Unit
-                ValidationResult.Rejected -> return@async R.string.app_feedback_generic_error_contact_support
-                ValidationResult.Unreadable -> return@async R.string.app_addbutton_feedback_uri_unreadable
-            }
+            // Derive the destination extension from the validated MIME so the saved file's name matches
+            // its actual container (a recorded clip is AAC/MP4, an imported .opus stays .opus) — share
+            // MIME resolution keys on the extension. Unknown MIME falls back to mp3.
+            val mime =
+                when (val result = validateAudioUri(context, parsed)) {
+                    is ValidationResult.Ok -> result.mime
+                    ValidationResult.Rejected -> return@async R.string.app_feedback_generic_error_contact_support
+                    ValidationResult.Unreadable -> return@async R.string.app_addbutton_feedback_uri_unreadable
+                }
+            val extension = AUDIO_EXT_BY_MIME[mime] ?: DEFAULT_AUDIO_EXT
+            val fileName = "$sanitizedName-${System.currentTimeMillis()}.$extension"
             // getFile() resolves context.getExternalFilesDir(...), which performs disk I/O —
             // keep it inside the IO dispatcher so StrictMode does not flag it on the main thread.
             val targetFile = getFile(context, fileName)
@@ -89,25 +98,8 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                         } else {
                             copy(inputStream, fileOutputStream)
                             val repo = SoundsRepository(context)
-                            repo.save(Sound(id, name, fileName))
-                            val durationMs =
-                                runCatching {
-                                    val retriever = MediaMetadataRetriever()
-                                    try {
-                                        retriever.setDataSource(targetFile.absolutePath)
-                                        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toInt()
-                                    } finally {
-                                        retriever.release()
-                                    }
-                                }.onFailure {
-                                    Tracker.log("addbutton.fileName=$fileName")
-                                    Tracker.track(
-                                        RuntimeException("Failed to extract duration metadata", it),
-                                    )
-                                }.getOrNull()
-                            if (durationMs != null) {
-                                repo.saveDuration(id, name, durationMs)
-                            }
+                            repo.save(Sound(id, name, fileName).copy(source = source))
+                            extractDurationMs(targetFile, fileName)?.let { repo.saveDuration(id, name, it) }
                             // Apply collection tags now so the audio shows up in the right place
                             // immediately. Failures don't roll back the save (the audio still
                             // exists, just untagged) but ARE reported as non-fatal so we can spot
@@ -138,6 +130,24 @@ private class AddButtonFeatureImpl : AddButtonFeature {
             feedbackMessage
         }
     }
+
+    /** Best-effort duration probe of the just-copied file; a failure is non-fatal (the audio saves). */
+    private fun extractDurationMs(
+        file: File,
+        fileName: String,
+    ): Int? =
+        runCatching {
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(file.absolutePath)
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toInt()
+            } finally {
+                retriever.release()
+            }
+        }.onFailure {
+            Tracker.log("addbutton.fileName=$fileName")
+            Tracker.track(RuntimeException("Failed to extract duration metadata", it))
+        }.getOrNull()
 
     override fun renameButtonAsync(
         context: Context,
@@ -184,7 +194,7 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                 else -> null
             }
         return if (rejection == null) {
-            ValidationResult.Ok
+            ValidationResult.Ok(mime)
         } else {
             Timber.w("Rejected inbound URI: %s", rejection)
             ValidationResult.Rejected
@@ -209,7 +219,9 @@ private class AddButtonFeatureImpl : AddButtonFeature {
     }
 
     private sealed class ValidationResult {
-        data object Ok : ValidationResult()
+        data class Ok(
+            val mime: String?,
+        ) : ValidationResult()
 
         data object Rejected : ValidationResult()
 
@@ -225,5 +237,22 @@ private class AddButtonFeatureImpl : AddButtonFeature {
         const val MAX_AUDIO_BYTES = 50L * 1024 * 1024
         const val AUDIO_MIME_PREFIX = "audio/"
         val ALLOWED_SCHEMES = setOf(ContentResolver.SCHEME_CONTENT, ContentResolver.SCHEME_FILE)
+
+        /**
+         * Destination extension per validated MIME. Explicit map rather than
+         * `MimeTypeMap.getExtensionFromMimeType` (which returns `mp4`, not `m4a`, for `audio/mp4`).
+         * Unknown audio MIME falls back to [DEFAULT_AUDIO_EXT].
+         */
+        const val DEFAULT_AUDIO_EXT = "mp3"
+        val AUDIO_EXT_BY_MIME =
+            mapOf(
+                "audio/mp4" to "m4a",
+                "audio/aac" to "m4a",
+                "audio/mpeg" to "mp3",
+                "audio/opus" to "opus",
+                "audio/ogg" to "ogg",
+                "audio/wav" to "wav",
+                "audio/x-wav" to "wav",
+            )
     }
 }

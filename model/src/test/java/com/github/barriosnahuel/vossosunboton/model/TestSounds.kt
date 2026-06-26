@@ -20,6 +20,7 @@ internal fun testSound(
     dateAdded: Long? = null,
     isPinned: Boolean = false,
     isVisibleInMySounds: Boolean = true,
+    source: SoundSource = if (file != null) SoundSource.IMPORTED else SoundSource.BUNDLED,
 ): Sound =
     Sound(
         id = if (file != null) "custom:$name" else "bundled:$rawRes",
@@ -31,4 +32,5 @@ internal fun testSound(
         dateAdded = dateAdded,
         isPinned = isPinned,
         isVisibleInMySounds = isVisibleInMySounds,
+        source = source,
     )

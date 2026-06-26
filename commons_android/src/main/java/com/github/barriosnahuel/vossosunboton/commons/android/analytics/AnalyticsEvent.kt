@@ -428,9 +428,51 @@ sealed class AnalyticsEvent(
      * Import-Hub funnel · INTENT. The user tapped the live "import audio from your device" row,
      * committing to pick a file (the system picker launches next). The genuine middle funnel step:
      * separates "opened the Hub but never engaged its CTA" from "engaged but bailed in the picker /
-     * naming screen". `hasFirstVariant = true`. The inert "record" row (badged "Soon") emits nothing.
+     * naming screen". `hasFirstVariant = true`.
      */
     object ImportHubImportSelected : AnalyticsEvent(name = "import_hub_import_selected", hasFirstVariant = true)
+
+    /**
+     * Import-Hub funnel · INTENT (record). The user tapped the live "record" row, committing to the
+     * in-app recorder (ADR 0019). Sibling of [ImportHubImportSelected]; together they split Hub intent
+     * between the two creation channels. `hasFirstVariant = true`.
+     */
+    object ImportHubRecordSelected : AnalyticsEvent(name = "import_hub_record_selected", hasFirstVariant = true)
+
+    /**
+     * In-app recorder funnel · COMPLETION (ADR 0019). A capture reached the review state — via
+     * tap-to-stop, the 60 s auto-stop, or an interruption-preserve. The missing middle between the
+     * INTENT ([ImportHubRecordSelected]) and the conversion (`sound_add {source=record}`): lets us see
+     * where users drop (granted the mic but never recorded? recorded but never saved?). Not emitted on
+     * a draft *restore* — that is a recovered prior completion, not a new one.
+     */
+    object RecordingCompleted : AnalyticsEvent(name = "recording_completed", hasFirstVariant = true)
+
+    /**
+     * Outcome of the app's first runtime permission, `RECORD_AUDIO` (ADR 0019). [granted] is true on
+     * allow, false on deny — the grant rate of the recorder's gate. No first-variant: every result
+     * counts, not just the first request.
+     */
+    data class RecordPermissionResult(
+        val granted: Boolean,
+    ) : AnalyticsEvent(name = "record_permission_result", hasFirstVariant = false) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putBoolean(AnalyticsParam.GRANTED, granted)
+            }
+    }
+
+    /**
+     * Draft recovery (ADR 0019 § Draft recovery). The resume banner was offered on My Bomps for an
+     * unsaved recording. Denominator for the resume rate ([RecordingDraftResumed] / this).
+     */
+    object RecordingDraftBannerShown : AnalyticsEvent(name = "recording_draft_banner_shown", hasFirstVariant = true)
+
+    /** Draft recovery. The user resumed an unsaved recording from the banner ("Continue"). */
+    object RecordingDraftResumed : AnalyticsEvent(name = "recording_draft_resumed", hasFirstVariant = true)
+
+    /** Draft recovery. The user discarded an unsaved recording from the banner ("Discard"). */
+    object RecordingDraftDiscarded : AnalyticsEvent(name = "recording_draft_discarded", hasFirstVariant = true)
 
     /**
      * Pre-stable-id `sounds_json` data was found on disk and recovered on read — the install carried

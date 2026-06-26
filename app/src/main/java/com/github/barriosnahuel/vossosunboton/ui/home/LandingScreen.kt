@@ -68,6 +68,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
+import com.github.barriosnahuel.vossosunboton.feature.recorder.RecordingActivity
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareAppIntent
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.feature.vault.requestUnlock
@@ -283,6 +284,13 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     tracker.log(AnalyticsEvent.ImportHubImportSelected)
                     isHubVisible = false
                     importPicker.launch(arrayOf("audio/*"))
+                }
+            },
+            onRecord = {
+                if (isHubVisible) {
+                    tracker.log(AnalyticsEvent.ImportHubRecordSelected)
+                    isHubVisible = false
+                    context.startActivity(RecordingActivity.createIntent(context))
                 }
             },
             onHowItWorks = {
@@ -930,6 +938,15 @@ private fun MySoundsBody(
 ) {
     val activeCollection = publicCollections.firstOrNull { it.id == activeFilterId }
     val welcomeHintPending by viewModel.welcomeHintPending.collectAsStateWithLifecycle()
+    // Re-collected on each resume so a draft created/cleared while the user was in the recorder (or
+    // dropped by a process death) re-evaluates the banner without an explicit onResume hook (ADR 0019).
+    val pendingDraft by viewModel.pendingDraft.collectAsStateWithLifecycle(initialValue = null)
+    val draftTracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
+    // Impression — once per distinct draft (keyed on its file), so returning to Landing with the same
+    // draft doesn't inflate the denominator of the resume rate.
+    LaunchedEffect(pendingDraft?.file?.name) {
+        if (pendingDraft != null) draftTracker.log(AnalyticsEvent.RecordingDraftBannerShown)
+    }
     val isOnMySounds = selectedTab == AppTab.MY_SOUNDS
     val showFilterEmptyState = isOnMySounds && activeFilterId != null && sounds.isEmpty() && activeCollection != null
     val showWelcomeEmptyState = sounds.isEmpty() && isOnMySounds && !showFilterEmptyState
@@ -939,6 +956,18 @@ private fun MySoundsBody(
     val showHeader = isOnMySounds && !showWelcomeEmptyState && !showFilterEmptyState
 
     androidx.compose.foundation.layout.Column(modifier = Modifier.padding(innerPadding)) {
+        pendingDraft?.let {
+            RecorderDraftBanner(
+                onContinue = {
+                    draftTracker.log(AnalyticsEvent.RecordingDraftResumed)
+                    context.startActivity(RecordingActivity.createIntent(context, resumeDraft = true))
+                },
+                onDiscard = {
+                    draftTracker.log(AnalyticsEvent.RecordingDraftDiscarded)
+                    viewModel.discardDraft()
+                },
+            )
+        }
         if (isOnMySounds) {
             // Always rendered on My Sounds — even with no public collections the user still needs
             // the "+ Nueva" chip to bootstrap one. Hiding the whole row left the create affordance

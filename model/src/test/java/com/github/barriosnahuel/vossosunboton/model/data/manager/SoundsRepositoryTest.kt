@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.github.barriosnahuel.vossosunboton.model.testSound
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.async
@@ -490,5 +491,48 @@ internal class SoundsRepositoryTest : AbstractRobolectricTest() {
                     .first { it.id == "custom:priv" }
                     .isVisibleInMySounds,
             ).isTrue()
+        }
+
+    @Test
+    fun `save persists and exposes a RECORDED source`() =
+        runTest {
+            repo.save(testSound("rec", "rec.mp3", source = SoundSource.RECORDED))
+
+            assertThat(
+                repo.sounds
+                    .first()
+                    .first { it.id == "custom:rec" }
+                    .source,
+            ).isEqualTo(SoundSource.RECORDED)
+        }
+
+    @Test
+    fun `a generic save preserves a previously RECORDED source`() =
+        runTest {
+            repo.save(testSound("rec", "rec.mp3", source = SoundSource.RECORDED))
+            // A later generic save (e.g. carrying the default IMPORTED) must not downgrade the origin.
+            repo.save(testSound("rec", "rec.mp3", source = SoundSource.IMPORTED))
+
+            assertThat(
+                repo.sounds
+                    .first()
+                    .first { it.id == "custom:rec" }
+                    .source,
+            ).isEqualTo(SoundSource.RECORDED)
+        }
+
+    @Test
+    fun `decoding coerces an unknown source value to IMPORTED`() =
+        runTest {
+            // A forward-incompatible payload (a future source this build doesn't know) must not break
+            // decoding — `coerceInputValues = true` falls it back to the IMPORTED default (ADR 0019).
+            repo.setRawJsonForTest("""[{"id":"custom:strm","name":"strm","file":"strm.mp3","source":"STREAMED"}]""")
+
+            assertThat(
+                repo.sounds
+                    .first()
+                    .first { it.id == "custom:strm" }
+                    .source,
+            ).isEqualTo(SoundSource.IMPORTED)
         }
 }

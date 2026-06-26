@@ -15,6 +15,10 @@
         </intent>
     </queries>
 
+    <!-- In-app recorder (ADR 0019): requested at runtime before the first capture; denial routes to
+         Settings or an import escape. The Vault still never taps the mic for playback visuals. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
@@ -79,6 +83,17 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
+
+        <!-- In-app recorder (ADR 0019). Not exported: launched only by the import Hub via an explicit
+             intent; it hands the captured clip to AddButtonActivity for naming + save. -->
+        <activity
+            android:name=".feature.recorder.RecordingActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:parentActivityName=".ui.home.LandingActivity"
+            tools:ignore="Instantiatable" />
 
     </application>
 

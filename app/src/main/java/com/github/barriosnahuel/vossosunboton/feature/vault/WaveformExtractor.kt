@@ -9,6 +9,7 @@ import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.net.Uri
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -48,34 +49,64 @@ internal object WaveformExtractor {
     ): FloatArray? {
         cache[sound.id]?.let { return it }
         val peaks =
-            withContext(dispatcher) {
-                runCatching { decodeEnvelope(context, sound, barCount) }
-                    .onFailure { error ->
-                        if (error is CancellationException) throw error
-                        Tracker.log("immersive.waveform_fail=${error.javaClass.simpleName}")
-                        Tracker.track(RuntimeException("Vault waveform extraction failed", error))
-                    }.getOrNull()
+            decode(barCount, dispatcher, "Vault waveform extraction failed", "immersive") { extractor ->
+                if (sound.file != null) {
+                    extractor.setDataSource(getFile(context, sound.file!!).path)
+                } else {
+                    context.resources.openRawResourceFd(sound.rawRes).use { afd ->
+                        extractor.setDataSource(afd.fileDescriptor, afd.startOffset, afd.declaredLength)
+                    }
+                }
             }
         return peaks?.also { cache[sound.id] = it }
     }
 
+    /**
+     * Same envelope, decoded from a `content://`/`file://` [uri] instead of a saved [Sound] — for the
+     * recorder review, where the clip is a temp FileProvider URI not yet persisted as a Sound.
+     *
+     * Deliberately NOT cached: every recording is a new timestamped temp file → a unique, short-lived
+     * URI key that would accumulate in [cache] forever. The host decodes once per `reviewUri` and a
+     * config-change recreate just re-decodes the short clip — cheap, and bounded unlike a leaking cache.
+     */
+    suspend fun extract(
+        context: Context,
+        uri: Uri,
+        barCount: Int,
+        dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    ): FloatArray? =
+        decode(barCount, dispatcher, "Recorder waveform extraction failed", "recorder") { extractor ->
+            // Content-resolver overload: handles a content:// FileProvider URI directly, where an
+            // AssetFileDescriptor's declaredLength is often UNKNOWN and would break the fd overload.
+            extractor.setDataSource(context, uri, null)
+        }
+
     /** Visible for the cold-start / no-data fallback path and tests. */
     fun cached(soundId: String): FloatArray? = cache[soundId]
 
-    private suspend fun decodeEnvelope(
-        context: Context,
-        sound: Sound,
+    private suspend fun decode(
         barCount: Int,
+        dispatcher: CoroutineDispatcher,
+        failureMessage: String,
+        failureModule: String,
+        configureSource: (MediaExtractor) -> Unit,
+    ): FloatArray? =
+        withContext(dispatcher) {
+            runCatching { decodeEnvelope(barCount, configureSource) }
+                .onFailure { error ->
+                    if (error is CancellationException) throw error
+                    Tracker.log("$failureModule.waveform_fail=${error.javaClass.simpleName}")
+                    Tracker.track(RuntimeException(failureMessage, error))
+                }.getOrNull()
+        }
+
+    private suspend fun decodeEnvelope(
+        barCount: Int,
+        configureSource: (MediaExtractor) -> Unit,
     ): FloatArray {
         val extractor = MediaExtractor()
         try {
-            if (sound.file != null) {
-                extractor.setDataSource(getFile(context, sound.file!!).path)
-            } else {
-                context.resources.openRawResourceFd(sound.rawRes).use { afd ->
-                    extractor.setDataSource(afd.fileDescriptor, afd.startOffset, afd.declaredLength)
-                }
-            }
+            configureSource(extractor)
             val trackIndex = audioTrackIndex(extractor)
             require(trackIndex >= 0) { "no audio track" }
             extractor.selectTrack(trackIndex)

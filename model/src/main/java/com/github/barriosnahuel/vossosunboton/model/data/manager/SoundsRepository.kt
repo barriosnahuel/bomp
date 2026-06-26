@@ -396,6 +396,7 @@ class SoundsRepository(
             dateAdded = dateAdded,
             isPinned = isPinned,
             isVisibleInMySounds = isVisibleInMySounds,
+            source = source,
         )
     }
 
@@ -411,6 +412,10 @@ class SoundsRepository(
             // upsert so a generic `save` can never silently reset a hidden audio back to visible.
             // A brand-new audio (previous == null) takes the Sound's value (default `true`).
             isVisibleInMySounds = previous?.isVisibleInMySounds ?: isVisibleInMySounds,
+            // Provenance is immutable per audio (ADR 0019): preserve the stored value on an upsert so
+            // a generic `save` can't reset a RECORDED audio to the IMPORTED default. New audio takes
+            // the Sound's value (recorder passes RECORDED; import keeps the default).
+            source = previous?.source ?: source,
         )
 
     private fun validateName(name: String) {
