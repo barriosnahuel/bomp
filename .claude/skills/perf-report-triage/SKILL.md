@@ -14,6 +14,10 @@ de-confounds the aggregate **before** anyone builds, profiles, or "fixes" code.
 Worked precedent that motivated this skill: `docs/perf-investigations/0001-2.2.0-startup-false-alarm.md`
 (a reported 4× cold-start + 10× frozen-frame regression that was entirely one low-tier device over ~2 days).
 
+The weekly `/exec-report` skill (`.claude/skills/exec-report/`) bakes this same methodology into its
+Performance/Quality axes (median + per-device + min-N guard) so the report doesn't raise the alarm in the
+first place; use this skill to confirm a flagged regression is same-device before treating it as a code bug.
+
 ## When to use
 
 - The weekly report flags a version-over-version cold-start (`_app_start`) or frame (slow/frozen)
