@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -52,6 +53,10 @@ internal fun EnvelopeWaveform(
     val unplayedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = WAVEFORM_UNPLAYED_ALPHA)
     val label = contentDescription
     val effectiveBars = peaks?.size ?: barCount
+    // The drag gesture lives in a pointerInput(Unit) that never restarts, so it would otherwise
+    // capture the onSeek from first composition — stale once the host's seek closure rebinds to a
+    // late-arriving duration (developer.android.com/jetpack/compose/side-effects#rememberupdatedstate).
+    val currentOnSeek by rememberUpdatedState(onSeek)
     var scrub by remember { mutableStateOf<Float?>(null) }
     val displayFraction = (scrub ?: progress).coerceIn(0f, 1f)
 
@@ -76,7 +81,7 @@ internal fun EnvelopeWaveform(
                         scrub = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
                     },
                     onDragEnd = {
-                        scrub?.let(onSeek)
+                        scrub?.let { fraction -> currentOnSeek?.invoke(fraction) }
                         scrub = null
                     },
                     onDragCancel = { scrub = null },
