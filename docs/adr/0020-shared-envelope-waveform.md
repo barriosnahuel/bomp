@@ -41,6 +41,13 @@ duplication and deferred the dedup to here.
   and the renderer. The all-silent branch is NOT folded in — its callers disagree on purpose
   (`PeakAccumulator` returns a flat baseline; `buildRecorderEnvelope` returns `null` to decode).
 
+## Enforcement
+
+The single-sourced floor is grep-guarded: `scripts/check-adr-invariants.sh` (CI job
+`adr-invariants`) fails on a bare `0.06f` bar-floor literal in any waveform surface outside
+`WaveformNormalization.kt`. The "one shared component" half is not cleanly greppable and relies on
+review.
+
 ## Out of scope
 
 `LiveWaveform` (the recorder's scrolling live input meter) and onboarding's decorative `Waveform`

@@ -289,6 +289,25 @@ A test's runBlocking { … .first/.collect/.await/.single … } must be bounded 
 fi
 
 # ============================================================================
+# ADR 0020 — docs/adr/0020-shared-envelope-waveform.md
+# Invariant: the normalized waveform-bar floor is single-sourced as
+# WAVEFORM_MIN_BAR (feature/waveform/WaveformNormalization.kt). The dedup
+# collapsed a 0.06f floor that used to live in 4 places; a bare 0.06f literal in
+# any waveform surface re-forks it. Reuse the shared constant — kin to the
+# design-system alpha/color greps above.
+# ============================================================================
+WAVEFORM_DIRS="app/src/main/java/com/github/barriosnahuel/vossosunboton/feature/waveform app/src/main/java/com/github/barriosnahuel/vossosunboton/feature/vault app/src/main/java/com/github/barriosnahuel/vossosunboton/feature/recorder"
+stray_floor=$(
+    grep -rnE --include="*.kt" '\b0\.06f\b' $WAVEFORM_DIRS 2>/dev/null \
+        | grep -vF 'WaveformNormalization.kt' || true
+)
+if [ -n "$stray_floor" ]; then
+    fail "ADR 0020 broken: bar-floor literal 0.06f outside WaveformNormalization.kt:
+$stray_floor
+The normalized bar floor is single-sourced as WAVEFORM_MIN_BAR. Reuse it instead of a bare 0.06f literal, or supersede ADR 0020. See docs/adr/0020-shared-envelope-waveform.md."
+fi
+
+# ============================================================================
 if [ "$errors" -gt 0 ]; then
     echo
     echo "$errors ADR invariant(s) violated. See messages above for which ADR(s) to revisit." >&2
