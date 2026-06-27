@@ -47,19 +47,22 @@ private val HUB_ICON_TILE = 44.dp
 private val HUB_TILE_RADIUS = 12.dp
 
 /**
- * The import Hub — a [ModalBottomSheet] opened by the + FAB on My Bomps. Three creation paths: "import
- * audio from your device" ([onImport]), "record" a new Bomp in-app ([onRecord], ADR 0019), and "see how
- * it works" ([onHowItWorks]) that opens the onboarding tour, re-openable any time.
+ * The import Hub — a [ModalBottomSheet] opened by the + FAB on My Bomps. Rows are ordered by likely
+ * intent for a returning user: "record" a new Bomp in-app ([onRecord], ADR 0019, the acid-primary row),
+ * "bring audios from other apps" ([onBringFromApps]) that opens a focused single-step guide on sharing a
+ * voice note in from WhatsApp/Telegram, and "import audio from your device" ([onImport]) for a file
+ * already saved on the phone (the least-frequent path on Android 11+, where app-private media is not
+ * SAF-browsable). The full 3-step onboarding tour is reachable from the empty state, not from here.
  *
- * Presentational only: the caller dismisses on [onImport]/[onRecord]/[onHowItWorks]/[onDismiss] and owns
- * the file picker, the recorder Activity, and the tour state.
+ * Presentational only: the caller dismisses on [onImport]/[onRecord]/[onBringFromApps]/[onDismiss] and
+ * owns the file picker, the recorder Activity, and the guide state.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ImportHubSheet(
     onImport: () -> Unit,
     onRecord: () -> Unit,
-    onHowItWorks: () -> Unit,
+    onBringFromApps: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -87,27 +90,15 @@ internal fun ImportHubSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(Spacing.SM))
-            HubRow(
-                iconPainter = painterResource(R.drawable.app_ic_add),
-                title = stringResource(R.string.app_hub_import),
-                subtitle = stringResource(R.string.app_hub_import_sub),
-                tileColor = MaterialTheme.colorScheme.primaryContainer,
-                iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                // Animate the sheet closed before handing off, mirroring InlineCollectionCreateSheet
-                // (sheetState.hide() then the callback) — the host then clears state + launches the picker.
-                onClick = {
-                    scope.launch {
-                        sheetState.hide()
-                        onImport()
-                    }
-                },
-            )
+            // Acid-primary row: recording is the one creation path that always works, regardless of what
+            // the user already has on the device. Animate the sheet closed before handing off, mirroring
+            // InlineCollectionCreateSheet (sheetState.hide() then the callback).
             HubRow(
                 iconPainter = painterResource(R.drawable.app_ic_mic),
                 title = stringResource(R.string.app_hub_record),
                 subtitle = stringResource(R.string.app_hub_record_sub),
-                tileColor = MaterialTheme.colorScheme.surfaceVariant,
-                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                tileColor = MaterialTheme.colorScheme.primaryContainer,
+                iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 onClick = {
                     scope.launch {
                         sheetState.hide()
@@ -115,18 +106,31 @@ internal fun ImportHubSheet(
                     }
                 },
             )
-            // Soft secondary helper — neutral tile (not acid) so it never competes with the import
-            // primary. Animate the sheet closed first, then hand off, mirroring the import row.
+            // Neutral tile (not acid) so it never competes with the primary record row. The share icon
+            // mirrors the gesture the guide teaches: "Share" a voice note from another app into Bomp.
             HubRow(
-                iconPainter = painterResource(R.drawable.app_ic_play_arrow),
-                title = stringResource(R.string.app_hub_how),
-                subtitle = stringResource(R.string.app_hub_how_sub),
+                iconPainter = painterResource(R.drawable.app_ic_share),
+                title = stringResource(R.string.app_hub_bring),
+                subtitle = stringResource(R.string.app_hub_bring_sub),
                 tileColor = MaterialTheme.colorScheme.surfaceVariant,
                 iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onClick = {
                     scope.launch {
                         sheetState.hide()
-                        onHowItWorks()
+                        onBringFromApps()
+                    }
+                },
+            )
+            HubRow(
+                iconPainter = painterResource(R.drawable.app_ic_add),
+                title = stringResource(R.string.app_hub_import),
+                subtitle = stringResource(R.string.app_hub_import_sub),
+                tileColor = MaterialTheme.colorScheme.surfaceVariant,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                onClick = {
+                    scope.launch {
+                        sheetState.hide()
+                        onImport()
                     }
                 },
             )

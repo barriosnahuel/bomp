@@ -23,11 +23,58 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun `hub shows title and the import row`() {
+    fun `hub shows title and the record row`() {
         setHub()
 
         composeTestRule.onNodeWithText("How do you add one?").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Import audio from your device").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Record a Bomp").assertIsDisplayed()
+    }
+
+    @Test
+    fun `hub orders the rows record then bring then import`() {
+        setHub()
+
+        val recordTop =
+            composeTestRule
+                .onNodeWithText("Record a Bomp")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        val bringTop =
+            composeTestRule
+                .onNodeWithText("Bring audios from other apps")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        val importTop =
+            composeTestRule
+                .onNodeWithText("Import audio from your device")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+
+        assertThat(recordTop).isLessThan(bringTop)
+        assertThat(bringTop).isLessThan(importTop)
+    }
+
+    @Test
+    fun `tapping the record row invokes onRecord`() {
+        var recorded = false
+        setHub(onRecord = { recorded = true })
+
+        composeTestRule.onNodeWithText("Record a Bomp").performClick()
+        composeTestRule.waitForIdle() // the row animates the sheet closed before invoking onRecord
+
+        assertThat(recorded).isTrue()
+    }
+
+    @Test
+    fun `tapping the bring-from-apps row invokes onBringFromApps`() {
+        var opened = false
+        setHub(onBringFromApps = { opened = true })
+
+        composeTestRule.onNodeWithText("Bring audios from other apps").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Bring audios from other apps").performClick()
+        composeTestRule.waitForIdle() // the row animates the sheet closed before invoking the callback
+
+        assertThat(opened).isTrue()
     }
 
     @Test
@@ -41,41 +88,10 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
         assertThat(imported).isTrue()
     }
 
-    @Test
-    fun `tapping the record row invokes onRecord`() {
-        var recorded = false
-        setHub(onRecord = { recorded = true })
-
-        composeTestRule.onNodeWithText("Record a Bomp").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Record a Bomp").performClick()
-        composeTestRule.waitForIdle() // the row animates the sheet closed before invoking onRecord
-
-        assertThat(recorded).isTrue()
-    }
-
-    @Test
-    fun `hub offers the see-how-it-works row`() {
-        // PR4: the onboarding entry point now has a destination, so it joins the Hub as an enabled row.
-        setHub()
-
-        composeTestRule.onNodeWithText("See how it works").assertIsDisplayed()
-    }
-
-    @Test
-    fun `tapping the see-how-it-works row invokes onHowItWorks`() {
-        var opened = false
-        setHub(onHowItWorks = { opened = true })
-
-        composeTestRule.onNodeWithText("See how it works").performClick()
-        composeTestRule.waitForIdle() // the row animates the sheet closed before invoking the callback
-
-        assertThat(opened).isTrue()
-    }
-
     private fun setHub(
         onImport: () -> Unit = {},
         onRecord: () -> Unit = {},
-        onHowItWorks: () -> Unit = {},
+        onBringFromApps: () -> Unit = {},
         onDismiss: () -> Unit = {},
     ) {
         composeTestRule.setContent {
@@ -83,7 +99,7 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
                 ImportHubSheet(
                     onImport = onImport,
                     onRecord = onRecord,
-                    onHowItWorks = onHowItWorks,
+                    onBringFromApps = onBringFromApps,
                     onDismiss = onDismiss,
                 )
             }

@@ -206,6 +206,22 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `tapping the bring-from-apps row in the Hub emits import_hub_bring_selected`() {
+        val viewModel = givenAViewModel()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_hub_fab_description)).performClick()
+        composeTestRule.waitForIdle()
+        // The row animates the sheet closed before invoking onBringFromApps (see ImportHubSheetTest).
+        composeTestRule.onNodeWithText(context.getString(R.string.app_hub_bring)).performClick()
+        composeTestRule.waitForIdle()
+
+        fake.assertEmitted("import_hub_bring_selected")
+    }
+
+    @Test
     fun `finishing the onboarding tour opens the Hub with source onboarding_finish`() {
         val viewModel = givenAViewModel()
         val context = ApplicationProvider.getApplicationContext<Context>()

@@ -122,6 +122,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // "is it open" and the step, so an Activity recreate mid-tour cannot rewind the user to step 0
     // (§ Stateful Composables). On-demand only — no first-run auto-open, no "seen" flag.
     var onboardingStep by rememberSaveable { mutableStateOf<Int?>(null) }
+    // The Hub's "bring audios from other apps" single-step guide: true = open. rememberSaveable so an
+    // Activity recreate while it is open doesn't silently dump the user back to My Bomps (§ Stateful
+    // Composables). It reuses the IMPORT onboarding content but is a separate, lighter overlay.
+    var bringGuideVisible by rememberSaveable { mutableStateOf(false) }
     // System file picker for the Hub's "import audio" path. OpenDocument(arrayOf("audio/*")) opens the
     // full SAF browser filtered to audio (non-audio files are not selectable) — better at surfacing
     // on-device audio across OEMs than GetContent's "Recent" view. We copy the audio at save time, so we
@@ -146,10 +150,12 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 
     // Key on the open/closed boolean, not the raw step: advancing or going back within the tour must
     // not re-emit screen_view=onboarding (one open = one screen view, like the other overlays).
-    LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible, onboardingStep != null) {
+    LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible, onboardingStep != null, bringGuideVisible) {
         val name =
             when {
-                onboardingStep != null -> CanonicalScreenName.ONBOARDING
+                // The bring-from-apps guide reuses the onboarding content, so it reports the same screen.
+                // The funnel separates its entry via ImportHubBringSelected, not via a distinct screen_view.
+                onboardingStep != null || bringGuideVisible -> CanonicalScreenName.ONBOARDING
                 isSearchVisible -> CanonicalScreenName.SEARCH_SOUND
                 isAboutVisible -> CanonicalScreenName.ABOUT
                 manageRequest != null -> CanonicalScreenName.MANAGE_COLLECTIONS
@@ -169,6 +175,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                 manageRequest == null &&
                 immersiveListenSoundId == null &&
                 onboardingStep == null &&
+                !bringGuideVisible &&
                 tabBackStack.isNotEmpty(),
     ) {
         viewModel.selectTab(tabBackStack.removeAt(tabBackStack.lastIndex))
@@ -201,7 +208,8 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // and UI tests neither reach nor double-match nodes hidden behind the opaque overlay (e.g. a
     // collection name shown both in the chip row and in the Manage list). Drawing is untouched, so
     // the gesture still reveals the live list visually.
-    val subScreenOpen = isAboutVisible || manageRequest != null || immersiveListenSoundId != null || onboardingStep != null
+    val subScreenOpen =
+        isAboutVisible || manageRequest != null || immersiveListenSoundId != null || onboardingStep != null || bringGuideVisible
     ScaffoldedLanding(
         modifier = if (subScreenOpen) Modifier.clearAndSetSemantics {} else Modifier,
         viewModel = viewModel,
@@ -293,12 +301,21 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     context.startActivity(RecordingActivity.createIntent(context))
                 }
             },
-            onHowItWorks = {
-                tracker.log(AnalyticsEvent.OnboardingOpened(source = AnalyticsSource.IMPORT_HUB))
-                isHubVisible = false
-                onboardingStep = 0
+            onBringFromApps = {
+                if (isHubVisible) {
+                    tracker.log(AnalyticsEvent.ImportHubBringSelected)
+                    isHubVisible = false
+                    bringGuideVisible = true
+                }
             },
             onDismiss = { isHubVisible = false },
+        )
+    }
+
+    // The Hub's "bring audios from other apps" single-step guide, overlaying everything like the tour.
+    if (bringGuideVisible) {
+        com.github.barriosnahuel.vossosunboton.feature.onboarding.BringFromAppsGuide(
+            onClose = { bringGuideVisible = false },
         )
     }
 
