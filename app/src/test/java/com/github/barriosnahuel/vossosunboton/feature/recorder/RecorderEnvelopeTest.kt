@@ -44,6 +44,23 @@ internal class RecorderEnvelopeTest {
         assertThat(buildRecorderEnvelope(List(100) { 0f }, BARS)).isNull()
     }
 
+    @Test
+    fun `review wave follows the live player position while the clip is loaded`() {
+        assertThat(reviewWavePositionMs(playerPositionMs = 2_000, pendingScrubMs = 5_000)).isEqualTo(2_000)
+    }
+
+    @Test
+    fun `review wave holds a pre-play scrub when no player is loaded`() {
+        assertThat(reviewWavePositionMs(playerPositionMs = null, pendingScrubMs = 3_000)).isEqualTo(3_000)
+    }
+
+    @Test
+    fun `review wave rests at the start with no player and no pending scrub (e g after completion)`() {
+        // Regression: parity once let the last scrub stick after completion; the listen screen rewinds
+        // to 0, so the review must too once the pending scrub has been consumed by play.
+        assertThat(reviewWavePositionMs(playerPositionMs = null, pendingScrubMs = null)).isEqualTo(0)
+    }
+
     private companion object {
         const val BARS = 48
         const val FLOOR = 0.06f

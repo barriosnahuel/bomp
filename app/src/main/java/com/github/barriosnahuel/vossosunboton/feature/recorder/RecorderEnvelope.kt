@@ -47,3 +47,15 @@ internal fun buildRecorderEnvelope(
     // caller decodes the real file instead of showing a fake flat line for a clip that has audio.
     return if (loudest <= 0f) null else normalizeEnvelope(raw, loudest)
 }
+
+/**
+ * The position (ms) the review wave should show: the live [playerPositionMs] while the clip is the
+ * loaded playback; otherwise a [pendingScrubMs] the user scrubbed to before playing; otherwise the
+ * start. The pending scrub is consumed when play begins, so after a natural completion (no player, no
+ * pending) the wave rests at the start — matching the listen screen instead of sticking at the last
+ * scrub. Pure so the rule is unit-tested without the Activity/playback host.
+ */
+internal fun reviewWavePositionMs(
+    playerPositionMs: Long?,
+    pendingScrubMs: Long?,
+): Long = playerPositionMs ?: pendingScrubMs ?: 0L
