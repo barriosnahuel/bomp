@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### Changed
 - The add-a-Bomp sheet now leads with recording and adds a "Bring audios from other apps" option that shows how to share a voice note in from WhatsApp or Telegram, with importing a saved file moved last
+- The quick tour is easier to find — it shows up right under the welcome audio for new users and lives in the top "⋮" menu so you can reopen it any time
 
 ### Fixed
 - Bomps saved before an earlier update no longer disappear when you open the app — audios stored under the old format are recovered instead of the whole list silently emptying
@@ -31,7 +32,8 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Shortened seven collection/Vault user property names that exceeded Firebase's 24-character limit and were being dropped before reaching BigQuery, and added a build-time guard so over-length names can't ship again
 
 #### Changed
-- Reordered the import Hub rows by returning-user intent (record → bring-from-apps → import) and replaced the Hub's full-tour entry with a focused single-step guide reusing the onboarding IMPORT step; added the `import_hub_bring_selected` funnel event (the full tour stays reachable from the empty state)
+- Reordered the import Hub rows by returning-user intent (record → bring-from-apps → import) and replaced the Hub's full-tour entry with a focused single-step guide reusing the onboarding IMPORT step; added the `import_hub_bring_selected` funnel event and a `bring_guide` screen_view
+- Surfaced the full onboarding tour from a welcome-audio footer and the top-bar overflow (so a fresh-install user, whose welcome audio hides the empty-state, can still reach it); parameterized `onboarding_opened` by source (`welcome_footer`, `overflow_menu`) and reordered the overflow menu with decorative leading icons
 - De-duplicated the Vault listen and recorder-review waveforms into one shared `EnvelopeWaveform` component, and the `0.06f` floor + normalize loop into a single `WaveformNormalization` helper (ADR 0020)
 - Kotlin compiler warnings now fail the build (`allWarningsAsErrors`, binary/unconditional) so they can't accumulate
 - `sounds_json` decoding is now element-by-element with id de-dup and a fast path, so one corrupt record can't wipe the list and clean payloads pay no recovery cost (ADR 0018)

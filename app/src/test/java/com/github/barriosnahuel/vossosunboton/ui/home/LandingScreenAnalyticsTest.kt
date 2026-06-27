@@ -20,6 +20,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Canonica
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -137,6 +138,27 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
         // points into `playOrStop` / `share`, and the open sub-screen clears them from the semantics tree.
         fake.assertScreenView(CanonicalScreenName.ABOUT)
         composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_search)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `tapping see how it works in the overflow emits onboarding_opened with source overflow_menu`() {
+        val viewModel = givenAViewModel()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        // A custom Bomp hides the welcome footer (also "See how it works"), so the menu item is the
+        // only match for the click below.
+        viewModel.injectSounds(listOf(testSound("a bomp", file = "a.mp3")))
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_overflow_menu)).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.app_my_sounds_empty_secondary)).performClick()
+        composeTestRule.waitForIdle()
+
+        val event = fake.assertEmitted("onboarding_opened")
+        assertThat(event.params["source"]).isEqualTo("overflow_menu")
     }
 
     @Test

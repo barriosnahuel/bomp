@@ -22,6 +22,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Canonica
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -144,6 +145,35 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
 
         composeTestRule.onNodeWithText(STEP1_TITLE).assertIsDisplayed()
         assertThat(fake.assertEmitted("onboarding_opened").params["source"]).isEqualTo("my_sounds_empty_state")
+    }
+
+    @Test
+    fun `welcome footer opens the tour with source welcome_footer`() {
+        // Fresh install = only the welcome sticker → the list is non-empty (not the ZRP), so the footer
+        // is the new user's path to the tour. The overflow's "See how it works" is closed/uncomposed, so
+        // SECONDARY_LABEL is unique to the footer here.
+        val viewModel = givenAViewModel()
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(SECONDARY_LABEL).performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(STEP1_TITLE).assertIsDisplayed()
+        assertThat(fake.assertEmitted("onboarding_opened").params["source"]).isEqualTo("welcome_footer")
+    }
+
+    @Test
+    fun `welcome footer disappears once a custom Bomp exists`() {
+        val viewModel = givenAViewModel()
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        viewModel.injectSounds(listOf(testSound("a bomp", file = "a.mp3")))
+        composeTestRule.waitForIdle()
+
+        // List no longer all-welcome → footer hidden; the overflow item is uncomposed (menu closed), so
+        // "See how it works" is absent entirely.
+        composeTestRule.onNodeWithText(SECONDARY_LABEL).assertDoesNotExist()
     }
 
     @Test

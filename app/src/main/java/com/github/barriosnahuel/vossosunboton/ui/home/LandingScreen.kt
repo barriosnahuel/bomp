@@ -20,6 +20,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -29,6 +30,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -54,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -146,6 +150,13 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             tracker.log(AnalyticsEvent.ImportHubOpened(source = source))
             isHubVisible = true
         }
+    }
+
+    // Single onboarding-tour entry point: logs the ENTRY with the [source] surface (empty state, the
+    // welcome footer, or the overflow menu), then opens the tour at step 0.
+    val openOnboarding = { source: String ->
+        tracker.log(AnalyticsEvent.OnboardingOpened(source = source))
+        onboardingStep = 0
     }
 
     // Key on the open/closed boolean, not the raw step: advancing or going back within the tour must
@@ -241,10 +252,9 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             if (!sound.isPlaying) viewModel.playOrStop(sound)
         },
         onCreateClick = openHub,
-        onShowOnboarding = {
-            tracker.log(AnalyticsEvent.OnboardingOpened(source = AnalyticsSource.EMPTY_STATE))
-            onboardingStep = 0
-        },
+        onShowOnboarding = { openOnboarding(AnalyticsSource.EMPTY_STATE) },
+        onShowOnboardingFromWelcome = { openOnboarding(AnalyticsSource.WELCOME_FOOTER) },
+        onOpenOnboardingFromMenu = { openOnboarding(AnalyticsSource.OVERFLOW_MENU) },
     )
 
     // Exactly one sub-screen overlays the list at a time (About wins over Manage, preserving the
@@ -456,14 +466,17 @@ private fun ScaffoldedLanding(
     // vs the empty-state CTA), so `import_hub_opened` is attributed honestly.
     onCreateClick: (String) -> Unit,
     onShowOnboarding: () -> Unit,
+    onShowOnboardingFromWelcome: () -> Unit,
+    onOpenOnboardingFromMenu: () -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
         topBar = {
             AppTopBar(
                 onSearchClick = { viewModel.showSearch() },
-                onAboutClick = onAboutClick,
+                onSeeHowItWorks = onOpenOnboardingFromMenu,
                 onManageCollectionsClick = onManageCollectionsClick,
+                onAboutClick = onAboutClick,
             )
         },
         // FAB only on My Bomps (design "regla por tab"): Explore is a consumption surface and Vault's
@@ -535,6 +548,7 @@ private fun ScaffoldedLanding(
                     onActiveFilterEditClick = onActiveFilterEditClick,
                     onImportClick = { onCreateClick(AnalyticsSource.EMPTY_STATE) },
                     onShowOnboarding = onShowOnboarding,
+                    onShowOnboardingFromWelcome = onShowOnboardingFromWelcome,
                     viewModel = viewModel,
                     context = context,
                 )
@@ -673,8 +687,9 @@ private fun SnackbarEffects(
 @Composable
 private fun AppTopBar(
     onSearchClick: () -> Unit,
-    onAboutClick: () -> Unit,
+    onSeeHowItWorks: () -> Unit,
     onManageCollectionsClick: () -> Unit,
+    onAboutClick: () -> Unit,
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -693,29 +708,52 @@ private fun AppTopBar(
                     contentDescription = stringResource(R.string.app_overflow_menu),
                 )
             }
+            // Ordered by intent for a confused newcomer (help first), then organize; a divider splits
+            // "use the app" from "about the app" (share + about last, the conventional tail). Leading
+            // icons are decorative — the item text is the accessible name (emojis read poorly in TalkBack).
             DropdownMenu(
                 expanded = isMenuExpanded,
                 onDismissRequest = { isMenuExpanded = false },
             ) {
                 DropdownMenuItem(
+                    text = { Text(stringResource(R.string.app_my_sounds_empty_secondary)) },
+                    leadingIcon = {
+                        Icon(painter = painterResource(R.drawable.app_ic_help), contentDescription = null)
+                    },
+                    onClick = {
+                        isMenuExpanded = false
+                        onSeeHowItWorks()
+                    },
+                )
+                DropdownMenuItem(
                     text = { Text(stringResource(R.string.app_manage_collections_menu_item)) },
+                    leadingIcon = {
+                        Icon(painter = painterResource(R.drawable.app_ic_library_music), contentDescription = null)
+                    },
                     onClick = {
                         isMenuExpanded = false
                         onManageCollectionsClick()
                     },
                 )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.app_about)) },
-                    onClick = {
-                        isMenuExpanded = false
-                        onAboutClick()
-                    },
-                )
+                HorizontalDivider()
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.app_share_app_menu_item)) },
+                    leadingIcon = {
+                        Icon(painter = painterResource(R.drawable.app_ic_share), contentDescription = null)
+                    },
                     onClick = {
                         isMenuExpanded = false
                         ShareAppIntent.launch(context, PlayStoreReferrer.CONTENT_MENU)
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.app_about)) },
+                    leadingIcon = {
+                        Icon(painter = painterResource(R.drawable.app_ic_info), contentDescription = null)
+                    },
+                    onClick = {
+                        isMenuExpanded = false
+                        onAboutClick()
                     },
                 )
             }
@@ -832,6 +870,10 @@ internal fun SoundsList(
     // My Sounds list passes these — the Vault never renders the welcome.
     welcomeHintPending: Boolean = false,
     onWelcomeHintShown: () -> Unit = {},
+    // When true (My Sounds, list is only the welcome), a "see how it works" footer trails the list so a
+    // fresh-install user can reach the onboarding tour. Off everywhere else (Vault/Explore/Search).
+    showWelcomeFooter: Boolean = false,
+    onShowOnboardingFromWelcome: () -> Unit = {},
 ) {
     val dismissingItems = remember { mutableStateSetOf<String>() }
     val coroutineScope = rememberCoroutineScope()
@@ -925,6 +967,18 @@ internal fun SoundsList(
                     )
                 }
             }
+            if (showWelcomeFooter) {
+                item(key = "welcome_onboarding_footer") {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(top = Spacing.SM),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TextButton(onClick = onShowOnboardingFromWelcome) {
+                            Text(stringResource(R.string.app_my_sounds_empty_secondary))
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -951,6 +1005,7 @@ private fun MySoundsBody(
     onActiveFilterEditClick: (String) -> Unit,
     onImportClick: () -> Unit,
     onShowOnboarding: () -> Unit,
+    onShowOnboardingFromWelcome: () -> Unit,
     viewModel: SoundsViewModel,
     context: Context,
 ) {
@@ -968,6 +1023,10 @@ private fun MySoundsBody(
     val isOnMySounds = selectedTab == AppTab.MY_SOUNDS
     val showFilterEmptyState = isOnMySounds && activeFilterId != null && sounds.isEmpty() && activeCollection != null
     val showWelcomeEmptyState = sounds.isEmpty() && isOnMySounds && !showFilterEmptyState
+    // Fresh install lands here, not on the ZRP: the welcome audio keeps the list non-empty. Surface a
+    // "see how it works" footer under the lone welcome so a new user can reach the tour without first
+    // deleting the welcome. Drops away the moment any real Bomp exists.
+    val showWelcomeFooter = isOnMySounds && sounds.isNotEmpty() && sounds.all { isWelcomeSticker(it) }
     // The ActiveFilterHeader is suppressed alongside the chip row whenever the body collapses to a
     // ZRP — same reasoning as the Vault locked state: a header above a "nothing here yet" body
     // adds noise instead of context.
@@ -1044,6 +1103,8 @@ private fun MySoundsBody(
                     onAddToCollection = { sound -> viewModel.requestAssignCollections(sound.id) },
                     welcomeHintPending = welcomeHintPending,
                     onWelcomeHintShown = { viewModel.markWelcomeHintShown() },
+                    showWelcomeFooter = showWelcomeFooter,
+                    onShowOnboardingFromWelcome = onShowOnboardingFromWelcome,
                 )
         }
     }
