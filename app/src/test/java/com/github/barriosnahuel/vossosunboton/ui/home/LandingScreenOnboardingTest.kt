@@ -76,16 +76,59 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `Hub see-how-it-works opens the tour and emits the onboarding screen view`() {
+    fun `Hub bring-from-apps opens the guide and emits the onboarding screen view`() {
         val viewModel = givenAViewModel()
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
 
-        openTourFromHub()
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(BRING_LABEL).performClick()
+        composeTestRule.waitForIdle()
 
+        // The guide reuses the IMPORT step content + the ONBOARDING screen_view; its entry is
+        // distinguished by import_hub_bring_selected, not by a distinct screen name.
         composeTestRule.onNodeWithText(STEP1_TITLE).assertIsDisplayed()
+        composeTestRule.onNodeWithText(GUIDE_CTA).assertIsDisplayed()
         fake.assertScreenView(CanonicalScreenName.ONBOARDING)
-        assertThat(fake.assertEmitted("onboarding_opened").params["source"]).isEqualTo("import_hub")
+        fake.assertEmitted("import_hub_bring_selected")
+    }
+
+    @Test
+    fun `closing the bring-from-apps guide returns to My Bomps`() {
+        val viewModel = givenAViewModel()
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(BRING_LABEL).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(GUIDE_CTA).performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").assertIsDisplayed()
+    }
+
+    @Test
+    fun `bring-from-apps guide survives an Activity recreate`() {
+        val viewModel = givenAViewModel()
+        val restorationTester = StateRestorationTester(composeTestRule)
+        restorationTester.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Add a Bomp").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(BRING_LABEL).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(GUIDE_CTA).assertIsDisplayed()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+        composeTestRule.waitForIdle()
+
+        // bringGuideVisible is rememberSaveable in the host: a recreate (rotation, theme, system kill)
+        // must not silently dump the user back to My Bomps mid-guide.
+        composeTestRule.onNodeWithText(GUIDE_CTA).assertIsDisplayed()
     }
 
     @Test
@@ -109,7 +152,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
 
-        openTourFromHub()
+        openTourFromEmptyState(viewModel)
         composeTestRule.onNodeWithText("Go on").performClick()
         composeTestRule.onNodeWithText("Next").performClick()
         composeTestRule.onNodeWithText("Start").performClick()
@@ -124,11 +167,13 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
 
-        openTourFromHub()
+        openTourFromEmptyState(viewModel)
         composeTestRule.onNodeWithText("Skip").performClick()
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithContentDescription("Add a Bomp").assertIsDisplayed()
+        // Back on the empty My Bomps (the tour was opened from there, so the list is empty → no FAB):
+        // its "see how it works" secondary is shown again, and MY_SOUNDS is re-emitted on the way back.
+        composeTestRule.onNodeWithText(SECONDARY_LABEL).performScrollTo().assertIsDisplayed()
         val mySoundsHits = fake.screens.count { it.name == CanonicalScreenName.MY_SOUNDS }
         assertThat(mySoundsHits).isAtLeast(2)
     }
@@ -140,7 +185,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         restorationTester.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
 
-        openTourFromHub()
+        openTourFromEmptyState(viewModel)
         composeTestRule.onNodeWithText("Go on").performClick()
         composeTestRule.onNodeWithText(STEP2_TITLE).assertIsDisplayed()
         val stepViewsBeforeRestore = fake.events.count { it.name == "onboarding_step_viewed" }
@@ -156,10 +201,12 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         assertThat(stepViewsAfterRestore).isEqualTo(stepViewsBeforeRestore)
     }
 
-    private fun openTourFromHub() {
-        composeTestRule.onNodeWithContentDescription("Add a Bomp").performClick()
+    // The full tour is reachable from the empty My Bomps secondary (the Hub now opens the focused
+    // bring-from-apps guide instead). Injecting an empty list reveals the welcome-empty state that hosts it.
+    private fun openTourFromEmptyState(viewModel: SoundsViewModel) {
+        viewModel.injectSounds(emptyList())
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText(SECONDARY_LABEL).performClick()
+        composeTestRule.onNodeWithText(SECONDARY_LABEL).performScrollTo().performClick()
         composeTestRule.waitForIdle()
     }
 
@@ -190,6 +237,8 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         const val AWAIT_TIMEOUT_MS = 5_000L
         const val HUB_TITLE = "How do you add one?"
         const val SECONDARY_LABEL = "See how it works"
+        const val BRING_LABEL = "Bring audios from other apps"
+        const val GUIDE_CTA = "Got it"
         const val STEP1_TITLE = "Bring in the voices you already have."
         const val STEP2_TITLE = "Keep them your way."
     }

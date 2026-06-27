@@ -223,12 +223,13 @@
     <string name="app_hub_fab_description">Sumar un Bomp</string>
     <string name="app_hub_title">¿Cómo la sumás?</string>
     <string name="app_hub_subtitle">Una voz se guarda y la tenés cerca, para escucharla cuando quieras.</string>
-    <string name="app_hub_import">Importar audio del dispositivo</string>
-    <string name="app_hub_import_sub">Notas de voz, grabaciones, lo que ya tengas guardado.</string>
     <string name="app_hub_record">Grabar un Bomp</string>
     <string name="app_hub_record_sub">Tu voz, un momento que no querés perder.</string>
-    <string name="app_hub_how">Ver cómo funciona</string>
-    <string name="app_hub_how_sub">Un minuto y le tomás la mano.</string>
+    <string name="app_hub_bring">Traé audios de otras apps</string>
+    <string name="app_hub_bring_sub">De WhatsApp, Telegram, donde sea — te mostramos cómo.</string>
+    <string name="app_hub_import">Importar audio del dispositivo</string>
+    <string name="app_hub_import_sub">Un audio que ya tengas guardado en el teléfono.</string>
+    <string name="app_hub_bring_guide_cta">Listo</string>
 
     <!-- Grabador in-app (ADR 0019) -->
     <string name="app_recorder_ready_hint">Tocá para grabar</string>

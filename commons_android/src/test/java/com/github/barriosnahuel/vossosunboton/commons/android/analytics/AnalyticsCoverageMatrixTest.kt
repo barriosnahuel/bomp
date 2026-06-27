@@ -96,6 +96,7 @@ internal class AnalyticsCoverageMatrixTest {
                 "ImportHubOpened",
                 "ImportHubImportSelected",
                 "ImportHubRecordSelected",
+                "ImportHubBringSelected",
                 "RecordingCompleted",
                 "RecordPermissionResult",
                 "RecordingDraftBannerShown",

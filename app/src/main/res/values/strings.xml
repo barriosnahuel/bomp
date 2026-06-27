@@ -229,12 +229,13 @@
     <string name="app_hub_fab_description">Add a Bomp</string>
     <string name="app_hub_title">How do you add one?</string>
     <string name="app_hub_subtitle">A voice gets saved and stays close, ready whenever you want to hear it.</string>
-    <string name="app_hub_import">Import audio from your device</string>
-    <string name="app_hub_import_sub">Voice notes, recordings, whatever you already have saved.</string>
     <string name="app_hub_record">Record a Bomp</string>
     <string name="app_hub_record_sub">Your voice, a moment you don\'t want to lose.</string>
-    <string name="app_hub_how">See how it works</string>
-    <string name="app_hub_how_sub">A minute and you\'ve got it.</string>
+    <string name="app_hub_bring">Bring audios from other apps</string>
+    <string name="app_hub_bring_sub">From WhatsApp, Telegram, wherever — we\'ll show you how.</string>
+    <string name="app_hub_import">Import audio from your device</string>
+    <string name="app_hub_import_sub">An audio you already have saved on your phone.</string>
+    <string name="app_hub_bring_guide_cta">Got it</string>
 
     <!-- In-app recorder (ADR 0019) -->
     <string name="app_recorder_ready_hint">Tap to record</string>

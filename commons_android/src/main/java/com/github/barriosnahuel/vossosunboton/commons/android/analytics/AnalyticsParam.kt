@@ -90,8 +90,7 @@ object AnalyticsSource {
     const val MY_SOUNDS_FILTER = "my_sounds_filter"
     const val SEARCH = "search"
 
-    /** Onboarding entry points — the import Hub "see how it works" row vs the empty My Bomps CTA. */
-    const val IMPORT_HUB = "import_hub"
+    /** Onboarding tour entry point — the empty My Bomps "see how it works" secondary. */
     const val EMPTY_STATE = "my_sounds_empty_state"
 
     /**

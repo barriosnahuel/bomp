@@ -97,13 +97,15 @@ internal class HubImportFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun hubExposesSeeHowItWorksEntryPoint() {
-        // PR4: the onboarding entry point now has a live destination, so it joins the Hub as an
-        // actionable row. The full open→tour flow (with its looping demo animations) is covered by the
-        // reduce-motion Robolectric suite; here we only assert the new tappable thing is reachable.
+    fun bringFromAppsRowOpensTheGuide() {
+        // The "bring audios from other apps" row opens the focused single-step guide. Assert the
+        // transition end-to-end: tapping the row dismisses the Hub and lands on the guide (its terminal
+        // CTA is shown). The looping demo animation itself is covered by the reduce-motion Robolectric suite.
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(fabLabel()).performClick()
-            composeRule.awaitNodeWithText(howLabel()).assertHasClickAction()
+            composeRule.awaitNodeWithText(bringLabel()).performClick()
+
+            composeRule.awaitNodeWithText(bringGuideCta()).assertIsDisplayed()
         }
     }
 
@@ -113,7 +115,9 @@ internal class HubImportFlowTest : AbstractUiTest() {
 
     private fun importLabel() = context.getString(R.string.app_hub_import)
 
-    private fun howLabel() = context.getString(R.string.app_hub_how)
+    private fun bringLabel() = context.getString(R.string.app_hub_bring)
+
+    private fun bringGuideCta() = context.getString(R.string.app_hub_bring_guide_cta)
 
     companion object {
         private val PICKED_AUDIO: Uri = Uri.parse("content://test/picked-audio.mp3")

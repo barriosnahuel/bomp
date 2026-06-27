@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Record a Bomp without leaving the app — the add sheet's "Record" option opens a full-screen recorder: tap to record, listen back on a real waveform, and save it like any other Bomp; if you leave mid-recording, a banner offers to pick it back up
 - Drag the recorder's review waveform to scrub through your recording and jump to any spot — before, during, or after playback — the same way you can on the listen screen
 
+### Changed
+- The add-a-Bomp sheet now leads with recording and adds a "Bring audios from other apps" option that shows how to share a voice note in from WhatsApp or Telegram, with importing a saved file moved last
+
 ### Fixed
 - Bomps saved before an earlier update no longer disappear when you open the app — audios stored under the old format are recovered instead of the whole list silently emptying
 - Dragging the listen-screen waveform to seek now works even right after opening an audio, before its length has finished loading
@@ -28,6 +31,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Shortened seven collection/Vault user property names that exceeded Firebase's 24-character limit and were being dropped before reaching BigQuery, and added a build-time guard so over-length names can't ship again
 
 #### Changed
+- Reordered the import Hub rows by returning-user intent (record → bring-from-apps → import) and replaced the Hub's full-tour entry with a focused single-step guide reusing the onboarding IMPORT step; added the `import_hub_bring_selected` funnel event (the full tour stays reachable from the empty state)
 - De-duplicated the Vault listen and recorder-review waveforms into one shared `EnvelopeWaveform` component, and the `0.06f` floor + normalize loop into a single `WaveformNormalization` helper (ADR 0020)
 - Routed the `AudioPreview` and `SoundItem` progress sliders through the shared `seekTargetMs` mapping (a new `reserveEndMargin` flag keeps their reach-the-end semantics, distinct from the waveform scrub), finishing the fraction→ms dedup left over from the waveform scrub work
 - Kotlin compiler warnings now fail the build (`allWarningsAsErrors`, binary/unconditional) so they can't accumulate

@@ -323,7 +323,8 @@ sealed class AnalyticsEvent(
         AnalyticsEvent(name = "vault_search_unlock_cta_shown", hasFirstVariant = false)
 
     /**
-     * Onboarding funnel · ENTRY. [source] = which surface opened it (IMPORT_HUB vs EMPTY_STATE).
+     * Onboarding funnel · ENTRY. [source] = which surface opened the full tour (today only EMPTY_STATE;
+     * the Hub now opens the focused bring-from-apps guide instead — see [ImportHubBringSelected]).
      * `hasFirstVariant = true` so first-ever opens are isolable.
      *
      * Funnel query guide (whole funnel; each sibling event adds its own notes):
@@ -438,6 +439,16 @@ sealed class AnalyticsEvent(
      * between the two creation channels. `hasFirstVariant = true`.
      */
     object ImportHubRecordSelected : AnalyticsEvent(name = "import_hub_record_selected", hasFirstVariant = true)
+
+    /**
+     * Import-Hub funnel · INTENT (bring-from-apps). The user tapped the "bring audios from other apps"
+     * row, which opens a focused single-step guide on sharing a voice note in from WhatsApp/Telegram.
+     * Unlike [ImportHubImportSelected]/[ImportHubRecordSelected] this is not an in-app conversion step
+     * (the share is initiated from the *other* app, off-funnel); it measures how many Hub opens are
+     * driven by the import-from-another-app intent — the primary use case the Hub is being reshaped
+     * around. `hasFirstVariant = true`.
+     */
+    object ImportHubBringSelected : AnalyticsEvent(name = "import_hub_bring_selected", hasFirstVariant = true)
 
     /**
      * In-app recorder funnel · COMPLETION (ADR 0019). A capture reached the review state — via
