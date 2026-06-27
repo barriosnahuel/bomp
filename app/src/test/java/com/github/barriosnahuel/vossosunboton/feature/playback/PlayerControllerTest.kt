@@ -425,6 +425,25 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `startPlayingUri with a start position seeks there before starting and publishes it`() {
+        // The recorder review resumes a scrubbed offset: a fresh start must seek before start() and
+        // report the offset as the initial position (not 0) so the wave doesn't jump to the beginning.
+        val context = mockk<Context>(relaxed = true)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.duration } returns 5_000
+        val uri = Uri.parse("content://test/clip.mp3")
+
+        val controller = controllerForTest(mp)
+        controller.startPlayingUri(context, uri, startPositionMs = 2_000)
+
+        verifyOrder {
+            mp.seekTo(2_000)
+            mp.start()
+        }
+        assertThat(controller.playbackState.value?.positionMs).isEqualTo(2_000)
+    }
+
+    @Test
     fun `startPlayingUri while a Sound is playing preempts the sound via onPlayerPause`() {
         // Concurrency invariant: starting a Stream while a Sound plays must surface the event to
         // the Sound listener so the Home UI updates. Because the Sound's position is captured for

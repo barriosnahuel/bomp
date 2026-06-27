@@ -43,6 +43,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.feature.playback.seekTargetMs
 import com.github.barriosnahuel.vossosunboton.feature.vault.WaveformExtractor
 import com.github.barriosnahuel.vossosunboton.ui.theme.ImmersiveListenTheme
 
@@ -103,7 +104,14 @@ class RecordingActivity : FragmentActivity() {
         val reviewUri = (state as? RecorderState.Review)?.uri
         val preview = playback?.takeIf { it.uri == reviewUri }
         val isPreviewPlaying = preview?.isPlaying == true
-        val previewPositionMs = preview?.positionMs?.toLong() ?: 0L
+        // Persisted scrub position for the current clip. The Vault keeps this in its ViewModel
+        // (_pausedProgress) because the VM owns playback; the recorder owns playback in this host, so it
+        // lives here. It lets the wave hold the scrubbed spot when no player is loaded (before first
+        // play / after the clip completes) and gives `play` a resume offset. Reset per clip.
+        var scrubPositionMs by rememberSaveable(reviewUri) { mutableStateOf(0L) }
+        // While the clip is the loaded playback, follow the player head (seekTo publishes it even when
+        // paused); otherwise show the persisted scrub position so the wave never snaps back to 0.
+        val displayPositionMs = if (preview != null) preview.positionMs.toLong() else scrubPositionMs
 
         // Real amplitude envelope of the recorded clip. A fresh recording carries the live-captured
         // envelope (instant — no placeholder gap); only a restored draft (no live samples) falls back to
@@ -139,25 +147,26 @@ class RecordingActivity : FragmentActivity() {
                         RecorderScreen(
                             state = state,
                             isPreviewPlaying = isPreviewPlaying,
-                            previewPositionMs = previewPositionMs,
+                            previewPositionMs = displayPositionMs,
                             peaks = peaks,
                             onRecordTap = viewModel::onRecordTapped,
                             onStopTap = viewModel::onStopTapped,
-                            onPreviewToggle = { togglePreview(reviewUri) },
+                            onPreviewToggle = { togglePreview(reviewUri, scrubPositionMs.toInt()) },
                             onUseClip = viewModel::onUseClip,
                             onReRecord = {
                                 PlayerControllerFactory.instance.stopPlayingSound()
                                 viewModel.onReRecord()
                             },
                             onClose = { if (viewModel.hasUnsavedClip()) showDiscard = true else finish() },
-                            // Scrub the preview like the Vault listen wave. Only seeks when this clip is
-                            // the loaded playback (preview started); before first play there is no player
-                            // to seek, so the drag scrubs the wave visually only.
+                            // Scrub like the Vault listen wave: remember the target so the wave holds it,
+                            // and seek the player when this clip is loaded. Tapping play from idle resumes
+                            // from the remembered offset (passed into togglePreview).
                             onSeek = { fraction ->
                                 val review = state as? RecorderState.Review
-                                if (review != null && preview != null) {
-                                    recorderSeekTargetMs(review.durationMs, fraction)?.let {
-                                        PlayerControllerFactory.instance.seekTo(it)
+                                if (review != null) {
+                                    seekTargetMs(review.durationMs, fraction)?.let { target ->
+                                        scrubPositionMs = target.toLong()
+                                        if (preview != null) PlayerControllerFactory.instance.seekTo(target)
                                     }
                                 }
                             },
@@ -195,14 +204,19 @@ class RecordingActivity : FragmentActivity() {
         }
     }
 
-    private fun togglePreview(reviewUri: Uri?) {
+    private fun togglePreview(
+        reviewUri: Uri?,
+        startPositionMs: Int,
+    ) {
         val uri = reviewUri ?: return
         val controller = PlayerControllerFactory.instance
         val current = controller.playbackState.value
         when {
             current?.isPlaying == true -> controller.pause()
+            // Paused on this clip: the player head already holds the scrubbed position — resume from it.
             current != null && current.uri == uri -> controller.resume()
-            else -> controller.startPlayingUri(this, uri)
+            // Fresh start (before first play / after completion): resume from the remembered scrub offset.
+            else -> controller.startPlayingUri(this, uri, startPositionMs)
         }
     }
 

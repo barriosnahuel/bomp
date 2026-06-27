@@ -166,6 +166,7 @@ internal class PlayerControllerImpl(
     override fun startPlayingUri(
         context: Context,
         uri: Uri,
+        startPositionMs: Int,
     ) {
         val currentTarget = target
         if (currentTarget is PlaybackTarget.UriTarget && currentTarget.uri == uri && !mediaPlayer.isPlaying) {
@@ -192,7 +193,7 @@ internal class PlayerControllerImpl(
                 if (!isActive) return@launch
 
                 prepared
-                    .onSuccess { durationMs -> completeUriStart(uri, durationMs) }
+                    .onSuccess { durationMs -> completeUriStart(uri, durationMs, startPositionMs) }
                     .onFailure { e -> trackUriPrepareFailure(uri, e) }
             }
     }
@@ -200,18 +201,21 @@ internal class PlayerControllerImpl(
     private fun completeUriStart(
         uri: Uri,
         durationMs: Int,
+        startPositionMs: Int,
     ) {
         mediaPlayer.setOnCompletionListener {
             handler.removeCallbacks(progressRunnable)
             target = null
             _playbackState.value = null
         }
+        // seekTo is valid in PREPARED state; the next start() picks up from there (the scrubbed offset).
+        if (startPositionMs > 0) runCatching { mediaPlayer.seekTo(startPositionMs) }
         val started = runCatching { mediaPlayer.start() }
         started
             .onSuccess {
                 target = PlaybackTarget.UriTarget(uri)
                 _playbackState.value =
-                    PlaybackState(uri = uri, positionMs = 0, durationMs = durationMs, isPlaying = true)
+                    PlaybackState(uri = uri, positionMs = startPositionMs, durationMs = durationMs, isPlaying = true)
                 handler.post(progressRunnable)
             }.onFailure { e ->
                 if (e is IllegalStateException) {
@@ -389,9 +393,18 @@ internal class PlayerControllerImpl(
     }
 
     override fun seekTo(positionMs: Int) {
-        mediaPlayer.seekTo(positionMs)
+        // Wrapped like every other MediaPlayer call here: a seek racing a stop/complete can land in an
+        // invalid state and throw IllegalStateException — swallow + report rather than crash.
+        runCatching { mediaPlayer.seekTo(positionMs) }
+            .onFailure { e ->
+                Tracker.log("playback.seek_position=$positionMs")
+                Tracker.track(RuntimeException("MediaPlayer can't seek", e))
+                return
+            }
         // Publish the new head right away so a seek while paused reflects in the UI — the progress
         // runnable only advances positionMs while playing, so otherwise a paused scrub would snap back.
+        // seekTo acts on the currently-loaded target, so _playbackState (that same target) is the right
+        // place to publish; callers own matching the fraction to the loaded clip before seeking.
         _playbackState.update { it?.copy(positionMs = positionMs) }
     }
 

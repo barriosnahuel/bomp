@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.feature.playback.seekTargetMs
 import com.github.barriosnahuel.vossosunboton.feature.waveform.EnvelopeWaveform
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
@@ -132,7 +133,7 @@ internal fun ImmersiveListenHost(
         peaks = peaks,
         onPlayPause = { viewModel.playOrStop(sound.copy(isPlaying = isThisPlaying)) },
         onRestart = { viewModel.seekTo(0, soundId) },
-        onSeek = { f -> durationMs?.let { d -> viewModel.seekTo((f * d).toInt(), soundId) } },
+        onSeek = { f -> durationMs?.let { d -> seekTargetMs(d.toLong(), f)?.let { viewModel.seekTo(it, soundId) } } },
         onBack = onBack,
     )
 }

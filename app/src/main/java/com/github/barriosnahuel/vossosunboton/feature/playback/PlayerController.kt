@@ -56,10 +56,15 @@ internal interface PlayerController {
      * registered [PlayerControllerListener] sees `onPlayerPause(currentSound, ...)` for the Sound
      * case (preemption preserves position — it is a pause, not a stop). Progress for the new
      * preview is reported via [playbackState] only — listener events are not fired (no Sound to pass).
+     *
+     * [startPositionMs] resumes a fresh start from that offset (e.g. the recorder review resuming a
+     * scrubbed position); 0 starts from the beginning. A resume of the already-loaded paused uri
+     * continues from its own head and ignores this.
      */
     fun startPlayingUri(
         context: Context,
         uri: Uri,
+        startPositionMs: Int = 0,
     )
 
     /**

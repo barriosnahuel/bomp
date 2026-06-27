@@ -47,14 +47,3 @@ internal fun buildRecorderEnvelope(
     // caller decodes the real file instead of showing a fake flat line for a clip that has audio.
     return if (loudest <= 0f) null else normalizeEnvelope(raw, loudest)
 }
-
-/**
- * Maps a waveform-scrub [fraction] (0..1) to a millisecond seek target within a clip of [durationMs].
- * Returns `null` for a non-positive duration (nothing to seek). Pure so the recorder review's seek
- * gate/mapping is unit-tested without an Activity; the host still gates on the clip being the active
- * preview playback before calling `seekTo`.
- */
-internal fun recorderSeekTargetMs(
-    durationMs: Long,
-    fraction: Float,
-): Int? = if (durationMs > 0L) (fraction.coerceIn(0f, 1f) * durationMs).toInt() else null
