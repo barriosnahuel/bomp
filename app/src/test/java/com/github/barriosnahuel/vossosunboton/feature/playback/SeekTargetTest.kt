@@ -30,4 +30,22 @@ internal class SeekTargetTest {
     fun `returns null for a non-positive duration so nothing seeks`() {
         assertThat(seekTargetMs(durationMs = 0, fraction = 0.5f)).isNull()
     }
+
+    @Test
+    fun `without end margin a full-right scrub reaches the end so a slider can complete`() {
+        // A progress slider dragged to the end should land on EOS and complete naturally, unlike the
+        // waveform scrub which reserves the margin to keep the preview alive.
+        assertThat(seekTargetMs(durationMs = 10_000, fraction = 1f, reserveEndMargin = false)).isEqualTo(10_000)
+        assertThat(seekTargetMs(durationMs = 10_000, fraction = 1.5f, reserveEndMargin = false)).isEqualTo(10_000)
+    }
+
+    @Test
+    fun `without end margin a mid scrub still maps to millis within the clip`() {
+        assertThat(seekTargetMs(durationMs = 10_000, fraction = 0.5f, reserveEndMargin = false)).isEqualTo(5_000)
+    }
+
+    @Test
+    fun `without end margin a non-positive duration still returns null`() {
+        assertThat(seekTargetMs(durationMs = 0, fraction = 1f, reserveEndMargin = false)).isNull()
+    }
 }
