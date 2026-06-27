@@ -390,6 +390,9 @@ internal class PlayerControllerImpl(
 
     override fun seekTo(positionMs: Int) {
         mediaPlayer.seekTo(positionMs)
+        // Publish the new head right away so a seek while paused reflects in the UI — the progress
+        // runnable only advances positionMs while playing, so otherwise a paused scrub would snap back.
+        _playbackState.update { it?.copy(positionMs = positionMs) }
     }
 
     override fun forgetSound(sound: Sound) {

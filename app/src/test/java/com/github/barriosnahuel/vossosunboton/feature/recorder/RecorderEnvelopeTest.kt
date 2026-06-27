@@ -44,6 +44,22 @@ internal class RecorderEnvelopeTest {
         assertThat(buildRecorderEnvelope(List(100) { 0f }, BARS)).isNull()
     }
 
+    @Test
+    fun `recorderSeekTargetMs maps a scrub fraction to millis within the clip`() {
+        assertThat(recorderSeekTargetMs(durationMs = 10_000, fraction = 0.5f)).isEqualTo(5_000)
+    }
+
+    @Test
+    fun `recorderSeekTargetMs coerces out-of-range fractions into the clip bounds`() {
+        assertThat(recorderSeekTargetMs(durationMs = 10_000, fraction = 1.5f)).isEqualTo(10_000)
+        assertThat(recorderSeekTargetMs(durationMs = 10_000, fraction = -0.3f)).isEqualTo(0)
+    }
+
+    @Test
+    fun `recorderSeekTargetMs returns null for a non-positive duration so nothing seeks`() {
+        assertThat(recorderSeekTargetMs(durationMs = 0, fraction = 0.5f)).isNull()
+    }
+
     private companion object {
         const val BARS = 48
         const val FLOOR = 0.06f

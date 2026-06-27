@@ -515,6 +515,25 @@ internal class PlayerControllerTest : AbstractRobolectricTest() {
         verify { mp.seekTo(1500) }
     }
 
+    @Test
+    fun `seekTo publishes the new position so a paused scrub reflects in the UI`() {
+        // The progress runnable only advances positionMs while playing, so without publishing here a
+        // seek on a paused preview would leave the StateFlow (and the waveform) at the old position.
+        val context = mockk<Context>(relaxed = true)
+        val mp = givenAnIdleMediaPlayer()
+        every { mp.duration } returns 5_000
+        val controller = controllerForTest(mp)
+        controller.startPlayingUri(context, Uri.parse("content://test/clip.mp3"))
+        every { mp.isPlaying } returns true
+        controller.pause()
+        every { mp.isPlaying } returns false
+
+        controller.seekTo(3_200)
+
+        verify { mp.seekTo(3_200) }
+        assertThat(controller.playbackState.value?.positionMs).isEqualTo(3_200)
+    }
+
     private fun givenAMediaPlayerCurrentlyPlayingASound(): MediaPlayer {
         val mockedMediaPlayer = mockk<MediaPlayer>()
         every { mockedMediaPlayer.isPlaying } returns true
