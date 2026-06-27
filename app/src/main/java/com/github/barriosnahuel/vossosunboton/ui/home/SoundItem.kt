@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.feature.playback.seekTargetMs
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performConfirmHaptic
@@ -498,7 +499,10 @@ private fun SoundCard(
                         onValueChangeFinished = {
                             isDragging = false
                             if (playbackProgress != null) {
-                                onSeek((sliderPosition * playbackProgress.durationMs).toInt())
+                                // reserveEndMargin = false: a full-right drag may intend to reach
+                                // the end and complete, unlike the waveform scrub (see seekTargetMs).
+                                seekTargetMs(playbackProgress.durationMs.toLong(), sliderPosition, reserveEndMargin = false)
+                                    ?.let(onSeek)
                             }
                         },
                         enabled = sound.isPlaying,

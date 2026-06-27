@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.feature.playback.seekTargetMs
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
@@ -188,7 +189,9 @@ internal fun AudioPreview(
                         Slider(
                             value = sliderPosition,
                             onValueChange = { value ->
-                                if (durationMs > 0) controller.seekTo((value * durationMs).toInt())
+                                // reserveEndMargin = false: a full-right drag may intend to reach
+                                // the end and complete, unlike the waveform scrub (see seekTargetMs).
+                                seekTargetMs(durationMs.toLong(), value, reserveEndMargin = false)?.let(controller::seekTo)
                             },
                             enabled = isPlaying,
                             colors =
