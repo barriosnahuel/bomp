@@ -33,8 +33,11 @@ object CanonicalScreenName {
     /** Manage Collections screen — canonical home for rename / delete / create across both scopes. */
     const val MANAGE_COLLECTIONS = "manage_collections"
 
-    /** On-demand onboarding tour (3 steps) opened from the import Hub or the My Bomps empty state. */
+    /** On-demand onboarding tour (3 steps) opened from the My Bomps empty state. */
     const val ONBOARDING = "onboarding"
+
+    /** Focused single-step guide opened from the import Hub's "bring audios from other apps" row. */
+    const val BRING_GUIDE = "bring_guide"
 
     /** Immersive in-app recorder opened from the import Hub's Record row (ADR 0019). */
     const val RECORD_SOUND = "record_sound"
@@ -53,6 +56,7 @@ object CanonicalScreenName {
             COLLECTION_CREATE,
             MANAGE_COLLECTIONS,
             ONBOARDING,
+            BRING_GUIDE,
             RECORD_SOUND,
         )
 }

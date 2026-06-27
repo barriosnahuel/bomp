@@ -119,6 +119,7 @@ internal class AnalyticsCoverageMatrixTest {
                 CanonicalScreenName.COLLECTION_CREATE,
                 CanonicalScreenName.MANAGE_COLLECTIONS,
                 CanonicalScreenName.ONBOARDING,
+                CanonicalScreenName.BRING_GUIDE,
                 CanonicalScreenName.RECORD_SOUND,
             )
 

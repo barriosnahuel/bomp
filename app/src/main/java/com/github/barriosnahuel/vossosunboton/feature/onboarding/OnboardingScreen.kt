@@ -69,15 +69,16 @@ internal const val ONBOARDING_STEP_COUNT = 3
 internal const val ONBOARDING_TAP_PREV = "onboarding_tap_prev"
 internal const val ONBOARDING_TAP_NEXT = "onboarding_tap_next"
 
-private val STAGE_RADIUS = 24.dp
-private val CTA_HEIGHT = 56.dp
+// Shared with BringFromAppsGuide (same package), which reuses the demo card + CTA pill.
+internal val STAGE_RADIUS = 24.dp
+internal val CTA_HEIGHT = 56.dp
 private val DOT_HEIGHT = 7.dp
 private val DOT_ACTIVE_WIDTH = 22.dp
 
 // Min height the demo keeps when the layout switches to its scrollable (landscape) variant.
-private val DEMO_MIN_HEIGHT = 200.dp
+internal val DEMO_MIN_HEIGHT = 200.dp
 
-private data class OnboardingStepContent(
+internal data class OnboardingStepContent(
     // Stable concept slug for analytics — survives a future reorder of the display positions, so the
     // funnel keys on "what the step teaches", not its (mutable) 1/2/3 index. NOT user-facing.
     val key: String,
@@ -88,6 +89,9 @@ private data class OnboardingStepContent(
     @StringRes val cta: Int,
     @StringRes val demoDescription: Int,
 )
+
+/** The IMPORT step's content, reused standalone by [BringFromAppsGuide] so its copy never drifts from the tour. */
+internal val ONBOARDING_IMPORT_STEP: OnboardingStepContent get() = ONBOARDING_STEPS[0]
 
 private val ONBOARDING_STEPS =
     listOf(
@@ -287,72 +291,106 @@ internal fun OnboardingTour(
                 }
 
                 Spacer(Modifier.height(Spacing.LG))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = content.number,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.width(Spacing.SM))
-                    Text(
-                        text = stringResource(content.eyebrow).uppercase(),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
-                        letterSpacing = 1.6.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(Modifier.height(Spacing.SM))
-                Text(
-                    text = stringResource(content.title),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(Modifier.height(Spacing.MD))
-                Text(
-                    text = stringResource(content.body),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                OnboardingStepHeadline(content = content, leadingNumber = content.number)
 
                 Spacer(Modifier.height(Spacing.XL))
-                // Filled-primary tier (ADR 0010): the single forward action of the screen. Tall acid pill.
-                Button(
+                OnboardingPrimaryCta(
+                    text = stringResource(content.cta),
+                    showTrailingArrow = isLast,
                     onClick = { if (isLast) finish(AnalyticsNavMethod.BUTTON) else advance(AnalyticsNavMethod.BUTTON) },
-                    modifier = Modifier.fillMaxWidth().height(CTA_HEIGHT),
-                    shape = RoundedCornerShape(percent = 50),
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        ),
-                ) {
-                    Text(
-                        text = stringResource(content.cta),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    if (isLast) {
-                        Spacer(Modifier.width(Spacing.SM))
-                        Icon(
-                            painter = painterResource(R.drawable.app_ic_keyboard_arrow_right),
-                            contentDescription = null,
-                            modifier = Modifier.height(Spacing.XL),
-                        )
-                    }
-                }
+                )
                 Spacer(Modifier.height(Spacing.XL))
             }
         }
     }
 }
 
+/**
+ * The step's eyebrow (optionally preceded by [leadingNumber]), title and body. Shared between the tour
+ * (which passes the step number) and [BringFromAppsGuide] (which passes null) so typography never drifts.
+ */
+@Composable
+internal fun OnboardingStepHeadline(
+    content: OnboardingStepContent,
+    leadingNumber: String?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (leadingNumber != null) {
+                Text(
+                    text = leadingNumber,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(Spacing.SM))
+            }
+            Text(
+                text = stringResource(content.eyebrow).uppercase(),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                letterSpacing = 1.6.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.height(Spacing.SM))
+        Text(
+            text = stringResource(content.title),
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(Spacing.MD))
+        Text(
+            text = stringResource(content.body),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Filled-primary tier (ADR 0010): the screen's single forward action, a tall acid pill. Shared between
+ * the tour (forward/finish, [showTrailingArrow] on the last step) and [BringFromAppsGuide] (terminal).
+ */
+@Composable
+internal fun OnboardingPrimaryCta(
+    text: String,
+    showTrailingArrow: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().height(CTA_HEIGHT),
+        shape = RoundedCornerShape(percent = 50),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        if (showTrailingArrow) {
+            Spacer(Modifier.width(Spacing.SM))
+            Icon(
+                painter = painterResource(R.drawable.app_ic_keyboard_arrow_right),
+                contentDescription = null,
+                modifier = Modifier.height(Spacing.XL),
+            )
+        }
+    }
+}
+
 /** The demo illustration framed in a hairline-bordered tonal card. Decorative: one merged description. */
 @Composable
-private fun DemoStage(
+internal fun DemoStage(
     step: Int,
     reduceMotion: Boolean,
     demoDescription: String,
