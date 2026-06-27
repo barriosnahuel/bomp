@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.waveform.EnvelopeWaveform
+import com.github.barriosnahuel.vossosunboton.feature.waveform.WAVEFORM_MIN_BAR
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.theme.ImmersiveListenTheme
@@ -207,7 +208,7 @@ private fun LiveWaveform(
         val centerY = size.height / 2f
         val corner = CornerRadius(barWidth / 2f, barWidth / 2f)
         bars.forEachIndexed { i, raw ->
-            val barHeight = raw.coerceIn(WAVEFORM_MIN_FRACTION, 1f) * size.height
+            val barHeight = raw.coerceIn(WAVEFORM_MIN_BAR, 1f) * size.height
             val x = i * slot + (slot - barWidth) / 2f
             drawRoundRect(
                 color = activeColor,
@@ -462,7 +463,6 @@ private val PRIMING_ICON_SIZE = 64.dp
 private val WAVEFORM_HEIGHT = 120.dp
 internal const val RECORDER_WAVEFORM_BARS = 48
 private const val WAVEFORM_BAR_FILL = 0.5f
-private const val WAVEFORM_MIN_FRACTION = 0.06f
 private const val GLOW_CENTER_ALPHA = 0.16f
 private const val GLOW_MID_ALPHA = 0.04f
 private const val GLOW_STOP_CENTER = 0.0f

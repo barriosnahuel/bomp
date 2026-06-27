@@ -18,8 +18,8 @@ internal const val WAVEFORM_MIN_BAR = 0.06f
 /**
  * Normalizes [raw] amplitude buckets so the [loudest] becomes 1.0, with every bar floored at
  * [WAVEFORM_MIN_BAR]. Pure (no Android types) so the bucketing callers stay unit-testable.
- * Precondition: [loudest] > 0 — callers own the all-silent case (a flat baseline, or `null` to
- * decode the real file instead), which is why that branch is not folded in here.
+ * Precondition: [loudest] > 0 — callers own the all-silent case, which is deliberately not folded
+ * in here: docs/adr/0020-shared-envelope-waveform.md.
  */
 internal fun normalizeEnvelope(
     raw: FloatArray,

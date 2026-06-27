@@ -30,11 +30,13 @@ import androidx.compose.ui.semantics.setProgress
  * `primary` as playback advances and the rest dims. While `peaks` is still decoding (or decoding
  * failed) it is `null` and a neutral placeholder baseline shows — never a fake-looking wave.
  *
- * One component for both the Vault listen screen and the recorder review (was `ImmersiveWaveform` +
- * `ReviewWaveform`). Per-surface differences are parameters: bar count and bar width ([barCount],
- * [barFill]) and, when non-null, [onSeek] enables drag-to-scrub plus the `SetProgress` semantics
- * action; a `null` [onSeek] renders a read-only wave. The played boundary is the bar's left edge
- * (`i / barCount < progress`), matching the shipped Vault behavior.
+ * Per-surface differences are parameters: bar width ([barFill]); [onSeek], which when non-null wires
+ * drag-to-scrub plus the `SetProgress` semantics action (a `null` renders a read-only wave); and
+ * [barCount], which sizes the placeholder grid only — once `peaks` arrives the bar count follows
+ * `peaks.size`, so a caller must decode at the same resolution it passes here.
+ *
+ * The one shared component, the unified left-edge played boundary, and the per-surface params:
+ * docs/adr/0020-shared-envelope-waveform.md.
  */
 @Composable
 internal fun EnvelopeWaveform(
