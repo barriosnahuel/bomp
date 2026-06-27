@@ -7,9 +7,11 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 ### Added
 - Record a Bomp without leaving the app — the add sheet's "Record" option opens a full-screen recorder: tap to record, listen back on a real waveform, and save it like any other Bomp; if you leave mid-recording, a banner offers to pick it back up
+- Drag the recorder's review waveform to scrub through your recording while previewing it, the same way you can on the listen screen
 
 ### Fixed
 - Bomps saved before an earlier update no longer disappear when you open the app — audios stored under the old format are recovered instead of the whole list silently emptying
+- Dragging the listen-screen waveform to seek now works even right after opening an audio, before its length has finished loading
 
 ### For nerds 🤓
 

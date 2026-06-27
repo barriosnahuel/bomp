@@ -76,6 +76,7 @@ internal fun RecorderScreen(
     onUseClip: () -> Unit,
     onReRecord: () -> Unit,
     onClose: () -> Unit,
+    onSeek: (Float) -> Unit,
 ) {
     RecorderBackdrop {
         Column(
@@ -88,7 +89,7 @@ internal fun RecorderScreen(
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 RecorderHeadline(state, isPreviewPlaying, previewPositionMs)
-                RecorderVisual(state, previewPositionMs, peaks)
+                RecorderVisual(state, previewPositionMs, peaks, onSeek)
                 RecorderTransport(
                     state = state,
                     isPreviewPlaying = isPreviewPlaying,
@@ -167,6 +168,7 @@ private fun RecorderVisual(
     state: RecorderState,
     previewPositionMs: Long,
     peaks: FloatArray?,
+    onSeek: (Float) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxWidth().height(WAVEFORM_HEIGHT), contentAlignment = Alignment.Center) {
         when (state) {
@@ -179,6 +181,7 @@ private fun RecorderVisual(
                     barCount = RECORDER_WAVEFORM_BARS,
                     barFill = WAVEFORM_BAR_FILL,
                     modifier = Modifier.fillMaxWidth().height(WAVEFORM_HEIGHT),
+                    onSeek = onSeek,
                 )
             RecorderState.Ready -> LiveWaveform(amplitude = 0f, tick = 0L)
         }

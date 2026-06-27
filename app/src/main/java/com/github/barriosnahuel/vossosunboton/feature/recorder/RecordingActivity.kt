@@ -150,6 +150,17 @@ class RecordingActivity : FragmentActivity() {
                                 viewModel.onReRecord()
                             },
                             onClose = { if (viewModel.hasUnsavedClip()) showDiscard = true else finish() },
+                            // Scrub the preview like the Vault listen wave. Only seeks when this clip is
+                            // the loaded playback (preview started); before first play there is no player
+                            // to seek, so the drag scrubs the wave visually only.
+                            onSeek = { fraction ->
+                                val review = state as? RecorderState.Review
+                                if (review != null && preview != null) {
+                                    recorderSeekTargetMs(review.durationMs, fraction)?.let {
+                                        PlayerControllerFactory.instance.seekTo(it)
+                                    }
+                                }
+                            },
                         )
                     permanentlyDenied ->
                         MicPermissionDenied(

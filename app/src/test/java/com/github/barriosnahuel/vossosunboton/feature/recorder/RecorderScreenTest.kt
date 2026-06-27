@@ -15,6 +15,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeRight
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
@@ -105,17 +107,35 @@ internal class RecorderScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `review waveform exposes no seek action`() {
-        // The recorder review is read-only (shared EnvelopeWaveform called with onSeek = null), so it
-        // must not advertise a SetProgress action — otherwise TalkBack would offer a phantom scrub the
-        // recorder never wired. The Vault listen wave is the only seekable envelope (covered there).
+    fun `review waveform exposes a seek action`() {
+        // The recorder review is scrubbable (shared EnvelopeWaveform wired with onSeek), so it must
+        // advertise a SetProgress action for TalkBack — matching the Vault listen wave.
         val review = RecorderState.Review(Uri.parse("content://clip"), durationMs = 5_000)
         composeTestRule.setContent {
             AppTheme { recorder(review, isPreviewPlaying = true, previewPositionMs = 2_000) }
         }
 
         val node = composeTestRule.onNodeWithContentDescription("Playback progress").fetchSemanticsNode()
-        assertThat(node.config.contains(SemanticsActions.SetProgress)).isFalse()
+        assertThat(node.config.contains(SemanticsActions.SetProgress)).isTrue()
+    }
+
+    @Test
+    fun `dragging the review waveform seeks on release`() {
+        var seeked: Float? = null
+        val review = RecorderState.Review(Uri.parse("content://clip"), durationMs = 5_000)
+        composeTestRule.setContent {
+            AppTheme { recorder(review, isPreviewPlaying = true, previewPositionMs = 2_000, onSeek = { seeked = it }) }
+        }
+
+        composeTestRule
+            .onNodeWithContentDescription("Playback progress")
+            .performTouchInput { swipeRight() }
+        composeTestRule.waitForIdle()
+
+        // Released near the right edge → a fraction well into the second half of the clip.
+        assertThat(seeked).isNotNull()
+        assertThat(seeked!!).isAtLeast(0.5f)
+        assertThat(seeked).isAtMost(1f)
     }
 
     @Composable
@@ -125,6 +145,7 @@ internal class RecorderScreenTest : AbstractRobolectricTest() {
         previewPositionMs: Long = 0L,
         peaks: FloatArray? = null,
         onRecordTap: () -> Unit = {},
+        onSeek: (Float) -> Unit = {},
     ) {
         RecorderScreen(
             state = state,
@@ -137,6 +158,7 @@ internal class RecorderScreenTest : AbstractRobolectricTest() {
             onUseClip = {},
             onReRecord = {},
             onClose = {},
+            onSeek = onSeek,
         )
     }
 }
