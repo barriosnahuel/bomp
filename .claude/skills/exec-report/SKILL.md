@@ -52,17 +52,23 @@ NAME (2.1.0, 2.2.0); Play uses the CODE (`App_Version_Code` = Firebase's `build_
 **Methodology for QUALITY and PERFORMANCE version cuts (anti-false-alarm — this is the lesson of
 [`docs/perf-investigations/0001`](../../../docs/perf-investigations/0001-2.2.0-startup-false-alarm.md);
 see the `/perf-report-triage` skill):** the field sample is small, so a raw mean over a handful of events
-is dominated by a single bad-actor device and manufactures fake regressions. Therefore, for startup and
-frame metrics (and version-cut quality):
+is dominated by a single bad-actor device and manufactures fake regressions. Therefore:
 
-- Use the **median** (`APPROX_QUANTILES(...)[OFFSET(1)]`), not `AVG`.
+- **For continuous metrics (startup time, frame ratios):** report the **median** (`APPROX_QUANTILES`
+  `[OFFSET(50)]`) instead of `AVG` — the median ignores a single outlier device. **Also report `p90`
+  (`[OFFSET(90)]`)** so a tail regression that hits a slice of users (which the median hides) is still
+  visible: median flat + p90 worse = a real tail regression, escalate it.
+- **For quality (crash-free %, crash/ANR counts):** these are **rates/counts, not medianable** — keep
+  raw counts/rates, but apply the **per-device + min-N + single-device-domination** guards below (do
+  **not** take a "median" of a crash count).
 - **Segment by `device_name`**, not just by version — the only honest comparison is the *same device
   model across versions*. A version delta that doesn't reproduce on the same model is device-mix, not a
   regression.
 - **Flag single-device domination:** if one `device_name` carries most of a cell's samples, also report
   the figure excluding it.
 - **Minimum-sample guard:** if a version×device cell has too few samples to be meaningful, label it
-  "muestra insuficiente" instead of reporting a delta.
+  "muestra insuficiente" instead of reporting a delta. (The reference queries surface a sample count `n`
+  per metric so this guard is applicable.)
 - A single bad device must not become a release-regression headline. Only call a regression real when the
   *same device model* regresses across versions.
 
@@ -125,8 +131,9 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
    Prioritize funnels with signal; if a funnel has 0 events, summarize it in one line, don't break it down.
 
 3. **QUALITY:** crash-free, number and top crashes (Crashlytics), ANRs (Play) — ALWAYS broken down by
-   version, applying the anti-false-alarm methodology above (median + per-device + min-N guard; a single
-   device shouldn't define release health).
+   version. These are **counts/rates, not medianable** (no "median of a crash count"): keep raw
+   crash-free % and counts, but apply the per-device + min-N + single-device-domination guards from the
+   methodology block — a single device shouldn't define release health.
 
 4. **GROWTH/ENGAGEMENT (Firebase sessions):** sessions, unique devices (DAU proxy), cold starts
    (`session_index=0`), 7d vs prior 7d trend, geography. If GA4 is enabled, real users/retention come from
@@ -135,10 +142,11 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
 5. **PERFORMANCE:** startup (`_app_start`, `trace_info.duration_us` µs→ms); `slow_frame_ratio` and
    `frozen_frame_ratio` per screen (SCREEN_TRACE, `trace_info.screen_info`); network latency and error %
    (NETWORK_REQUEST, `response_code>=400`, `SAFE_DIVIDE`) — ALWAYS comparing new vs previous version, and
-   ALWAYS with the anti-false-alarm methodology: **median (not mean), segmented by `device_name`, with the
-   single-device-outlier flag and the min-N guard.** Report startup as the per-version median plus the
-   same-device check; never headline a startup/frame regression that doesn't reproduce on the same device
-   model.
+   ALWAYS with the anti-false-alarm methodology: **report p50 AND p90 (not mean), segmented by
+   `device_name`, with the single-device-outlier flag and the min-N guard.** Report startup as the
+   per-version p50 + p90 plus the same-device check; never headline a startup/frame regression that
+   doesn't reproduce on the same device model — but if p50 is flat while p90 worsens, that's a real tail
+   regression, escalate it.
 
 ## Reference queries (validated)
 
@@ -148,21 +156,25 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
   `bomp-prod.firebase_sessions.com_github_barriosnahuel_vossosunboton_ANDROID` WHERE
   event_type='SESSION_START';`
 
-- Performance per version (MEDIAN + sample size for the min-N guard):
-  `SELECT app_display_version ver, COUNTIF(event_name='_app_start') n_start,
-  ROUND(APPROX_QUANTILES(IF(event_name='_app_start',trace_info.duration_us,NULL),2)[OFFSET(1)]/1000,1)
-  appstart_p50_ms,
-  ROUND(APPROX_QUANTILES(IF(event_name='_st_LandingActivity',trace_info.screen_info.slow_frame_ratio,NULL),2)[OFFSET(1)],3)
-  landing_slow_p50,
-  ROUND(APPROX_QUANTILES(IF(event_name='_st_LandingActivity',trace_info.screen_info.frozen_frame_ratio,NULL),2)[OFFSET(1)],3)
-  landing_frozen_p50 FROM `bomp-prod.firebase_performance.com_github_barriosnahuel_vossosunboton_ANDROID`
+- Performance per version (p50 + p90 + a sample count `n` per metric for the min-N guard):
+  `SELECT app_display_version ver,
+  COUNTIF(event_name='_app_start') n_start,
+  ROUND(APPROX_QUANTILES(IF(event_name='_app_start',trace_info.duration_us,NULL),100)[OFFSET(50)]/1000,1) appstart_p50_ms,
+  ROUND(APPROX_QUANTILES(IF(event_name='_app_start',trace_info.duration_us,NULL),100)[OFFSET(90)]/1000,1) appstart_p90_ms,
+  COUNTIF(event_name='_st_LandingActivity') n_landing,
+  ROUND(APPROX_QUANTILES(IF(event_name='_st_LandingActivity',trace_info.screen_info.slow_frame_ratio,NULL),100)[OFFSET(50)],3) landing_slow_p50,
+  ROUND(APPROX_QUANTILES(IF(event_name='_st_LandingActivity',trace_info.screen_info.frozen_frame_ratio,NULL),100)[OFFSET(90)],3) landing_frozen_p90
+  FROM `bomp-prod.firebase_performance.com_github_barriosnahuel_vossosunboton_ANDROID`
   GROUP BY ver ORDER BY ver;`
+  (`n_start`/`n_landing` are the per-cell counts for the min-N guard; report `landing_frozen` at p90 —
+  the frozen tail is what users feel.)
 
 - Performance — DECISIVE same-device check (a version delta is only real if the same device model
-  regresses; otherwise it's device-mix). If one device dominates a version, recompute its median excluding
+  regresses; otherwise it's device-mix). If one device dominates a version, recompute its p50/p90 excluding
   that device:
   `SELECT device_name, app_build_version code, COUNT(*) n,
-  ROUND(APPROX_QUANTILES(trace_info.duration_us,2)[OFFSET(1)]/1000,1) appstart_p50_ms FROM
+  ROUND(APPROX_QUANTILES(trace_info.duration_us,100)[OFFSET(50)]/1000,1) appstart_p50_ms,
+  ROUND(APPROX_QUANTILES(trace_info.duration_us,100)[OFFSET(90)]/1000,1) appstart_p90_ms FROM
   `bomp-prod.firebase_performance.com_github_barriosnahuel_vossosunboton_ANDROID` WHERE
   event_type='DURATION_TRACE' AND event_name='_app_start' GROUP BY device_name, code ORDER BY device_name,
   code;`
