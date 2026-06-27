@@ -90,8 +90,14 @@ object AnalyticsSource {
     const val MY_SOUNDS_FILTER = "my_sounds_filter"
     const val SEARCH = "search"
 
-    /** Onboarding tour entry point — the empty My Bomps "see how it works" secondary. */
+    /** Onboarding tour entry points. */
     const val EMPTY_STATE = "my_sounds_empty_state"
+
+    /** "See how it works" footer under the lone welcome audio on a fresh install. */
+    const val WELCOME_FOOTER = "welcome_footer"
+
+    /** "See how it works" item in the top bar overflow menu (reopenable any time). */
+    const val OVERFLOW_MENU = "overflow_menu"
 
     /**
      * Import-Hub open entry points — the `+` FAB on My Bomps vs the onboarding tour's closing

@@ -153,6 +153,20 @@ internal class HomeTabFlowTest : AbstractUiTest() {
         }
     }
 
+    @Test
+    fun overflowSeeHowItWorksOpensTheTour() {
+        // A seeded custom sound hides the welcome footer, so the overflow item is the only "See how it
+        // works"; tapping it opens the full onboarding tour at step 1.
+        TestData.seedCustomSounds(context, count = 1)
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithContentDescription(overflowLabel()).performClick()
+            composeRule.awaitNodeWithText(seeHowItWorksLabel()).performClick()
+
+            composeRule.awaitNodeWithText(tourStep1Title()).assertIsDisplayed()
+        }
+    }
+
     private fun playLabel() = context.getString(R.string.app_play)
 
     private fun pauseLabel() = context.getString(R.string.app_pause)
@@ -168,6 +182,10 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     private fun searchLabel() = context.getString(R.string.app_search)
 
     private fun overflowLabel() = context.getString(R.string.app_overflow_menu)
+
+    private fun seeHowItWorksLabel() = context.getString(R.string.app_my_sounds_empty_secondary)
+
+    private fun tourStep1Title() = context.getString(R.string.app_onboarding_step1_title)
 
     companion object {
         private const val SNACKBAR_LONG_TIMEOUT_MS = 15_000L

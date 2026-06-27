@@ -17,7 +17,9 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
+import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
@@ -101,14 +103,43 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `overflow menu offers the share-app action`() {
+    fun `overflow menu lists help, collections, share and about in order`() {
         val viewModel = givenAViewModel()
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
+        // A custom Bomp hides the welcome footer (also "See how it works"), so that label is unique to
+        // the menu and the order assertion isn't confused by a second match.
+        viewModel.injectSounds(listOf(testSound("a bomp", file = "a.mp3")))
+        composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("More options").performClick()
-        composeTestRule.onNodeWithText("Share Bomp").assertIsDisplayed()
+        composeTestRule.waitForIdle()
+
+        val helpTop =
+            composeTestRule
+                .onNodeWithText("See how it works")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        val collectionsTop =
+            composeTestRule
+                .onNodeWithText("Manage collections")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        val shareTop =
+            composeTestRule
+                .onNodeWithText("Share Bomp")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        val aboutTop =
+            composeTestRule
+                .onNodeWithText("About")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+
+        assertThat(helpTop).isLessThan(collectionsTop)
+        assertThat(collectionsTop).isLessThan(shareTop)
+        assertThat(shareTop).isLessThan(aboutTop)
     }
 
     @Test
