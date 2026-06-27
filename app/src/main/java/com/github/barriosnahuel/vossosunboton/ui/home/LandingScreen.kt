@@ -153,9 +153,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible, onboardingStep != null, bringGuideVisible) {
         val name =
             when {
-                // The bring-from-apps guide reuses the onboarding content, so it reports the same screen.
-                // The funnel separates its entry via ImportHubBringSelected, not via a distinct screen_view.
-                onboardingStep != null || bringGuideVisible -> CanonicalScreenName.ONBOARDING
+                // The bring-from-apps guide reuses the onboarding IMPORT content but is its own screen, so
+                // it reports a distinct screen_view — keeping the onboarding-tour funnel uncontaminated.
+                bringGuideVisible -> CanonicalScreenName.BRING_GUIDE
+                onboardingStep != null -> CanonicalScreenName.ONBOARDING
                 isSearchVisible -> CanonicalScreenName.SEARCH_SOUND
                 isAboutVisible -> CanonicalScreenName.ABOUT
                 manageRequest != null -> CanonicalScreenName.MANAGE_COLLECTIONS

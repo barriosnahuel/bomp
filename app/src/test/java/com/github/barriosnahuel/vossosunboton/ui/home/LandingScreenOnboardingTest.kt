@@ -86,11 +86,11 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         composeTestRule.onNodeWithText(BRING_LABEL).performClick()
         composeTestRule.waitForIdle()
 
-        // The guide reuses the IMPORT step content + the ONBOARDING screen_view; its entry is
-        // distinguished by import_hub_bring_selected, not by a distinct screen name.
+        // The guide reuses the IMPORT step content but reports its own BRING_GUIDE screen_view (kept
+        // distinct from the onboarding tour); its entry is the import_hub_bring_selected event.
         composeTestRule.onNodeWithText(STEP1_TITLE).assertIsDisplayed()
         composeTestRule.onNodeWithText(GUIDE_CTA).assertIsDisplayed()
-        fake.assertScreenView(CanonicalScreenName.ONBOARDING)
+        fake.assertScreenView(CanonicalScreenName.BRING_GUIDE)
         fake.assertEmitted("import_hub_bring_selected")
     }
 
