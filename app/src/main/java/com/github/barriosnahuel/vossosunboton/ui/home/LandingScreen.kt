@@ -591,8 +591,6 @@ private fun SnackbarEffects(
     snackbarHostState: SnackbarHostState,
 ) {
     val deletedEvent by viewModel.deletedSoundEvent.collectAsState()
-    val audioDeletedMessage = stringResource(R.string.app_feedback_audio_deleted)
-    val welcomeDismissedMessage = stringResource(R.string.app_welcome_sticker_feedback_dismissed)
     val welcomeInfoMessage = stringResource(R.string.app_welcome_sticker_info)
     val undoLabel = stringResource(R.string.app_undo)
     val playbackErrorMessage = stringResource(R.string.app_error_playback_failed)
@@ -675,12 +673,7 @@ private fun SnackbarEffects(
 
     LaunchedEffect(deletedEvent) {
         val event = deletedEvent ?: return@LaunchedEffect
-        val message =
-            if (isWelcomeSticker(event.sound)) {
-                welcomeDismissedMessage
-            } else {
-                audioDeletedMessage
-            }
+        val message = deletionSnackbarMessage(activityContext, event.sound)
         val result =
             snackbarHostState.showSnackbar(
                 message = message,
@@ -1006,6 +999,20 @@ internal fun SoundsList(
 internal fun deletionSnackbarDuration(
     @Suppress("UNUSED_PARAMETER") sound: Sound,
 ): SnackbarDuration = SnackbarDuration.Long
+
+// Two intentional voices sharing one brand register: the welcome leans on Undo with a warm
+// author line (never a goodbye, which a reversible action contradicts); a user audio names what
+// was deleted. Blank name (unreachable via creation, which blocks blank) falls back to the
+// nameless voice so the placeholder never renders empty.
+internal fun deletionSnackbarMessage(
+    context: Context,
+    sound: Sound,
+): String =
+    when {
+        isWelcomeSticker(sound) -> context.getString(R.string.app_welcome_sticker_feedback_dismissed)
+        sound.name.isBlank() -> context.getString(R.string.app_feedback_audio_deleted_unnamed)
+        else -> context.getString(R.string.app_feedback_audio_deleted, sound.name)
+    }
 
 @Composable
 private fun MySoundsBody(

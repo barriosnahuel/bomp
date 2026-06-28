@@ -9,10 +9,11 @@
     <string name="app_share_feedback_no_app_for_audio">No app on your device can share audio. Try installing one.</string>
     <string name="app_share_feedback_copy_failed">Couldn\'t prepare this Bomp for sharing. Free up some space and try again — Nahu\'s already looking into it.</string>
     <string name="app_share_feedback_broken_data">This Bomp\'s data is broken. Remove it and add it again — Nahu\'s already on it.</string>
-    <string name="app_undo">Undo!</string>
+    <string name="app_undo">Undo</string>
     <string name="app_snackbar_action_dismiss">Got it</string>
     <string name="app_snackbar_action_retry">Try again</string>
-    <string name="app_feedback_audio_deleted">Audio deleted</string>
+    <string name="app_feedback_audio_deleted">Deleted \"%1$s\"</string>
+    <string name="app_feedback_audio_deleted_unnamed">Audio deleted</string>
     <string name="app_feedback_button_saved">%1$s is now yours!</string>
     <string name="app_addbutton_overlay_subtitle_saved">is now yours</string>
     <string name="app_addbutton_overlay_subtitle_renamed">renamed</string>
@@ -103,7 +104,7 @@
     <string name="app_welcome_sticker_title">Your first voice-hug</string>
     <string name="app_welcome_sticker_origin">From the maker</string>
     <string name="app_welcome_sticker_info">From me to you. It\'s yours — delete it whenever you like.</string>
-    <string name="app_welcome_sticker_feedback_dismissed">Catch you around!</string>
+    <string name="app_welcome_sticker_feedback_dismissed">I\'ll keep it here in case you want it back.</string>
 
     <!-- Vault tab (private collections — biometric-gated per collection) -->
     <string name="app_navigation_menu_item_vault">Vault</string>
