@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
 
-## \[unreleased] (v2.3.0)
+## \[v2.3.0] - 2026-06-28
 
 ### Added
 - Record a Bomp without leaving the app — the add sheet's "Record" option opens a full-screen recorder: tap to record, listen back on a real waveform, and save it like any other Bomp; if you leave mid-recording, a banner offers to pick it back up
