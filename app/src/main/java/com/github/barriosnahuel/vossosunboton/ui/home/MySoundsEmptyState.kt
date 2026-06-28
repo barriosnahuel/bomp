@@ -126,10 +126,22 @@ internal fun MySoundsEmptyState(
             Spacer(Modifier.height(Spacing.SM))
             // Text tier (ADR 0010): a low-commitment secondary below the single Import imperative —
             // inherits `primary`, no container, so it never competes with the filled CTA above.
-            TextButton(onClick = onShowOnboarding) {
-                Text(text = stringResource(R.string.app_my_sounds_empty_secondary))
-            }
+            SeeHowItWorksButton(onClick = onShowOnboarding)
         }
+    }
+}
+
+/**
+ * Text-tier (ADR 0010) "see how it works" CTA that opens the onboarding tour. Shared by this empty-state
+ * secondary and the welcome-audio footer (SoundsList) so the two never drift in copy or button typology.
+ */
+@Composable
+internal fun SeeHowItWorksButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TextButton(onClick = onClick, modifier = modifier) {
+        Text(text = stringResource(R.string.app_my_sounds_empty_secondary))
     }
 }
 
