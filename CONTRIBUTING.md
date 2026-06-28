@@ -867,7 +867,11 @@ It runs as a **Claude Code Desktop Scheduled Task** (Fridays 18:00 GMT-3). The s
 **Rebuild steps**
 
 1. **Create the task.** New Claude Code Desktop **Scheduled Task** → schedule it **Fridays 18:00 GMT-3** → attach the "Google Cloud BigQuery" connector → grant it **project access** to this repo directory (so it can resolve the committed skill).
-2. Set the task's Instructions to a one-liner — a *thin pointer* to the committed skill, not a re-pasted prompt: *"Ejecutá el skill `/exec-report` y entregá el resultado en esta conversación."*
+2. Set the task's Instructions to a one-liner — a *thin pointer* to the committed skill, not a re-pasted prompt. Paste exactly this into the Instructions field:
+
+   ```
+   Ejecutá el skill /exec-report y entregá el resultado en esta conversación.
+   ```
 3. Validate with **Run now**. The skill must be on the branch the repo dir is checked out to (it lives on `develop` once merged) — don't repoint the live task before the skill is on that branch, or the run can't resolve it.
 
 **Durability:** the task trigger can't be versioned in this (public) repo. Keep a copy of the task's exported JSON in the private `../push-me-backlog/` so a clean-machine rebuild is copy-paste rather than from-memory.
