@@ -1,0 +1,8 @@
+What's new in this version.
+
+▸ Record a Bomp without leaving the app: tap Record, listen back on a real waveform, and save it like any other.
+▸ Scrub the waveform to jump anywhere in your recording — before, during or after playback.
+▸ Bringing audios in from other apps is clearer, with a quick guide for sharing a voice note from WhatsApp or Telegram.
+▸ Bomps saved in an older format now reappear instead of vanishing.
+
+Thanks for bomping.
