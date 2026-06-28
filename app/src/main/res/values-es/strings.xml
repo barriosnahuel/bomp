@@ -9,10 +9,11 @@
     <string name="app_share_feedback_no_app_for_audio">No tenés una app para compartir audios. Probá instalando una.</string>
     <string name="app_share_feedback_copy_failed">No pude preparar este Bomp para compartir. Liberá espacio y probá de nuevo — Nahu ya se enteró y lo va a investigar.</string>
     <string name="app_share_feedback_broken_data">Los datos de este Bomp están rotos. Borralo y volvé a agregarlo — Nahu ya se enteró y lo va a investigar.</string>
-    <string name="app_undo">Deshacer!</string>
+    <string name="app_undo">Deshacer</string>
     <string name="app_snackbar_action_dismiss">Listo</string>
     <string name="app_snackbar_action_retry">Reintentar</string>
-    <string name="app_feedback_audio_deleted">Audio borrado</string>
+    <string name="app_feedback_audio_deleted">Borraste «%1$s»</string>
+    <string name="app_feedback_audio_deleted_unnamed">Audio borrado</string>
     <string name="app_feedback_button_saved">¡%1$s es tuyo!</string>
     <string name="app_addbutton_overlay_subtitle_saved">ahora es tuyo</string>
     <string name="app_addbutton_overlay_subtitle_renamed">renombrado</string>
@@ -97,7 +98,7 @@
     <string name="app_welcome_sticker_title">Tu primer audio-abrazo</string>
     <string name="app_welcome_sticker_origin">Del que armó esto</string>
     <string name="app_welcome_sticker_info">De mí para vos. Es tuyo: borralo cuando quieras.</string>
-    <string name="app_welcome_sticker_feedback_dismissed">¡Hasta luego!</string>
+    <string name="app_welcome_sticker_feedback_dismissed">Te lo guardo por si lo querés de vuelta.</string>
 
     <!-- Vault (colecciones privadas — biométrico por colección) -->
     <string name="app_navigation_menu_item_vault">Baúl</string>

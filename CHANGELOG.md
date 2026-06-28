@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 ### Changed
 - The add-a-Bomp sheet now leads with recording and adds a "Bring audios from other apps" option that shows how to share a voice note in from WhatsApp or Telegram, with importing a saved file moved last
 - The quick tour is easier to find — it shows up right under the welcome audio for new users and lives in the top "⋮" menu so you can reopen it any time
+- Deleting an audio now names the one you removed, and the welcome's farewell no longer says goodbye — it reassures you it's kept in case you tap Undo
 
 ### Fixed
 - Bomps saved before an earlier update no longer disappear when you open the app — audios stored under the old format are recovered instead of the whole list silently emptying
