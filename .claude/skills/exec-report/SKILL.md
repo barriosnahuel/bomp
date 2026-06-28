@@ -32,8 +32,9 @@ queries use `CURRENT_TIMESTAMP()`.
 - **Product / custom events (GA4):** `list_dataset_ids` and look for a dataset starting with `analytics_`.
   If it does NOT exist, mark Product as pending GA4 → BigQuery and don't invent. If it exists, tables
   `analytics_XXX.events_*`. Version in `app_info.version`. Fields: `event_name`, `event_timestamp`,
-  `user_pseudo_id`, `event_params` (repeated: key/value), `user_properties` (repeated). Date filter with
-  `_TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', ...)`. Read a param with
+  `user_pseudo_id`, `event_params` (repeated: key/value), `user_properties` (repeated). For the date
+  window, use the **GA4 windowing rule** in the Product axis below (exact `event_timestamp` window +
+  regex table-prune that includes intraday) — not a plain `_TABLE_SUFFIX BETWEEN`. Read a param with
   `(SELECT value.string_value FROM UNNEST(event_params) WHERE key='source')` or `value.int_value` per type.
 
 ## Versions (cross-cutting dimension)
