@@ -123,10 +123,23 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
    `lifetime_plays`, `lifetime_coll_creates`, `lifetime_coll_deletes`, `lifetime_coll_renames`,
    `lifetime_coll_assigns`, `lifetime_vault_unlocks`.
 
-   GA4 reference query: `SELECT event_name, COUNT(*) n, COUNT(DISTINCT user_pseudo_id) usuarios FROM
-   `bomp-prod.analytics_XXX.events_*` WHERE _TABLE_SUFFIX BETWEEN
-   FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE(),INTERVAL 7 DAY)) AND
-   FORMAT_DATE('%Y%m%d',CURRENT_DATE()) GROUP BY event_name ORDER BY n DESC`.
+   **GA4 windowing (use this WHERE in every GA4 query — it fixes three traps):** filter precisely on
+   `event_timestamp` for an exact N×24h window (so it matches the sessions axis, not 8 days), and prune
+   tables with a regex that matches BOTH finalized `events_YYYYMMDD` AND `events_intraday_YYYYMMDD`
+   (otherwise the most recent 1-3 days — which lag finalization, and the intraday table — are silently
+   dropped right after a release):
+
+   ```
+   WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+     AND REGEXP_EXTRACT(_TABLE_SUFFIX, r'[0-9]{8}$') >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 8 DAY))
+   ```
+   (For 7d-vs-prev-7d, widen both bounds to 14 days and split on `event_timestamp`.)
+
+   GA4 reference query (event counts, windowed per the rule above): `SELECT event_name, COUNT(*) n,
+   COUNT(DISTINCT user_pseudo_id) usuarios FROM `bomp-prod.analytics_XXX.events_*` WHERE
+   event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),INTERVAL 7 DAY) AND
+   REGEXP_EXTRACT(_TABLE_SUFFIX, r'[0-9]{8}$') >= FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE(),INTERVAL 8 DAY))
+   GROUP BY event_name ORDER BY n DESC`.
 
    Prioritize funnels with signal; if a funnel has 0 events, summarize it in one line, don't break it down.
 
@@ -179,10 +192,16 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
   event_type='DURATION_TRACE' AND event_name='_app_start' GROUP BY device_name, code ORDER BY device_name,
   code;`
 
-- GA4 version share: `SELECT app_info.version ver, COUNT(DISTINCT user_pseudo_id) usuarios FROM
-  `bomp-prod.analytics_XXX.events_*` WHERE _TABLE_SUFFIX BETWEEN
-  FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE(),INTERVAL 7 DAY)) AND
-  FORMAT_DATE('%Y%m%d',CURRENT_DATE()) GROUP BY ver ORDER BY usuarios DESC;`
+- GA4 version share (each user counted ONCE, in the version of their LATEST event — so shares don't sum
+  to >100% and adoption isn't overstated; windowed per the GA4 rule above):
+  `SELECT ver, COUNT(*) usuarios FROM (
+    SELECT user_pseudo_id,
+      ARRAY_AGG(app_info.version ORDER BY event_timestamp DESC LIMIT 1)[OFFSET(0)] ver
+    FROM `bomp-prod.analytics_XXX.events_*`
+    WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),INTERVAL 7 DAY)
+      AND REGEXP_EXTRACT(_TABLE_SUFFIX, r'[0-9]{8}$') >= FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE(),INTERVAL 8 DAY))
+    GROUP BY user_pseudo_id
+  ) GROUP BY ver ORDER BY usuarios DESC;`
 
 - Network (hardened): `SELECT COUNT(*) total, COUNTIF(network_info.response_code>=400) errors,
   ROUND(SAFE_DIVIDE(COUNTIF(network_info.response_code>=400),COUNT(*))*100,1) err_pct FROM
