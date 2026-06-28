@@ -870,7 +870,7 @@ It runs as a **Claude Code Desktop Scheduled Task** (Fridays 18:00 GMT-3). The s
 2. Set the task's Instructions to a one-liner — a *thin pointer* to the committed skill, not a re-pasted prompt. Paste exactly this into the Instructions field:
 
    ```
-   Ejecutá el skill /exec-report y entregá el resultado en esta conversación.
+   Run the /exec-report skill and deliver its result in this conversation.
    ```
 3. Validate with **Run now**. The skill must be on the branch the repo dir is checked out to (it lives on `develop` once merged) — don't repoint the live task before the skill is on that branch, or the run can't resolve it.
 
