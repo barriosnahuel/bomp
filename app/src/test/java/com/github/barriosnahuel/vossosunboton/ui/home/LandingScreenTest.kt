@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -17,7 +18,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -108,34 +108,28 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
-        // A custom Bomp hides the welcome footer (also "See how it works"), so that label is unique to
-        // the menu and the order assertion isn't confused by a second match.
-        viewModel.injectSounds(listOf(testSound("a bomp", file = "a.mp3")))
-        composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("More options").performClick()
         composeTestRule.waitForIdle()
 
-        val helpTop =
-            composeTestRule
-                .onNodeWithText("See how it works")
-                .fetchSemanticsNode()
-                .boundsInRoot.top
-        val collectionsTop =
-            composeTestRule
-                .onNodeWithText("Manage collections")
-                .fetchSemanticsNode()
-                .boundsInRoot.top
-        val shareTop =
-            composeTestRule
-                .onNodeWithText("Share Bomp")
-                .fetchSemanticsNode()
-                .boundsInRoot.top
-        val aboutTop =
-            composeTestRule
-                .onNodeWithText("About")
-                .fetchSemanticsNode()
-                .boundsInRoot.top
+        // "Help" shares its label ("See how it works") with the welcome footer, so it is addressed by
+        // its stable tag rather than the ambiguous text; the other three labels are unique.
+        val help = composeTestRule.onNodeWithTag(OVERFLOW_SEE_HOW_IT_WORKS_TAG)
+        val collections = composeTestRule.onNodeWithText("Manage collections")
+        val share = composeTestRule.onNodeWithText("Share Bomp")
+        val about = composeTestRule.onNodeWithText("About")
+
+        // Each item is actually on screen (not merely composed) — guards the AGPLv3-required About entry
+        // and Share against being pushed off the visible menu by future growth.
+        help.assertIsDisplayed()
+        collections.assertIsDisplayed()
+        share.assertIsDisplayed()
+        about.assertIsDisplayed()
+
+        val helpTop = help.fetchSemanticsNode().boundsInRoot.top
+        val collectionsTop = collections.fetchSemanticsNode().boundsInRoot.top
+        val shareTop = share.fetchSemanticsNode().boundsInRoot.top
+        val aboutTop = about.fetchSemanticsNode().boundsInRoot.top
 
         assertThat(helpTop).isLessThan(collectionsTop)
         assertThat(collectionsTop).isLessThan(shareTop)

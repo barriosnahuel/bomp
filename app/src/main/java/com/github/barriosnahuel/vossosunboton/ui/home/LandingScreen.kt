@@ -43,7 +43,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -60,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -153,10 +153,14 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     }
 
     // Single onboarding-tour entry point: logs the ENTRY with the [source] surface (empty state, the
-    // welcome footer, or the overflow menu), then opens the tour at step 0.
+    // welcome footer, or the overflow menu), then opens the tour at step 0. The `onboardingStep == null`
+    // guard mirrors openHub's: it makes the open idempotent so a rapid double-tap on a trigger can't
+    // double-count `onboarding_opened` (the funnel's "started").
     val openOnboarding = { source: String ->
-        tracker.log(AnalyticsEvent.OnboardingOpened(source = source))
-        onboardingStep = 0
+        if (onboardingStep == null) {
+            tracker.log(AnalyticsEvent.OnboardingOpened(source = source))
+            onboardingStep = 0
+        }
     }
 
     // Key on the open/closed boolean, not the raw step: advancing or going back within the tour must
@@ -252,9 +256,9 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             if (!sound.isPlaying) viewModel.playOrStop(sound)
         },
         onCreateClick = openHub,
-        onShowOnboarding = { openOnboarding(AnalyticsSource.EMPTY_STATE) },
-        onShowOnboardingFromWelcome = { openOnboarding(AnalyticsSource.WELCOME_FOOTER) },
-        onOpenOnboardingFromMenu = { openOnboarding(AnalyticsSource.OVERFLOW_MENU) },
+        // One source-parameterized entry point (mirrors onCreateClick): each surface binds its own
+        // AnalyticsSource at the leaf call site below, so no per-surface callback has to be threaded.
+        onShowOnboarding = openOnboarding,
     )
 
     // Exactly one sub-screen overlays the list at a time (About wins over Manage, preserving the
@@ -344,6 +348,14 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             onSkip = { onboardingStep = null },
             onFinish = {
                 onboardingStep = null
+                // The tour teaches My Bomps and lands on the Hub to add a first Bomp. When it was opened
+                // from the overflow on Vault/Explore, return to My Bomps first so the saved Bomp lands on
+                // the tab the user is looking at — otherwise it goes to the unseen My Bomps list and seems
+                // to vanish.
+                if (selectedTab != AppTab.MY_SOUNDS) {
+                    tabBackStack.add(selectedTab)
+                    viewModel.selectTab(AppTab.MY_SOUNDS)
+                }
                 openHub(AnalyticsSource.ONBOARDING_FINISH)
             },
         )
@@ -465,16 +477,16 @@ private fun ScaffoldedLanding(
     // Opens the import Hub, carrying the funnel `source` of the surface that triggered it (the FAB
     // vs the empty-state CTA), so `import_hub_opened` is attributed honestly.
     onCreateClick: (String) -> Unit,
-    onShowOnboarding: () -> Unit,
-    onShowOnboardingFromWelcome: () -> Unit,
-    onOpenOnboardingFromMenu: () -> Unit,
+    // Opens the onboarding tour, carrying the funnel `source` of the surface that triggered it (empty
+    // state, welcome footer, or overflow). Each leaf surface binds its own constant.
+    onShowOnboarding: (String) -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
         topBar = {
             AppTopBar(
                 onSearchClick = { viewModel.showSearch() },
-                onSeeHowItWorks = onOpenOnboardingFromMenu,
+                onSeeHowItWorks = { onShowOnboarding(AnalyticsSource.OVERFLOW_MENU) },
                 onManageCollectionsClick = onManageCollectionsClick,
                 onAboutClick = onAboutClick,
             )
@@ -548,7 +560,6 @@ private fun ScaffoldedLanding(
                     onActiveFilterEditClick = onActiveFilterEditClick,
                     onImportClick = { onCreateClick(AnalyticsSource.EMPTY_STATE) },
                     onShowOnboarding = onShowOnboarding,
-                    onShowOnboardingFromWelcome = onShowOnboardingFromWelcome,
                     viewModel = viewModel,
                     context = context,
                 )
@@ -683,6 +694,9 @@ private fun SnackbarEffects(
     }
 }
 
+// Test tag for the overflow "See how it works" item, which shares its label with the welcome footer.
+internal const val OVERFLOW_SEE_HOW_IT_WORKS_TAG = "overflow_see_how_it_works"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppTopBar(
@@ -716,6 +730,10 @@ private fun AppTopBar(
                 onDismissRequest = { isMenuExpanded = false },
             ) {
                 DropdownMenuItem(
+                    // Tagged so tests can address this item without its label ("See how it works"),
+                    // which it intentionally shares with the welcome footer. Same label → same action,
+                    // so the duplication is fine for users; the tag only disambiguates for tests.
+                    modifier = Modifier.testTag(OVERFLOW_SEE_HOW_IT_WORKS_TAG),
                     text = { Text(stringResource(R.string.app_my_sounds_empty_secondary)) },
                     leadingIcon = {
                         Icon(painter = painterResource(R.drawable.app_ic_help), contentDescription = null)
@@ -973,9 +991,9 @@ internal fun SoundsList(
                         modifier = Modifier.fillMaxWidth().padding(top = Spacing.SM),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TextButton(onClick = onShowOnboardingFromWelcome) {
-                            Text(stringResource(R.string.app_my_sounds_empty_secondary))
-                        }
+                        // Shared with the empty-state secondary (MySoundsEmptyState) so the two never
+                        // drift in copy or button typology.
+                        SeeHowItWorksButton(onClick = onShowOnboardingFromWelcome)
                     }
                 }
             }
@@ -1004,8 +1022,9 @@ private fun MySoundsBody(
     allCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
     onActiveFilterEditClick: (String) -> Unit,
     onImportClick: () -> Unit,
-    onShowOnboarding: () -> Unit,
-    onShowOnboardingFromWelcome: () -> Unit,
+    // Source-parameterized tour opener; this body binds EMPTY_STATE for the empty-state secondary and
+    // WELCOME_FOOTER for the welcome footer at their respective leaf call sites.
+    onShowOnboarding: (String) -> Unit,
     viewModel: SoundsViewModel,
     context: Context,
 ) {
@@ -1078,7 +1097,7 @@ private fun MySoundsBody(
                 // (Column gives non-weighted children the full max), pushing the CTA below the fold.
                 MySoundsEmptyState(
                     onImportClick = onImportClick,
-                    onShowOnboarding = onShowOnboarding,
+                    onShowOnboarding = { onShowOnboarding(AnalyticsSource.EMPTY_STATE) },
                     modifier = Modifier.weight(1f),
                 )
             else ->
@@ -1104,7 +1123,7 @@ private fun MySoundsBody(
                     welcomeHintPending = welcomeHintPending,
                     onWelcomeHintShown = { viewModel.markWelcomeHintShown() },
                     showWelcomeFooter = showWelcomeFooter,
-                    onShowOnboardingFromWelcome = onShowOnboardingFromWelcome,
+                    onShowOnboardingFromWelcome = { onShowOnboarding(AnalyticsSource.WELCOME_FOOTER) },
                 )
         }
     }

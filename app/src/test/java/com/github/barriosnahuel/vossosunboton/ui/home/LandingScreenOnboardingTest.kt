@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -41,10 +42,11 @@ import org.junit.Test
 import org.robolectric.annotation.Config
 
 /**
- * Integration coverage for the PR4 onboarding tour wired through the real [LandingScreen]: both entry
- * points (Hub row + empty-state secondary) open it, the final CTA lands on the Hub, skipping returns
- * to My Bomps, and the step index is durable across an Activity recreate. System animations are off
- * so the looping touch-dot indicator never keeps the Compose clock busy past `waitForIdle`.
+ * Integration coverage for the onboarding tour wired through the real [LandingScreen]: every entry
+ * point (empty-state secondary, welcome footer, overflow menu) opens it, the final CTA lands on the Hub
+ * (returning to My Bomps first when opened from another tab), skipping returns to My Bomps, and the step
+ * index is durable across an Activity recreate. System animations are off so the looping touch-dot
+ * indicator never keeps the Compose clock busy past `waitForIdle`.
  */
 @Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
@@ -192,6 +194,30 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `finishing the tour opened from another tab returns to My Bomps before the Hub`() {
+        val viewModel = givenAViewModel()
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        // Open the tour from the overflow (reachable on every tab) while standing on the Vault tab.
+        viewModel.selectTab(AppTab.VAULT)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription(OVERFLOW_LABEL).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(OVERFLOW_SEE_HOW_IT_WORKS_TAG).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Go on").performClick()
+        composeTestRule.onNodeWithText("Next").performClick()
+        composeTestRule.onNodeWithText("Start").performClick()
+        composeTestRule.waitForIdle()
+
+        // The Hub opened so the user can add a first Bomp, AND the tab returned to My Bomps so that Bomp
+        // lands where the user is looking — not into the unseen My Bomps list behind Vault.
+        composeTestRule.onNodeWithText(HUB_TITLE).assertIsDisplayed()
+        assertThat(fake.screens.last().name).isEqualTo(CanonicalScreenName.MY_SOUNDS)
+    }
+
+    @Test
     fun `skipping the tour returns to My Bomps`() {
         val viewModel = givenAViewModel()
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
@@ -266,6 +292,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         // timeout (ADR ratchet on unbounded runBlocking flow-awaits in tests).
         const val AWAIT_TIMEOUT_MS = 5_000L
         const val HUB_TITLE = "How do you add one?"
+        const val OVERFLOW_LABEL = "More options"
         const val SECONDARY_LABEL = "See how it works"
         const val BRING_LABEL = "Bring audios from other apps"
         const val GUIDE_CTA = "Got it"
