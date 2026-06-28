@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 - Shortened seven collection/Vault user property names that exceeded Firebase's 24-character limit and were being dropped before reaching BigQuery, and added a build-time guard so over-length names can't ship again
 
 #### Changed
+- Regenerated the committed Baseline Profile against the current LandingActivity cold-start path, and made the physical-device requirement explicit in the generation guideline (validation only yields valid AOT numbers on real hardware)
 - Reordered the import Hub rows by returning-user intent (record → bring-from-apps → import) and replaced the Hub's full-tour entry with a focused single-step guide reusing the onboarding IMPORT step; added the `import_hub_bring_selected` funnel event and a `bring_guide` screen_view
 - Surfaced the full onboarding tour from a welcome-audio footer and the top-bar overflow (so a fresh-install user, whose welcome audio hides the empty-state, can still reach it); parameterized `onboarding_opened` by source (`welcome_footer`, `overflow_menu`) and reordered the overflow menu with decorative leading icons
 - De-duplicated the Vault listen and recorder-review waveforms into one shared `EnvelopeWaveform` component, and the `0.06f` floor + normalize loop into a single `WaveformNormalization` helper (ADR 0020)

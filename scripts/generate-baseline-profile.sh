@@ -11,8 +11,10 @@
 # build type: the real release code (its own CustomBuildTypeApplication, mirroring release) but
 # un-minified. Generating against `debug`
 # would capture debug-only code (StrictMode, seeder, debug Application); against the minified
-# `benchmark` it would capture obfuscated names. Device type doesn't matter for generation — the
-# profile is a code-path snapshot; a real device is only needed to VALIDATE timing afterwards.
+# `benchmark` it would capture obfuscated names. Run the whole flow on a PHYSICAL DEVICE: generation
+# is device-agnostic (a code-path snapshot), but the mandatory validation step (StartupBenchmark) only
+# works on real hardware — emulators report inverted AOT numbers. Since a real device is needed to
+# validate anyway, generate on it too; there is no case where an emulator helps here.
 #
 # Run from anywhere in the repo. Set ANDROID_SERIAL to pick a device when several are attached.
 # Regenerate when the startup path changes meaningfully. See CONTRIBUTING § Baseline Profile.
