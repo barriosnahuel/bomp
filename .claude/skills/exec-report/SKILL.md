@@ -214,34 +214,38 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
 Render the report EXACTLY per the spec below. **The output is in Spanish** and the format below is the
 output contract — keep it as-is.
 
-=== ESTILO Y FORMATO (CRÍTICO — leerse de un vistazo, insight primero) ===
+=== OUTPUT STYLE & FORMAT (CRITICAL — scannable at a glance, insight first) ===
 
-Reglas de redacción:
+Convention for this block: the prose is an instruction to you, in English. Text in "quotes", the badges,
+and the traffic-light legend are LITERAL OUTPUT — emit them verbatim in Spanish, exactly as written.
+`<...>` are placeholders you fill with Spanish content.
 
-- INSIGHT PRIMERO, en castellano y negrita. NO abras con el nombre del evento ni una métrica cruda.
+Writing rules:
 
-- NÚMEROS como sub-bullets de apoyo, en lenguaje natural. NUNCA escribas en el cuerpo cosas como `first_sound_add=0`, `filter_apply=true` ni nombres de eventos/params en formato código.
+- INSIGHT FIRST, in Spanish and bold. Do NOT open with the event name or a raw metric.
 
-- PROHIBIDO varias métricas por línea separadas por punto y coma. Una idea por bloque; cada cifra en su sub-bullet.
+- NUMBERS as supporting sub-bullets, in natural language. NEVER write things like `first_sound_add=0`, `filter_apply=true`, or event/param names in code format in the body.
 
-- Lo técnico (nombres de eventos, params sin poblar, gaps de export, mapeo de versión, legacy_sounds_recovered) va SOLO en una sección final "*Nota técnica (instrumentación):*", separada de los insights.
+- NO multiple metrics on one line separated by semicolons. One idea per block; each figure in its own sub-bullet.
 
-Semáforos: 🟢 ok · 🟡 atención · 🔴 alerta · ⚪ sin datos aún.
+- Technical detail (event names, unpopulated params, export gaps, version mapping, legacy_sounds_recovered) goes ONLY in a final section titled "*Nota técnica (instrumentación):*", separated from the insights.
 
-Estructura:
+Traffic-light legend (emit verbatim): 🟢 ok · 🟡 atención · 🔴 alerta · ⚪ sin datos aún.
 
-- Encabezado: "# 📊 Reporte Ejecutivo — Bomp — <fecha>" + línea de leyenda de semáforos.
+Structure:
 
-- "## 📡 Estado de fuentes": una viñeta por fuente con semáforo y nombre en negrita; opcional blockquote de contexto (ej. volumen bajo → leer en absolutos).
+- Header: emit "# 📊 Reporte Ejecutivo — Bomp — <fecha>" + the traffic-light legend line.
 
-- "## 🆕 Adopción de versión <sem>": share de usuarios por versión (nueva vs anterior), velocidad de adopción, y una línea de salud del release (si la nueva mejora/empeora algo notorio, con remisión al eje). Si hay una sola versión activa, decilo en una línea.
+- "## 📡 Estado de fuentes": one bullet per source with a traffic light and the name in bold; optional context blockquote (e.g. low volume → read in absolutes).
 
-- Un "## " por eje con ícono + semáforo: "## 🏢 Negocio · Play <sem>", "## 🧭 Producto / Funnel <sem>", "## 🛡️ Calidad <sem>", "## 📈 Crecimiento / Engagement <sem>", "## ⚡ Performance <sem>". En Calidad y Performance, mostrá el corte por versión.
+- "## 🆕 Adopción de versión <sem>": user share per version (new vs previous), adoption speed, and a one-line release-health note (if the new version notably improves/worsens something, cross-referencing the axis). If there's only one active version, say so in one line.
 
-- Dentro de cada eje agrupá por sub-tema; en ejes ricos (sobre todo Producto) usá subheadings "### <sem> <sub-tema en lenguaje natural>"; en ejes chicos, titular en negrita. Bajo cada sub-tema: 1 línea de insight en negrita + sub-bullets con cifras (resaltá el número clave).
+- One "## " per axis with icon + traffic light: "## 🏢 Negocio · Play <sem>", "## 🧭 Producto / Funnel <sem>", "## 🛡️ Calidad <sem>", "## 📈 Crecimiento / Engagement <sem>", "## ⚡ Performance <sem>". In the Calidad and Performance axes, show the per-version cut.
 
-- "## 🎯 Top 3 Action Items": numerados, prefijados con badge 🔴 **Alta** / 🟡 **Media** (o **Media-Alta**) / 🟢 **Baja**. Formato: "N. <badge> **<Prioridad> — <acción>.** *Por qué:* <justificación con números>". Una regresión notoria de release escala al Top 3. Prioridades según datos.
+- Within each axis, group by sub-topic; in rich axes (especially Producto) use subheadings "### <sem> <sub-topic in natural Spanish>"; in small axes, a bold lead-in. Under each sub-topic: 1 bold insight line + sub-bullets with figures (highlight the key number).
 
-- Al final "*Nota técnica (instrumentación):*" si hay algo técnico (mapeo de versión ambiguo, params sin poblar, legacy recovery, gaps de export).
+- "## 🎯 Top 3 Action Items": numbered, prefixed with a badge 🔴 **Alta** / 🟡 **Media** (or **Media-Alta**) / 🟢 **Baja**. Format: "N. <badge> **<Prioridad> — <acción>.** *Por qué:* <justificación con números>". A notable release regression escalates to the Top 3. Priorities driven by the data.
 
-- Ejecutivo: sin relleno; emojis limitados a semáforos, íconos de heading y badges.
+- At the end, "*Nota técnica (instrumentación):*" if there's anything technical (ambiguous version mapping, unpopulated params, legacy recovery, export gaps).
+
+- Executive: no filler; emojis limited to traffic lights, heading icons, and badges.
