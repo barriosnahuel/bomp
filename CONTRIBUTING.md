@@ -326,7 +326,7 @@ The profile must reflect the **real release startup path** with **real (non-obfu
 ./scripts/generate-baseline-profile.sh        # set ANDROID_SERIAL if several devices are attached
 ```
 
-Any device or emulator works for **generation** (the profile is a code-path snapshot, not a timing). Review the diff and commit. Then **validate on a real device** (emulators report inverted AOT numbers, so they can't validate this): `StartupBenchmark.startupBaselineProfile` (`CompilationMode.Partial(Require)`) should land near `startupDefaultCompilation` and well under `startupNoCompilation`.
+**Run the whole flow on a physical device** — generation *and* validation on the same handset, in one pass. Generation itself is device-agnostic (the profile is a code-path snapshot, not a timing, so any device or emulator would collect identical rules), but the **mandatory validation step only works on real hardware**: emulators report inverted AOT numbers, so they can't tell you the profile actually helps. Since a real device is required for validation anyway, generating on it too removes a second pass and the recurring "device or emulator?" decision — there is no scenario where reaching for an emulator helps here. After generating, review the diff and commit, then **validate**: `StartupBenchmark.startupBaselineProfile` (`CompilationMode.Partial(Require)`) should land near `startupDefaultCompilation` and well under `startupNoCompilation`.
 
 ### Frozen-frame crash gate (JankStats)
 
