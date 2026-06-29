@@ -20,7 +20,7 @@ android {
         minSdkVersion 23
         targetSdkVersion 37
         versionCode 8
-        versionName '2.3.0'
+        versionName '2.3.0' // last SemVer release; CalVer YYYY.MM.DD from the next cut (CONTRIBUTING § Versioning)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Keep capture/utility drivers out of the default suite (connectedDebugAndroidTest /
         // run-instrumented-tests.sh). The store-screenshot driver still runs via

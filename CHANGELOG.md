@@ -1,7 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog][], and this project adheres to [Semantic Versioning][].
+The format is based on [Keep a Changelog][]. Releases through v2.3.0 followed [Semantic Versioning][]; from the next release onward this project uses [Calendar Versioning][] (`YYYY.MM.DD`).
+
+## \[unreleased] (amplitud)
 
 ## \[v2.3.0] - 2026-06-28
 
@@ -324,3 +326,4 @@ The format is based on [Keep a Changelog][], and this project adheres to [Semant
 
 [keep a changelog]: https://keepachangelog.com/en/1.0.0/
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
+[calendar versioning]: https://calver.org/

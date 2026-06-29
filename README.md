@@ -8,7 +8,7 @@ Bomp is your personal collection of the voices that matter. Save them, keep them
 
 ## Project status 📖
 [![version](https://img.shields.io/badge/version-2.3.0-brightgreen.svg)](https://github.com/barriosnahuel/bomp/releases)
-[![Semver](https://img.shields.io/badge/SemVer-v2.3.0-green.svg)](http://semver.org/spec/v2.0.0.html)
+[![CalVer](https://img.shields.io/badge/CalVer-YYYY.MM.DD-green.svg)](https://calver.org/)
 [![stable](https://img.shields.io/badge/stability-experimental-green.svg)](https://nodejs.org/api/documentation.html#documentation_stability_index)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
