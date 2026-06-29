@@ -136,9 +136,12 @@ Igual que en la app:
 
 Antes del primer push de la ficha en Play, resolver:
 
-- [ ] Reemplazar el pill custom en `.l-cta-row` por el badge oficial **Pre-register on Google
-      Play** (es-419 SVG) descargado del Partner Marketing Hub:
-      https://partnermarketinghub.withgoogle.com/brands/google-play/visual-identity/badge-guidelines/
+- [x] Badge oficial de Google Play en `.l-cta-row`: la app ya está en producción, así que el
+      badge del hero es el oficial **"Get it on / Disponible en Google Play"** (web generic,
+      646×250 con clear-space), con swap por locale en `i18n.js` (4 assets en
+      `assets/img/google-play/get-*.png`, un dialecto cada uno: en "Get it on",
+      es-419 "Descargar en" — usado por es-AR/es-419, es-ES "Disponible en", pt-BR "Disponível no").
+      Fuente: https://partnermarketinghub.withgoogle.com/brands/google-play/visual-identity/badge-guidelines/
 - [x] Email de contacto definitivo: `barrios.nahuel+bomp@gmail.com` (usado en `pp.s05.li7`,
       `tos.s12.body`, `tos.meta.operator` × 5 locales + fallbacks estáticos en
       `privacy-policy.html` y `terms-of-service.html`).

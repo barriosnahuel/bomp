@@ -282,7 +282,7 @@
   color: var(--color-on-background);
 }
 
-/* Play badge — official Google Play asset (270x80 PNG per locale).
+/* Play badge — official Google Play asset (646x250 PNG per locale, con clear-space).
    The wrapper is just a focus/hover surface; the image carries the brand. */
 .l-playbadge {
   display: inline-flex;

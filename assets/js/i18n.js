@@ -50,7 +50,7 @@
       "hero.eyebrow": "Beta · Android · gratis",
       "hero.title.html": "La voz de los tuyos.<br><span class=\"acid\">Siempre con vos</span>.",
       "hero.sub": "Guardá los audios que te llegan por WhatsApp, Telegram o WeChat. Apodalos para que sean tuyos. Tocalos cuando los necesites — y si querés, mandalos.",
-      "hero.playBadge.aria": "Resérvalo en Google Play (próximamente)",
+      "hero.playBadge.aria": "Descargar en Google Play",
 
       "decoy.1": "Risa de mi vieja",
       "decoy.2": "¡Che, capo!",
@@ -295,7 +295,7 @@
       "hero.eyebrow": "Beta · Android · gratis",
       "hero.title.html": "La voz de los tuyos.<br><span class=\"acid\">Siempre contigo</span>.",
       "hero.sub": "Guarda los audios que te llegan por WhatsApp, Telegram o WeChat. Apódalos para que sean tuyos. Tócalos cuando los necesites — y si quieres, mándalos.",
-      "hero.playBadge.aria": "Resérvalo en Google Play (próximamente)",
+      "hero.playBadge.aria": "Descargar en Google Play",
 
       "decoy.1": "Risa de mi mamá",
       "decoy.2": "¡Hey wey!",
@@ -540,7 +540,7 @@
       "hero.eyebrow": "Beta · Android · gratis",
       "hero.title.html": "La voz de los tuyos.<br><span class=\"acid\">Siempre contigo</span>.",
       "hero.sub": "Guarda los audios que te llegan por WhatsApp, Telegram o WeChat. Apódalos para que sean tuyos. Tócalos cuando los necesites — y si quieres, mándalos.",
-      "hero.playBadge.aria": "Resérvalo en Google Play (próximamente)",
+      "hero.playBadge.aria": "Disponible en Google Play",
 
       "decoy.1": "Risa de mi madre",
       "decoy.2": "¡Tío!",
@@ -785,7 +785,7 @@
       "hero.eyebrow": "Beta · Android · free",
       "hero.title.html": "The voices that matter.<br><span class=\"acid\">Always with you</span>.",
       "hero.sub": "Save the audios that come in through WhatsApp, Telegram, or WeChat. Nickname them so they feel yours. Play them when you need them — and if you want, share them.",
-      "hero.playBadge.aria": "Pre-register on Google Play (coming soon)",
+      "hero.playBadge.aria": "Get it on Google Play",
 
       "decoy.1": "Mom's laugh",
       "decoy.2": "Yo dude!",
@@ -1030,7 +1030,7 @@
       "hero.eyebrow": "Beta · Android · grátis",
       "hero.title.html": "A voz da sua gente.<br><span class=\"acid\">Sempre com você</span>.",
       "hero.sub": "Salve os áudios que chegam pelo WhatsApp, Telegram ou WeChat. Apelide-os pra que sejam seus. Toque-os quando precisar — e se quiser, mande-os.",
-      "hero.playBadge.aria": "Reserve no Google Play (em breve)",
+      "hero.playBadge.aria": "Disponível no Google Play",
 
       "decoy.1": "Risada da mãe",
       "decoy.2": "E aí mano!",
@@ -1255,13 +1255,13 @@
     }
   };
 
-  // Locale → Google Play badge image (es-AR uses the LATAM badge, no AR-specific asset).
+  // Locale → Google Play badge image (es-AR uses the LATAM "Descargar en" badge; es-ES uses "Disponible en").
   var BADGE = {
-    "es-AR":  "assets/img/google-play/preregister-es-419.png",
-    "es-419": "assets/img/google-play/preregister-es-419.png",
-    "es-ES":  "assets/img/google-play/preregister-es-ES.png",
-    "en":     "assets/img/google-play/preregister-en.png",
-    "pt-BR":  "assets/img/google-play/preregister-pt-BR.png"
+    "es-AR":  "assets/img/google-play/get-es-419.png",
+    "es-419": "assets/img/google-play/get-es-419.png",
+    "es-ES":  "assets/img/google-play/get-es-ES.png",
+    "en":     "assets/img/google-play/get-en.png",
+    "pt-BR":  "assets/img/google-play/get-pt-BR.png"
   };
 
   // Display labels for the language switcher (in the language itself).
