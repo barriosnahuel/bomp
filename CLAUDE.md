@@ -345,7 +345,7 @@ Full "when to use" per label + worked combinations: CONTRIBUTING.md § *Labels &
 
 ## Changelog
 
-`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/):
+`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); released headers are CalVer `## [YYYY.MM.DD]` (CONTRIBUTING § *Versioning*):
 - Sections `Added` / `Changed` / `Fixed` / `Removed` under `## [unreleased]`. Each entry: single sentence, capital, no trailing period.
 - Dependency bumps → one line for the overall bump (`"Bumped all dependencies to latest stable"`), not one per library.
 - Update `[unreleased]` per commit when the change is user-visible or architecturally significant.
