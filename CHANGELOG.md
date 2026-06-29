@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog][]. Releases through v2.3.0 followed [Semantic Versioning][]; from the next release onward this project uses [Calendar Versioning][] (`YYYY.MM.DD`).
+The format is based on [Keep a Changelog][]. Releases through v2.3.0 followed [Semantic Versioning][]; from the next release onward this project uses [Calendar Versioning][] — the app `versionName` is `YYYY.MM`, while release tags and the headers below are `vYYYY.MM.DD`.
 
 ## \[unreleased] (amplitud)
 
