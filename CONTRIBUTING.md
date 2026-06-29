@@ -562,19 +562,20 @@ Release-only Gradle commands (need the signing files above in the project root):
 
 ### Versioning
 
-`versionName` follows **Calendar Versioning**: `YYYY.MM.DD` — the year, month, and day of the release cut (e.g. `2026.07.15`). The date *is* the version, so it tells the Bomper how fresh the app is; there is no SemVer `MAJOR.MINOR.PATCH` and **no sequential counter** — the "patch" position is the day, never a running number.
+**Calendar Versioning**, at two granularities — the user-facing version reads as a month, the GitHub tag is day-precise:
 
-- **`versionCode`** stays a **monotonic integer**, bumped +1 per release, independent of `versionName` (Play Store requirement). It is the true build identity — two cuts on the same day (not expected) are still distinct by `versionCode`.
-- **Forward-only frontier:** releases through `v2.3.0` were SemVer and stay as-is in tags / CHANGELOG / history. CalVer governs from the first release cut after this change onward.
-- **GitHub** tags and release titles use the same CalVer string; `CHANGELOG.md` headers become `## [YYYY.MM.DD]` at cut.
+- **`versionName`** (what the Bomper sees in Play / "Acerca de") is **`YYYY.MM`** — year + month of the cut (e.g. `2026.07`). The date *is* the version: it tells the Bomper how fresh the app is. No SemVer `MAJOR.MINOR.PATCH`, **no sequential counter**. Two releases in the same month share a `versionName` — Play allows it; they stay distinct by `versionCode`.
+- **`versionCode`** stays a **monotonic integer**, bumped +1 per release, independent of `versionName` (Play Store requirement). It is the true build identity.
+- **GitHub tags + release titles + `CHANGELOG.md` headers** are **`vYYYY.MM.DD`** — the `v`-prefixed cut date with day precision, so every release is a unique tag without a sequential counter (e.g. `v2026.07.15`).
+- **Forward-only frontier:** releases through `v2.3.0` were SemVer and stay as-is in tags / CHANGELOG / history. CalVer governs from the first cut after this change onward.
 
 ### Pre-release checklist
 
 A **seed** — expand it as the release process is formalized (store rollout steps aren't documented yet, so they're intentionally omitted rather than invented). Before cutting a release:
 
 - [ ] **Regenerate the Baseline Profile** — `./scripts/generate-baseline-profile.sh`, then validate on a **real device** (`StartupBenchmark.startupBaselineProfile` near `DEFAULT`, well under `None`). It's a frozen snapshot of the cold-start path (§ *Baseline Profile*); refresh it so accumulated startup changes are precompiled.
-- [ ] **Finalize `CHANGELOG.md`** — stamp `## [unreleased]` as `## [YYYY.MM.DD]`, the cut date (§ CLAUDE.md *Changelog*).
-- [ ] **Bump `versionCode` + `versionName`** in `app/build.gradle` — `versionCode` +1; `versionName` to the CalVer `YYYY.MM.DD` cut date (§ *Versioning*).
+- [ ] **Finalize `CHANGELOG.md`** — stamp `## [unreleased]` as `## [vYYYY.MM.DD]`, the cut date (§ CLAUDE.md *Changelog*).
+- [ ] **Bump `versionCode` + `versionName`** in `app/build.gradle` — `versionCode` +1; `versionName` to the CalVer `YYYY.MM` cut month (§ *Versioning*).
 - [ ] **Release lint gate** — `./gradlew app:lintVitalRelease` green.
 - [ ] **Build the AAB** — `./gradlew app:bundle`.
 - [ ] **Write the store change notes** — `store-listing/{en-US,es-AR}/changelog-<versionCode>.txt`; the GitHub release notes are sourced from the en-US file (§ *Creating the GitHub release*).
@@ -588,16 +589,16 @@ After the checklist above is green and the version bump is merged to `develop`:
 2. **Create the release + tag from `develop`**, notes from the store change file, attaching **only** the R8 mapping as the single asset:
 
    ```bash
-   gh release create YYYY.MM.DD --target develop --title "YYYY.MM.DD" \
+   gh release create vYYYY.MM.DD --target develop --title "vYYYY.MM.DD" \
      --notes-file store-listing/en-US/changelog-<versionCode>.txt \
      app/build/outputs/mapping/release/mapping.txt
    ```
 
-   The tag/title is the CalVer cut date (§ *Versioning*), e.g. `2026.07.15`.
+   The tag/title is the `v`-prefixed CalVer cut date (§ *Versioning*), e.g. `v2026.07.15`.
 
    `<versionCode>` is the value in `app/build.gradle`. Add a footer line linking to the full `CHANGELOG.md` on `develop` if the notes file omits it.
 3. **Attach nothing else.** The mapping is a backup for offline `retrace`; **never** attach the keystore, `secure.properties`, the real `google-services.json`, or the `.aab` (the `.aab` carries no mapping anyway).
-4. **Verify the asset landed** — `gh release view YYYY.MM.DD --json assets -q '.assets[].name'` must list `mapping.txt`. Print an explicit line for the maintainer to confirm, e.g. `✅ mapping.txt attached to YYYY.MM.DD` (or ⚠️ + re-run `gh release upload YYYY.MM.DD app/build/outputs/mapping/release/mapping.txt` if missing).
+4. **Verify the asset landed** — `gh release view vYYYY.MM.DD --json assets -q '.assets[].name'` must list `mapping.txt`. Print an explicit line for the maintainer to confirm, e.g. `✅ mapping.txt attached to vYYYY.MM.DD` (or ⚠️ + re-run `gh release upload vYYYY.MM.DD app/build/outputs/mapping/release/mapping.txt` if missing).
 5. **Verify Firebase actually got the mapping** — the build log must show `uploadCrashlyticsMappingFileRelease` *ran* (not skipped). Within minutes, a fresh crash on this version should de-obfuscate in the Console / via the Firebase MCP (real frames, **not** `r8-map-id-…`). This step exists because past releases shipped **without** the mapping (§ *BigQuery export* → *Stack frames come R8-obfuscated*) — so Crashlytics couldn't deobfuscate them either.
 
 Why archive the mapping: even when Firebase holds it for Console/MCP de-obfuscation, a GitHub-release copy keyed to the tag is a durable offline `retrace` backup independent of Firebase retention — and the safety net for exactly the case above, where the Firebase upload didn't happen.
