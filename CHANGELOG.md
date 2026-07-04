@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### For nerds 🤓
+
+#### Fixed
+- The My Sounds visibility toggle now updates the visible list synchronously (mirroring the pin toggle) instead of waiting for the DataStore write to round-trip back through `loadSounds`, removing the async dependency that made `SoundsViewModelVisibilityTest` time out under CI load
+
 ## \[v2.3.0] - 2026-06-28
 
 ### Added
