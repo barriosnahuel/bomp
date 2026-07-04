@@ -7,7 +7,6 @@ package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.ContentResolver
 import android.content.Context
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.github.barriosnahuel.vossosunboton.R
@@ -99,7 +98,7 @@ private class AddButtonFeatureImpl : AddButtonFeature {
                             copy(inputStream, fileOutputStream)
                             val repo = SoundsRepository(context)
                             repo.save(Sound(id, name, fileName).copy(source = source))
-                            extractDurationMs(targetFile, fileName)?.let { repo.saveDuration(id, name, it) }
+                            extractDurationMs(context, targetFile, fileName)?.let { repo.saveDuration(id, name, it) }
                             // Apply collection tags now so the audio shows up in the right place
                             // immediately. Failures don't roll back the save (the audio still
                             // exists, just untagged) but ARE reported as non-fatal so we can spot
@@ -133,17 +132,12 @@ private class AddButtonFeatureImpl : AddButtonFeature {
 
     /** Best-effort duration probe of the just-copied file; a failure is non-fatal (the audio saves). */
     private fun extractDurationMs(
+        context: Context,
         file: File,
         fileName: String,
     ): Int? =
         runCatching {
-            val retriever = MediaMetadataRetriever()
-            try {
-                retriever.setDataSource(file.absolutePath)
-                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toInt()
-            } finally {
-                retriever.release()
-            }
+            readDurationMsBlocking(context, Uri.fromFile(file))
         }.onFailure {
             Tracker.log("addbutton.fileName=$fileName")
             Tracker.track(RuntimeException("Failed to extract duration metadata", it))

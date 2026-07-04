@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 #### Added
 - ADR 0022 decides the playback architecture for the Media3 migration: measured hybrid — MediaPlayer stays on the tap path (80 ms vs ExoPlayer's 390 ms on device, AEP exception documented), Media3 + MediaSession take the listening sessions (Vault immersive, recorder review)
 - Long-form playback engine (`ListenSessionEngine`, Media3 ExoPlayer 1.10.1) behind the same `PlayerController` facade: Vault immersive listen and recorder review now play on it, reporting through the existing listener/StateFlow channels; list-row taps and add-flow previews stay on MediaPlayer (ADR 0022)
+- Audio duration extraction (import + add-preview) moved from the AEP-prohibited `MediaMetadataRetriever` to Media3's `MetadataRetriever` (`media3-inspector`), keeping the same failure UX and Crashlytics grouping (ADR 0022 / spec 002e)
 
 ## \[v2.3.0] - 2026-06-28
 
