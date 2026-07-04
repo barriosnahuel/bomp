@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### For nerds 🤓
+
+#### Added
+- ADR 0022 decides the playback architecture for the Media3 migration: measured hybrid — MediaPlayer stays on the tap path (80 ms vs ExoPlayer's 390 ms on device, AEP exception documented), Media3 + MediaSession take the listening sessions (Vault immersive, recorder review)
+
 ## \[v2.3.0] - 2026-06-28
 
 ### Added
