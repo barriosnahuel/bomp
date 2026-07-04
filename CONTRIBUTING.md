@@ -566,7 +566,7 @@ Release-only Gradle commands (need the signing files above in the project root):
 
 - **`versionName`** (what the Bomper sees in Play / "Acerca de") is **`YYYY.MM`** — year + month of the cut (e.g. `2026.07`). The date *is* the version: it tells the Bomper how fresh the app is. No SemVer `MAJOR.MINOR.PATCH`, **no sequential counter**. Two releases in the same month share a `versionName` — Play allows it; they stay distinct by `versionCode`.
 - **`versionCode`** stays a **monotonic integer**, bumped +1 per release, independent of `versionName` (Play Store requirement). It is the true build identity.
-- **GitHub tags + release titles + `CHANGELOG.md` headers** are **`vYYYY.MM.DD`** — the `v`-prefixed cut date with day precision, so every release is a unique tag without a sequential counter (e.g. `v2026.07.15`).
+- **GitHub tags + release titles + `CHANGELOG.md` headers** are **`vYYYY.MM.DD`** — the `v`-prefixed cut date with day precision (e.g. `v2026.07.15`). Day precision keeps tags unique across months without a sequential counter. If two releases ever land the **same day** (rare — a same-afternoon hotfix), disambiguate the second **tag only** at cut (e.g. `v2026.07.15-2`); `versionCode` already separates the builds and `versionName` stays `YYYY.MM`.
 - **Forward-only frontier:** releases through `v2.3.0` were SemVer and stay as-is in tags / CHANGELOG / history. CalVer governs from the first cut after this change onward.
 
 ### Pre-release checklist
@@ -593,8 +593,6 @@ After the checklist above is green and the version bump is merged to `develop`:
      --notes-file store-listing/en-US/changelog-<versionCode>.txt \
      app/build/outputs/mapping/release/mapping.txt
    ```
-
-   The tag/title is the `v`-prefixed CalVer cut date (§ *Versioning*), e.g. `v2026.07.15`.
 
    `<versionCode>` is the value in `app/build.gradle`. Add a footer line linking to the full `CHANGELOG.md` on `develop` if the notes file omits it.
 3. **Attach nothing else.** The mapping is a backup for offline `retrace`; **never** attach the keystore, `secure.properties`, the real `google-services.json`, or the `.aab` (the `.aab` carries no mapping anyway).
