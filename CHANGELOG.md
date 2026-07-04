@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### For nerds 🤓
+
+#### Added
+- Tap-to-sound latency guardrail: a Macrobenchmark (`TapLatencyBenchmark`) measures tap → playback-start on a physical device via an engine-agnostic trace section, baselining the current player before the Media3 migration and gating the ≤100 ms budget after it
+
 ## \[v2.3.0] - 2026-06-28
 
 ### Added
