@@ -97,6 +97,31 @@ internal fun isReachableOutsideMySounds(
     privateCollectionIds: Set<String>,
 ): Boolean = publicCollectionIds.isNotEmpty() || privateCollectionIds.isNotEmpty()
 
+/**
+ * Optimistic My Sounds "Todo" reprojection for a visibility toggle (ADR 0012), factored out as a
+ * pure function so the synchronous list update is unit-testable without the DataStore round-trip
+ * (`SoundsViewModel.setAudioVisibleInMySounds` applies the flag to the cache, then reprojects the
+ * visible list through this). [current] is the visible list, [catalog] the full cache already
+ * carrying the just-applied flag, [order] the canonical [Sound] sort. Hiding drops [audioId];
+ * showing inserts it from [catalog] re-sorted by [order] — preserving the welcome sticker and any
+ * pins — and is a no-op when it is already present or absent from the catalog. `loadSounds` later
+ * reprojects to the same list, so this only governs the transient window before the write lands.
+ */
+internal fun reprojectVisibilityToggle(
+    current: List<Sound>,
+    audioId: String,
+    visible: Boolean,
+    catalog: List<Sound>,
+    order: Comparator<Sound>,
+): List<Sound> =
+    if (!visible) {
+        current.filterNot { it.id == audioId }
+    } else if (current.any { it.id == audioId }) {
+        current
+    } else {
+        catalog.firstOrNull { it.id == audioId }?.let { (current + it).sortedWith(order) } ?: current
+    }
+
 data class PlaybackProgress(
     val positionMs: Int,
     val durationMs: Int,
@@ -1174,10 +1199,11 @@ class SoundsViewModel(
     }
 
     /**
-     * Persists [Sound.isVisibleInMySounds] for [audioId] and reflects it instantly in the catalog
-     * cache (ADR 0012). The DataStore write re-triggers `loadSounds` through the repo observer,
-     * which reprojects the visible list; updating [allSoundsCache] here keeps the sheet's switch and
-     * any cache-derived reads consistent in the meantime. Mirror of [togglePin]'s optimistic shape.
+     * Persists [Sound.isVisibleInMySounds] for [audioId] and reflects it instantly in BOTH the catalog
+     * cache and the visible "Todo" list (ADR 0012). The DataStore write re-triggers `loadSounds`
+     * through the repo observer, which reprojects the visible list; updating [allSoundsCache] and
+     * [_sounds] here keeps the sheet's switch and the list consistent in the meantime — a full mirror
+     * of [togglePin]'s optimistic shape, so the toggle never has to wait for the DataStore round-trip.
      */
     fun setAudioVisibleInMySounds(
         audioId: String,
@@ -1186,6 +1212,14 @@ class SoundsViewModel(
     ) {
         allSoundsCache.update { list ->
             list.map { if (it.id == audioId) it.copy(isVisibleInMySounds = visible) else it }
+        }
+        // Optimistically reproject the visible list so "Todo" updates synchronously instead of only
+        // after the DataStore write round-trips back through `loadSounds` (the source of the earlier
+        // flaky timeout under CI load). Only the unfiltered My Sounds view is visibility-driven: a
+        // public chip surfaces members by membership (ADR 0012) and other tabs don't project by
+        // visibility, so leave those to the reactive `loadSounds`, which reprojects to the same list.
+        if (_selectedTab.value == AppTab.MY_SOUNDS && _activeMySoundsFilter.value == null) {
+            _sounds.update { current -> reprojectVisibilityToggle(current, audioId, visible, allSoundsCache.value, SOUND_ORDER) }
         }
         viewModelScope.launch(ioDispatcher) {
             runCatching { repo.saveVisibility(audioId, name, visible) }
