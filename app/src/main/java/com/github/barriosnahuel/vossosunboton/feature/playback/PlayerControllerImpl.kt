@@ -10,6 +10,8 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,6 +32,7 @@ internal class PlayerControllerImpl(
     private val mediaPlayer: MediaPlayer = MediaPlayer(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob()),
+    private val sessionPlayerProvider: (Context) -> Player = { ExoPlayer.Builder(it).build() },
 ) : PlayerController {
     private var listener: PlayerControllerListener? = null
 
@@ -86,6 +89,15 @@ internal class PlayerControllerImpl(
         context: Context,
         sound: Sound,
     ) {
+        if (session.targetSoundId == sound.id) {
+            // The immersive's play toggle routes here (same VM path as list rows): the sound is the
+            // paused session target → resume the session in place, don't load it on MediaPlayer.
+            prepareJob?.cancel()
+            session.resume()
+            return
+        }
+        session.stop()
+
         val currentTarget = target
         if (currentTarget is PlaybackTarget.SoundTarget && currentTarget.sound.id == sound.id && !mediaPlayer.isPlaying) {
             // Same sound, paused → resume in place. MediaPlayer kept the data source and the
@@ -168,6 +180,8 @@ internal class PlayerControllerImpl(
         uri: Uri,
         startPositionMs: Int,
     ) {
+        session.stop()
+
         val currentTarget = target
         if (currentTarget is PlaybackTarget.UriTarget && currentTarget.uri == uri && !mediaPlayer.isPlaying) {
             prepareJob?.cancel()
@@ -299,7 +313,54 @@ internal class PlayerControllerImpl(
             }
         }
 
+    // --- Long-form listen-session engine (Media3 ExoPlayer) : docs/adr/0022 ---
+
+    /**
+     * The second engine behind this facade. Mutually exclusive with [target]: every start path
+     * preempts the other engine first, keeping the ADR 0005 one-active-playback invariant across
+     * both engines.
+     */
+    private val session =
+        ListenSessionEngine(
+            playerProvider = sessionPlayerProvider,
+            handler = handler,
+            listenerProvider = { listener },
+            playbackState = _playbackState,
+        )
+
+    override fun startListenSession(
+        context: Context,
+        sound: Sound,
+    ) {
+        prepareJob?.cancel()
+        preemptMediaPlayerEngine()
+        session.startSound(context, sound)
+    }
+
+    override fun startUriListenSession(
+        context: Context,
+        uri: Uri,
+        startPositionMs: Int,
+    ) {
+        prepareJob?.cancel()
+        preemptMediaPlayerEngine()
+        session.startUri(context, uri, startPositionMs)
+    }
+
+    /**
+     * Pauses-with-position whatever the MediaPlayer engine has loaded and returns it to IDLE, so a
+     * session can start. The paused sound keeps its saved position (ADR 0007/0008) — returning to
+     * it from a list row resumes where it left off.
+     */
+    private fun preemptMediaPlayerEngine() {
+        if (target == null) return
+        preemptCurrentTargetPreservingPosition()
+        handler.removeCallbacks(progressRunnable)
+        mediaPlayer.reset()
+    }
+
     override fun stopPlayingSound() {
+        session.stop()
         val isPlayingNow = mediaPlayer.isPlaying
         val hasUriState = _playbackState.value != null
         val t = target
@@ -327,7 +388,7 @@ internal class PlayerControllerImpl(
 
     override fun pause() {
         val t = target
-        if (t == null || !mediaPlayer.isPlaying) return
+        if (session.pause() || t == null || !mediaPlayer.isPlaying) return
         val paused = runCatching { mediaPlayer.pause() }
         paused.onFailure { e ->
             if (e is IllegalStateException) {
@@ -351,10 +412,15 @@ internal class PlayerControllerImpl(
     }
 
     override fun resume() {
+        if (session.isActive) {
+            val uriBlocked = session.targetSoundId == null && (_playbackState.value?.isPlaying != false)
+            if (!uriBlocked) session.resume()
+            return
+        }
+
         val t = target
-        if (t == null || mediaPlayer.isPlaying) return
         val uriBlocked = t is PlaybackTarget.UriTarget && (_playbackState.value?.isPlaying != false)
-        if (uriBlocked) return
+        if (t == null || mediaPlayer.isPlaying || uriBlocked) return
         resumeCurrentTarget()
     }
 
@@ -393,6 +459,7 @@ internal class PlayerControllerImpl(
     }
 
     override fun seekTo(positionMs: Int) {
+        if (session.seekTo(positionMs)) return
         // Wrapped like every other MediaPlayer call here: a seek racing a stop/complete can land in an
         // invalid state and throw IllegalStateException — swallow + report rather than crash.
         runCatching { mediaPlayer.seekTo(positionMs) }
@@ -409,6 +476,9 @@ internal class PlayerControllerImpl(
     }
 
     override fun forgetSound(sound: Sound) {
+        if (session.targetSoundId == sound.id) {
+            session.stop()
+        }
         savedSoundPositions.remove(sound.id)
         val t = target
         if (t is PlaybackTarget.SoundTarget && t.sound.id == sound.id) {

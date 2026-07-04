@@ -166,6 +166,7 @@ dependencies {
     implementation libs.compose.material3
     implementation libs.androidx.activity.compose
     implementation libs.androidx.core.splashscreen
+    implementation libs.androidx.media3.exoplayer
     implementation libs.lifecycle.viewmodel.compose
     implementation libs.lifecycle.runtime.compose
     implementation libs.coroutines.android

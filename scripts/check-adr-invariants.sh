@@ -80,6 +80,24 @@ Route through PlayerController.startPlayingUri / startPlayingSound, or supersede
 fi
 
 # ============================================================================
+# ADR 0022 — docs/adr/0022-hybrid-playback-engines-media3.md
+# Invariant: the only ExoPlayer construction in src/main lives inside
+# feature/playback/PlayerControllerImpl.kt (the session engine receives it via
+# provider). New listening surfaces must route through PlayerController's
+# listen-session APIs, not build their own player.
+# ============================================================================
+ALLOWED_EXOPLAYER="app/src/main/java/com/github/barriosnahuel/vossosunboton/feature/playback/PlayerControllerImpl.kt"
+unexpected_exoplayer=$(
+    grep -rlE --include="*.kt" 'ExoPlayer\s*\.\s*Builder' $MAIN_DIRS 2>/dev/null \
+        | grep -vxF "$ALLOWED_EXOPLAYER" || true
+)
+if [ -n "$unexpected_exoplayer" ]; then
+    fail "ADR 0022 broken: ExoPlayer.Builder outside PlayerControllerImpl.kt:
+$unexpected_exoplayer
+Route through PlayerController.startListenSession / startUriListenSession, or supersede ADR 0022."
+fi
+
+# ============================================================================
 # ADR 0006 — docs/adr/0006-no-kotlin-assert-in-tests.md
 # Invariant: no bare kotlin.assert(...) in any test sourceset. The JVM only
 # evaluates the condition under -ea, so a misused assert silently no-ops on

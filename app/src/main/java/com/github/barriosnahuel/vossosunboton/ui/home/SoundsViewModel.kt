@@ -844,6 +844,28 @@ class SoundsViewModel(
         }
     }
 
+    /**
+     * Starts [sound] as an immersive listen session on the long-form engine — always from 0, no
+     * cross-open position retention (ADR 0022). Same play analytics as a list tap; playback events
+     * arrive through the same [PlayerControllerListener] callbacks, so the UI state
+     * ([playingSound], [playbackProgress], [pausedProgress]) works unchanged. In-session toggles
+     * keep routing through [playOrStop] — the controller resolves the engine.
+     */
+    fun startListenSession(sound: Sound) {
+        PlayerControllerFactory.instance.startListenSession(getApplication(), sound)
+        tracker.log(AnalyticsEvent.SoundPlay(surface = currentSurface))
+        val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_PLAYS)
+        tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_PLAYS, newCount.toString())
+    }
+
+    /**
+     * Definitive stop of whatever is playing on either engine (position discarded). The immersive's
+     * back gesture uses this — a session must not survive its surface (ADR 0022: no retention).
+     */
+    fun stopPlayback() {
+        PlayerControllerFactory.instance.stopPlayingSound()
+    }
+
     fun seekTo(positionMs: Int) {
         PlayerControllerFactory.instance.seekTo(positionMs)
         _playbackProgress.update { it?.copy(positionMs = positionMs) }

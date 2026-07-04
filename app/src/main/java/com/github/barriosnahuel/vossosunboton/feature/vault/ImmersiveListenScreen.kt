@@ -131,7 +131,16 @@ internal fun ImmersiveListenHost(
         isPlaying = isThisPlaying,
         progressFraction = fraction,
         peaks = peaks,
-        onPlayPause = { viewModel.playOrStop(sound.copy(isPlaying = isThisPlaying)) },
+        onPlayPause = {
+            // Pause keeps the shared toggle; play goes to the session API so a replay after natural
+            // completion stays on the long-form engine and starts from 0 (ADR 0022) — routing it
+            // through playOrStop would fall back to MediaPlayer once the session target cleared.
+            if (isThisPlaying) {
+                viewModel.playOrStop(sound.copy(isPlaying = true))
+            } else {
+                viewModel.startListenSession(sound)
+            }
+        },
         onRestart = { viewModel.seekTo(0, soundId) },
         onSeek = { f -> durationMs?.let { d -> seekTargetMs(d.toLong(), f)?.let { viewModel.seekTo(it, soundId) } } },
         onBack = onBack,
