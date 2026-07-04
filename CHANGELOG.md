@@ -1,9 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog][]. Releases through v2.3.0 followed [Semantic Versioning][]; from the next release onward this project uses [Calendar Versioning][] — the app `versionName` is `YYYY.MM`, while release tags and the headers below are `vYYYY.MM.DD`.
+The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [Semantic Versioning][]; from the next release onward it uses [Calendar Versioning][] — see CONTRIBUTING § *Versioning*. Existing headers below stay as the SemVer versions they shipped as.
 
-## \[unreleased] (amplitud)
+## \[unreleased]
 
 ## \[v2.3.0] - 2026-06-28
 

@@ -330,7 +330,7 @@ Store listing PNGs (icon, feature graphic) render from SVG masters under `store-
 
 ## Labels and milestone
 
-Apply exactly **one type label** (`a:*` or `an:*`) + **zero or more concern labels** (`c:*`) to every PR before merging. Don't call `gh label list`. For the milestone, read the `## [unreleased]` line in `CHANGELOG.md` — the version in parentheses is the milestone (e.g. `(v2.0.0)` → milestone `v2.0.0`); don't call the milestones API.
+Apply exactly **one type label** (`a:*` or `an:*`) + **zero or more concern labels** (`c:*`) to every PR before merging. Don't call `gh label list`. For the milestone: under CalVer the next version is fixed **at cut**, so `## [unreleased]` carries no version — leave the milestone unset until a release exists (pre-CalVer PRs read it from a `(vX.Y.Z)` on that line). Don't call the milestones API.
 
 - **Type — user-facing** (appear in CHANGELOG `### Added/Changed/Fixed/Removed`): `a:feature`, `a:fix`, `an:enhancement`.
 - **Type — internal** (under `### For nerds 🤓` or omitted): `a:refactor`, `a:test`, `a:build`, `a:docs`.
