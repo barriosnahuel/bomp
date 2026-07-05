@@ -45,5 +45,12 @@ internal class WaveformExtractorContentUriTest {
         assertThat(peaks!!.size).isEqualTo(RECORDER_WAVEFORM_BARS)
         // A real envelope varies bar to bar; the old synthetic/placeholder path would be uniform.
         assertThat(peaks.toSet().size).isGreaterThan(1)
+        // Source normalization copies the uri to a temp file — it must not outlive the decode.
+        assertThat(
+            context.cacheDir
+                .listFiles()
+                .orEmpty()
+                .filter { it.name.startsWith("waveform_src_") },
+        ).isEmpty()
     }
 }
