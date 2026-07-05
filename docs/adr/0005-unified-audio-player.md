@@ -1,6 +1,6 @@
 # ADR 0005 — Unified audio player across Home and previews
 
-- **Status:** Accepted
+- **Status:** Accepted (tap-again-to-stop semantic superseded by [ADR 0007](0007-sound-playback-pause-resume.md); single-engine premise amended by [ADR 0022](0022-hybrid-playback-engines-media3.md) — the controller now fronts two engines)
 - **Date:** 2026-05-09
 - **Supersedes:** —
 

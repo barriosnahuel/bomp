@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.tracing.Trace
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsScope
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
@@ -95,6 +96,31 @@ internal fun isReachableOutsideMySounds(
     publicCollectionIds: Set<String>,
     privateCollectionIds: Set<String>,
 ): Boolean = publicCollectionIds.isNotEmpty() || privateCollectionIds.isNotEmpty()
+
+/**
+ * Optimistic My Sounds "Todo" reprojection for a visibility toggle (ADR 0012), factored out as a
+ * pure function so the synchronous list update is unit-testable without the DataStore round-trip
+ * (`SoundsViewModel.setAudioVisibleInMySounds` applies the flag to the cache, then reprojects the
+ * visible list through this). [current] is the visible list, [catalog] the full cache already
+ * carrying the just-applied flag, [order] the canonical [Sound] sort. Hiding drops [audioId];
+ * showing inserts it from [catalog] re-sorted by [order] — preserving the welcome sticker and any
+ * pins — and is a no-op when it is already present or absent from the catalog. `loadSounds` later
+ * reprojects to the same list, so this only governs the transient window before the write lands.
+ */
+internal fun reprojectVisibilityToggle(
+    current: List<Sound>,
+    audioId: String,
+    visible: Boolean,
+    catalog: List<Sound>,
+    order: Comparator<Sound>,
+): List<Sound> =
+    if (!visible) {
+        current.filterNot { it.id == audioId }
+    } else if (current.any { it.id == audioId }) {
+        current
+    } else {
+        catalog.firstOrNull { it.id == audioId }?.let { (current + it).sortedWith(order) } ?: current
+    }
 
 data class PlaybackProgress(
     val positionMs: Int,
@@ -833,6 +859,7 @@ class SoundsViewModel(
             // but its position is retained in _pausedProgress so the progress bar stays put.
             PlayerControllerFactory.instance.pause()
         } else {
+            beginTapToSoundSpan()
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
             if (isWelcomeSticker(sound)) {
                 tracker.log(AnalyticsEvent.WelcomeStickerPlay)
@@ -1194,10 +1221,11 @@ class SoundsViewModel(
     }
 
     /**
-     * Persists [Sound.isVisibleInMySounds] for [audioId] and reflects it instantly in the catalog
-     * cache (ADR 0012). The DataStore write re-triggers `loadSounds` through the repo observer,
-     * which reprojects the visible list; updating [allSoundsCache] here keeps the sheet's switch and
-     * any cache-derived reads consistent in the meantime. Mirror of [togglePin]'s optimistic shape.
+     * Persists [Sound.isVisibleInMySounds] for [audioId] and reflects it instantly in BOTH the catalog
+     * cache and the visible "Todo" list (ADR 0012). The DataStore write re-triggers `loadSounds`
+     * through the repo observer, which reprojects the visible list; updating [allSoundsCache] and
+     * [_sounds] here keeps the sheet's switch and the list consistent in the meantime — a full mirror
+     * of [togglePin]'s optimistic shape, so the toggle never has to wait for the DataStore round-trip.
      */
     fun setAudioVisibleInMySounds(
         audioId: String,
@@ -1206,6 +1234,14 @@ class SoundsViewModel(
     ) {
         allSoundsCache.update { list ->
             list.map { if (it.id == audioId) it.copy(isVisibleInMySounds = visible) else it }
+        }
+        // Optimistically reproject the visible list so "Todo" updates synchronously instead of only
+        // after the DataStore write round-trips back through `loadSounds` (the source of the earlier
+        // flaky timeout under CI load). Only the unfiltered My Sounds view is visibility-driven: a
+        // public chip surfaces members by membership (ADR 0012) and other tabs don't project by
+        // visibility, so leave those to the reactive `loadSounds`, which reprojects to the same list.
+        if (_selectedTab.value == AppTab.MY_SOUNDS && _activeMySoundsFilter.value == null) {
+            _sounds.update { current -> reprojectVisibilityToggle(current, audioId, visible, allSoundsCache.value, SOUND_ORDER) }
         }
         viewModelScope.launch(ioDispatcher) {
             runCatching { repo.saveVisibility(audioId, name, visible) }
@@ -1480,6 +1516,7 @@ class SoundsViewModel(
         durationMs: Int,
         positionMs: Int,
     ) {
+        endTapToSoundSpan()
         val playingSound = sound.copy(isPlaying = true)
         _playingSound.value = playingSound
         // positionMs is non-zero on resume from a paused state; initialising _playbackProgress with
@@ -1502,6 +1539,9 @@ class SoundsViewModel(
         sound: Sound,
         completed: Boolean,
     ) {
+        // A stop/delete can land while a tap's prepare is still in flight — close the span so the
+        // next tap doesn't double-begin with the same cookie (guarded no-op otherwise).
+        endTapToSoundSpan()
         val stoppedSound = sound.copy(isPlaying = false)
         _playingSound.value = null
         _playbackProgress.value = null
@@ -1563,11 +1603,45 @@ class SoundsViewModel(
     }
 
     override fun onPlayerError(sound: Sound) {
+        endTapToSoundSpan()
         _playbackErrorEvent.trySend(Unit)
+    }
+
+    /** Whether a [TAP_TO_SOUND_TRACE] span is open. See [beginTapToSoundSpan]; main-thread only. */
+    private var tapToSoundSpanInFlight = false
+
+    /**
+     * Opens the [TAP_TO_SOUND_TRACE] async span. At most one span is in flight: a re-tap that
+     * supersedes a pending start closes the stale span first (its start never completed — the new
+     * tap preempts it), otherwise a same-cookie double-begin corrupts the trace. Main-thread only
+     * (like every player callback here), so the flag needs no synchronization.
+     */
+    private fun beginTapToSoundSpan() {
+        if (tapToSoundSpanInFlight) {
+            Trace.endAsyncSection(TAP_TO_SOUND_TRACE, TAP_TO_SOUND_COOKIE)
+        }
+        tapToSoundSpanInFlight = true
+        Trace.beginAsyncSection(TAP_TO_SOUND_TRACE, TAP_TO_SOUND_COOKIE)
+    }
+
+    /** Closes the span if one is in flight. Guarded: resume paths fire [onPlayerStart] with no tap span. */
+    private fun endTapToSoundSpan() {
+        if (!tapToSoundSpanInFlight) return
+        tapToSoundSpanInFlight = false
+        Trace.endAsyncSection(TAP_TO_SOUND_TRACE, TAP_TO_SOUND_COOKIE)
     }
 
     companion object {
         private val AUDIO_MILESTONES = listOf(3, 5, 10, 25)
+
+        /**
+         * Trace section spanning tap → playback started (the ≤100 ms tap-to-sound budget). Begins in
+         * [playOrStop], ends in [onPlayerStart]/[onPlayerError] — deliberately OUTSIDE the player
+         * engine so the span survives engine swaps and stays comparable across them. Measured by the
+         * :macrobenchmark `TapLatencyBenchmark` (keep the literal in sync with `BenchmarkTargets.kt`).
+         */
+        private const val TAP_TO_SOUND_TRACE = "BompTapToSound"
+        private const val TAP_TO_SOUND_COOKIE = 0
 
         /**
          * Canonical My Sounds ordering: pinned first, then most-recent by `dateAdded`, then name.

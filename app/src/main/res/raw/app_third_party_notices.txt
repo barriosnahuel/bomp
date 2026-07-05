@@ -40,6 +40,13 @@ https://developer.android.com/jetpack/androidx/releases/biometric
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
+AndroidX Tracing
+Copyright (C) The Android Open Source Project
+Apache License, Version 2.0
+https://developer.android.com/jetpack/androidx/releases/tracing
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
 AndroidX Media3 (ExoPlayer, Inspector)
 Copyright (C) The Android Open Source Project
 Apache License, Version 2.0
