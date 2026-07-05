@@ -387,6 +387,7 @@ internal class PlayerControllerListenSessionTest : AbstractRobolectricTest() {
             ioDispatcher = dispatcher,
             scope = CoroutineScope(dispatcher + SupervisorJob()),
             sessionPlayerProvider = { player },
+            sessionBridge = FakeMediaSessionBridge(),
         )
     }
 }

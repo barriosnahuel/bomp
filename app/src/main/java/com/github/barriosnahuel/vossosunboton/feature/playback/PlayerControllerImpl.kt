@@ -10,6 +10,8 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
@@ -32,7 +34,8 @@ internal class PlayerControllerImpl(
     private val mediaPlayer: MediaPlayer = MediaPlayer(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob()),
-    private val sessionPlayerProvider: (Context) -> Player = { ExoPlayer.Builder(it).build() },
+    private val sessionPlayerProvider: (Context) -> Player = { defaultSessionPlayer(it) },
+    private val sessionBridge: MediaSessionBridge = MediaSessionBridgeImpl,
 ) : PlayerController {
     private var listener: PlayerControllerListener? = null
 
@@ -326,6 +329,7 @@ internal class PlayerControllerImpl(
             handler = handler,
             listenerProvider = { listener },
             playbackState = _playbackState,
+            bridge = sessionBridge,
         )
 
     override fun startListenSession(
@@ -510,5 +514,23 @@ internal class PlayerControllerImpl(
 
     companion object {
         private const val PROGRESS_INTERVAL_MS = 100L
+
+        /**
+         * Session engine only: listening sessions take (and yield) audio focus like any media app —
+         * a session pauses for a phone call or another player and the pause is reconciled back into
+         * the UI by [ListenSessionEngine]. The MediaPlayer tap path is untouched: a 2-second Bomp
+         * burst deliberately does not preempt whatever the user is listening to.
+         */
+        private fun defaultSessionPlayer(context: Context): Player =
+            ExoPlayer
+                .Builder(context)
+                .setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+                        .build(),
+                    true,
+                ).build()
     }
 }
