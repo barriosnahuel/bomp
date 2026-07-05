@@ -251,9 +251,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             manageRequest = ManageRequest.Focused(collectionId)
         },
         onImmersivePlay = { sound ->
-            // Vault play opens immersive listen mode and starts playback (unless already playing).
+            // Vault play opens immersive listen mode and starts a listen session — always from 0 on
+            // the long-form engine (ADR 0022), unless the audio is already mid-session.
             immersiveListenSoundId = sound.id
-            if (!sound.isPlaying) viewModel.playOrStop(sound)
+            if (!sound.isPlaying) viewModel.startListenSession(sound)
         },
         onCreateClick = openHub,
         // One source-parameterized entry point (mirrors onCreateClick): each surface binds its own
@@ -274,16 +275,15 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     }
 
     // Immersive listen mode for a Vault audio — layers above everything (it covers the top bar, so
-    // About/Manage are unreachable while it is open). Back pauses playback (position retained) so no
-    // audio keeps playing headless behind the Vault list, then closes the overlay.
+    // About/Manage are unreachable while it is open). Back STOPS playback definitively (sessions have
+    // no cross-open retention — ADR 0022) so no audio keeps playing headless behind the Vault list,
+    // then closes the overlay.
     immersiveListenSoundId?.let { listeningId ->
         com.github.barriosnahuel.vossosunboton.feature.vault.ImmersiveListenHost(
             viewModel = viewModel,
             soundId = listeningId,
             onBack = {
-                viewModel.playingSound.value
-                    ?.takeIf { it.id == listeningId }
-                    ?.let { viewModel.playOrStop(it) }
+                viewModel.stopPlayback()
                 immersiveListenSoundId = null
             },
         )

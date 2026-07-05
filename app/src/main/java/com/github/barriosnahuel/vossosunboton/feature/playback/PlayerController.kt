@@ -27,6 +27,7 @@ internal data class PlaybackState(
     val isPlaying: Boolean,
 )
 
+@Suppress("TooManyFunctions") // Single-facade contract by design (ADR 0005): every playback surface routes here.
 internal interface PlayerController {
     /**
      * Emits a non-null value while a Uri-bound (preview) playback is active. Consumers filter by
@@ -62,6 +63,33 @@ internal interface PlayerController {
      * continues from its own head and ignores this.
      */
     fun startPlayingUri(
+        context: Context,
+        uri: Uri,
+        startPositionMs: Int = 0,
+    )
+
+    /**
+     * Starts [sound] as a LISTEN SESSION on the long-form engine (Media3 ExoPlayer) — the Vault
+     * immersive surface. Fresh sessions ALWAYS start from 0: session sounds deliberately have no
+     * cross-open position retention, unlike [startPlayingSound]'s saved-position semantics
+     * (ADR 0022). When [sound] is the current paused session target this resumes in place — it is
+     * the immersive's play toggle, valid mid-clip and after natural completion alike. Any current
+     * playback on either engine is preempted ([startPlayingSound] targets pause with position; a
+     * previous session stops). Events flow through the same [PlayerControllerListener] as list
+     * playback, so consumers render sessions identically.
+     */
+    fun startListenSession(
+        context: Context,
+        sound: Sound,
+    )
+
+    /**
+     * Starts [uri] as a listen session on the long-form engine — the recorder-review surface.
+     * [startPositionMs] preserves review's resume-from-offset semantics (ADR 0022). Progress is
+     * reported via [playbackState] only, exactly like [startPlayingUri] (no Sound to pass to the
+     * listener).
+     */
+    fun startUriListenSession(
         context: Context,
         uri: Uri,
         startPositionMs: Int = 0,

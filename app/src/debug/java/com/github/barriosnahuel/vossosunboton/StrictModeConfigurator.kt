@@ -137,6 +137,13 @@ private val KNOWN_THIRD_PARTY_VIOLATIONS =
             library = "Firebase Analytics (embedded)",
             classNamePrefix = "com.google.android.gms.internal.measurement",
         ),
+        // Media3 ExoPlayer's renderer/codec internals hit greylist (NonSdkApi) APIs when a listen
+        // session starts (ADR 0022). Reproduced on device the first time ExoPlayer prepares a
+        // stream; the violation's top app-code frame is androidx.media3 code, not ours.
+        KnownThirdPartyViolation(
+            library = "Media3 ExoPlayer",
+            classNamePrefix = "androidx.media3.",
+        ),
         // Same logical SDK as above, delivered via GMS Dynamite on real devices with Play Services. The
         // dynamic module ships obfuscated class names (m7.apj, m7.api, ...) so a classNamePrefix match would
         // either be unsafe (`m7.` is too generic) or break on every Play Services revision. The Dynamite

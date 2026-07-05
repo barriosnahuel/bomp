@@ -223,7 +223,8 @@ class RecordingActivity : FragmentActivity() {
             // Paused on this clip: the player head already holds the scrubbed position — resume from it.
             current != null && current.uri == uri -> controller.resume()
             // Fresh start (before first play / after completion): resume from the remembered scrub offset.
-            else -> controller.startPlayingUri(this, uri, startPositionMs)
+            // Long-form engine (ADR 0022): the review is a listening session, not a quick tap.
+            else -> controller.startUriListenSession(this, uri, startPositionMs)
         }
     }
 
