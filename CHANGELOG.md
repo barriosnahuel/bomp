@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Tap-to-sound latency guardrail: a Macrobenchmark (`TapLatencyBenchmark`) measures tap → playback-start on a physical device via an engine-agnostic trace section, baselining the current player before the Media3 migration and gating the ≤100 ms budget after it
 - ADR 0022 decides the playback architecture for the Media3 migration: measured hybrid — MediaPlayer stays on the tap path (80 ms vs ExoPlayer's 390 ms on device, AEP exception documented), Media3 + MediaSession take the listening sessions (Vault immersive, recorder review)
 - Long-form playback engine (`ListenSessionEngine`, Media3 ExoPlayer 1.10.1) behind the same `PlayerController` facade: Vault immersive listen and recorder review now play on it, reporting through the existing listener/StateFlow channels; list-row taps and add-flow previews stay on MediaPlayer (ADR 0022)
+- Audio duration extraction (import + add-preview) moved from the AEP-prohibited `MediaMetadataRetriever` to Media3's `MetadataRetriever` (`media3-inspector`), keeping the same failure UX and Crashlytics grouping (ADR 0022 / spec 002e)
 
 #### Fixed
 - The My Sounds visibility toggle now updates the visible list synchronously (mirroring the pin toggle) instead of waiting for the DataStore write to round-trip back through `loadSounds`, removing the async dependency that made `SoundsViewModelVisibilityTest` time out under CI load

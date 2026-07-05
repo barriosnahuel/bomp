@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 import android.content.Context
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -51,6 +50,7 @@ import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
 import com.github.barriosnahuel.vossosunboton.ui.theme.DISABLED_TRACK_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.PLAYING_TINT_ALPHA
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -80,21 +80,17 @@ internal fun AudioPreview(
     var durationMs by remember(source) { mutableStateOf(0) }
 
     LaunchedEffect(source) {
-        // MediaMetadataRetriever runs off-thread to avoid blocking the main looper. Failure leaves
+        // Metadata extraction runs off-thread to avoid blocking the main looper. Failure leaves
         // durationMs at 0 which keeps the Card hidden — same UX as a player that can't prepare.
         // Mirrors AddButtonFeature's canonical pattern (same wrapper message so both call-sites
         // group under one Crashlytics issue; the breadcrumb disambiguates the path).
         durationMs =
             withContext(Dispatchers.IO) {
                 runCatching {
-                    val retriever = MediaMetadataRetriever()
-                    try {
-                        retriever.setDataSource(context, source)
-                        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toInt() ?: 0
-                    } finally {
-                        retriever.release()
-                    }
+                    readDurationMs(context, source)
                 }.onFailure {
+                    // A disposed preview cancels the extraction — propagate, don't report it as a failure.
+                    if (it is CancellationException) throw it
                     Tracker.log("addbutton.preview.uri=$source")
                     Tracker.track(RuntimeException("Failed to extract duration metadata", it))
                 }.getOrDefault(0)

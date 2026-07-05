@@ -168,6 +168,7 @@ dependencies {
     implementation libs.androidx.core.splashscreen
     implementation libs.androidx.tracing
     implementation libs.androidx.media3.exoplayer
+    implementation libs.androidx.media3.inspector
     implementation libs.lifecycle.viewmodel.compose
     implementation libs.lifecycle.runtime.compose
     implementation libs.coroutines.android

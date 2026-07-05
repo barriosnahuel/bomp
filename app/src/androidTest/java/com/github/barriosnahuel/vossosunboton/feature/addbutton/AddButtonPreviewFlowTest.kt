@@ -39,7 +39,7 @@ internal class AddButtonPreviewFlowTest : AbstractUiTest() {
         ActivityScenario.launch<AddButtonActivity>(launchIntent(TestData.seedPreviewAudio(context))).use {
             // The IconButton's contentDescription is the same string in play and pause states
             // (the icon swaps; the a11y label stays "Preview audio"). Awaiting it confirms the
-            // Card mounted, which only happens after MediaMetadataRetriever resolves durationMs > 0.
+            // Card mounted, which only happens after Media3 metadata extraction resolves durationMs > 0.
             composeRule.awaitNodeWithContentDescription(previewLabel()).assertIsDisplayed()
             // Slider exists alongside the play button — independent confirmation of the Card layout.
             composeRule.awaitNode(sliderMatcher).assertIsDisplayed()

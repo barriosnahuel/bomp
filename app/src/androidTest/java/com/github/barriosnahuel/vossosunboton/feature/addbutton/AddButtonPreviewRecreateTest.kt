@@ -78,7 +78,7 @@ internal class AddButtonPreviewRecreateTest : AbstractUiTest() {
     @Test
     fun audioPreviewCardReRendersAfterRecreate() {
         ActivityScenario.launch<AddButtonActivity>(launchIntent(TestData.seedPreviewAudio(context))).use { scenario ->
-            // Pre-recreate: card mounts after MediaMetadataRetriever resolves the duration.
+            // Pre-recreate: card mounts after Media3 metadata extraction resolves the duration.
             composeRule.awaitNodeWithContentDescription(previewLabel()).assertIsDisplayed()
             composeRule.awaitNode(sliderMatcher).assertIsDisplayed()
 
