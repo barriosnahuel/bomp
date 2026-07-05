@@ -570,11 +570,11 @@ Release-only Gradle commands (need the signing files above in the project root):
 
 ### Versioning
 
-**Calendar Versioning**, at two granularities — the user-facing version reads as a month, the GitHub tag is day-precise:
+**Calendar Versioning**, at two granularities — the user-facing version reads as a month, the GitHub tag adds a sequential counter:
 
 - **`versionName`** (what the Bomper sees in Play / "Acerca de") is **`YYYY.MM`** — year + month of the cut (e.g. `2026.07`). The date *is* the version: it tells the Bomper how fresh the app is. No SemVer `MAJOR.MINOR.PATCH`, **no sequential counter**. Two releases in the same month share a `versionName` — Play allows it; they stay distinct by `versionCode`.
 - **`versionCode`** stays a **monotonic integer**, bumped +1 per release, independent of `versionName` (Play Store requirement). It is the true build identity.
-- **GitHub tags + release titles + `CHANGELOG.md` headers** are **`vYYYY.MM.DD`** — the `v`-prefixed cut date with day precision (e.g. `v2026.07.15`). Day precision keeps tags unique across months without a sequential counter. If two releases ever land the **same day** (rare — a same-afternoon hotfix), disambiguate the second **tag only** at cut (e.g. `v2026.07.15-2`); `versionCode` already separates the builds and `versionName` stays `YYYY.MM`.
+- **GitHub tags + release titles + `CHANGELOG.md` headers** are **`vYYYY.MM.N`** — the `v`-prefixed cut month plus a 1-based counter within the month (e.g. `v2026.07.1`; a second July release is `v2026.07.2`). The counter keeps tags unique at any cadence, and — unlike a cut *date* — the name is knowable from the start of the month, which is what lets the month's **milestone** exist while PRs are still being opened (CLAUDE.md § *Labels and milestone*); git already records the cut date on the tag. Rationale + trade-off vs the earlier day-precision scheme: [ADR 0023](docs/adr/0023-monthly-sequential-release-tags.md).
 - **Forward-only frontier:** releases through `v2.3.0` were SemVer and stay as-is in tags / CHANGELOG / history. CalVer governs from the first cut after this change onward.
 
 ### Pre-release checklist
@@ -583,7 +583,7 @@ A **seed** — expand it as the release process is formalized (store rollout ste
 
 - [ ] **Regenerate the Baseline Profile** — `./scripts/generate-baseline-profile.sh`, then validate on a **real device** (`StartupBenchmark.startupBaselineProfile` near `DEFAULT`, well under `None`). It's a frozen snapshot of the cold-start path (§ *Baseline Profile*); refresh it so accumulated startup changes are precompiled.
 - [ ] **Run the tap-to-sound latency gate** — `TapLatencyBenchmark` on a **real device** (§ *Performance → What it measures*): median must stay ≤ 100 ms and in line with the last row of `macrobenchmark/RESULTS.md`; **append this run's row** there (that file is the versioned before/today series — there is no automatic threshold).
-- [ ] **Finalize `CHANGELOG.md`** — stamp `## [unreleased]` as `## [vYYYY.MM.DD]`, the cut date (§ CLAUDE.md *Changelog*).
+- [ ] **Finalize `CHANGELOG.md`** — stamp `## [unreleased]` as `## [vYYYY.MM.N] - YYYY-MM-DD`, the cut month + the month's next counter (`.1` for the month's first release), keeping the Keep-a-Changelog cut-date suffix (§ CLAUDE.md *Changelog*). The tag must match the month's open milestone — if the milestone was carried over from an earlier no-release month, rename it to the cut month first.
 - [ ] **Bump `versionCode` + `versionName`** in `app/build.gradle` — `versionCode` +1; `versionName` to the CalVer `YYYY.MM` cut month (§ *Versioning*).
 - [ ] **Release lint gate** — `./gradlew app:lintVitalRelease` green.
 - [ ] **Build the AAB** — `./gradlew app:bundle`.
@@ -598,15 +598,16 @@ After the checklist above is green and the version bump is merged to `develop`:
 2. **Create the release + tag from `develop`**, notes from the store change file, attaching **only** the R8 mapping as the single asset:
 
    ```bash
-   gh release create vYYYY.MM.DD --target develop --title "vYYYY.MM.DD" \
+   gh release create vYYYY.MM.N --target develop --title "vYYYY.MM.N" \
      --notes-file store-listing/en-US/changelog-<versionCode>.txt \
      app/build/outputs/mapping/release/mapping.txt
    ```
 
    `<versionCode>` is the value in `app/build.gradle`. Add a footer line linking to the full `CHANGELOG.md` on `develop` if the notes file omits it.
 3. **Attach nothing else.** The mapping is a backup for offline `retrace`; **never** attach the keystore, `secure.properties`, the real `google-services.json`, or the `.aab` (the `.aab` carries no mapping anyway).
-4. **Verify the asset landed** — `gh release view vYYYY.MM.DD --json assets -q '.assets[].name'` must list `mapping.txt`. Print an explicit line for the maintainer to confirm, e.g. `✅ mapping.txt attached to vYYYY.MM.DD` (or ⚠️ + re-run `gh release upload vYYYY.MM.DD app/build/outputs/mapping/release/mapping.txt` if missing).
+4. **Verify the asset landed** — `gh release view vYYYY.MM.N --json assets -q '.assets[].name'` must list `mapping.txt`. Print an explicit line for the maintainer to confirm, e.g. `✅ mapping.txt attached to vYYYY.MM.N` (or ⚠️ + re-run `gh release upload vYYYY.MM.N app/build/outputs/mapping/release/mapping.txt` if missing).
 5. **Verify Firebase actually got the mapping** — the build log must show `uploadCrashlyticsMappingFileRelease` *ran* (not skipped). Within minutes, a fresh crash on this version should de-obfuscate in the Console / via the Firebase MCP (real frames, **not** `r8-map-id-…`). This step exists because past releases shipped **without** the mapping (§ *BigQuery export* → *Stack frames come R8-obfuscated*) — so Crashlytics couldn't deobfuscate them either.
+6. **Close the release's milestone** — the `vYYYY.MM.N` milestone gathering this release's PRs closes at cut; the next month's (or same-month `.N+1`) milestone is created lazily when its first PR opens (CLAUDE.md § *Labels and milestone*).
 
 Why archive the mapping: even when Firebase holds it for Console/MCP de-obfuscation, a GitHub-release copy keyed to the tag is a durable offline `retrace` backup independent of Firebase retention — and the safety net for exactly the case above, where the Firebase upload didn't happen.
 
@@ -925,7 +926,17 @@ Those tools need the **Firebase App Id** (not a secret — it ships inside the A
 
 ## Labels & milestone examples 🏷️
 
-The *rule* (one type label + optional concern labels; how to derive the milestone from the CHANGELOG) and the bare label names live in CLAUDE.md § *Labels and milestone*. Full "when to use" per label, then worked combinations:
+The *rule* (one type label + optional concern labels; the month's `vYYYY.MM.N` milestone assigned at PR creation) and the bare label names live in CLAUDE.md § *Labels and milestone*. Full "when to use" per label, then worked combinations:
+
+### Milestone operations
+
+**Deriving `N`:** the next counter after the month's last cut — check existing `vYYYY.MM.*` tags and closed milestones; `.1` if the month has none yet. `gh` has no first-class milestone commands, so use the API:
+
+```bash
+gh api repos/{owner}/{repo}/milestones -f title="v2026.07.1"                  # create (month's first PR)
+gh api -X PATCH repos/{owner}/{repo}/milestones/<number> -f title="v2026.08.1" # rename on a no-release month
+gh pr create --milestone "v2026.07.1" ...                                      # assign at PR creation
+```
 
 ### Type — user-facing (appear under `### Added/Changed/Fixed/Removed` in CHANGELOG)
 
