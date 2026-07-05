@@ -50,6 +50,7 @@ import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
 import com.github.barriosnahuel.vossosunboton.ui.theme.DISABLED_TRACK_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.PLAYING_TINT_ALPHA
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -86,8 +87,10 @@ internal fun AudioPreview(
         durationMs =
             withContext(Dispatchers.IO) {
                 runCatching {
-                    readDurationMsBlocking(context, source)
+                    readDurationMs(context, source)
                 }.onFailure {
+                    // A disposed preview cancels the extraction — propagate, don't report it as a failure.
+                    if (it is CancellationException) throw it
                     Tracker.log("addbutton.preview.uri=$source")
                     Tracker.track(RuntimeException("Failed to extract duration metadata", it))
                 }.getOrDefault(0)

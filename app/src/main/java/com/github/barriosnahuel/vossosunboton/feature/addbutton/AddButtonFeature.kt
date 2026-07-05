@@ -18,6 +18,7 @@ import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -131,14 +132,15 @@ private class AddButtonFeatureImpl : AddButtonFeature {
     }
 
     /** Best-effort duration probe of the just-copied file; a failure is non-fatal (the audio saves). */
-    private fun extractDurationMs(
+    private suspend fun extractDurationMs(
         context: Context,
         file: File,
         fileName: String,
     ): Int? =
         runCatching {
-            readDurationMsBlocking(context, Uri.fromFile(file))
+            readDurationMs(context, Uri.fromFile(file))
         }.onFailure {
+            if (it is CancellationException) throw it
             Tracker.log("addbutton.fileName=$fileName")
             Tracker.track(RuntimeException("Failed to extract duration metadata", it))
         }.getOrNull()
