@@ -50,3 +50,30 @@ internal const val SEED_RENDER_TIMEOUT_MS = 15_000L
 internal const val SMALL_LIST = 20
 internal const val MEDIUM_LIST = 50
 internal const val LARGE_LIST = 200
+
+// --- Tap-to-sound latency guardrail (the ≤100 ms tap budget, pre/post playback-engine migration) ---
+
+/**
+ * Async trace section spanning tap → playback started. Must match `TAP_TO_SOUND_TRACE` in
+ * `SoundsViewModel` — the span is emitted at the ViewModel boundary (not inside the engine) so it
+ * stays comparable across playback-engine swaps.
+ */
+internal const val TAP_TO_SOUND_SECTION = "BompTapToSound"
+
+/**
+ * Display name of the one seeded sound backed by real audio bytes (synthetic index 0 — see the
+ * benchmark variant's `CustomBuildTypeApplication.seedPlayableAudioFile`). The tap benchmark taps it.
+ */
+internal const val PLAYABLE_SOUND_NAME = "$SYNTHETIC_NAME_PREFIX 0"
+
+/** Corpus size for the tap benchmark: one playable row is all it needs (no scrolling involved). */
+internal const val TAP_SEED_COUNT = 1
+
+/** Post-tap wait so prepare+start complete and the async section closes inside the measured window. */
+internal const val TAP_SETTLE_MS = 2_000L
+
+/**
+ * Content description of the per-row Play icon button (`R.string.app_play`). UiAutomator reads the
+ * localized string, so the benchmark assumes an English-locale device — it fails loudly otherwise.
+ */
+internal const val PLAY_BUTTON_DESC = "Play"

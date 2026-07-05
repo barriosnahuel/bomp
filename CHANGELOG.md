@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ### For nerds 🤓
 
+#### Added
+- Tap-to-sound latency guardrail: a Macrobenchmark (`TapLatencyBenchmark`) measures tap → playback-start on a physical device via an engine-agnostic trace section, baselining the current player before the Media3 migration and gating the ≤100 ms budget after it
+
 #### Fixed
 - The My Sounds visibility toggle now updates the visible list synchronously (mirroring the pin toggle) instead of waiting for the DataStore write to round-trip back through `loadSounds`, removing the async dependency that made `SoundsViewModelVisibilityTest` time out under CI load
 

@@ -8,15 +8,19 @@ package com.github.barriosnahuel.vossosunboton
 import android.app.Application
 import android.content.Intent
 import com.github.barriosnahuel.vossosunboton.commons.android.error.ErrorTrackerTree
+import com.github.barriosnahuel.vossosunboton.commons.file.copy
+import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
+import java.io.FileOutputStream
 
 /**
  * Build-type specifics for the `benchmark` variant: release-like (no StrictMode, no debug seeding
- * corpus), plus an on-demand synthetic-corpus seeder used **only** by the :macrobenchmark scroll
- * benchmark to control the list size (the scroll-jank-vs-N question, H2).
+ * corpus), plus an on-demand synthetic-corpus seeder used **only** by the :macrobenchmark benchmarks —
+ * scroll list-size control (the scroll-jank-vs-N question, H2) and a playable row for the
+ * tap-to-sound latency guardrail.
  *
  * This overrides the release source set's `CustomBuildTypeApplication` for the benchmark variant;
  * the synthetic seeding never reaches release or debug. Architecture + rationale: ADR 0015.
@@ -46,11 +50,28 @@ internal abstract class CustomBuildTypeApplication : Application() {
         }
         val sounds =
             (0 until count).map { index ->
-                Sound("$SYNTHETIC_ID_PREFIX$index", "$SYNTHETIC_NAME_PREFIX $index", "$SYNTHETIC_ID_PREFIX$index.dat")
+                Sound("$SYNTHETIC_ID_PREFIX$index", "$SYNTHETIC_NAME_PREFIX $index", "$SYNTHETIC_FILE_PREFIX$index.dat")
             }
         runBlocking {
             SoundsRepository(this@CustomBuildTypeApplication)
                 .replaceSyntheticCorpus(SYNTHETIC_ID_PREFIX, sounds, SYNTHETIC_DURATION_MS)
+        }
+        seedPlayableAudioFile()
+    }
+
+    /**
+     * Backs synthetic sound 0 with real audio bytes (the bundled welcome mp3) so `TapLatencyBenchmark`
+     * can tap it and measure a real prepare+start through the dominant custom-file path. The rest of
+     * the corpus stays file-less on purpose: the scroll render never reads the file (ADR 0015), and
+     * playback fidelity only needs the one tapped row. Idempotent; still synchronous in `onCreate`.
+     */
+    private fun seedPlayableAudioFile() {
+        val playableFile = getFile(this, "${SYNTHETIC_FILE_PREFIX}0.dat")
+        if (playableFile.exists()) {
+            return
+        }
+        resources.openRawResource(R.raw.app_welcome_sticker).let { input ->
+            copy(input, FileOutputStream(playableFile))
         }
     }
 }
@@ -62,6 +83,12 @@ const val SEED_COUNT_EXTRA = "benchmark_seed_count"
 const val SYNTHETIC_NAME_PREFIX = "Benchmark sound"
 
 private const val SYNTHETIC_ID_PREFIX = "benchmark:"
+
+/**
+ * File-name prefix for synthetic rows. Deliberately NOT the id prefix: a `:` is rejected by the
+ * emulated external storage (FUSE) where sound files live, and the playable row's file is real.
+ */
+private const val SYNTHETIC_FILE_PREFIX = "benchmark_"
 
 /** A plausible audio length so each seeded row renders a duration like a real sound. */
 private const val SYNTHETIC_DURATION_MS = 3_000
