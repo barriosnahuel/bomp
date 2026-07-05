@@ -19,6 +19,14 @@
          Settings or an import escape. The Vault still never taps the mic for playback visuals. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Listen sessions (ADR 0022): PlaybackSessionService runs as a mediaPlayback foreground
+         service while a listen session plays, so the media notification / lock-screen controls
+         stay alive with the audio. Install-time permissions, no runtime prompt. Note there is
+         deliberately NO POST_NOTIFICATIONS: media-session notifications are exempt on API 33+
+         (https://developer.android.com/develop/ui/views/notifications/notification-permission). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
@@ -83,6 +91,27 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
+
+        <!-- Media3 listen sessions (ADR 0022): publishes the active listen session (Vault immersive,
+             recorder review) to system media surfaces — notification, lock screen, media keys.
+             Exported ONLY for the androidx.media3.session.MediaSessionService bind intent below, so
+             System UI / Assistant / companion-device controllers can connect; controller-supplied
+             media items are rejected (CuratedContentSessionCallback), leaving external callers
+             transport controls over app-curated content only. Short soundboard taps never start
+             this service. -->
+        <!-- ExportedService: suppressed by design — external media controllers (System UI, Assistant)
+             cannot hold an app-defined permission, which is why the Media3 template ships exported
+             and permissionless; access control happens at the MediaSession layer instead
+             (CuratedContentSessionCallback + no-session starts self-stop). -->
+        <service
+            android:name=".feature.playback.PlaybackSessionService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
 
         <!-- In-app recorder (ADR 0019). Not exported: launched only by the import Hub via an explicit
              intent; it hands the captured clip to AddButtonActivity for naming + save. -->

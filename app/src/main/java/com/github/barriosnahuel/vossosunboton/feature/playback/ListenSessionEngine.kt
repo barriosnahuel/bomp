@@ -10,8 +10,10 @@ import android.net.Uri
 import android.os.Handler
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -28,12 +30,18 @@ import kotlinx.coroutines.flow.update
  * [startUri] offset) and preemption is a definitive stop, never a pause. In-session pause/resume
  * keeps the player's own head. [PlayerControllerImpl] is the only caller and enforces the
  * one-active-playback invariant across both engines. Main-thread only, like the whole controller.
+ *
+ * Sessions are also published to the system through [bridge] (media notification, lock screen,
+ * media keys). External surfaces command the [Player] DIRECTLY — not through this engine's
+ * [pause]/[resume] — so the [playerListener] reconciles player-initiated transitions back into
+ * the same consumer events, keyed off [publishedPlaying] to avoid double emission.
  */
 internal class ListenSessionEngine(
     private val playerProvider: (Context) -> Player,
     private val handler: Handler,
     private val listenerProvider: () -> PlayerControllerListener?,
     private val playbackState: MutableStateFlow<PlaybackState?>,
+    private val bridge: MediaSessionBridge,
 ) {
     private sealed class SessionTarget {
         data class SoundTarget(
@@ -47,9 +55,18 @@ internal class ListenSessionEngine(
 
     private var player: Player? = null
     private var target: SessionTarget? = null
+    private var appContext: Context? = null
 
     /** Set by start calls; consumed by the first STATE_READY so re-buffers don't re-emit start events. */
     private var startPending = false
+
+    /**
+     * The play/pause state last emitted to consumers. When a player callback reports a state we
+     * already emitted (because the transition came from [pause]/[resume]) the reconciliation in
+     * [playerListener] skips it; a mismatch means the player was commanded externally (media
+     * notification, media key, audio-focus loss) and the event must be emitted from the callback.
+     */
+    private var publishedPlaying = false
 
     val isActive: Boolean get() = target != null
 
@@ -76,6 +93,42 @@ internal class ListenSessionEngine(
                     Player.STATE_READY -> onReady()
                     Player.STATE_ENDED -> onEnded()
                     else -> Unit
+                }
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (startPending) return // The initial start is STATE_READY's to emit, whatever the callback order.
+                val t = target
+                val p = player
+                when {
+                    isPlaying == publishedPlaying ->
+                        // Regaining after a transient suppression (audio-focus loss, re-buffer) is not a
+                        // state change to re-emit, but the self-terminating progress ticker must be re-armed.
+                        if (isPlaying) {
+                            handler.removeCallbacks(progressRunnable)
+                            handler.post(progressRunnable)
+                        }
+                    t == null || p == null -> Unit
+                    isPlaying -> publishPlaying(t, p)
+                    // ENDED is onEnded's stop; playWhenReady still true is a transient re-buffer.
+                    p.playbackState != Player.STATE_ENDED && !p.playWhenReady -> publishPaused(t, p)
+                    else -> Unit
+                }
+            }
+
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int,
+            ) {
+                // External seeks (lock-screen seekbar) move the head without passing through seekTo;
+                // publish the new position so a paused UI doesn't keep the stale one.
+                if (reason != Player.DISCONTINUITY_REASON_SEEK) return
+                val position = newPosition.positionMs.toInt()
+                when (target) {
+                    is SessionTarget.SoundTarget -> listenerProvider()?.onProgressUpdate(position)
+                    is SessionTarget.UriTarget -> playbackState.update { it?.copy(positionMs = position) }
+                    null -> Unit
                 }
             }
 
@@ -107,7 +160,7 @@ internal class ListenSessionEngine(
                 Uri.fromFile(getFile(context, sound.file!!))
             }
         target = SessionTarget.SoundTarget(sound)
-        load(context, uri, startPositionMs = 0)
+        load(context, uri, startPositionMs = 0, title = sound.name)
     }
 
     /** Starts [uri] as a session, honoring [startPositionMs] (recorder review's scrub offset). */
@@ -124,20 +177,29 @@ internal class ListenSessionEngine(
         }
         stop()
         target = SessionTarget.UriTarget(uri)
-        load(context, uri, startPositionMs)
+        load(context, uri, startPositionMs, title = context.getString(R.string.app_playback_recording_session_title))
     }
 
     private fun load(
         context: Context,
         uri: Uri,
         startPositionMs: Int,
+        title: String,
     ) {
         val p = obtainPlayer(context)
         startPending = true
-        p.setMediaItem(MediaItem.fromUri(uri))
+        p.setMediaItem(
+            MediaItem
+                .Builder()
+                .setUri(uri)
+                // Title feeds the system media surfaces (notification, lock screen).
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(title).build())
+                .build(),
+        )
         p.prepare()
         if (startPositionMs > 0) p.seekTo(startPositionMs.toLong())
         p.play()
+        bridge.onSessionStarted(context.applicationContext)
     }
 
     /**
@@ -148,8 +210,15 @@ internal class ListenSessionEngine(
         val t = target ?: return
         handler.removeCallbacks(progressRunnable)
         startPending = false
-        player?.let { runCatching { it.stop() } }
+        publishedPlaying = false
+        // clearMediaItems drops the notification content and turns a later stray media-key press
+        // into a no-op — a dead session must not be resurrectable from the system surface.
+        player?.let {
+            runCatching { it.stop() }
+            runCatching { it.clearMediaItems() }
+        }
         target = null
+        appContext?.let { bridge.onSessionEnded(it) }
         when (t) {
             is SessionTarget.SoundTarget -> listenerProvider()?.onPlayerStop(t.sound, completed = false)
             is SessionTarget.UriTarget -> playbackState.value = null
@@ -167,15 +236,8 @@ internal class ListenSessionEngine(
         val p = player
         if (p != null) {
             runCatching { p.pause() }
-            handler.removeCallbacks(progressRunnable)
             startPending = false
-            val position = p.currentPosition.toInt()
-            when (t) {
-                is SessionTarget.SoundTarget ->
-                    listenerProvider()?.onPlayerPause(t.sound, positionMs = position, durationMs = p.durationMsOrZero())
-                is SessionTarget.UriTarget ->
-                    playbackState.update { it?.copy(positionMs = position, isPlaying = false) }
-            }
+            publishPaused(t, p)
         }
         return true
     }
@@ -186,14 +248,10 @@ internal class ListenSessionEngine(
         val p = player
         if (p != null && !p.isPlaying) {
             p.play()
-            val position = p.currentPosition.toInt()
-            when (t) {
-                is SessionTarget.SoundTarget ->
-                    listenerProvider()?.onPlayerStart(t.sound, durationMs = p.durationMsOrZero(), positionMs = position)
-                is SessionTarget.UriTarget ->
-                    playbackState.update { it?.copy(positionMs = position, isPlaying = true) }
-            }
-            handler.post(progressRunnable)
+            publishPlaying(t, p)
+            // Re-publish to the system: after onTaskRemoved the service is gone while the paused
+            // target survives, so an in-place resume must restore the notification (start is idempotent).
+            appContext?.let { bridge.onSessionStarted(it) }
         }
         return true
     }
@@ -207,10 +265,47 @@ internal class ListenSessionEngine(
     }
 
     private fun obtainPlayer(context: Context): Player =
-        player ?: playerProvider(context.applicationContext).also {
-            it.addListener(playerListener)
-            player = it
+        player ?: run {
+            val app = context.applicationContext
+            appContext = app
+            playerProvider(app).also {
+                it.addListener(playerListener)
+                bridge.onSessionPlayerCreated(app, it)
+                player = it
+            }
         }
+
+    /** Emits the paused state for [t] and stops progress ticking. Shared by [pause] and reconciliation. */
+    private fun publishPaused(
+        t: SessionTarget,
+        p: Player,
+    ) {
+        handler.removeCallbacks(progressRunnable)
+        publishedPlaying = false
+        val position = p.currentPosition.toInt()
+        when (t) {
+            is SessionTarget.SoundTarget ->
+                listenerProvider()?.onPlayerPause(t.sound, positionMs = position, durationMs = p.durationMsOrZero())
+            is SessionTarget.UriTarget ->
+                playbackState.update { it?.copy(positionMs = position, isPlaying = false) }
+        }
+    }
+
+    /** Emits the playing state for [t] and (re)starts progress ticking. Shared by [resume] and reconciliation. */
+    private fun publishPlaying(
+        t: SessionTarget,
+        p: Player,
+    ) {
+        publishedPlaying = true
+        val position = p.currentPosition.toInt()
+        when (t) {
+            is SessionTarget.SoundTarget ->
+                listenerProvider()?.onPlayerStart(t.sound, durationMs = p.durationMsOrZero(), positionMs = position)
+            is SessionTarget.UriTarget ->
+                playbackState.update { it?.copy(positionMs = position, isPlaying = true) }
+        }
+        handler.post(progressRunnable)
+    }
 
     private fun onReady() {
         if (!startPending) return
@@ -218,6 +313,7 @@ internal class ListenSessionEngine(
         val p = player ?: return
         val duration = p.durationMsOrZero()
         val position = p.currentPosition.toInt()
+        publishedPlaying = true
         when (val t = target) {
             is SessionTarget.SoundTarget ->
                 listenerProvider()?.onPlayerStart(t.sound, durationMs = duration, positionMs = position)
@@ -229,13 +325,16 @@ internal class ListenSessionEngine(
     }
 
     private fun onEnded() {
+        val t = target ?: return
         handler.removeCallbacks(progressRunnable)
-        when (val t = target) {
+        publishedPlaying = false
+        player?.let { runCatching { it.clearMediaItems() } }
+        target = null
+        appContext?.let { bridge.onSessionEnded(it) }
+        when (t) {
             is SessionTarget.SoundTarget -> listenerProvider()?.onPlayerStop(t.sound, completed = true)
             is SessionTarget.UriTarget -> playbackState.value = null
-            null -> Unit
         }
-        target = null
     }
 
     private fun onError(error: PlaybackException) {
@@ -243,6 +342,8 @@ internal class ListenSessionEngine(
         val t = target
         target = null
         startPending = false
+        publishedPlaying = false
+        appContext?.let { bridge.onSessionEnded(it) }
         when (t) {
             is SessionTarget.SoundTarget -> {
                 Tracker.log("playback.sound=${t.sound.name}")

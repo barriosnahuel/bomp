@@ -241,7 +241,7 @@ Before adding a DataStore preference file or persistent path with sensitive data
 
 ### Exported components default to false
 
-New `Activity`/`Service`/`Receiver` in `AndroidManifest.xml` defaults `android:exported="false"`. Set `true` only with an `<intent-filter>` for external callers; document the intents in a comment above. Today's exported activities: `LandingActivity` (LAUNCHER + `push-me://open` deep link) and `AddButtonActivity` (share sheet `ACTION_SEND` with `audio/*`).
+New `Activity`/`Service`/`Receiver` in `AndroidManifest.xml` defaults `android:exported="false"`. Set `true` only with an `<intent-filter>` for external callers; document the intents in a comment above. Today's exported components: `LandingActivity` (LAUNCHER + `push-me://open` deep link), `AddButtonActivity` (share sheet `ACTION_SEND` with `audio/*`), `PlaybackSessionService` (Media3 bind intent; external media items rejected).
 
 ### Security test tagging (OWASP MASVS / CWE)
 

@@ -5,12 +5,16 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### Added
+- Long listens now show up in your system media controls — playing an audio from the Vault's listen screen (or reviewing a recording) surfaces a media notification with lock-screen controls, and headset/media keys pause and resume it; quick soundboard taps stay notification-free
+
 ### Changed
 - Opening a Vault audio's listen screen now always starts it from the beginning — previously a reopened audio silently resumed from where it was left mid-clip
 
 ### For nerds 🤓
 
 #### Added
+- `PlaybackSessionService` (Media3 `MediaSessionService`, `media3-session` 1.10.1) publishes listen sessions as a `mediaPlayback` foreground service with an auto-managed media notification; exported only for the Media3 bind intent, with controller-supplied media items rejected (`CuratedContentSessionCallback`) and external play/pause/seek reconciled back into the engine's published state; the session ExoPlayer now takes audio focus (spec 002d)
 - Tap-to-sound latency guardrail: a Macrobenchmark (`TapLatencyBenchmark`) measures tap → playback-start on a physical device via an engine-agnostic trace section, baselining the current player before the Media3 migration and gating the ≤100 ms budget after it
 - ADR 0022 decides the playback architecture for the Media3 migration: measured hybrid — MediaPlayer stays on the tap path (80 ms vs ExoPlayer's 390 ms on device, AEP exception documented), Media3 + MediaSession take the listening sessions (Vault immersive, recorder review)
 - Long-form playback engine (`ListenSessionEngine`, Media3 ExoPlayer 1.10.1) behind the same `PlayerController` facade: Vault immersive listen and recorder review now play on it, reporting through the existing listener/StateFlow channels; list-row taps and add-flow previews stay on MediaPlayer (ADR 0022)

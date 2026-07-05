@@ -169,6 +169,7 @@ dependencies {
     implementation libs.androidx.tracing
     implementation libs.androidx.media3.exoplayer
     implementation libs.androidx.media3.inspector
+    implementation libs.androidx.media3.session
     implementation libs.lifecycle.viewmodel.compose
     implementation libs.lifecycle.runtime.compose
     implementation libs.coroutines.android

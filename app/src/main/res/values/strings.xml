@@ -247,6 +247,9 @@
     <string name="app_recorder_cd_timer">Recording time</string>
     <string name="app_recorder_cd_waveform">Playback progress</string>
     <string name="app_recorder_use">Use this</string>
+
+    <!-- Media session (system media controls) title for the recorder-review listen session. -->
+    <string name="app_playback_recording_session_title">Your recording</string>
     <string name="app_recorder_rerecord">Re-record</string>
     <string name="app_recorder_cd_play">Play</string>
     <string name="app_recorder_cd_pause">Pause</string>
