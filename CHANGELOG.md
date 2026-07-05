@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Long-form playback engine (`ListenSessionEngine`, Media3 ExoPlayer 1.10.1) behind the same `PlayerController` facade: Vault immersive listen and recorder review now play on it, reporting through the existing listener/StateFlow channels; list-row taps and add-flow previews stay on MediaPlayer (ADR 0022)
 - Audio duration extraction (import + add-preview) moved from the AEP-prohibited `MediaMetadataRetriever` to Media3's `MetadataRetriever` (`media3-inspector`), keeping the same failure UX and Crashlytics grouping (ADR 0022 / spec 002e)
 
+#### Changed
+- Release tags, GitHub release titles and CHANGELOG headers move from day-precision CalVer (`vYYYY.MM.DD`) to month + sequential counter (`vYYYY.MM.N`), so the month's milestone can be created up front and assigned to every PR at creation (ADR 0023 amending ADR 0021)
+
 #### Fixed
 - The My Sounds visibility toggle now updates the visible list synchronously (mirroring the pin toggle) instead of waiting for the DataStore write to round-trip back through `loadSounds`, removing the async dependency that made `SoundsViewModelVisibilityTest` time out under CI load
 

@@ -330,7 +330,7 @@ Store listing PNGs (icon, feature graphic) render from SVG masters under `store-
 
 ## Labels and milestone
 
-Apply exactly **one type label** (`a:*` or `an:*`) + **zero or more concern labels** (`c:*`) to every PR before merging. Don't call `gh label list`. For the milestone: under CalVer the next version is fixed **at cut**, so `## [unreleased]` carries no version — leave the milestone unset until a release exists (pre-CalVer PRs read it from a `(vX.Y.Z)` on that line). Don't call the milestones API.
+Apply exactly **one type label** (`a:*` or `an:*`) + **zero or more concern labels** (`c:*`) to every PR before merging. Don't call `gh label list`. Milestone: assign the current month's `vYYYY.MM.N` **at PR creation**, creating it if missing; a no-release month renames it to the next month. See [ADR 0023](docs/adr/0023-monthly-sequential-release-tags.md).
 
 - **Type — user-facing** (appear in CHANGELOG `### Added/Changed/Fixed/Removed`): `a:feature`, `a:fix`, `an:enhancement`.
 - **Type — internal** (under `### For nerds 🤓` or omitted): `a:refactor`, `a:test`, `a:build`, `a:docs`.
@@ -345,7 +345,7 @@ Full "when to use" per label + worked combinations: CONTRIBUTING.md § *Labels &
 
 ## Changelog
 
-`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); released headers are CalVer `## [vYYYY.MM.DD]` (CONTRIBUTING § *Versioning*):
+`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); released headers are CalVer `## [vYYYY.MM.N]` (CONTRIBUTING § *Versioning*):
 - Sections `Added` / `Changed` / `Fixed` / `Removed` under `## [unreleased]`. Each entry: single sentence, capital, no trailing period.
 - Dependency bumps → one line for the overall bump (`"Bumped all dependencies to latest stable"`), not one per library.
 - Update `[unreleased]` per commit when the change is user-visible or architecturally significant.
