@@ -7,9 +7,11 @@ package com.github.barriosnahuel.vossosunboton.feature.vault
 
 import android.content.Context
 import android.media.MediaCodec
-import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.inspector.MediaExtractorCompat
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.feature.waveform.WAVEFORM_MIN_BAR
@@ -40,6 +42,7 @@ import kotlin.math.min
  * a tiny `FloatArray`), and returns `null` on any failure so the UI falls back to a neutral
  * placeholder rather than a fake-looking wave.
  */
+@OptIn(UnstableApi::class) // media3-inspector's MediaExtractorCompat is the drop-in for the AEP-prohibited MediaExtractor.
 internal object WaveformExtractor {
     private val cache = ConcurrentHashMap<String, FloatArray>()
 
@@ -51,13 +54,11 @@ internal object WaveformExtractor {
     ): FloatArray? {
         cache[sound.id]?.let { return it }
         val peaks =
-            decode(barCount, dispatcher, "Vault waveform extraction failed", "immersive") { extractor ->
+            decode(context, barCount, dispatcher, "Vault waveform extraction failed", "immersive") {
                 if (sound.file != null) {
-                    extractor.setDataSource(getFile(context, sound.file!!).path)
+                    SourceFile(getFile(context, sound.file!!), deleteAfter = false)
                 } else {
-                    context.resources.openRawResourceFd(sound.rawRes).use { afd ->
-                        extractor.setDataSource(afd.fileDescriptor, afd.startOffset, afd.declaredLength)
-                    }
+                    SourceFile(copyRawResToTempFile(context, sound.rawRes), deleteAfter = true)
                 }
             }
         return peaks?.also { cache[sound.id] = it }
@@ -77,38 +78,53 @@ internal object WaveformExtractor {
         barCount: Int,
         dispatcher: CoroutineDispatcher = Dispatchers.IO,
     ): FloatArray? =
-        decode(barCount, dispatcher, "Recorder waveform extraction failed", "recorder") { extractor ->
-            // Content-resolver overload: handles a content:// FileProvider URI directly, where an
-            // AssetFileDescriptor's declaredLength is often UNKNOWN and would break the fd overload.
-            extractor.setDataSource(context, uri, null)
+        decode(context, barCount, dispatcher, "Recorder waveform extraction failed", "recorder") {
+            // The content:// stream is copied to a temp file first — see the source-normalization
+            // contract on [decodeEnvelope]; the temp is deleted once the envelope is folded.
+            SourceFile(copyUriToTempFile(context, uri), deleteAfter = true)
         }
 
     /** Visible for the cold-start / no-data fallback path and tests. */
     fun cached(soundId: String): FloatArray? = cache[soundId]
 
     private suspend fun decode(
+        context: Context,
         barCount: Int,
         dispatcher: CoroutineDispatcher,
         failureMessage: String,
         failureModule: String,
-        configureSource: (MediaExtractor) -> Unit,
+        resolveSource: () -> SourceFile,
     ): FloatArray? =
         withContext(dispatcher) {
-            runCatching { decodeEnvelope(barCount, configureSource) }
-                .onFailure { error ->
-                    if (error is CancellationException) throw error
-                    Tracker.log("$failureModule.waveform_fail=${error.javaClass.simpleName}")
-                    Tracker.track(RuntimeException(failureMessage, error))
-                }.getOrNull()
+            runCatching {
+                val source = resolveSource()
+                try {
+                    decodeEnvelope(context, barCount, source)
+                } finally {
+                    if (source.deleteAfter) source.file.delete()
+                }
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                Tracker.log("$failureModule.waveform_fail=${error.javaClass.simpleName}")
+                Tracker.track(RuntimeException(failureMessage, error))
+            }.getOrNull()
         }
 
+    /**
+     * Every source is normalized to a LOCAL FILE PATH before touching the extractor:
+     * MediaExtractorCompat 1.10.1 truncates after the first sample for fd-with-offset,
+     * `content://` and `android.resource://` sources (verified empirically on this project's
+     * audio; unreported upstream as of 2026-07). Path and `file://` sources demux correctly.
+     * Revisit the normalization when a fixed Media3 release lands.
+     */
     private suspend fun decodeEnvelope(
+        context: Context,
         barCount: Int,
-        configureSource: (MediaExtractor) -> Unit,
+        source: SourceFile,
     ): FloatArray {
-        val extractor = MediaExtractor()
+        val extractor = MediaExtractorCompat(context)
         try {
-            configureSource(extractor)
+            extractor.setDataSource(source.file.path)
             val trackIndex = audioTrackIndex(extractor)
             require(trackIndex >= 0) { "no audio track" }
             extractor.selectTrack(trackIndex)
@@ -138,7 +154,7 @@ internal object WaveformExtractor {
 
     private suspend fun decodeLoop(
         codec: MediaCodec,
-        extractor: MediaExtractor,
+        extractor: MediaExtractorCompat,
         accumulator: PeakAccumulator,
     ) {
         val bufferInfo = MediaCodec.BufferInfo()
@@ -154,7 +170,7 @@ internal object WaveformExtractor {
     /** Queues one input sample (or end-of-stream). Returns true once the stream is exhausted. */
     private fun feedInput(
         codec: MediaCodec,
-        extractor: MediaExtractor,
+        extractor: MediaExtractorCompat,
     ): Boolean {
         val inIndex = codec.dequeueInputBuffer(DEQUEUE_TIMEOUT_US)
         if (inIndex < 0) return false
@@ -190,7 +206,7 @@ internal object WaveformExtractor {
         return bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
     }
 
-    private fun audioTrackIndex(extractor: MediaExtractor): Int {
+    private fun audioTrackIndex(extractor: MediaExtractorCompat): Int {
         for (i in 0 until extractor.trackCount) {
             val mime = extractor.getTrackFormat(i).getString(MediaFormat.KEY_MIME).orEmpty()
             if (mime.startsWith("audio/")) return i
