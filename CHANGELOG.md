@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Audio duration extraction (import + add-preview) moved from the AEP-prohibited `MediaMetadataRetriever` to Media3's `MetadataRetriever` (`media3-inspector`), keeping the same failure UX and Crashlytics grouping (ADR 0022 / spec 002e)
 
 #### Changed
+- Release tags, GitHub release titles and CHANGELOG headers move from day-precision CalVer (`vYYYY.MM.DD`) to month + sequential counter (`vYYYY.MM.N`), so the month's milestone can be created up front and assigned to every PR at creation (ADR 0023 amending ADR 0021)
 - Waveform envelope extraction demuxes via Media3's `MediaExtractorCompat` instead of the AEP-prohibited `MediaExtractor` (`MediaCodec` decode unchanged); all sources normalize to per-decode temp files to route around a Media3 1.10.1 truncation bug with fd/content/resource sources — envelope verified bit-comparable (1 of 48 bars off by 0.014)
 
 #### Fixed
