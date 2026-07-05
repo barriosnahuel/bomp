@@ -3,6 +3,9 @@
 - **Status:** Accepted (with explicit revisit criteria)
 - **Date:** 2026-05-21
 - **Supersedes:** —
+- **Amended:** 2026-07-05 by [ADR 0024](0024-jetpack-navigation-3.md) (§ Revisit criteria — the
+  Navigation 3 criterion fired: surfaces migrating to Nav3 destinations drop the manual machinery;
+  the convention stays for non-route overlays)
 
 ## Context
 
@@ -58,8 +61,9 @@ legitimately used by swallowers, so a blanket grep guard would over-match.
 
 ## Revisit criteria
 
-When the **Navigation 3 migration (backlog 08)** lands, predictive back between
-destinations becomes automatic. At that point the manual
+When the **Navigation 3 migration (backlog `003-nav3-migration.md`)** lands, predictive back
+between destinations becomes automatic — decided by [ADR 0024](0024-jetpack-navigation-3.md);
+this criterion fired. At that point the manual
 `predictiveBackTransition`, the layering, the `clearAndSetSemantics` occlusion,
 and the per-surface handlers in `SearchOverlay` / `AboutScreen` /
 `ManageCollectionsScreen` are simplified or removed. Re-evaluate this ADR then.
