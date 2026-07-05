@@ -1,6 +1,6 @@
 # ADR 0007 — Sound playback uses pause/resume with in-process position cache
 
-- **Status:** Accepted
+- **Status:** Accepted (cache key migrated from `Sound.name` to `Sound.id` by [ADR 0008](0008-stable-sound-id.md); the Vault immersive's cross-open resume dropped by [ADR 0022](0022-hybrid-playback-engines-media3.md) — sessions always start from 0)
 - **Date:** 2026-05-13
 - **Supersedes:** ADR 0005 (the "tap again to stop" Home semantic; the rest of ADR 0005 — unified player, single MediaPlayer, listener+StateFlow bridging — stands)
 
