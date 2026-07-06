@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - ADR 0024 decides the navigation architecture: Jetpack Navigation 3 (multi-back-stack tabs, shared `SoundsViewModel`, hybrid creation flows keeping a share-sheet trampoline Activity), amending ADR 0011 — automatic predictive back replaces the manual per-surface machinery as screens become destinations
 
 #### Changed
+- In-app navigation runs on Jetpack Navigation 3 (`NavBackStack` per tab + typed destinations, ADR 0024): predictive back between screens is now automatic, tab history follows the platform's multi-back-stack semantics, and the manual per-overlay back wiring is gone
 - Release tags, GitHub release titles and CHANGELOG headers move from day-precision CalVer (`vYYYY.MM.DD`) to month + sequential counter (`vYYYY.MM.N`), so the month's milestone can be created up front and assigned to every PR at creation (ADR 0023 amending ADR 0021)
 - Waveform envelope extraction demuxes via Media3's `MediaExtractorCompat` instead of the AEP-prohibited `MediaExtractor` (`MediaCodec` decode unchanged); all sources normalize to per-decode temp files to route around a Media3 1.10.1 truncation bug with fd/content/resource sources — envelope verified bit-comparable (1 of 48 bars off by 0.014)
 

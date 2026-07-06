@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.onboarding
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -40,7 +39,6 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 internal fun BringFromAppsGuide(onClose: () -> Unit) {
     val reduceMotion = rememberReduceMotionEnabled()
     val step = ONBOARDING_IMPORT_STEP
-    BackHandler { onClose() }
     Scaffold(containerColor = MaterialTheme.colorScheme.surface) { innerPadding ->
         // Same cramped-window handling as OnboardingTour: portrait pins the CTA (the demo flexes via
         // weight); landscape / split-screen / large fonts switch to a fully scrollable column so the

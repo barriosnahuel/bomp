@@ -17,14 +17,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,7 +33,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
-import kotlinx.coroutines.launch
 
 // Dim applied to a disabled row's icon + text. Standard Material disabled opacity; a disabled
 // control is exempt from the WCAG 1.4.3 contrast minimum (§ Accessibility). All Hub rows are live
@@ -47,94 +42,70 @@ private val HUB_ICON_TILE = 44.dp
 private val HUB_TILE_RADIUS = 12.dp
 
 /**
- * The import Hub — a [ModalBottomSheet] opened by the + FAB on My Bomps. Rows are ordered by likely
- * intent for a returning user: "record" a new Bomp in-app ([onRecord], ADR 0019, the acid-primary row),
- * "bring audios from other apps" ([onBringFromApps]) that opens a focused single-step guide on sharing a
- * voice note in from WhatsApp/Telegram, and "import audio from your device" ([onImport]) for a file
- * already saved on the phone (the least-frequent path on Android 11+, where app-private media is not
- * SAF-browsable). The full 3-step onboarding tour is reachable from the empty state, not from here.
+ * The import Hub's sheet content — rendered inside the modal bottom sheet that the Nav3
+ * `BottomSheetSceneStrategy` provides for `ImportHubRoute` (swipe/scrim/back dismissal pop the
+ * route; ADR 0024). Rows are ordered by likely intent for a returning user: "record" a new Bomp
+ * in-app ([onRecord], ADR 0019, the acid-primary row), "bring audios from other apps"
+ * ([onBringFromApps]) that opens a focused single-step guide on sharing a voice note in from
+ * WhatsApp/Telegram, and "import audio from your device" ([onImport]) for a file already saved on
+ * the phone (the least-frequent path on Android 11+, where app-private media is not SAF-browsable).
+ * The full 3-step onboarding tour is reachable from the empty state, not from here.
  *
- * Presentational only: the caller dismisses on [onImport]/[onRecord]/[onBringFromApps]/[onDismiss] and
- * owns the file picker, the recorder Activity, and the guide state.
+ * Presentational only: the caller pops the route on [onImport]/[onRecord]/[onBringFromApps] and
+ * owns the file picker, the recorder Activity, and the guide destination.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ImportHubSheet(
     onImport: () -> Unit,
     onRecord: () -> Unit,
     onBringFromApps: () -> Unit,
-    onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.XL, vertical = Spacing.LG),
+        verticalArrangement = Arrangement.spacedBy(Spacing.SM),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.XL, vertical = Spacing.LG),
-            verticalArrangement = Arrangement.spacedBy(Spacing.SM),
-        ) {
-            Text(
-                text = stringResource(R.string.app_hub_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.app_hub_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(Spacing.SM))
-            // Acid-primary row: recording is the one creation path that always works, regardless of what
-            // the user already has on the device. Animate the sheet closed before handing off, mirroring
-            // InlineCollectionCreateSheet (sheetState.hide() then the callback).
-            HubRow(
-                iconPainter = painterResource(R.drawable.app_ic_mic),
-                title = stringResource(R.string.app_hub_record),
-                subtitle = stringResource(R.string.app_hub_record_sub),
-                tileColor = MaterialTheme.colorScheme.primaryContainer,
-                iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                onClick = {
-                    scope.launch {
-                        sheetState.hide()
-                        onRecord()
-                    }
-                },
-            )
-            // Neutral tile (not acid) so it never competes with the primary record row. The share icon
-            // mirrors the gesture the guide teaches: "Share" a voice note from another app into Bomp.
-            HubRow(
-                iconPainter = painterResource(R.drawable.app_ic_share),
-                title = stringResource(R.string.app_hub_bring),
-                subtitle = stringResource(R.string.app_hub_bring_sub),
-                tileColor = MaterialTheme.colorScheme.surfaceVariant,
-                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                onClick = {
-                    scope.launch {
-                        sheetState.hide()
-                        onBringFromApps()
-                    }
-                },
-            )
-            HubRow(
-                iconPainter = painterResource(R.drawable.app_ic_add),
-                title = stringResource(R.string.app_hub_import),
-                subtitle = stringResource(R.string.app_hub_import_sub),
-                tileColor = MaterialTheme.colorScheme.surfaceVariant,
-                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                onClick = {
-                    scope.launch {
-                        sheetState.hide()
-                        onImport()
-                    }
-                },
-            )
-        }
+        Text(
+            text = stringResource(R.string.app_hub_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.app_hub_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(Spacing.SM))
+        // Acid-primary row: recording is the one creation path that always works, regardless of what
+        // the user already has on the device.
+        HubRow(
+            iconPainter = painterResource(R.drawable.app_ic_mic),
+            title = stringResource(R.string.app_hub_record),
+            subtitle = stringResource(R.string.app_hub_record_sub),
+            tileColor = MaterialTheme.colorScheme.primaryContainer,
+            iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            onClick = onRecord,
+        )
+        // Neutral tile (not acid) so it never competes with the primary record row. The share icon
+        // mirrors the gesture the guide teaches: "Share" a voice note from another app into Bomp.
+        HubRow(
+            iconPainter = painterResource(R.drawable.app_ic_share),
+            title = stringResource(R.string.app_hub_bring),
+            subtitle = stringResource(R.string.app_hub_bring_sub),
+            tileColor = MaterialTheme.colorScheme.surfaceVariant,
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            onClick = onBringFromApps,
+        )
+        HubRow(
+            iconPainter = painterResource(R.drawable.app_ic_add),
+            title = stringResource(R.string.app_hub_import),
+            subtitle = stringResource(R.string.app_hub_import_sub),
+            tileColor = MaterialTheme.colorScheme.surfaceVariant,
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            onClick = onImport,
+        )
     }
 }
 

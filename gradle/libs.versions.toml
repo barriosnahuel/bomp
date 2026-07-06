@@ -19,6 +19,7 @@ tracing                   = "1.2.0"
 media3                    = "1.10.1"
 composeBom                = "2026.06.01"
 lifecycleCompose          = "2.11.0"
+nav3                      = "1.1.4"
 material                  = "1.14.0"
 
 # Firebase
@@ -78,6 +79,8 @@ compose-ui-test-junit4            = { module = "androidx.compose.ui:ui-test-juni
 # ---------- Lifecycle ----------
 lifecycle-viewmodel-compose       = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleCompose" }
 lifecycle-runtime-compose         = { module = "androidx.lifecycle:lifecycle-runtime-compose",   version.ref = "lifecycleCompose" }
+androidx-navigation3-runtime      = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3" }
+androidx-navigation3-ui           = { module = "androidx.navigation3:navigation3-ui",      version.ref = "nav3" }
 
 # ---------- Material ----------
 material                          = { module = "com.google.android.material:material", version.ref = "material" }

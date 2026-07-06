@@ -11,6 +11,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -63,6 +64,25 @@ internal class VaultImmersiveListenTest : AbstractUiTest() {
 
             // Back closes listen mode and reveals the Vault list again.
             composeRule.awaitNodeWithText(AUDIO_NAME).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun systemBackFromImmersiveListenModeStopsPlaybackAndReturnsToTheVaultList() {
+        seedVaultAudio()
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithText(vaultLabel()).performClick()
+            composeRule.awaitNodeWithContentDescription(playLabel()).performClick()
+            composeRule.awaitNodeWithText(listenModeLabel()).assertIsDisplayed()
+
+            Espresso.pressBack()
+
+            // System back (the NavDisplay pop path) must mirror the top-bar back: listen mode
+            // closes AND the session stops — the row is back to its idle play affordance instead
+            // of a headless session still running behind the list.
+            composeRule.awaitNodeWithText(AUDIO_NAME).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(playLabel()).assertIsDisplayed()
         }
     }
 

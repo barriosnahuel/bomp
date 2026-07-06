@@ -8,7 +8,9 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 import android.app.Application
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -132,6 +134,7 @@ data class PlaybackProgress(
 @Suppress("TooManyFunctions", "LargeClass")
 class SoundsViewModel(
     application: Application,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val searchDebounceMs: Long = 200L,
     private val welcomeStore: WelcomeStickerStore = WelcomeStickerStore(application),
@@ -195,8 +198,10 @@ class SoundsViewModel(
     @Volatile
     private var welcomeHintConsumed = false
 
-    private val _selectedTab = MutableStateFlow(AppTab.MY_SOUNDS)
-    val selectedTab: StateFlow<AppTab> = _selectedTab.asStateFlow()
+    // SavedStateHandle-backed so the selected tab survives process death: the Nav3 back stack
+    // restores itself (rememberNavBackStack) and the VM->graph sync in LandingScreen would
+    // otherwise see the default MY_SOUNDS and snap the restored graph back to Home.
+    val selectedTab: StateFlow<AppTab> = savedStateHandle.getStateFlow(KEY_SELECTED_TAB, AppTab.MY_SOUNDS)
 
     private val _sounds = MutableStateFlow<List<Sound>>(emptyList())
     val sounds: StateFlow<List<Sound>> = _sounds.asStateFlow()
@@ -615,8 +620,8 @@ class SoundsViewModel(
         get() =
             when {
                 _isSearchVisible.value -> CanonicalScreenName.SEARCH_SOUND
-                _selectedTab.value == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
-                _selectedTab.value == AppTab.VAULT -> CanonicalScreenName.VAULT
+                selectedTab.value == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
+                selectedTab.value == AppTab.VAULT -> CanonicalScreenName.VAULT
                 else -> CanonicalScreenName.EXPLORE_SOUNDS
             }
 
@@ -680,7 +685,7 @@ class SoundsViewModel(
     }
 
     fun selectTab(tab: AppTab) {
-        _selectedTab.value = tab
+        savedStateHandle[KEY_SELECTED_TAB] = tab
         // Optimistically rebuild `_sounds` from the in-memory caches before kicking off the
         // async loadSounds. Without this, the freshly selected tab renders an empty list (the
         // previous tab's filtered view) until the IO chain settles — the user sees the empty
@@ -700,7 +705,7 @@ class SoundsViewModel(
         if (snapshot.isEmpty()) return
         // Mirrors the byTab branch in loadSounds so the tab swap doesn't flash an empty list.
         _sounds.value =
-            when (_selectedTab.value) {
+            when (selectedTab.value) {
                 AppTab.MY_SOUNDS -> mySoundsProjection(snapshot)
                 AppTab.EXPLORE_SOUNDS -> snapshot.filter { it.isBundled() }
                 AppTab.VAULT -> emptyList()
@@ -812,7 +817,7 @@ class SoundsViewModel(
      */
     private fun mySoundsProjection(library: List<Sound>): List<Sound> {
         val custom = library.filter { !it.isBundled() }
-        val activeChip = _activeMySoundsFilter.value.takeIf { _selectedTab.value == AppTab.MY_SOUNDS }
+        val activeChip = _activeMySoundsFilter.value.takeIf { selectedTab.value == AppTab.MY_SOUNDS }
         return if (activeChip != null) {
             val ids =
                 _collections.value
@@ -979,7 +984,7 @@ class SoundsViewModel(
         // directly in `_sounds`, so mutating that list would push a private-only audio into the
         // My Sounds projection until the next loadSounds wipes it. Keep `_sounds` untouched on
         // Vault and let `recomputeVaultAudios()` do the user-visible work.
-        val shouldUpdateVisibleSounds = isWelcome || _selectedTab.value != AppTab.VAULT
+        val shouldUpdateVisibleSounds = isWelcome || selectedTab.value != AppTab.VAULT
         if (shouldUpdateVisibleSounds) {
             val currentSounds = _sounds.value.toMutableList()
             if (isWelcome) {
@@ -1240,7 +1245,7 @@ class SoundsViewModel(
         // flaky timeout under CI load). Only the unfiltered My Sounds view is visibility-driven: a
         // public chip surfaces members by membership (ADR 0012) and other tabs don't project by
         // visibility, so leave those to the reactive `loadSounds`, which reprojects to the same list.
-        if (_selectedTab.value == AppTab.MY_SOUNDS && _activeMySoundsFilter.value == null) {
+        if (selectedTab.value == AppTab.MY_SOUNDS && _activeMySoundsFilter.value == null) {
             _sounds.update { current -> reprojectVisibilityToggle(current, audioId, visible, allSoundsCache.value, SOUND_ORDER) }
         }
         viewModelScope.launch(ioDispatcher) {
@@ -1359,7 +1364,7 @@ class SoundsViewModel(
         installTs: Long,
     ): List<Sound> {
         val shouldShowWelcome =
-            _selectedTab.value == AppTab.MY_SOUNDS &&
+            selectedTab.value == AppTab.MY_SOUNDS &&
                 _welcomeStickerVisible.value &&
                 !welcomeIsPendingDismissal
         if (!shouldShowWelcome) return filtered
@@ -1473,7 +1478,7 @@ class SoundsViewModel(
             recomputeVaultAudios()
             _sounds.update {
                 val byTab =
-                    when (_selectedTab.value) {
+                    when (selectedTab.value) {
                         // ADR 0012: "Todo" shows audios with isVisibleInMySounds == true; an active
                         // public chip surfaces that collection's members by membership. Both live in
                         // mySoundsProjection. The Vault-privacy hide rule is NOT applied here.
@@ -1653,10 +1658,15 @@ class SoundsViewModel(
                 .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
                 .thenBy { it.name.lowercase() }
 
+        private const val KEY_SELECTED_TAB = "selected_tab"
+
         val Factory: ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
-                    SoundsViewModel(application = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]!!)
+                    SoundsViewModel(
+                        application = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]!!,
+                        savedStateHandle = createSavedStateHandle(),
+                    )
                 }
             }
     }
