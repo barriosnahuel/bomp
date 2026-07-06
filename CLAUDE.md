@@ -173,16 +173,16 @@ Full checklists: CONTRIBUTING.md § *Testing → Pre-PR checklist* / *Pre-push c
 
 ## Analytics events
 
-Firebase Analytics goes through the `AnalyticsTracker` wrapper (`commons_android/.../analytics/`); the catalogue is three sibling files — `AnalyticsEvent` (one subclass per custom event), `CanonicalScreenName` (every `screen_view` literal), `AnalyticsUserProperty` (user-property names + lifetime counter keys).
+Firebase Analytics goes through the `AnalyticsTracker` wrapper (`commons_android/.../analytics/`); the catalogue is three sibling files — `AnalyticsEvent` (custom events), `CanonicalScreenName` (`screen_view` literals), `AnalyticsUserProperty` (user properties + counter keys).
 
 Hard rules:
 
 - Never call `FirebaseAnalytics.getInstance(...)` or `.logEvent(...)` outside the wrapper — the `analytics-wrapper-guard` CI job fails the build.
-- Auto `screen_view` is disabled via manifest meta-data; every screen emits `tracker.logScreen(CanonicalScreenName.X)` manually with a canonical literal.
+- Auto `screen_view` is disabled via manifest meta-data; every screen emits `tracker.logScreen(CanonicalScreenName.X)` manually with a canonical literal — from composition (`LaunchedEffect`), never `Activity.onCreate`: GA4 silently drops a `screen_view` logged before the Activity is in focus (guard: `AddButtonScreenScreenViewTest`).
 - The `first_*` variant is emitted by the wrapper when the event declares `hasFirstVariant = true` — call-sites never reference `first_*` directly.
-- In tests: substitute with `AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())`, assert with `fake.assertEmitted(...)` / `fake.assertScreenView(...)`. Never mock `AnalyticsTracker` directly. Fake lives in `:commons_android` test fixtures.
+- In tests: substitute with `AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())`, assert with `fake.assertEmitted(...)` / `fake.assertScreenView(...)`. Never mock `AnalyticsTracker` directly.
 
-Naming rules, regression-test matrix, and DebugView / `adb logcat -s FA FA-SVC` verification in CONTRIBUTING.md § *Analytics events 📊*. Don't skip the manual smoke before merging — aggregated Reports have a 24–48 h delay.
+Naming rules, regression-test matrix, and DebugView / logcat verification in CONTRIBUTING.md § *Analytics events 📊*. Don't skip the manual smoke before merging — aggregated Reports have a 24–48 h delay.
 
 ## Error tracking (non-fatals)
 
