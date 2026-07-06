@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 import android.content.Context
 import android.net.Uri
+import android.os.Bundle
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
@@ -72,6 +73,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraftStoreProvider
@@ -99,6 +101,9 @@ fun AddButtonScreen(
     // Surface that opened this Create flow, forwarded to the `sound_add` event. Defaults to share
     // (the manifest ACTION_SEND path); the import Hub passes SOURCE_IMPORT. Ignored in Edit mode.
     source: String = AddButtonActivity.SOURCE_SHARE,
+    // Host-provided intent sequence: bumped per user intent so screen_view re-emits even when a
+    // new intent carries a payload structurally equal to the live one (same audio re-shared).
+    intentKey: Int = 0,
     onSaved: (String) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
@@ -123,6 +128,19 @@ fun AddButtonScreen(
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
     val nameFocusRequester = remember { FocusRequester() }
     val view = LocalView.current
+
+    // screen_view is owned by this composable, not the host Activity: a manual GA4 screen_view
+    // logged from Activity.onCreate (before the Activity is in focus) is silently dropped by the
+    // SDK, so it must fire from composition — Firebase docs say to log it in onResume. Keyed by
+    // (mode, source, intentKey) so a new intent over the live screen re-emits — including one whose
+    // payload equals the current screen's — matching the one-screen_view-per-user-intent contract.
+    LaunchedEffect(mode, source, intentKey) {
+        when (mode) {
+            is AddButtonMode.Create ->
+                tracker.logScreen(CanonicalScreenName.ADD_SOUND, Bundle().apply { putString("source", source) })
+            is AddButtonMode.Edit -> tracker.logScreen(CanonicalScreenName.EDIT_SOUND)
+        }
+    }
 
     // Reactive lookup against the user's library (custom + bundled). Derivation, predicate, and
     // the supporting `produceState` live in `DuplicateNameHint.kt` so this composable stays under

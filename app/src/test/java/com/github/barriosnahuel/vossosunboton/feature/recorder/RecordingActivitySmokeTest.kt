@@ -53,6 +53,7 @@ internal class RecordingActivitySmokeTest : AbstractRobolectricTest() {
     @Test
     fun emitsTheRecordSoundScreenView() {
         ActivityScenario.launch(RecordingActivity::class.java).use {
+            composeTestRule.waitForIdle()
             fake.assertScreenView(CanonicalScreenName.RECORD_SOUND)
         }
     }

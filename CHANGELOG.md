@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Waveform envelope extraction demuxes via Media3's `MediaExtractorCompat` instead of the AEP-prohibited `MediaExtractor` (`MediaCodec` decode unchanged); all sources normalize to per-decode temp files to route around a Media3 1.10.1 truncation bug with fd/content/resource sources — envelope verified bit-comparable (1 of 48 bars off by 0.014)
 
 #### Fixed
+- `screen_view` for the add/edit-Bomp and recorder screens now fires from composition instead of `Activity.onCreate`, where the GA4 SDK silently dropped it — `add_sound`, `edit_sound` and `record_sound` had never reached the analytics export
 - The My Sounds visibility toggle now updates the visible list synchronously (mirroring the pin toggle) instead of waiting for the DataStore write to round-trip back through `loadSounds`, removing the async dependency that made `SoundsViewModelVisibilityTest` time out under CI load
 
 ## \[v2.3.0] - 2026-06-28

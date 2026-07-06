@@ -58,7 +58,6 @@ class RecordingActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
-        AnalyticsTrackerProvider.get(this).logScreen(CanonicalScreenName.RECORD_SOUND)
         // Restore a pending draft when launched from the Landing banner; otherwise start fresh. Guarded
         // inside the VM so a config-change recreate (which keeps the VM) doesn't re-run it.
         viewModel.onEnter(resumeDraft = intent.getBooleanExtra(EXTRA_RESUME_DRAFT, false))
@@ -78,6 +77,11 @@ class RecordingActivity : FragmentActivity() {
     @Composable
     private fun RecorderHost() {
         val context = LocalContext.current
+        // screen_view fires from composition, not onCreate: a manual GA4 screen_view logged before
+        // the Activity is in focus is silently dropped by the SDK (Firebase docs: log in onResume).
+        LaunchedEffect(Unit) {
+            AnalyticsTrackerProvider.get(context.applicationContext).logScreen(CanonicalScreenName.RECORD_SOUND)
+        }
         val snackbarHostState = remember { SnackbarHostState() }
         var granted by remember { mutableStateOf(hasMicPermission()) }
         // Saveable: durable progress (the denied/settings screen, an open discard dialog) must survive an
