@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
@@ -23,6 +24,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.robolectric.Robolectric
 import org.robolectric.android.controller.ActivityController
@@ -42,6 +44,11 @@ import org.robolectric.annotation.Config
  */
 @Config(sdk = [Build.VERSION_CODES.M, Build.VERSION_CODES.TIRAMISU]) // sdk-boundary: handleIntent branches on SDK_INT >= TIRAMISU
 internal class AddButtonActivitySdkBoundaryTest : AbstractRobolectricTest() {
+    // screen_view now fires from AddButtonScreen's composition (not the Activity): flush the
+    // pending frame (waitForIdle in launch) before asserting on fake.screens.
+    @get:Rule
+    val composeTestRule = createEmptyComposeRule()
+
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
     private lateinit var fake: FakeAnalyticsTracker
@@ -81,11 +88,17 @@ internal class AddButtonActivitySdkBoundaryTest : AbstractRobolectricTest() {
     private fun launch(intent: Intent): AddButtonActivity {
         val newController = Robolectric.buildActivity(AddButtonActivity::class.java, intent)
         controller = newController
-        return newController
-            .create()
-            .start()
-            .resume()
-            .get()
+        val activity =
+            newController
+                .create()
+                .start()
+                .resume()
+                // Attach the view hierarchy: without visible() the composition never gets a frame,
+                // so the screen_view LaunchedEffect would not run.
+                .visible()
+                .get()
+        composeTestRule.waitForIdle()
+        return activity
     }
 
     private fun shareIntent(): Intent =

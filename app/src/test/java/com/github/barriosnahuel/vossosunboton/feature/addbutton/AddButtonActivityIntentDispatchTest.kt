@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
@@ -24,6 +25,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.robolectric.Robolectric
 import org.robolectric.android.controller.ActivityController
@@ -45,6 +47,11 @@ import org.robolectric.annotation.Config
  */
 @Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class AddButtonActivityIntentDispatchTest : AbstractRobolectricTest() {
+    // screen_view now fires from AddButtonScreen's composition (not the Activity), so screen
+    // asserts must flush the pending frame first: waitForIdle after every launch/newIntent.
+    @get:Rule
+    val composeTestRule = createEmptyComposeRule()
+
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
     private lateinit var fake: FakeAnalyticsTracker
@@ -83,6 +90,7 @@ internal class AddButtonActivityIntentDispatchTest : AbstractRobolectricTest() {
         assertThat(fake.screens.map { it.name }).contains(CanonicalScreenName.EDIT_SOUND)
 
         controller!!.newIntent(shareIntent(SAMPLE_URI))
+        composeTestRule.waitForIdle()
 
         val addScreen =
             fake.screens.lastOrNull { it.name == CanonicalScreenName.ADD_SOUND }
@@ -108,10 +116,24 @@ internal class AddButtonActivityIntentDispatchTest : AbstractRobolectricTest() {
         assertThat(fake.screens.count { it.name == CanonicalScreenName.ADD_SOUND }).isEqualTo(1)
 
         controller!!.newIntent(shareIntent(OTHER_URI))
+        composeTestRule.waitForIdle()
 
         assertThat(fake.screens.count { it.name == CanonicalScreenName.ADD_SOUND }).isEqualTo(2)
         assertThat(activity.intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java))
             .isEqualTo(OTHER_URI)
+    }
+
+    @Test
+    fun `share intent arriving with the same audio re-emits screen_view`() {
+        // Re-sharing the exact same file is still a fresh user intent: the screen must re-emit
+        // even though (mode, source) are structurally identical to the live composition's.
+        launch(shareIntent(SAMPLE_URI))
+        assertThat(fake.screens.count { it.name == CanonicalScreenName.ADD_SOUND }).isEqualTo(1)
+
+        controller!!.newIntent(shareIntent(SAMPLE_URI))
+        composeTestRule.waitForIdle()
+
+        assertThat(fake.screens.count { it.name == CanonicalScreenName.ADD_SOUND }).isEqualTo(2)
     }
 
     @Test
@@ -123,6 +145,7 @@ internal class AddButtonActivityIntentDispatchTest : AbstractRobolectricTest() {
         assertThat(fake.screens.map { it.name }).contains(CanonicalScreenName.ADD_SOUND)
 
         controller!!.newIntent(editIntent())
+        composeTestRule.waitForIdle()
 
         assertThat(fake.screens.map { it.name }).contains(CanonicalScreenName.EDIT_SOUND)
         assertThat(activity.intent.getParcelableExtra(LandingActivity.EXTRA_EDIT_SOUND, Sound::class.java))
@@ -165,6 +188,7 @@ internal class AddButtonActivityIntentDispatchTest : AbstractRobolectricTest() {
         val malformed = Intent(context, AddButtonActivity::class.java)
 
         controller!!.newIntent(malformed)
+        composeTestRule.waitForIdle()
 
         assertThat(activity.isFinishing).isTrue()
     }
@@ -176,11 +200,17 @@ internal class AddButtonActivityIntentDispatchTest : AbstractRobolectricTest() {
     private fun launch(intent: Intent): AddButtonActivity {
         val newController = Robolectric.buildActivity(AddButtonActivity::class.java, intent)
         controller = newController
-        return newController
-            .create()
-            .start()
-            .resume()
-            .get()
+        val activity =
+            newController
+                .create()
+                .start()
+                .resume()
+                // Attach the view hierarchy: without visible() the composition never gets a frame,
+                // so the screen_view LaunchedEffect would not run.
+                .visible()
+                .get()
+        composeTestRule.waitForIdle()
+        return activity
     }
 
     private fun shareIntent(uri: Uri): Intent =
