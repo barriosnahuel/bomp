@@ -105,12 +105,99 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
         }
     }
 
+    /** OWASP MASVS-PLATFORM-1 / CWE-939 (deep-link allowlist fallback survives state restoration). */
+    @Test
+    fun `deep link with unknown path still lands on MY_SOUNDS after Activity recreate`() {
+        // Restoration guard: the saveable NavBackStack must not let a restored graph override the
+        // deep-link allowlist fallback — an unknown path lands (and stays) on Home.
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open/unknown"))
+        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
+            composeTestRule.waitForIdle()
+            scenario.recreate()
+            composeTestRule.waitForIdle()
+            scenario.onActivity { activity ->
+                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
+            }
+        }
+    }
+
+    @Test
+    fun `back from a non-home tab returns to My Bomps before exiting`() {
+        // Multi-back-stack "exit through home" (ADR 0024): from the Vault base, back crosses to the
+        // Home tab instead of leaving the app; only the Home base exits.
+        ActivityScenario.launch(LandingActivity::class.java).use { scenario ->
+            composeTestRule.waitForIdle()
+            composeTestRule
+                .onNodeWithText(context.getString(R.string.app_navigation_menu_item_vault))
+                .performClick()
+            composeTestRule.waitForIdle()
+
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            composeTestRule.waitForIdle()
+
+            scenario.onActivity { activity ->
+                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
+                assertThat(activity.isFinishing).isFalse()
+            }
+        }
+    }
+
+    @Test
+    fun `back sequence from About over Explore walks Explore then My Bomps then exits`() {
+        // The epic's acceptance walk: My Bomps → Explore → About → back closes About, back returns
+        // to My Bomps (exit through home), back leaves the app. Needs bundled audios for Explore.
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        if (PackagedAudios.get(ctx).isEmpty()) {
+            return
+        }
+        ActivityScenario.launch(LandingActivity::class.java).use { scenario ->
+            composeTestRule.waitForIdle()
+            scenario.onActivity { activity ->
+                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
+                viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+            }
+            composeTestRule.waitForIdle()
+            composeTestRule
+                .onNodeWithContentDescription(context.getString(R.string.app_overflow_menu))
+                .performClick()
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithText(context.getString(R.string.app_about)).performClick()
+            composeTestRule.waitForIdle()
+            composeTestRule
+                .onNodeWithContentDescription(context.getString(R.string.app_about_back))
+                .assertIsDisplayed()
+
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            composeTestRule.waitForIdle()
+            scenario.onActivity { activity ->
+                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.EXPLORE_SOUNDS)
+            }
+
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            composeTestRule.waitForIdle()
+            scenario.onActivity { activity ->
+                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
+                assertThat(activity.isFinishing).isFalse()
+            }
+
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            composeTestRule.waitForIdle()
+            scenario.onActivity { activity ->
+                assertThat(activity.isFinishing).isTrue()
+            }
+        }
+    }
+
     @Test
     fun `About overlay survives Activity recreate so rotation does not bounce the user back to MY_SOUNDS`() {
-        // The About overlay is a full-screen early-return inside LandingScreen — when
-        // `isAboutVisible` flips back to false on recreate, the user silently lands on MY_SOUNDS
-        // without ever asking for it. Recreate has to preserve the flag so the screen stays where
-        // the user left it. The back-arrow content description is unique to the About TopAppBar.
+        // About is a destination on the saveable NavBackStack — if the restored stack dropped it,
+        // the user would silently land on MY_SOUNDS without ever asking for it. Recreate has to
+        // preserve the stack so the screen stays where the user left it. The back-arrow content
+        // description is unique to the About TopAppBar.
         ActivityScenario.launch(LandingActivity::class.java).use { scenario ->
             composeTestRule.waitForIdle()
             composeTestRule

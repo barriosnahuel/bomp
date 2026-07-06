@@ -75,7 +75,6 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
-import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import com.github.barriosnahuel.vossosunboton.util.withDeviceHl
 import kotlinx.coroutines.launch
@@ -123,7 +122,7 @@ fun AboutScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        modifier = Modifier.predictiveBackTransition(onBack = onBack),
+        modifier = Modifier,
         topBar = {
             TopAppBar(
                 title = {},

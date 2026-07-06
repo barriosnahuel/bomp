@@ -53,7 +53,6 @@ import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.home.formatFullDate
-import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
 import com.github.barriosnahuel.vossosunboton.ui.theme.ImmersiveListenTheme
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
@@ -98,7 +97,7 @@ internal fun ImmersiveListenHost(
     if (sound == null) {
         // Library not hydrated yet (cold start / process recreate). Hold an opaque backdrop that
         // still honours back instead of flashing the Vault list behind it.
-        ImmersiveBackdrop(modifier = Modifier.predictiveBackTransition(onBack = onBack)) {
+        ImmersiveBackdrop(modifier = Modifier) {
             Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                 ImmersiveTopBar(onBack = onBack)
             }
@@ -184,7 +183,7 @@ internal fun ImmersiveListenScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ImmersiveBackdrop(modifier = modifier.predictiveBackTransition(onBack = onBack)) {
+    ImmersiveBackdrop(modifier = modifier) {
         // safeDrawingPadding keeps the content clear of the status/navigation bars while the
         // backdrop gradient still bleeds full-screen behind them (edge-to-edge).
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {

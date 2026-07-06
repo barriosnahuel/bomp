@@ -7,7 +7,6 @@
 
 package com.github.barriosnahuel.vossosunboton.ui.home
 import android.content.Context
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -49,22 +48,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
@@ -84,8 +85,25 @@ import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.playstore.PlayStoreReferrer
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.about.AboutScreen
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.AboutRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.BottomSheetSceneStrategy
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.BringFromAppsRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.ExploreRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.HomeRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.ImmersiveListenRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.ImportHubRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.LandingNavigator
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.ManageCollectionsRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.OnboardingRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.VaultRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.instantTabTransitions
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.rememberLandingNavigationState
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.toRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.toTabOrNull
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,34 +120,36 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearchPending by viewModel.isSearchPending.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
-    val tabBackStack = remember { mutableStateListOf<AppTab>() }
-    // Saveable so a rotation while About / Manage are open does not silently bounce the user back
-    // to the sound list — those screens swap out the Scaffold body via a `when` below, and losing
-    // the flag = losing the screen.
-    var isAboutVisible by rememberSaveable { mutableStateOf(false) }
-    var manageRequest by rememberSaveable(stateSaver = ManageRequest.Saver) {
-        mutableStateOf<ManageRequest?>(null)
-    }
-    // Id of the Vault audio whose immersive listen-mode player is open, or null. Saveable so the
-    // overlay survives an Activity recreate (rotation, theme, system kill); the host re-resolves
-    // the Sound from `library` on the way back.
-    var immersiveListenSoundId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Import Hub open state. Saveable so an Activity recreate (rotation, theme, system kill) while
-    // the sheet is open does not silently rewind the user back to the list (§ Stateful Composables).
-    var isHubVisible by rememberSaveable { mutableStateOf(false) }
-    // Onboarding tour: null = closed, 0..2 = open at that step. One nullable Int captures both
-    // "is it open" and the step, so an Activity recreate mid-tour cannot rewind the user to step 0
-    // (§ Stateful Composables). On-demand only — no first-run auto-open, no "seen" flag.
-    var onboardingStep by rememberSaveable { mutableStateOf<Int?>(null) }
-    // The Hub's "bring audios from other apps" single-step guide: true = open. rememberSaveable so an
-    // Activity recreate while it is open doesn't silently dump the user back to My Bomps (§ Stateful
-    // Composables). It reuses the IMPORT onboarding content but is a separate, lighter overlay.
-    var bringGuideVisible by rememberSaveable { mutableStateOf(false) }
+    // Navigation 3 backbone (ADR 0024): one saveable back stack per tab + typed child destinations.
+    // The Navigator keeps SoundsViewModel.selectedTab in sync — the ViewModel still projects the
+    // sounds list off the selected tab.
+    val navState = rememberLandingNavigationState()
+    val navigator = remember(navState) { LandingNavigator(navState) { tab -> viewModel.selectTab(tab) } }
+
+    // ViewModel → graph sync: deep links (LandingActivity.handleDeeplink → selectTab) and any other
+    // programmatic tab change reach the graph through here. Navigator-side changes call selectTab
+    // themselves and StateFlow de-dups equal values, so this cannot loop. selectedTab survives
+    // process death (SavedStateHandle) so this never fights the restored back stack.
+    LaunchedEffect(selectedTab) {
+        if (navState.topLevelRoute.toTabOrNull() != selectedTab) {
+            // Leaving the current stack programmatically: an open immersive listen must not keep
+            // playing headless behind another tab, and the modal Hub sheet must not resurrect on a
+            // later visit — close both. Full-screen destinations stay: they are tab history (D2).
+            when (val visible = navState.visibleRoute) {
+                is ImmersiveListenRoute -> {
+                    viewModel.stopPlayback()
+                    navigator.close(visible)
+                }
+                ImportHubRoute -> navigator.close(visible)
+                else -> Unit
+            }
+            navigator.navigate(selectedTab.toRoute())
+        }
+    }
+
     // System file picker for the Hub's "import audio" path. OpenDocument(arrayOf("audio/*")) opens the
     // full SAF browser filtered to audio (non-audio files are not selectable) — better at surfacing
     // on-device audio across OEMs than GetContent's "Recent" view. We copy the audio at save time, so we
@@ -143,64 +163,34 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         }
 
     // Single import-Hub entry point: logs the funnel's ENTRY with the [source] surface, then opens.
-    // The `!isHubVisible` guard makes the open idempotent so a rapid double-tap on a trigger can't
-    // double-count `import_hub_opened`.
+    // The isVisible guard makes the open idempotent so a rapid double-tap on a trigger can't
+    // double-count `import_hub_opened` (or push the sheet twice).
     val openHub = { source: String ->
-        if (!isHubVisible) {
+        if (!navigator.isVisible(ImportHubRoute)) {
             tracker.log(AnalyticsEvent.ImportHubOpened(source = source))
-            isHubVisible = true
+            navigator.navigate(ImportHubRoute)
         }
     }
 
     // Single onboarding-tour entry point: logs the ENTRY with the [source] surface (empty state, the
-    // welcome footer, or the overflow menu), then opens the tour at step 0. The `onboardingStep == null`
-    // guard mirrors openHub's: it makes the open idempotent so a rapid double-tap on a trigger can't
-    // double-count `onboarding_opened` (the funnel's "started").
+    // welcome footer, or the overflow menu), then opens the tour at step 0. The guard mirrors
+    // openHub's: idempotent open so a rapid double-tap can't double-count `onboarding_opened`.
     val openOnboarding = { source: String ->
-        if (onboardingStep == null) {
+        if (!navigator.isVisible(OnboardingRoute)) {
             tracker.log(AnalyticsEvent.OnboardingOpened(source = source))
-            onboardingStep = 0
+            navigator.navigate(OnboardingRoute)
         }
     }
 
-    // Key on the open/closed boolean, not the raw step: advancing or going back within the tour must
-    // not re-emit screen_view=onboarding (one open = one screen view, like the other overlays).
-    LaunchedEffect(selectedTab, isAboutVisible, manageRequest, isSearchVisible, onboardingStep != null, bringGuideVisible) {
-        val name =
-            when {
-                // The bring-from-apps guide reuses the onboarding IMPORT content but is its own screen, so
-                // it reports a distinct screen_view — keeping the onboarding-tour funnel uncontaminated.
-                bringGuideVisible -> CanonicalScreenName.BRING_GUIDE
-                onboardingStep != null -> CanonicalScreenName.ONBOARDING
-                isSearchVisible -> CanonicalScreenName.SEARCH_SOUND
-                isAboutVisible -> CanonicalScreenName.ABOUT
-                manageRequest != null -> CanonicalScreenName.MANAGE_COLLECTIONS
-                selectedTab == AppTab.MY_SOUNDS -> CanonicalScreenName.MY_SOUNDS
-                selectedTab == AppTab.VAULT -> CanonicalScreenName.VAULT
-                selectedTab == AppTab.EXPLORE_SOUNDS -> CanonicalScreenName.EXPLORE_SOUNDS
-                else -> null
-            }
-        name?.let {
-            AnalyticsTrackerProvider.get(context.applicationContext).logScreen(it)
-        }
-    }
-
-    BackHandler(
-        enabled =
-            !isAboutVisible &&
-                manageRequest == null &&
-                immersiveListenSoundId == null &&
-                onboardingStep == null &&
-                !bringGuideVisible &&
-                tabBackStack.isNotEmpty(),
-    ) {
-        viewModel.selectTab(tabBackStack.removeAt(tabBackStack.lastIndex))
-    }
-
+    // screen_view derives from the visible destination, with the search overlay winning while open.
+    // Routes with no canonical name (Hub sheet, immersive listen) map to null = "keep the previous
+    // screen", and distinctUntilChanged keeps open/close round-trips over them from re-emitting —
+    // the same semantics the pre-Nav3 boolean model had.
     LaunchedEffect(Unit) {
-        viewModel.scrollToTopEvent.collect {
-            listState.animateScrollToItem(0)
-        }
+        snapshotFlow { screenNameFor(navState, isSearchVisible) }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collect { AnalyticsTrackerProvider.get(context.applicationContext).logScreen(it) }
     }
 
     SnackbarEffects(viewModel = viewModel, snackbarHostState = snackbarHostState)
@@ -211,83 +201,144 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val collectionsByAudio by viewModel.audioCollectionsIndex.collectAsState()
     val privateCollections = remember(collections) { collections.filter { it.isPrivate } }
 
-    // My Sounds is the always-composed base layer; About / Manage Collections render as opaque
-    // full-screen overlays stacked on top of it (the same layering SearchOverlay uses below).
-    // Keeping the list composed behind is what lets predictiveBackTransition reveal the live
-    // My Sounds as the user swipes those screens away — an exclusive `when` (the prior shape)
-    // exposed the bare window background instead. The overlays' Scaffold Surface is opaque: it
-    // blocks touch propagation and covers the list at rest, so there is no visual or input change
-    // until a back gesture is in progress. When the nav3 migration (backlog 08) lands, About/Manage
-    // become real destinations and this manual layering is removed.
-    //
-    // While a sub-screen is open the occluded list is cleared from the semantics tree, so TalkBack
-    // and UI tests neither reach nor double-match nodes hidden behind the opaque overlay (e.g. a
-    // collection name shown both in the chip row and in the Manage list). Drawing is untouched, so
-    // the gesture still reveals the live list visually.
-    val subScreenOpen =
-        isAboutVisible || manageRequest != null || immersiveListenSoundId != null || onboardingStep != null || bringGuideVisible
-    ScaffoldedLanding(
-        modifier = if (subScreenOpen) Modifier.clearAndSetSemantics {} else Modifier,
-        viewModel = viewModel,
-        sounds = sounds,
-        selectedTab = selectedTab,
-        hasBundledSounds = hasBundledSounds,
-        playbackProgress = playbackProgress,
-        pausedProgress = pausedProgress,
-        soundDurations = soundDurations,
-        snackbarHostState = snackbarHostState,
-        listState = listState,
-        coroutineScope = coroutineScope,
-        context = context,
-        tabBackStack = tabBackStack,
-        collections = collections,
-        activeFilter = activeFilter,
-        publicCollections = publicCollections,
-        collectionsByAudio = collectionsByAudio,
-        privateCollections = privateCollections,
-        onAboutClick = { isAboutVisible = true },
-        onManageCollectionsClick = { manageRequest = ManageRequest.Generic },
-        onActiveFilterEditClick = { collectionId ->
-            manageRequest = ManageRequest.Focused(collectionId)
-        },
-        onImmersivePlay = { sound ->
-            // Vault play opens immersive listen mode and starts a listen session — always from 0 on
-            // the long-form engine (ADR 0022), unless the audio is already mid-session.
-            immersiveListenSoundId = sound.id
-            if (!sound.isPlaying) viewModel.startListenSession(sound)
-        },
-        onCreateClick = openHub,
-        // One source-parameterized entry point (mirrors onCreateClick): each surface binds its own
-        // AnalyticsSource at the leaf call site below, so no per-surface callback has to be threaded.
-        onShowOnboarding = openOnboarding,
-    )
+    val bottomSheetStrategy = remember { BottomSheetSceneStrategy<NavKey>() }
 
-    // Exactly one sub-screen overlays the list at a time (About wins over Manage, preserving the
-    // prior priority); neither branch removes the base layer.
-    when {
-        isAboutVisible -> AboutScreen(onBack = { isAboutVisible = false })
-        manageRequest != null ->
-            com.github.barriosnahuel.vossosunboton.feature.collections.ManageCollectionsScreen(
-                viewModel = viewModel,
-                focusedCollectionId = (manageRequest as? ManageRequest.Focused)?.collectionId,
-                onBack = { manageRequest = null },
-            )
-    }
-
-    // Immersive listen mode for a Vault audio — layers above everything (it covers the top bar, so
-    // About/Manage are unreachable while it is open). Back STOPS playback definitively (sessions have
-    // no cross-open retention — ADR 0022) so no audio keeps playing headless behind the Vault list,
-    // then closes the overlay.
-    immersiveListenSoundId?.let { listeningId ->
-        com.github.barriosnahuel.vossosunboton.feature.vault.ImmersiveListenHost(
+    // The three tab entries share this content; each binds its own constant tab.
+    val tabContent: @Composable (AppTab) -> Unit = { tab ->
+        TabContent(
+            tab = tab,
             viewModel = viewModel,
-            soundId = listeningId,
-            onBack = {
-                viewModel.stopPlayback()
-                immersiveListenSoundId = null
+            sounds = sounds,
+            hasBundledSounds = hasBundledSounds,
+            playbackProgress = playbackProgress,
+            pausedProgress = pausedProgress,
+            soundDurations = soundDurations,
+            snackbarHostState = snackbarHostState,
+            context = context,
+            collections = collections,
+            activeFilter = activeFilter,
+            publicCollections = publicCollections,
+            collectionsByAudio = collectionsByAudio,
+            privateCollections = privateCollections,
+            onTabSelected = { target -> navigator.navigate(target.toRoute()) },
+            // isVisible-style guards mirror openHub's: a rapid double-tap must not push twice.
+            onAboutClick = {
+                if (!navigator.isVisible(AboutRoute)) navigator.navigate(AboutRoute)
             },
+            onManageCollectionsClick = {
+                if (navState.visibleRoute !is ManageCollectionsRoute) {
+                    navigator.navigate(ManageCollectionsRoute())
+                }
+            },
+            onActiveFilterEditClick = { collectionId ->
+                if (navState.visibleRoute !is ManageCollectionsRoute) {
+                    navigator.navigate(ManageCollectionsRoute(collectionId))
+                }
+            },
+            onImmersivePlay = { sound ->
+                // Vault play opens immersive listen mode and starts a listen session — always from 0 on
+                // the long-form engine (ADR 0022), unless the audio is already mid-session. Guarded so a
+                // double-tap can't push the destination twice.
+                if (navState.visibleRoute !is ImmersiveListenRoute) {
+                    navigator.navigate(ImmersiveListenRoute(sound.id))
+                    if (!sound.isPlaying) viewModel.startListenSession(sound)
+                }
+            },
+            onCreateClick = openHub,
+            // One source-parameterized entry point (mirrors onCreateClick): each surface binds its own
+            // AnalyticsSource at the leaf call site below, so no per-surface callback has to be threaded.
+            onShowOnboarding = openOnboarding,
         )
     }
+
+    NavDisplay(
+        entries =
+            navState.toEntries(
+                entryProvider {
+                    entry<HomeRoute>(metadata = instantTabTransitions()) { tabContent(AppTab.MY_SOUNDS) }
+                    entry<VaultRoute>(metadata = instantTabTransitions()) { tabContent(AppTab.VAULT) }
+                    entry<ExploreRoute>(metadata = instantTabTransitions()) { tabContent(AppTab.EXPLORE_SOUNDS) }
+                    entry<AboutRoute> {
+                        AboutScreen(onBack = { navigator.close(AboutRoute) })
+                    }
+                    entry<ManageCollectionsRoute> { key ->
+                        // close(key), not goBack(): Manage's "view collection" action switches tab before
+                        // closing, and a plain pop would hit the new tab's stack (see LandingNavigator.close).
+                        com.github.barriosnahuel.vossosunboton.feature.collections.ManageCollectionsScreen(
+                            viewModel = viewModel,
+                            focusedCollectionId = key.focusedCollectionId,
+                            onBack = { navigator.close(key) },
+                        )
+                    }
+                    entry<ImmersiveListenRoute> { key ->
+                        // Back STOPS playback definitively (sessions have no cross-open retention —
+                        // ADR 0022) so no audio keeps playing headless behind the Vault list.
+                        com.github.barriosnahuel.vossosunboton.feature.vault.ImmersiveListenHost(
+                            viewModel = viewModel,
+                            soundId = key.soundId,
+                            onBack = {
+                                viewModel.stopPlayback()
+                                navigator.close(key)
+                            },
+                        )
+                    }
+                    entry<OnboardingRoute> {
+                        OnboardingHost(
+                            onClose = { navigator.close(OnboardingRoute) },
+                            onFinished = {
+                                navigator.close(OnboardingRoute)
+                                // The tour teaches My Bomps and lands on the Hub to add a first Bomp. When
+                                // opened from the overflow on Vault/Explore, return to My Bomps first so the
+                                // saved Bomp lands on the tab the user is looking at.
+                                if (selectedTab != AppTab.MY_SOUNDS) {
+                                    navigator.navigate(HomeRoute)
+                                }
+                                openHub(AnalyticsSource.ONBOARDING_FINISH)
+                            },
+                        )
+                    }
+                    entry<BringFromAppsRoute> {
+                        com.github.barriosnahuel.vossosunboton.feature.onboarding.BringFromAppsGuide(
+                            onClose = { navigator.close(BringFromAppsRoute) },
+                        )
+                    }
+                    entry<ImportHubRoute>(metadata = BottomSheetSceneStrategy.bottomSheet()) {
+                        ImportHubSheet(
+                            // Guard on visibility so a double-tap on a row (both taps land before the pop
+                            // recomposes the sheet away) fires its action once, not twice.
+                            onImport = {
+                                if (navigator.isVisible(ImportHubRoute)) {
+                                    tracker.log(AnalyticsEvent.ImportHubImportSelected)
+                                    navigator.close(ImportHubRoute)
+                                    importPicker.launch(arrayOf("audio/*"))
+                                }
+                            },
+                            onRecord = {
+                                if (navigator.isVisible(ImportHubRoute)) {
+                                    tracker.log(AnalyticsEvent.ImportHubRecordSelected)
+                                    navigator.close(ImportHubRoute)
+                                    context.startActivity(RecordingActivity.createIntent(context))
+                                }
+                            },
+                            onBringFromApps = {
+                                if (navigator.isVisible(ImportHubRoute)) {
+                                    tracker.log(AnalyticsEvent.ImportHubBringSelected)
+                                    navigator.close(ImportHubRoute)
+                                    navigator.navigate(BringFromAppsRoute)
+                                }
+                            },
+                        )
+                    }
+                },
+            ),
+        onBack = {
+            // Route-aware side effect: popping the immersive listen (gesture or button) must stop
+            // the session, mirroring its explicit onBack above.
+            if (navState.visibleRoute is ImmersiveListenRoute) viewModel.stopPlayback()
+            navigator.goBack()
+        },
+        sceneStrategies = listOf(bottomSheetStrategy),
+    )
 
     com.github.barriosnahuel.vossosunboton.feature.collections
         .CollectionSheetHost(viewModel = viewModel)
@@ -297,69 +348,6 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 
     com.github.barriosnahuel.vossosunboton.feature.collections
         .CollectionDeleteDialog(viewModel = viewModel)
-
-    if (isHubVisible) {
-        ImportHubSheet(
-            // Guard on isHubVisible so a double-tap on the import row (both taps land before the
-            // sheet's hide animation recomposes it away) launches the picker once, not twice.
-            onImport = {
-                if (isHubVisible) {
-                    tracker.log(AnalyticsEvent.ImportHubImportSelected)
-                    isHubVisible = false
-                    importPicker.launch(arrayOf("audio/*"))
-                }
-            },
-            onRecord = {
-                if (isHubVisible) {
-                    tracker.log(AnalyticsEvent.ImportHubRecordSelected)
-                    isHubVisible = false
-                    context.startActivity(RecordingActivity.createIntent(context))
-                }
-            },
-            onBringFromApps = {
-                if (isHubVisible) {
-                    tracker.log(AnalyticsEvent.ImportHubBringSelected)
-                    isHubVisible = false
-                    bringGuideVisible = true
-                }
-            },
-            onDismiss = { isHubVisible = false },
-        )
-    }
-
-    // The Hub's "bring audios from other apps" single-step guide, overlaying everything like the tour.
-    if (bringGuideVisible) {
-        com.github.barriosnahuel.vossosunboton.feature.onboarding.BringFromAppsGuide(
-            onClose = { bringGuideVisible = false },
-        )
-    }
-
-    // On-demand onboarding tour overlaying everything (opened from the Hub or the empty state). The
-    // final "start" CTA lands on the Hub so the user can import right away ("Empezá cae al Hub").
-    onboardingStep?.let { current ->
-        com.github.barriosnahuel.vossosunboton.feature.onboarding.OnboardingTour(
-            step = current,
-            onAdvance = {
-                onboardingStep =
-                    ((onboardingStep ?: 0) + 1)
-                        .coerceAtMost(com.github.barriosnahuel.vossosunboton.feature.onboarding.ONBOARDING_STEP_COUNT - 1)
-            },
-            onStepBack = { onboardingStep = ((onboardingStep ?: 0) - 1).coerceAtLeast(0) },
-            onSkip = { onboardingStep = null },
-            onFinish = {
-                onboardingStep = null
-                // The tour teaches My Bomps and lands on the Hub to add a first Bomp. When it was opened
-                // from the overflow on Vault/Explore, return to My Bomps first so the saved Bomp lands on
-                // the tab the user is looking at — otherwise it goes to the unseen My Bomps list and seems
-                // to vanish.
-                if (selectedTab != AppTab.MY_SOUNDS) {
-                    tabBackStack.add(selectedTab)
-                    viewModel.selectTab(AppTab.MY_SOUNDS)
-                }
-                openHub(AnalyticsSource.ONBOARDING_FINISH)
-            },
-        )
-    }
 
     if (isSearchVisible) {
         SearchOverlayHost(
@@ -372,6 +360,56 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             soundDurations = soundDurations,
         )
     }
+}
+
+/**
+ * Maps the visible destination (+ the search overlay) to its canonical `screen_view` literal.
+ * Routes with no screen of their own (Hub sheet, immersive listen) are transparent: the name
+ * resolves to the entry beneath them in the stack, so opening/closing them never re-emits and a
+ * tab change underneath them still surfaces — the pre-Nav3 semantics.
+ */
+private fun screenNameFor(
+    navState: com.github.barriosnahuel.vossosunboton.ui.home.navigation.LandingNavigationState,
+    isSearchVisible: Boolean,
+): String? =
+    when {
+        isSearchVisible -> CanonicalScreenName.SEARCH_SOUND
+        else -> navState.activeStack.lastOrNull { canonicalNameFor(it) != null }?.let { canonicalNameFor(it) }
+    }
+
+private fun canonicalNameFor(route: NavKey): String? =
+    when (route) {
+        HomeRoute -> CanonicalScreenName.MY_SOUNDS
+        VaultRoute -> CanonicalScreenName.VAULT
+        ExploreRoute -> CanonicalScreenName.EXPLORE_SOUNDS
+        AboutRoute -> CanonicalScreenName.ABOUT
+        is ManageCollectionsRoute -> CanonicalScreenName.MANAGE_COLLECTIONS
+        OnboardingRoute -> CanonicalScreenName.ONBOARDING
+        BringFromAppsRoute -> CanonicalScreenName.BRING_GUIDE
+        else -> null
+    }
+
+/**
+ * Hosts the onboarding tour as a destination. The step lives here as `rememberSaveable` (not a
+ * route argument) so advancing steps never mutates the back stack and an Activity recreate
+ * mid-tour cannot rewind the user to step 0 (§ Stateful Composables); the tour's internal
+ * `BackHandler` keeps owning step-back vs dismiss.
+ */
+@Composable
+private fun OnboardingHost(
+    onClose: () -> Unit,
+    onFinished: () -> Unit,
+) {
+    var step by rememberSaveable { mutableStateOf(0) }
+    com.github.barriosnahuel.vossosunboton.feature.onboarding.OnboardingTour(
+        step = step,
+        onAdvance = {
+            step = (step + 1).coerceAtMost(com.github.barriosnahuel.vossosunboton.feature.onboarding.ONBOARDING_STEP_COUNT - 1)
+        },
+        onStepBack = { step = (step - 1).coerceAtLeast(0) },
+        onSkip = onClose,
+        onFinish = onFinished,
+    )
 }
 
 /**
@@ -445,31 +483,28 @@ private fun SearchOverlayHost(
 }
 
 /**
- * Extracted Scaffold body to keep [LandingScreen] readable now that the top-level swap between
- * Landing / About / Manage Collections lives in a `when`. All the previous Scaffold logic moves
- * here unchanged.
+ * One tab's full screen: the shared chrome (top bar, FAB, bottom bar, snackbar host) plus the
+ * tab's body. Each tab route renders its own instance; hoisted state (list scroll, snackbars)
+ * lives in [LandingScreen] so it behaves exactly as the single pre-Nav3 Scaffold did.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScaffoldedLanding(
-    modifier: Modifier = Modifier,
+private fun TabContent(
+    tab: AppTab,
     viewModel: SoundsViewModel,
     sounds: List<Sound>,
-    selectedTab: AppTab,
     hasBundledSounds: Boolean,
     playbackProgress: PlaybackProgress?,
     pausedProgress: Map<String, PlaybackProgress>,
     soundDurations: Map<String, Int>,
     snackbarHostState: SnackbarHostState,
-    listState: LazyListState,
-    coroutineScope: kotlinx.coroutines.CoroutineScope,
     context: Context,
-    tabBackStack: androidx.compose.runtime.snapshots.SnapshotStateList<AppTab>,
     collections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
     activeFilter: String?,
     publicCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
     collectionsByAudio: Map<String, List<String>>,
     privateCollections: List<com.github.barriosnahuel.vossosunboton.model.Collection>,
+    onTabSelected: (AppTab) -> Unit,
     onAboutClick: () -> Unit,
     onManageCollectionsClick: () -> Unit,
     onActiveFilterEditClick: (String) -> Unit,
@@ -481,8 +516,18 @@ private fun ScaffoldedLanding(
     // state, welcome footer, or overflow). Each leaf surface binds its own constant.
     onShowOnboarding: (String) -> Unit,
 ) {
+    // Per-tab list state: each tab keeps its own scroll position (multi-back-stack state retention,
+    // ADR 0024), and a predictive-back preview composing two tabs at once never shares one
+    // LazyListState between two live lists. The scroll-to-top event only reaches the visible tab —
+    // the others are not composed.
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        viewModel.scrollToTopEvent.collect {
+            listState.animateScrollToItem(0)
+        }
+    }
     Scaffold(
-        modifier = modifier,
         topBar = {
             AppTopBar(
                 onSearchClick = { viewModel.showSearch() },
@@ -503,7 +548,7 @@ private fun ScaffoldedLanding(
             val showsWelcomeEmpty =
                 sounds.isEmpty() &&
                     !(activeFilter != null && publicCollections.any { it.id == activeFilter })
-            if (selectedTab == AppTab.MY_SOUNDS && !showsWelcomeEmpty) {
+            if (tab == AppTab.MY_SOUNDS && !showsWelcomeEmpty) {
                 FloatingActionButton(
                     onClick = { onCreateClick(AnalyticsSource.FAB) },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -520,21 +565,20 @@ private fun ScaffoldedLanding(
             // Vault is always visible (spec § 2.1) — no `hasBundledSounds` gating. The Explore
             // tab keeps its conditional behaviour through `AppBottomBar.hasExplore`.
             AppBottomBar(
-                selectedTab = selectedTab,
+                selectedTab = tab,
                 hasExplore = hasBundledSounds,
-                onTabSelected = { tab ->
-                    if (tab == selectedTab) {
+                onTabSelected = { target ->
+                    if (target == tab) {
                         coroutineScope.launch { listState.animateScrollToItem(0) }
                     } else {
-                        tabBackStack.add(selectedTab)
-                        viewModel.selectTab(tab)
+                        onTabSelected(target)
                     }
                 },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
-        when (selectedTab) {
+        when (tab) {
             AppTab.VAULT ->
                 com.github.barriosnahuel.vossosunboton.feature.vault.VaultScreen(
                     privateCollections = privateCollections,
@@ -546,7 +590,7 @@ private fun ScaffoldedLanding(
                 )
             else -> {
                 MySoundsBody(
-                    selectedTab = selectedTab,
+                    selectedTab = tab,
                     sounds = sounds,
                     playbackProgress = playbackProgress,
                     pausedProgress = pausedProgress,
@@ -1157,40 +1201,5 @@ private fun MySoundsFilterEmptyState(collectionName: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
-    }
-}
-
-/**
- * Top-level navigation request to open [com.github.barriosnahuel.vossosunboton.feature.collections.ManageCollectionsScreen].
- * `Generic` opens it at the top with no row highlight; `Focused` deep-links to a specific
- * collection (scroll + transient tint). Persisted across rotation via [Saver].
- */
-internal sealed class ManageRequest {
-    object Generic : ManageRequest()
-
-    data class Focused(
-        val collectionId: String,
-    ) : ManageRequest()
-
-    companion object {
-        val Saver: androidx.compose.runtime.saveable.Saver<ManageRequest?, Any> =
-            androidx.compose.runtime.saveable.Saver(
-                save = { value ->
-                    when (value) {
-                        null -> ""
-                        Generic -> "generic"
-                        is Focused -> "focused:${value.collectionId}"
-                    }
-                },
-                restore = { raw ->
-                    val s = raw as? String ?: return@Saver null
-                    when {
-                        s.isEmpty() -> null
-                        s == "generic" -> Generic
-                        s.startsWith("focused:") -> Focused(s.removePrefix("focused:"))
-                        else -> null
-                    }
-                },
-            )
     }
 }

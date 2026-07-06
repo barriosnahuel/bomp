@@ -92,7 +92,6 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
         onImport: () -> Unit = {},
         onRecord: () -> Unit = {},
         onBringFromApps: () -> Unit = {},
-        onDismiss: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             AppTheme {
@@ -100,7 +99,6 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
                     onImport = onImport,
                     onRecord = onRecord,
                     onBringFromApps = onBringFromApps,
-                    onDismiss = onDismiss,
                 )
             }
         }

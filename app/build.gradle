@@ -3,6 +3,7 @@ apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'com.google.firebase.firebase-perf'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply from: "$project.rootProject.projectDir/linters.gradle"
 
 android {
@@ -172,6 +173,8 @@ dependencies {
     implementation libs.androidx.media3.session
     implementation libs.lifecycle.viewmodel.compose
     implementation libs.lifecycle.runtime.compose
+    implementation libs.androidx.navigation3.runtime
+    implementation libs.androidx.navigation3.ui
     implementation libs.coroutines.android
     implementation libs.coroutines.core
     implementation libs.androidx.datastore.preferences

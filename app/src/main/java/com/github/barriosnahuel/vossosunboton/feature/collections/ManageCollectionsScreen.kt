@@ -64,7 +64,6 @@ import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.ui.home.AppTab
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
-import com.github.barriosnahuel.vossosunboton.ui.predictiveBackTransition
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import kotlinx.coroutines.delay
 
@@ -118,7 +117,7 @@ internal fun ManageCollectionsScreen(
     var deepLinkConsumed by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
-        modifier = modifier.predictiveBackTransition(onBack = onBack),
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_manage_collections_title)) },
