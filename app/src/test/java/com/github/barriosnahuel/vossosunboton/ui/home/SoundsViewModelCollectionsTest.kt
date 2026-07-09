@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterStore
@@ -20,6 +21,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -278,12 +280,12 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         val vm = givenAViewModel()
         // Wait until the library is hydrated by the initial loadSounds before asserting on .value.
         runBlocking { vm.library.first { list -> list.any { it.name == "audio-b" } } }
-        // Switch to Vault — vm.sounds collapses to emptyList(), but the library snapshot must keep
-        // the user catalog so ImmersiveListenScreen can resolve collection.audioIds to real Sounds.
+        // Switch to Vault — vm.sounds keeps the previous tab's projection (emptying it flashed the
+        // outgoing tab's empty state mid-transition), and the library snapshot must keep the user
+        // catalog so ImmersiveListenScreen can resolve collection.audioIds to real Sounds.
         vm.selectTab(AppTab.VAULT)
-        runBlocking { vm.sounds.first { it.isEmpty() } }
 
-        assertThat(vm.sounds.value).isEmpty()
+        assertThat(vm.sounds.value.map { it.name }).containsExactly("audio-a", "audio-b")
         val userLibraryNames =
             vm.library.value
                 .filter { it.file != null }
@@ -310,8 +312,8 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         val vm = givenAViewModel()
         runBlocking { vm.collections.first { it.size >= 1 } }
         runBlocking { vm.vaultAudios.first { it.size == 1 } }
-        // The user is on the Vault tab when they swipe-to-delete; `_sounds` collapses to empty on
-        // Vault by design (the VaultScreen reads `_vaultAudios` directly).
+        // The user is on the Vault tab when they swipe-to-delete; the main list is empty here only
+        // because the seeded audio is Vault-only (VaultScreen itself reads `_vaultAudios` directly).
         vm.selectTab(AppTab.VAULT)
         runBlocking { vm.sounds.first { it.isEmpty() } }
 
@@ -418,6 +420,71 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         assertThat(created.profile.playbackUI).isEqualTo(
             com.github.barriosnahuel.vossosunboton.model.CollectionPlaybackUI.IMMERSIVE,
         )
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `returning from VAULT to MY_SOUNDS repopulates the list synchronously from the cache`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking {
+            val repo = SoundsRepository(context)
+            repo.save(testSound("first", file = "a.mp3"))
+            repo.save(testSound("second", file = "b.mp3"))
+        }
+        // StandardTestDispatcher (not Unconfined): keeps the async loadSounds parked so the
+        // assertion sees exactly what the UI sees between the tab tap and the IO chain landing.
+        val scheduler = kotlinx.coroutines.test.TestCoroutineScheduler()
+        val vm =
+            SoundsViewModel(
+                context,
+                ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(scheduler),
+            )
+        // NOT registered in createdViewModels: the shared tearDown's runBlocking join would
+        // deadlock on jobs parked on this test-owned virtual scheduler. Cancelled at the end below.
+        // Pump the parked IO scheduler and the Robolectric main looper together until the initial
+        // load lands — a plain runBlocking await would deadlock the main looper the VM relies on.
+        val mainLooper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+        // Interleave real time with the virtual pumps: the DataStore reads inside loadSounds run
+        // on their own real executor, and only their continuations land on the parked scheduler.
+        val deadline = System.currentTimeMillis() + 10_000
+        while (vm.sounds.value.size != 2 && System.currentTimeMillis() < deadline) {
+            scheduler.advanceTimeBy(1_000)
+            scheduler.runCurrent()
+            mainLooper.idle()
+            Thread.sleep(10)
+        }
+        com.google.common.truth.Truth
+            .assertWithMessage("initial load")
+            .that(vm.sounds.value.map { it.name })
+            .containsExactly("first", "second")
+
+        vm.selectTab(AppTab.VAULT)
+        scheduler.advanceTimeBy(1_000)
+        scheduler.runCurrent()
+        mainLooper.idle()
+        // The Vault renders its own list; the main projection must stay untouched — the outgoing
+        // tab remains composed during the Nav3 transition and would flash its empty state if this
+        // were emptied (the ZRP-flash regression this test guards).
+        com.google.common.truth.Truth
+            .assertWithMessage("while on VAULT")
+            .that(vm.sounds.value.map { it.name })
+            .containsExactly("first", "second")
+
+        vm.selectTab(AppTab.MY_SOUNDS)
+
+        // No scheduler advance: loadSounds has not run. The synchronous cache projection alone
+        // must repopulate the list — otherwise the tab renders its empty state until IO lands.
+        val namesRightAfterSwitch = vm.sounds.value.map { it.name }
+
+        // Cancel here (not via createdViewModels) and drain the virtual scheduler so no job
+        // outlives the test on a scheduler nobody advances anymore.
+        vm.viewModelScope.cancel()
+        scheduler.advanceUntilIdle()
+
+        com.google.common.truth.Truth
+            .assertWithMessage("right after switching back to MY_SOUNDS")
+            .that(namesRightAfterSwitch)
+            .containsExactly("first", "second")
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
