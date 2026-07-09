@@ -850,7 +850,7 @@ After enabling the BQ export, the first daily run lands ~24 h later. `bq ls --pr
 | Dataset | Tables |
 |---|---|
 | `firebase_crashlytics` | `com_github_barriosnahuel_vossosunboton_ANDROID` (one row per non-fatal/fatal; `event_timestamp`, `issue_id`, stack trace, sessions when enabled) |
-| `analytics_<GA4_PROPERTY_ID>` | `events_YYYYMMDD` (one row per event, params nested) — property ID is numeric, distinct from project ID, visible only after the first dataset materializes |
+| `analytics_<GA4_PROPERTY_ID>` | `events_YYYYMMDD` (one row per event, params nested) — property ID is numeric, distinct from project ID, visible only after the first dataset materializes. **`screen_view` gotcha:** the screen name is in `event_params` under key `firebase_screen` (class in `firebase_screen_class`), **not** `screen_name` — Firebase renames the reserved `SCREEN_NAME` param in the export, so querying `key='screen_name'` returns NULL for every row. |
 | `firebase_performance` | `com_github_barriosnahuel_vossosunboton_ANDROID` — one row per perf event; `event_type` ∈ {`DURATION_TRACE` (incl. `_app_start`), `SCREEN_TRACE` (`_st_<Activity>`, carries `screen_info.slow_frame_ratio` / `frozen_frame_ratio`), `TRACE_METRIC`, `NETWORK_REQUEST`}; segment by `app_build_version` (versionCode) + `device_name`. No cold/warm/hot dimension. |
 
 ### Sanity-check query

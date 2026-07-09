@@ -115,8 +115,11 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       `vault_unprotected_warning_shown`; `vault_search_unlock_cta_shown`).
    k) UNMET DEMAND: `search_zero_results` (+ `query_length`).
    l) MONETIZATION: `about_gratitude_cafecito_open` + `about_gratitude_kofi_open`.
-   m) NAVIGATION: `screen_view` by param `screen_name` (my_sounds, explore_sounds, vault, vault_listen,
-      about, search_sound, add_sound, edit_sound, manage_collections, onboarding, record_sound).
+   m) NAVIGATION: `screen_view` broken down by screen. Read the name from `event_params`
+      key `firebase_screen` — the export uses that key, not `screen_name` (Firebase renames
+      the SDK's SCREEN_NAME param). Values (`CanonicalScreenName.kt`): my_sounds,
+      explore_sounds, about, search_sound, add_sound, edit_sound, vault, vault_listen,
+      vault_unlock, collection_create, manage_collections, onboarding, bring_guide, record_sound.
 
    Available user properties (to segment if useful): `current_sounds`, `current_pinned`,
    `current_public_colls`, `current_private_colls`, `current_audios_in_colls`, `current_public_default`,
