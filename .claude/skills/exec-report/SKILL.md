@@ -128,20 +128,22 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
    `lifetime_coll_assigns`, `lifetime_vault_unlocks`.
 
    **GA4 windowing (use this WHERE in every GA4 query — it fixes three traps):** filter precisely on
-   `event_timestamp` for an exact N×24h window (so it matches the sessions axis, not 8 days), and prune
+   `event_timestamp` (INT64 microseconds in the GA4 export — wrap in `TIMESTAMP_MICROS` to compare with a
+   `TIMESTAMP`, else BigQuery raises a type error) for an exact N×24h window (so it matches the sessions
+   axis, not 8 days), and prune
    tables with a regex that matches BOTH finalized `events_YYYYMMDD` AND `events_intraday_YYYYMMDD`
    (otherwise the most recent 1-3 days — which lag finalization, and the intraday table — are silently
    dropped right after a release):
 
    ```
-   WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+   WHERE TIMESTAMP_MICROS(event_timestamp) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
      AND REGEXP_EXTRACT(_TABLE_SUFFIX, r'[0-9]{8}$') >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 8 DAY))
    ```
    (For 7d-vs-prev-7d, widen both bounds to 14 days and split on `event_timestamp`.)
 
    GA4 reference query (event counts, windowed per the rule above): `SELECT event_name, COUNT(*) n,
    COUNT(DISTINCT user_pseudo_id) usuarios FROM `bomp-prod.analytics_XXX.events_*` WHERE
-   event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),INTERVAL 7 DAY) AND
+   TIMESTAMP_MICROS(event_timestamp) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),INTERVAL 7 DAY) AND
    REGEXP_EXTRACT(_TABLE_SUFFIX, r'[0-9]{8}$') >= FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE(),INTERVAL 8 DAY))
    GROUP BY event_name ORDER BY n DESC`.
 
@@ -202,7 +204,7 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
     SELECT user_pseudo_id,
       ARRAY_AGG(app_info.version ORDER BY event_timestamp DESC LIMIT 1)[OFFSET(0)] ver
     FROM `bomp-prod.analytics_XXX.events_*`
-    WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),INTERVAL 7 DAY)
+    WHERE TIMESTAMP_MICROS(event_timestamp) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),INTERVAL 7 DAY)
       AND REGEXP_EXTRACT(_TABLE_SUFFIX, r'[0-9]{8}$') >= FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE(),INTERVAL 8 DAY))
     GROUP BY user_pseudo_id
   ) GROUP BY ver ORDER BY usuarios DESC;`
