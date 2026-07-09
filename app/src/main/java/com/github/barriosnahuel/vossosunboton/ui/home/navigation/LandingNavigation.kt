@@ -68,12 +68,19 @@ data object ImportHubRoute : NavKey
  * Tab entries switch instantly (no cross-scaffold animation), matching the pre-Nav3 body swap —
  * the top/bottom bars must read as static chrome while tabs change. Child destinations keep the
  * NavDisplay defaults, which is where the automatic predictive back pays off (ADR 0024).
+ *
+ * The outgoing tab must stay composed beneath until the incoming one has drawn
+ * (`KeepUntilTransitionsFinished`, the official recipe's pattern): `ExitTransition.None` drops it
+ * immediately, exposing the bare window background for however many frames the new tab's first
+ * composition takes — on device that reads as an empty-state flash when entering the Vault.
  */
 internal fun instantTabTransitions() =
     metadata {
-        put(NavDisplay.TransitionKey) { EnterTransition.None togetherWith ExitTransition.None }
-        put(NavDisplay.PopTransitionKey) { EnterTransition.None togetherWith ExitTransition.None }
-        put(NavDisplay.PredictivePopTransitionKey) { EnterTransition.None togetherWith ExitTransition.None }
+        put(NavDisplay.TransitionKey) { EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished }
+        put(NavDisplay.PopTransitionKey) { EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished }
+        put(NavDisplay.PredictivePopTransitionKey) {
+            EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished
+        }
     }
 
 internal fun AppTab.toRoute(): NavKey =

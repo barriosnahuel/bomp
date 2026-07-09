@@ -689,8 +689,10 @@ class SoundsViewModel(
         // Optimistically rebuild `_sounds` from the in-memory caches before kicking off the
         // async loadSounds. Without this, the freshly selected tab renders an empty list (the
         // previous tab's filtered view) until the IO chain settles — the user sees the empty
-        // state flash for ~150ms on every tab swap.
-        applyTabFilterFromCache()
+        // state flash on every tab swap. The tab is passed explicitly: reading it back through
+        // the SavedStateHandle flow here observed the PREVIOUS value, which re-emptied the list
+        // when leaving the Vault (whose projection is empty by design).
+        applyTabFilterFromCache(tab)
         viewModelScope.launch(ioDispatcher) { loadSounds() }
     }
 
@@ -700,15 +702,18 @@ class SoundsViewModel(
      * keeps the body composable rendering the right list instead of bouncing through the empty
      * state. Returns whatever `applyCollectionFilter` produces for the active tab + chip.
      */
-    private fun applyTabFilterFromCache() {
+    private fun applyTabFilterFromCache(tab: AppTab) {
         val snapshot = allSoundsCache.value
         if (snapshot.isEmpty()) return
         // Mirrors the byTab branch in loadSounds so the tab swap doesn't flash an empty list.
         _sounds.value =
-            when (selectedTab.value) {
+            when (tab) {
                 AppTab.MY_SOUNDS -> mySoundsProjection(snapshot)
                 AppTab.EXPLORE_SOUNDS -> snapshot.filter { it.isBundled() }
-                AppTab.VAULT -> emptyList()
+                // Leave the previous projection in place: VaultScreen renders its own list and
+                // never reads `_sounds`, while the OUTGOING tab stays composed during the Nav3
+                // entry transition — emptying here made it flash its empty state mid-swap.
+                AppTab.VAULT -> return
             }
     }
 
@@ -1484,12 +1489,11 @@ class SoundsViewModel(
                         // mySoundsProjection. The Vault-privacy hide rule is NOT applied here.
                         AppTab.MY_SOUNDS -> mySoundsProjection(allSounds)
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
-                        // The Vault tab is rendered by its own dedicated screen (VaultScreen) — the
-                        // primary sound list is empty here so the bottom-bar tab swap leaves the
-                        // screen blank while VaultScreen takes over via the overlay path in
-                        // LandingScreen. Returning an empty list also keeps the sound list's empty
-                        // state composable from rendering its "no sounds yet" body for the wrong tab.
-                        AppTab.VAULT -> emptyList()
+                        // The Vault tab renders its own dedicated list (VaultScreen reads
+                        // `_vaultAudios`, never this projection), so the previous tab's list is
+                        // left untouched: the outgoing tab stays composed during the Nav3 entry
+                        // transition, and emptying it here flashed its empty state mid-swap.
+                        AppTab.VAULT -> it
                     }.filter { it.id != deletedId }
                 val withWelcome = positionWelcomeIn(byTab, welcomeIsPendingDismissal, welcomeInstallTs)
                 if (playingId == null) {
