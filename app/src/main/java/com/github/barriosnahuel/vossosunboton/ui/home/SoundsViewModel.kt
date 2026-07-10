@@ -6,7 +6,6 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.app.Application
-import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
@@ -264,18 +263,17 @@ class SoundsViewModel(
     private val mutableInitialLoadComplete = MutableStateFlow(false)
 
     /**
-     * Flips to `true` after the first [loadSounds] call returns (success OR failure).
-     * Tests in this module use it to await the async DataStore read started in `init`
-     * before mutating state via reflection (otherwise the injected value gets overwritten
-     * by the in-flight load). Not part of the production API — `internal` so the wider
-     * codebase cannot accidentally depend on it; `@VisibleForTesting(otherwise = NONE)`
-     * so Lint warns if any non-test caller appears.
+     * Flips to `true` only AFTER the first [loadSounds] call finished writing every list it
+     * projects (`_sounds`, `_vaultAudios`, caches) — on success or failure. That write order is a
+     * contract: UI consumers gate their empty states on this flag and MUST read it BEFORE the list
+     * flows (release/acquire pairing), so a `true` flag is never paired with a stale empty list
+     * during the first composition pass (cold-start ZRP flash). Tests also use it to await the
+     * async DataStore read started in `init` before mutating state via reflection.
      *
      * Avoids the conventional `_isInitialLoadComplete`/`isInitialLoadComplete` backing-field
      * pair because ktlint's `backing-property-naming` rule requires both to be `private`,
-     * which would defeat the test-coordination purpose.
+     * which would defeat the coordination purpose.
      */
-    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
     internal val isInitialLoadComplete: StateFlow<Boolean> = mutableInitialLoadComplete.asStateFlow()
 
     private val allSoundsCache = MutableStateFlow<List<Sound>>(emptyList())
@@ -710,10 +708,11 @@ class SoundsViewModel(
             when (tab) {
                 AppTab.MY_SOUNDS -> mySoundsProjection(snapshot)
                 AppTab.EXPLORE_SOUNDS -> snapshot.filter { it.isBundled() }
-                // Leave the previous projection in place: VaultScreen renders its own list and
-                // never reads `_sounds`, while the OUTGOING tab stays composed during the Nav3
-                // entry transition — emptying here made it flash its empty state mid-swap.
-                AppTab.VAULT -> return
+                // VaultScreen renders its own list and never reads `_sounds`; project the HOME
+                // list here because (a) emptying flashed the outgoing tab's empty state mid-swap
+                // and (b) a predictive-back preview from the Vault base always composes Home
+                // (exit-through-home), which must show its own rows, not the previous tab's.
+                AppTab.VAULT -> mySoundsProjection(snapshot)
             }
     }
 
@@ -1490,10 +1489,10 @@ class SoundsViewModel(
                         AppTab.MY_SOUNDS -> mySoundsProjection(allSounds)
                         AppTab.EXPLORE_SOUNDS -> allSounds.filter { it.isBundled() }
                         // The Vault tab renders its own dedicated list (VaultScreen reads
-                        // `_vaultAudios`, never this projection), so the previous tab's list is
-                        // left untouched: the outgoing tab stays composed during the Nav3 entry
-                        // transition, and emptying it here flashed its empty state mid-swap.
-                        AppTab.VAULT -> it
+                        // `_vaultAudios`, never this projection). Project HOME here: emptying
+                        // flashed the outgoing tab's empty state mid-swap, and the predictive-back
+                        // preview from the Vault base always reveals Home (exit-through-home).
+                        AppTab.VAULT -> mySoundsProjection(allSounds)
                     }.filter { it.id != deletedId }
                 val withWelcome = positionWelcomeIn(byTab, welcomeIsPendingDismissal, welcomeInstallTs)
                 if (playingId == null) {

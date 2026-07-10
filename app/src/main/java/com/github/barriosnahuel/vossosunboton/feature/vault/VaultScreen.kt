@@ -42,6 +42,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
@@ -293,7 +294,11 @@ private fun VaultBody(
     onActiveFilterEditClick: (String) -> Unit,
     onImmersivePlay: (Sound) -> Unit,
 ) {
-    val vaultAudios by viewModel.vaultAudios.collectAsState()
+    // Read BEFORE `vaultAudios`: loadSounds() writes the vault list before flipping the flag, so
+    // the mirrored flag→list read order guarantees a `true` flag never pairs with a stale empty
+    // list (cold-start ZRP flash). Don't move below the vaultAudios read.
+    val initialLoadComplete by viewModel.isInitialLoadComplete.collectAsStateWithLifecycle()
+    val vaultAudios by viewModel.vaultAudios.collectAsStateWithLifecycle()
     val activeFilter by viewModel.activeVaultFilter.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
     val pausedProgress by viewModel.pausedProgress.collectAsState()
@@ -305,7 +310,9 @@ private fun VaultBody(
     val systemCollectionLabel = stringResource(R.string.app_vault_baul_name)
     val activeName =
         activeCollection?.let { if (it.isSystem) systemCollectionLabel else it.name }.orEmpty()
-    val showZrp = vaultAudios.isEmpty() && activeFilter == null
+    // Gated on the initial load (read above, before vaultAudios) so a cold start on the Vault tab
+    // never flashes the ZRP while the first loadSounds is still hydrating vaultAudios.
+    val showZrp = vaultAudios.isEmpty() && activeFilter == null && initialLoadComplete
     val showFilterEmpty = vaultAudios.isEmpty() && activeFilter != null
     // Header rendered alongside the chip row whenever the body shows real audios. ZRP and
     // filtered-empty states both hide it — header on top of an empty body is just noise.
