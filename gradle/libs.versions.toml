@@ -22,7 +22,7 @@ lifecycleCompose          = "2.11.0"
 material                  = "1.14.0"
 
 # Firebase
-firebaseBom               = "34.15.0"
+firebaseBom               = "34.16.0"
 
 # Other
 timber                    = "5.0.1"
