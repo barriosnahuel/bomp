@@ -522,9 +522,16 @@ private fun TabContent(
     // the others are not composed.
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
-        viewModel.scrollToTopEvent.collect {
-            listState.animateScrollToItem(0)
+    // Only the ACTIVE tab collects the one-shot scroll event: during a tab transition (or a
+    // predictive-back preview) two TabContent instances are composed at once, and the Channel's
+    // single delivery (ADR 0003) must not be consumed by the outgoing tab's collector.
+    val selectedTabNow by viewModel.selectedTab.collectAsStateWithLifecycle()
+    val isActiveTab = selectedTabNow == tab
+    LaunchedEffect(isActiveTab) {
+        if (isActiveTab) {
+            viewModel.scrollToTopEvent.collect {
+                listState.animateScrollToItem(0)
+            }
         }
     }
     Scaffold(

@@ -145,18 +145,16 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `back sequence from About over Explore walks Explore then My Bomps then exits`() {
-        // The epic's acceptance walk: My Bomps → Explore → About → back closes About, back returns
-        // to My Bomps (exit through home), back leaves the app. Needs bundled audios for Explore.
-        val ctx = ApplicationProvider.getApplicationContext<Context>()
-        if (PackagedAudios.get(ctx).isEmpty()) {
-            return
-        }
+    fun `back sequence from About over the Vault walks the Vault then My Bomps then exits`() {
+        // The epic's acceptance walk: My Bomps → Vault → About → back closes About, back returns
+        // to My Bomps (exit through home), back leaves the app. Driven through the Vault tab so it
+        // runs everywhere — Explore needs bundled audios that CI checkouts lack (the earlier
+        // Explore-based variant silently skipped there, leaving this behavior unguarded).
         ActivityScenario.launch(LandingActivity::class.java).use { scenario ->
             composeTestRule.waitForIdle()
             scenario.onActivity { activity ->
                 val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+                viewModel.selectTab(AppTab.VAULT)
             }
             composeTestRule.waitForIdle()
             composeTestRule
@@ -173,7 +171,7 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
             composeTestRule.waitForIdle()
             scenario.onActivity { activity ->
                 val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.EXPLORE_SOUNDS)
+                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.VAULT)
             }
 
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }

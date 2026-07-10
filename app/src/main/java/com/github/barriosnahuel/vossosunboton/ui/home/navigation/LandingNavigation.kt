@@ -205,9 +205,20 @@ internal class LandingNavigator(
      * screen resurrectable on the old one.
      */
     fun close(route: NavKey) {
-        state.backStacks.values.forEach { stack ->
+        // Exactly one instance is removed, preferring the active stack: routes are value-equal
+        // (@Serializable objects/data classes), and a route legitimately duplicated as another
+        // tab's history must survive closing the visible one.
+        val stacks =
+            buildList {
+                add(state.activeStack)
+                state.backStacks.values.forEach { if (it !== state.activeStack) add(it) }
+            }
+        for (stack in stacks) {
             val index = stack.lastIndexOf(route)
-            if (index >= 0) stack.removeAt(index)
+            if (index >= 0) {
+                stack.removeAt(index)
+                return
+            }
         }
     }
 
