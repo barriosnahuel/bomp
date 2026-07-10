@@ -79,6 +79,30 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         unmockkAll()
     }
 
+    /**
+     * Release/acquire contract behind the cold-start empty-state gate: the flag must flip only
+     * AFTER `loadSounds` projected `_sounds`, so UI reading flag→lists (LandingScreen/VaultScreen
+     * heads) can never pair a `true` flag with a stale empty list. Guards against a refactor
+     * moving the flag flip before the projection.
+     */
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun `isInitialLoadComplete flips only after sounds are projected`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        runBlocking { SoundsRepository(context).save(testSound("preloaded", file = "preloaded.mp3")) }
+        val viewModel =
+            SoundsViewModel(
+                context,
+                ioDispatcher = UnconfinedTestDispatcher(),
+                searchDebounceMs = 0L,
+            )
+        createdViewModels += viewModel
+
+        runBlocking { withTimeoutOrNull(5_000L) { viewModel.isInitialLoadComplete.first { it } } }
+
+        assertThat(viewModel.sounds.value.map { it.name }).contains("preloaded")
+    }
+
     @Test
     fun `initial tab is MY_SOUNDS`() {
         val viewModel = givenAViewModel()

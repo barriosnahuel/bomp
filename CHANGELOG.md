@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - The "⋮" menu's invite action is now labelled "Share app" ("Compartí la app" in Spanish) instead of "Share Bomp", so it reads as sharing the app rather than a single audio
 - Opening a Vault audio's listen screen now always starts it from the beginning — previously a reopened audio silently resumed from where it was left mid-clip
 
+### Fixed
+- Opening the app no longer briefly flashes the "This is where the voices live" empty state while your Bomps are still loading — the list now waits for the first load before deciding what to show
+
 ### For nerds 🤓
 
 #### Added

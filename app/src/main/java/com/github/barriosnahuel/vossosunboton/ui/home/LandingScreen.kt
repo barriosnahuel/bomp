@@ -109,6 +109,10 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LandingScreen(viewModel: SoundsViewModel) {
+    // Read BEFORE any list flow (sounds, vaultAudios): loadSounds() writes lists→flag, so the
+    // mirrored flag→lists read order guarantees a `true` flag is never paired with a stale empty
+    // list. Reordering these reads reintroduces the cold-start empty-state flash.
+    val initialLoadComplete by viewModel.isInitialLoadComplete.collectAsStateWithLifecycle()
     val sounds by viewModel.sounds.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     val hasBundledSounds by viewModel.hasBundledSounds.collectAsState()
@@ -209,6 +213,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             tab = tab,
             viewModel = viewModel,
             sounds = sounds,
+            initialLoadComplete = initialLoadComplete,
             hasBundledSounds = hasBundledSounds,
             playbackProgress = playbackProgress,
             pausedProgress = pausedProgress,
@@ -493,6 +498,9 @@ private fun TabContent(
     tab: AppTab,
     viewModel: SoundsViewModel,
     sounds: List<Sound>,
+    // Read at the LandingScreen head BEFORE `sounds` (release/acquire pairing with loadSounds) —
+    // don't replace with a local collect, that reintroduces the cold-start empty-state flash.
+    initialLoadComplete: Boolean,
     hasBundledSounds: Boolean,
     playbackProgress: PlaybackProgress?,
     pausedProgress: Map<String, PlaybackProgress>,
@@ -599,6 +607,7 @@ private fun TabContent(
                 MySoundsBody(
                     selectedTab = tab,
                     sounds = sounds,
+                    initialLoadComplete = initialLoadComplete,
                     playbackProgress = playbackProgress,
                     pausedProgress = pausedProgress,
                     soundDurations = soundDurations,
@@ -1069,6 +1078,7 @@ internal fun deletionSnackbarMessage(
 private fun MySoundsBody(
     selectedTab: AppTab,
     sounds: List<Sound>,
+    initialLoadComplete: Boolean,
     playbackProgress: PlaybackProgress?,
     pausedProgress: Map<String, PlaybackProgress>,
     soundDurations: Map<String, Int>,
@@ -1099,7 +1109,9 @@ private fun MySoundsBody(
     }
     val isOnMySounds = selectedTab == AppTab.MY_SOUNDS
     val showFilterEmptyState = isOnMySounds && activeFilterId != null && sounds.isEmpty() && activeCollection != null
-    val showWelcomeEmptyState = sounds.isEmpty() && isOnMySounds && !showFilterEmptyState
+    // Gated on the initial load: on a cold start `sounds` is empty until the first loadSounds
+    // lands, and rendering the inspirational empty state for that window reads as a data flash.
+    val showWelcomeEmptyState = sounds.isEmpty() && isOnMySounds && !showFilterEmptyState && initialLoadComplete
     // Fresh install lands here, not on the ZRP: the welcome audio keeps the list non-empty. Surface a
     // "see how it works" footer under the lone welcome so a new user can reach the tour without first
     // deleting the welcome. Drops away the moment any real Bomp exists.
