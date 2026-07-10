@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Long listens now show up in your system media controls — playing an audio from the Vault's listen screen (or reviewing a recording) surfaces a media notification with lock-screen controls, and headset/media keys pause and resume it; quick soundboard taps stay notification-free
 
 ### Changed
+- The "⋮" menu's invite action is now labelled "Share app" ("Compartí la app" in Spanish) instead of "Share Bomp", so it reads as sharing the app rather than a single audio
 - Opening a Vault audio's listen screen now always starts it from the beginning — previously a reopened audio silently resumed from where it was left mid-clip
 
 ### For nerds 🤓

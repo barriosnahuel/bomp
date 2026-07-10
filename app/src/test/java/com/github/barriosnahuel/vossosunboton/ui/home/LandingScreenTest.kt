@@ -116,7 +116,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         // its stable tag rather than the ambiguous text; the other three labels are unique.
         val help = composeTestRule.onNodeWithTag(OVERFLOW_SEE_HOW_IT_WORKS_TAG)
         val collections = composeTestRule.onNodeWithText("Manage collections")
-        val share = composeTestRule.onNodeWithText("Share Bomp")
+        val share = composeTestRule.onNodeWithText("Share app")
         val about = composeTestRule.onNodeWithText("About")
 
         // Each item is actually on screen (not merely composed) — guards the AGPLv3-required About entry
