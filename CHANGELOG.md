@@ -13,7 +13,8 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Opening a Vault audio's listen screen now always starts it from the beginning — previously a reopened audio silently resumed from where it was left mid-clip
 
 ### Fixed
-- Opening the app no longer briefly flashes the "This is where the voices live" empty state while your Bomps are still loading — the list now waits for the first load before deciding what to show
+- Opening the app no longer briefly flashes an empty state — inspirational or a collection filter's "no results" — while your Bomps are still loading; the list now waits for the first load before deciding what to show
+- An audio hidden from My Bomps (Vault-only) can no longer briefly reappear in the list right after opening the app — concurrent list refreshes could land out of order and show a stale view
 
 ### For nerds 🤓
 
