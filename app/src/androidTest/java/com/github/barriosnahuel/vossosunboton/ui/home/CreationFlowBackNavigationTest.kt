@@ -76,6 +76,11 @@ internal class CreationFlowBackNavigationTest : AbstractUiTest() {
             composeRule.awaitNodeWithText(createTitle()).assertIsDisplayed()
             composeRule.waitForIdle()
 
+            // The naming screen auto-focuses its name field, so the IME is up and swallows the first back
+            // (standard Android, and what the Activity did too). Close it first, or this asserts the
+            // keyboard's behavior instead of the graph's.
+            Espresso.closeSoftKeyboard()
+            composeRule.waitForIdle()
             Espresso.pressBack()
             composeRule.waitForIdle()
 
@@ -96,6 +101,11 @@ internal class CreationFlowBackNavigationTest : AbstractUiTest() {
             composeRule.awaitNodeWithText(createTitle()).assertIsDisplayed()
             composeRule.waitForIdle()
 
+            // The naming screen auto-focuses its name field, so the IME is up and swallows the first back
+            // (standard Android, and what the Activity did too). Close it first, or this asserts the
+            // keyboard's behavior instead of the graph's.
+            Espresso.closeSoftKeyboard()
+            composeRule.waitForIdle()
             Espresso.pressBack()
             composeRule.waitForIdle()
 
