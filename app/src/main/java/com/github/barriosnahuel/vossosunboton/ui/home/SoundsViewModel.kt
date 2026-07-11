@@ -48,6 +48,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 
 enum class AppTab { MY_SOUNDS, VAULT, EXPLORE_SOUNDS }
@@ -262,13 +264,35 @@ class SoundsViewModel(
 
     private val mutableInitialLoadComplete = MutableStateFlow(false)
 
+    // Two-input gate for the flag below: the projections loadSounds writes read `_collections`
+    // (chip filters, vault membership), and collections hydrate on an independent coroutine — a
+    // flag opened on loadSounds alone could still front a collections-blind projection. @Volatile:
+    // each input is marked from its own dispatcher thread.
+    @Volatile
+    private var initialSoundsLoaded = false
+
+    @Volatile
+    private var initialCollectionsLoaded = false
+
+    private fun maybeCompleteInitialLoad() {
+        if (initialSoundsLoaded && initialCollectionsLoaded) mutableInitialLoadComplete.value = true
+    }
+
+    // Serializes every loadSounds pass. Concurrent triggers (init, the reactive repo collector,
+    // collections emissions, tab/filter changes) each read-then-write the projections; without
+    // the lock, a pass that read an older snapshot can finish last and clobber a fresher
+    // projection (stale-writer-wins — surfaced as a hidden audio flashing back into My Sounds).
+    private val loadSoundsMutex = Mutex()
+
     /**
-     * Flips to `true` only AFTER the first [loadSounds] call finished writing every list it
-     * projects (`_sounds`, `_vaultAudios`, caches) — on success or failure. That write order is a
-     * contract: UI consumers gate their empty states on this flag and MUST read it BEFORE the list
-     * flows (release/acquire pairing), so a `true` flag is never paired with a stale empty list
-     * during the first composition pass (cold-start ZRP flash). Tests also use it to await the
-     * async DataStore read started in `init` before mutating state via reflection.
+     * Flips to `true` only AFTER both cold-start inputs landed: the first [loadSounds] pass
+     * finished writing every list it projects (`_sounds`, `_vaultAudios`, caches) AND the first
+     * collections snapshot was applied (those projections read `_collections`). Fail-open: an init
+     * failure flips it regardless so empty states are never gated shut forever. That write order
+     * is a contract: UI consumers gate their empty states on this flag and MUST read it BEFORE the
+     * list flows (release/acquire pairing), so a `true` flag is never paired with a stale empty
+     * list during the first composition pass (cold-start ZRP flash). Tests also use it to await
+     * the async DataStore reads started in `init` before mutating state via reflection.
      *
      * Avoids the conventional `_isInitialLoadComplete`/`isInitialLoadComplete` backing-field
      * pair because ktlint's `backing-property-naming` rule requires both to be `private`,
@@ -366,9 +390,10 @@ class SoundsViewModel(
         // init returns, so the first loadSounds always observes a stable
         // `_welcomeStickerVisible` snapshot.
         //
-        // The whole block is wrapped in try/catch so that any failure between `isActive()` and the
-        // `try/finally` inside `loadSounds()` still flips `mutableInitialLoadComplete` — otherwise
-        // tests that await `isInitialLoadComplete.first { it }` would deadlock.
+        // The `finally` marks the gate's sounds input no matter where this block fails — otherwise
+        // tests that await `isInitialLoadComplete.first { it }` would deadlock. Only THIS coroutine
+        // marks it (not loadSounds itself): it is the one sequenced after migrateVisibilityIfNeeded,
+        // so the gate can never open over a pre-migration projection written by a concurrent pass.
         viewModelScope.launch(ioDispatcher) {
             try {
                 // One-time migration from the old "ephemeral, self-destruct on completion" model:
@@ -393,7 +418,11 @@ class SoundsViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Throwable,
             ) {
                 Tracker.track(RuntimeException("SoundsViewModel init failed", e))
+                // Fail-open: a broken init must not gate the empty states shut forever.
                 mutableInitialLoadComplete.value = true
+            } finally {
+                initialSoundsLoaded = true
+                maybeCompleteInitialLoad()
             }
         }
         // Reactive trigger: any change to the persisted sound list (save / rename / pin /
@@ -473,7 +502,16 @@ class SoundsViewModel(
                     }
                     recomputeVaultAudios()
                     syncCollectionsUserProperties(list)
-                    if (!firstEmission) {
+                    if (firstEmission) {
+                        // The init loadSounds may have projected before this snapshot landed
+                        // (chip filters and vault membership read `_collections`): re-project
+                        // synchronously from the cache so the gate never opens over a
+                        // collections-blind list. No-op while the cache is still empty —
+                        // loadSounds hasn't run yet and will project with collections present.
+                        applyTabFilterFromCache(selectedTab.value)
+                        initialCollectionsLoaded = true
+                        maybeCompleteInitialLoad()
+                    } else {
                         loadSounds()
                     }
                     firstEmission = false
@@ -484,6 +522,8 @@ class SoundsViewModel(
                 @Suppress("TooGenericExceptionCaught") e: Throwable,
             ) {
                 Tracker.track(RuntimeException("SoundsViewModel collections observation failed", e))
+                // Fail-open: never hold the empty-state gate shut forever on a dead collector.
+                mutableInitialLoadComplete.value = true
             }
         }
         // React to the Vault unlock/lock session flag. Search results are the only consumer whose
@@ -1450,7 +1490,7 @@ class SoundsViewModel(
     }
 
     private suspend fun loadSounds() {
-        try {
+        loadSoundsMutex.withLock {
             val allSounds = repo.sounds.first().sortedWith(SOUND_ORDER)
             val cachedDurations = repo.durations.first()
             // Read once per loadSounds — pure function over a snapshotted value, easier to test. The
@@ -1513,9 +1553,6 @@ class SoundsViewModel(
                     tracker.log(AnalyticsEvent.MilestoneAudios(threshold))
                 }
             }
-        } finally {
-            // Always flag completion so test waits do not hang on DataStore failures.
-            mutableInitialLoadComplete.value = true
         }
     }
 

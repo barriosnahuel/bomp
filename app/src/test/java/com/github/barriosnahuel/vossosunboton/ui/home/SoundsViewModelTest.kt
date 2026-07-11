@@ -30,12 +30,16 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assume.assumeTrue
@@ -82,25 +86,42 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     /**
      * Release/acquire contract behind the cold-start empty-state gate: the flag must flip only
      * AFTER `loadSounds` projected `_sounds`, so UI reading flag→lists (LandingScreen/VaultScreen
-     * heads) can never pair a `true` flag with a stale empty list. Guards against a refactor
-     * moving the flag flip before the projection.
+     * heads) can never pair a `true` flag with a stale empty list. The welcome store is gated so
+     * the subscription provably starts BEFORE the init load runs, and `withTimeout` (not
+     * `withTimeoutOrNull`) makes a never-opening gate fail loudly instead of passing vacuously.
      */
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun `isInitialLoadComplete flips only after sounds are projected`() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking { SoundsRepository(context).save(testSound("preloaded", file = "preloaded.mp3")) }
+        // Holds the init coroutine parked before loadSounds until the test has subscribed.
+        val initGate = CompletableDeferred<Unit>()
+        val gatedWelcomeStore =
+            mockk<WelcomeStickerStore>(relaxed = true) {
+                coEvery { migrateToPersistentIfNeeded() } coAnswers { initGate.await() }
+            }
         val viewModel =
             SoundsViewModel(
                 context,
                 ioDispatcher = UnconfinedTestDispatcher(),
+                welcomeStore = gatedWelcomeStore,
                 searchDebounceMs = 0L,
             )
         createdViewModels += viewModel
 
-        runBlocking { withTimeoutOrNull(5_000L) { viewModel.isInitialLoadComplete.first { it } } }
+        val soundNamesWhenFlagFlipped =
+            runBlocking {
+                val awaiter =
+                    async(start = CoroutineStart.UNDISPATCHED) {
+                        withTimeout(5_000L) { viewModel.isInitialLoadComplete.first { it } }
+                        viewModel.sounds.value.map { it.name }
+                    }
+                initGate.complete(Unit)
+                awaiter.await()
+            }
 
-        assertThat(viewModel.sounds.value.map { it.name }).contains("preloaded")
+        assertThat(soundNamesWhenFlagFlipped).contains("preloaded")
     }
 
     @Test

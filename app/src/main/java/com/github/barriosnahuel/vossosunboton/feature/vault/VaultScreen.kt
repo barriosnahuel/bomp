@@ -310,10 +310,11 @@ private fun VaultBody(
     val systemCollectionLabel = stringResource(R.string.app_vault_baul_name)
     val activeName =
         activeCollection?.let { if (it.isSystem) systemCollectionLabel else it.name }.orEmpty()
-    // Gated on the initial load (read above, before vaultAudios) so a cold start on the Vault tab
-    // never flashes the ZRP while the first loadSounds is still hydrating vaultAudios.
+    // Both empty states gate on the initial load (read above, before vaultAudios) so a cold start
+    // on the Vault tab never flashes the ZRP — nor the filtered "no results" for a persisted
+    // chip — while the first loadSounds + collections snapshot are still hydrating vaultAudios.
     val showZrp = vaultAudios.isEmpty() && activeFilter == null && initialLoadComplete
-    val showFilterEmpty = vaultAudios.isEmpty() && activeFilter != null
+    val showFilterEmpty = vaultAudios.isEmpty() && activeFilter != null && initialLoadComplete
     // Header rendered alongside the chip row whenever the body shows real audios. ZRP and
     // filtered-empty states both hide it — header on top of an empty body is just noise.
     val showHeader = !showZrp && !showFilterEmpty

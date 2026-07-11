@@ -1108,9 +1108,11 @@ private fun MySoundsBody(
         if (pendingDraft != null) draftTracker.log(AnalyticsEvent.RecordingDraftBannerShown)
     }
     val isOnMySounds = selectedTab == AppTab.MY_SOUNDS
-    val showFilterEmptyState = isOnMySounds && activeFilterId != null && sounds.isEmpty() && activeCollection != null
-    // Gated on the initial load: on a cold start `sounds` is empty until the first loadSounds
-    // lands, and rendering the inspirational empty state for that window reads as a data flash.
+    // Both empty states gate on the initial load: on a cold start `sounds` is empty until the
+    // first loadSounds + collections snapshot land, and rendering either empty state for that
+    // window reads as a data flash (the filter variant hits users with a persisted chip).
+    val showFilterEmptyState =
+        isOnMySounds && activeFilterId != null && sounds.isEmpty() && activeCollection != null && initialLoadComplete
     val showWelcomeEmptyState = sounds.isEmpty() && isOnMySounds && !showFilterEmptyState && initialLoadComplete
     // Fresh install lands here, not on the ZRP: the welcome audio keeps the list non-empty. Surface a
     // "see how it works" footer under the lone welcome so a new user can reach the tour without first
