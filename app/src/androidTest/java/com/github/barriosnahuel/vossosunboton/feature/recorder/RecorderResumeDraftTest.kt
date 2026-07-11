@@ -7,11 +7,14 @@ package com.github.barriosnahuel.vossosunboton.feature.recorder
 
 import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.rule.GrantPermissionRule
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
+import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -20,10 +23,11 @@ import org.junit.Test
 
 /**
  * Instrumented integration coverage for ADR 0019 § Draft recovery: a persisted draft (its temp clip +
- * the [DataStoreRecorderDraftStore] metadata) reopens [RecordingActivity] straight into Review. This is
- * the launcher-re-entry / process-death path — the bug where a captured-but-unsaved clip was silently
- * lost when the app was re-opened from the launcher instead of Recents. Real DataStore + FileProvider +
- * the Activity run on the emulator; only the mic (irrelevant here, no recording happens) is absent.
+ * the [DataStoreRecorderDraftStore] metadata) reopens the recorder straight into Review. This is the
+ * launcher-re-entry / process-death path — the bug where a captured-but-unsaved clip was silently lost
+ * when the app was re-opened from the launcher instead of Recents. The recorder is a destination now,
+ * so the resume runs through the real entry point: the Landing draft banner. Real DataStore +
+ * FileProvider run on the emulator; only the mic (irrelevant here, no recording happens) is absent.
  */
 internal class RecorderResumeDraftTest : AbstractUiTest() {
     @get:Rule
@@ -39,6 +43,9 @@ internal class RecorderResumeDraftTest : AbstractUiTest() {
 
     @Test
     fun resumingADraftReopensTheRecorderInReview() {
+        // One custom sound so My Sounds renders its normal list (not the first-run welcome surface),
+        // which is what the draft banner sits above.
+        TestData.seedCustomSounds(context, count = 1)
         val clip = RecorderTempFiles.newTempFile(context)
         context.resources.openRawResource(R.raw.app_branding_audio).use { input ->
             clip.outputStream().use { output -> input.copyTo(output) }
@@ -48,7 +55,9 @@ internal class RecorderResumeDraftTest : AbstractUiTest() {
             draftStore.draft.first { it != null }
         }
 
-        ActivityScenario.launch<RecordingActivity>(RecordingActivity.createIntent(context, resumeDraft = true)).use {
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithText(string(R.string.app_recorder_draft_continue)).performClick()
+
             // Review affordances present → the persisted clip was restored, not lost.
             composeRule.awaitNodeWithText(string(R.string.app_recorder_use)).assertIsDisplayed()
             composeRule.awaitNodeWithText(string(R.string.app_recorder_rerecord)).assertIsDisplayed()

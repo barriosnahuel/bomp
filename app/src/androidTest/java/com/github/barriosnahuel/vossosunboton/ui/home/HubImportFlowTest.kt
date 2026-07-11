@@ -8,20 +8,19 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.intent.Intents.intended
 import androidx.test.espresso.intent.Intents.intending
-import androidx.test.espresso.intent.matcher.ComponentNameMatchers.hasClassName
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
-import androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
+import com.github.barriosnahuel.vossosunboton.awaitNode
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import org.junit.Before
@@ -29,9 +28,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The + FAB → import Hub → system audio picker → AddButtonActivity chain (PR2). Each tappable thing
- * added in this PR has a live destination; the picker and the onward launch are stubbed via
- * Espresso-Intents so the suite never opens the real system picker or the heavy Create screen.
+ * The + FAB → import Hub → system audio picker → naming chain. Each tappable thing has a live
+ * destination; only the SAF picker is stubbed via Espresso-Intents (it is still a real external
+ * intent), while the naming screen it feeds is now a destination inside Landing.
  */
 @RunWith(AndroidJUnit4::class)
 internal class HubImportFlowTest : AbstractUiTest() {
@@ -72,20 +71,23 @@ internal class HubImportFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun pickingAnAudioLaunchesAddButtonActivity() {
-        // Picker returns a content URI → the Hub forwards it to AddButtonActivity (Create). Stub both
-        // hops so neither the system picker nor the Create screen actually open.
+    fun pickingAnAudioOpensTheNamingScreen() {
+        // Picker returns a real content URI → the Hub hands it to the naming destination, in-place: the
+        // Create flow no longer hops to another Activity, so there is no second intent to stub.
         intending(hasAction(Intent.ACTION_OPEN_DOCUMENT))
-            .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, Intent().setData(PICKED_AUDIO)))
-        intending(hasComponent(hasClassName(ADD_BUTTON_ACTIVITY)))
-            .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
+            .respondWith(
+                Instrumentation.ActivityResult(
+                    Activity.RESULT_OK,
+                    Intent().setData(TestData.seedPreviewAudio(context)),
+                ),
+            )
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(fabLabel()).performClick()
             composeRule.awaitNodeWithText(importLabel()).performClick()
-            composeRule.waitForIdle()
 
-            intended(hasComponent(hasClassName(ADD_BUTTON_ACTIVITY)))
+            composeRule.awaitNodeWithText(createTitle()).assertIsDisplayed()
+            composeRule.awaitNode(hasSetTextAction()).assertIsDisplayed()
         }
     }
 
@@ -119,9 +121,5 @@ internal class HubImportFlowTest : AbstractUiTest() {
 
     private fun bringGuideCta() = context.getString(R.string.app_hub_bring_guide_cta)
 
-    companion object {
-        private val PICKED_AUDIO: Uri = Uri.parse("content://test/picked-audio.mp3")
-        private const val ADD_BUTTON_ACTIVITY =
-            "com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity"
-    }
+    private fun createTitle() = context.getString(R.string.app_addbutton_activity_title)
 }

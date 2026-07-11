@@ -5,16 +5,17 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
-import android.content.Intent
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
-import androidx.lifecycle.Lifecycle
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
@@ -26,12 +27,13 @@ import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
-import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Instrumented coverage for [AddButtonActivity] in Edit mode (case 1.6).
+ * Instrumented coverage for the naming screen in Edit mode (case 1.6). Edit is a destination inside
+ * Landing's graph now, reached by long-pressing a row and picking Rename — there is no Activity to
+ * launch with an edit intent, and a save pops back to the list instead of finishing a task.
  */
 @RunWith(AndroidJUnit4::class)
 internal class AddButtonEditFlowTest : AbstractUiTest() {
@@ -39,16 +41,16 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     fun editModeRendersPreviewCardAndExistingName() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
-        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use {
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openEditFor(sound)
+
             // Both the OutlinedTextField and the AudioPreview header render the sound name,
             // so a plain hasText() matcher returns 2 nodes. Scope to the editable input.
             composeRule.awaitNode(hasSetTextAction()).assertIsDisplayed()
             // AudioPreview gates its Card render on `isReady`, which is flipped from a
             // LaunchedEffect after `withContext(Dispatchers.IO) { player.prepare() }` finishes —
             // an IO round-trip that `waitForIdle()` does not await.
-            composeRule
-                .awaitNodeWithContentDescription(context.getString(R.string.app_addbutton_preview_audio))
-                .assertHasClickAction()
+            composeRule.awaitNodeWithContentDescription(string(R.string.app_addbutton_preview_audio)).assertHasClickAction()
         }
     }
 
@@ -56,35 +58,39 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     fun saveWithBlankNameShowsRequiredError() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
-        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use {
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openEditFor(sound)
+
             composeRule.awaitNode(hasSetTextAction()).performTextClearance()
-            composeRule.onNodeWithText(context.getString(R.string.app_addbutton_save_changes)).performClick()
-            composeRule
-                .awaitNodeWithText(context.getString(R.string.app_addbutton_name_is_required_error))
-                .assertIsDisplayed()
+            composeRule.onNodeWithText(string(R.string.app_addbutton_save_changes)).performClick()
+
+            composeRule.awaitNodeWithText(string(R.string.app_addbutton_name_is_required_error)).assertIsDisplayed()
         }
     }
 
     @Test
-    fun saveWithValidNameShowsConfirmationAndFinishes() {
+    fun saveWithValidNameShowsConfirmationAndReturnsToTheList() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
         val newName = "renamed_custom"
 
-        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use { scenario ->
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openEditFor(sound)
+
             composeRule.awaitNode(hasSetTextAction()).performTextClearance()
             nameField().performTextInput(newName)
-            composeRule.onNodeWithText(context.getString(R.string.app_addbutton_save_changes)).performClick()
+            composeRule.onNodeWithText(string(R.string.app_addbutton_save_changes)).performClick()
             // Confirmation lives inside the success overlay (no snackbar). Its semantics carry the
             // localised announcement with the new name interpolated.
             composeRule
                 .awaitNodeWithContentDescription(context.getString(R.string.app_feedback_button_renamed, newName))
                 .assertIsDisplayed()
-            // Overlay finishes the entry+hold+exit window and then the Activity must finish so back
-            // stack returns to the caller.
-            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
-                scenario.state == Lifecycle.State.DESTROYED
+
+            // The overlay's entry+hold+exit window ends by popping the creation flow: the user lands back
+            // on the list with the audio renamed, instead of an Activity finishing itself.
+            composeRule.waitUntil(timeoutMillis = SAVE_SETTLE_MS) {
+                composeRule.onAllNodesWithText(editTitle()).fetchSemanticsNodes().isEmpty()
             }
-            assertThat(scenario.state).isEqualTo(Lifecycle.State.DESTROYED)
+            composeRule.awaitNodeWithText(newName).assertIsDisplayed()
         }
     }
 
@@ -93,7 +99,9 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
         val typed = "mid_edit_typed"
 
-        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use { scenario ->
+        ActivityScenario.launch(LandingActivity::class.java).use { scenario ->
+            openEditFor(sound)
+
             // Replace the existing name with a half-typed value, then rotate WITHOUT saving. The
             // OutlinedTextField is the screen's primary action; losing the user's draft on rotation
             // is a worse UX bug than the (already covered) Success overlay disappearing.
@@ -102,6 +110,8 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
 
             scenario.recreate()
 
+            // The destination itself must come back from the saved back stack, not just its text.
+            composeRule.awaitNodeWithText(editTitle()).assertIsDisplayed()
             composeRule.awaitNode(hasSetTextAction()).assertTextContains(typed)
         }
     }
@@ -111,10 +121,12 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
         val newName = "rotated_rename"
 
-        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use { scenario ->
+        ActivityScenario.launch(LandingActivity::class.java).use { scenario ->
+            openEditFor(sound)
+
             composeRule.awaitNode(hasSetTextAction()).performTextClearance()
             nameField().performTextInput(newName)
-            composeRule.onNodeWithText(context.getString(R.string.app_addbutton_save_changes)).performClick()
+            composeRule.onNodeWithText(string(R.string.app_addbutton_save_changes)).performClick()
             // Wait for the overlay to render BEFORE recreating, so we exercise restoration of the
             // Success state — not a race between save() and the recreate boundary.
             composeRule
@@ -133,14 +145,33 @@ internal class AddButtonEditFlowTest : AbstractUiTest() {
     fun editScreenExposesA11yContentDescriptions() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
 
-        ActivityScenario.launch<AddButtonActivity>(editIntent(sound)).use {
-            composeRule
-                .awaitNodeWithContentDescription(context.getString(R.string.app_addbutton_preview_audio))
-                .assertHasClickAction()
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            openEditFor(sound)
+
+            composeRule.awaitNodeWithContentDescription(string(R.string.app_addbutton_preview_audio)).assertHasClickAction()
         }
     }
 
-    private fun editIntent(sound: Sound): Intent = LandingActivity.editIntent(context, sound)
+    /**
+     * Long-press the row → Rename, the only way into Edit now. Anchors on the destination's title so
+     * every test starts from a settled naming screen: the row and the preview header both carry the
+     * audio's name, so the name alone is not a unique anchor.
+     */
+    private fun openEditFor(sound: Sound) {
+        composeRule.awaitNodeWithText(sound.name).performTouchInput { longClick() }
+        composeRule.awaitNodeWithText(string(R.string.app_edit)).performClick()
+        composeRule.awaitNodeWithText(editTitle()).assertIsDisplayed()
+    }
 
     private fun nameField() = composeRule.onNode(hasSetTextAction())
+
+    private fun editTitle() = string(R.string.app_addbutton_activity_title_edit)
+
+    private fun string(resId: Int): String = context.getString(resId)
+
+    private companion object {
+        // The success overlay holds on screen before the flow pops; give it more room than the
+        // default node-wait so a slow emulator frame budget doesn't read as a regression.
+        const val SAVE_SETTLE_MS = 2 * WAIT_TIMEOUT_MS
+    }
 }

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Long listens now show up in your system media controls — playing an audio from the Vault's listen screen (or reviewing a recording) surfaces a media notification with lock-screen controls, and headset/media keys pause and resume it; quick soundboard taps stay notification-free
 
 ### Changed
+- Recording, importing and editing a Bomp now happen inside the app's own screen flow: the back gesture is continuous and step-by-step (from naming you go back to your recording, not out of the whole flow), and saving returns you to the tab you started from. Sharing an audio into Bomp from another app still takes you straight back to that app
 - The "⋮" menu's invite action is now labelled "Share app" ("Compartí la app" in Spanish) instead of "Share Bomp", so it reads as sharing the app rather than a single audio
 - Opening a Vault audio's listen screen now always starts it from the beginning — previously a reopened audio silently resumed from where it was left mid-clip
 
@@ -28,6 +29,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 #### Changed
 - In-app navigation runs on Jetpack Navigation 3 (`NavBackStack` per tab + typed destinations, ADR 0024): predictive back between screens is now automatic, tab history follows the platform's multi-back-stack semantics, and the manual per-overlay back wiring is gone
+- Creation flows are graph destinations (ADR 0024 D4): `RecordingActivity` is gone (now the `RecorderHost` destination) and `AddButtonActivity` is reduced to the share-sheet trampoline, keeping the task-level `excludeFromRecents` + return-to-source contract that a destination cannot honor. Screen-lifetime ViewModels scope per `NavEntry` (`lifecycle-viewmodel-navigation3`), and a grep invariant now fails the build if internal navigation reintroduces `startActivity` on one of our own Activities
 - Release tags, GitHub release titles and CHANGELOG headers move from day-precision CalVer (`vYYYY.MM.DD`) to month + sequential counter (`vYYYY.MM.N`), so the month's milestone can be created up front and assigned to every PR at creation (ADR 0023 amending ADR 0021)
 - Waveform envelope extraction demuxes via Media3's `MediaExtractorCompat` instead of the AEP-prohibited `MediaExtractor` (`MediaCodec` decode unchanged); all sources normalize to per-decode temp files to route around a Media3 1.10.1 truncation bug with fd/content/resource sources — envelope verified bit-comparable (1 of 48 bars off by 0.014)
 

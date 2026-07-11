@@ -11,7 +11,7 @@ import androidx.annotation.VisibleForTesting
 /**
  * Substitution seam for [RecorderEngine], mirroring `AddButtonFeatureProvider`: production resolves a
  * real [MediaRecorder][android.media.MediaRecorder]-backed engine; tests swap a fake via [setForTest]
- * so a `RecordingActivity` smoke test (or VM test through the factory) never touches the real mic.
+ * so a recorder-destination test (or a VM test through the factory) never touches the real mic.
  */
 object RecorderEngineProvider {
     @Volatile

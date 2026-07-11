@@ -6,13 +6,14 @@
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -21,7 +22,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.core.net.toUri
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -34,7 +34,7 @@ import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.SoundSource
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.testSound
-import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
+import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
@@ -63,7 +63,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() {
     @get:Rule
-    val composeTestRule = createEmptyComposeRule()
+    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
@@ -77,6 +77,10 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
     private lateinit var fake: FakeAnalyticsTracker
     private lateinit var feature: FakeAddButtonFeature
     private lateinit var playbackStateFlow: MutableStateFlow<PlaybackState?>
+
+    // Gates the screen in/out of the composition so the disposal contract can be exercised without
+    // tearing down the host: in the graph the naming destination is popped, the Activity survives.
+    private val screenMounted = mutableStateOf(true)
 
     @Before
     fun setUp() {
@@ -103,6 +107,7 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
 
     @After
     fun tearDown() {
+        disposeAddButtonScreen(composeTestRule, screenMounted)
         AnalyticsTrackerProvider.setForTest(null)
         AddButtonFeatureProvider.setForTest(null)
         runBlocking { SoundsRepository(context).clearForTest() }
@@ -113,59 +118,47 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
     fun `hint appears in Create mode when the typed name matches an existing custom Bomp`() {
         seedSound(EXISTING_NAME, "existing.mp3")
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
 
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
-            composeTestRule.onNodeWithText(hintText).assertIsDisplayed()
-            fake.assertEmitted("duplicate_name_hint_shown")
-        }
+        awaitHint()
+        composeTestRule.onNodeWithText(hintText).assertIsDisplayed()
+        fake.assertEmitted("duplicate_name_hint_shown")
     }
 
     @Test
     fun `hint matches case-insensitively and trims whitespace`() {
         seedSound("Bell", "bell.mp3")
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput("  BELL  ")
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput("  BELL  ")
 
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
-            composeTestRule.onNodeWithText(hintText).assertIsDisplayed()
-        }
+        awaitHint()
+        composeTestRule.onNodeWithText(hintText).assertIsDisplayed()
     }
 
     @Test
     fun `hint stays hidden in Create mode when the typed name has no match`() {
         seedSound(EXISTING_NAME, "existing.mp3")
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput("brand new")
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput("brand new")
+        composeTestRule.waitForIdle()
 
-            composeTestRule.waitForIdle()
-            composeTestRule.onAllNodesWithText(hintText).assertCountEquals(0)
-            fake.assertNotEmitted("duplicate_name_hint_shown")
-        }
+        composeTestRule.onAllNodesWithText(hintText).assertCountEquals(0)
+        fake.assertNotEmitted("duplicate_name_hint_shown")
     }
 
     @Test
     fun `hint stays hidden in Edit mode when the name still matches only the sound being edited`() {
         val self = seedSound(EXISTING_NAME, "existing.mp3")
 
-        ActivityScenario.launch<AddButtonActivity>(editIntent(self)).use {
-            composeTestRule.waitForIdle()
+        setScreen(AddButtonMode.Edit(self))
 
-            // Field is pre-populated with the sound's own name; the only match is the sound
-            // itself, which is excluded by id (ADR 0008) — the hint must not fire.
-            composeTestRule.onAllNodesWithText(hintText).assertCountEquals(0)
-            fake.assertNotEmitted("duplicate_name_hint_shown")
-        }
+        // Field is pre-populated with the sound's own name; the only match is the sound
+        // itself, which is excluded by id (ADR 0008) — the hint must not fire.
+        composeTestRule.onAllNodesWithText(hintText).assertCountEquals(0)
+        fake.assertNotEmitted("duplicate_name_hint_shown")
     }
 
     @Test
@@ -173,35 +166,27 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         val self = seedSound(EXISTING_NAME, "existing.mp3")
         seedSound(OTHER_NAME, "other.mp3")
 
-        ActivityScenario.launch<AddButtonActivity>(editIntent(self)).use {
-            composeTestRule.waitForIdle()
-            // Replace the pre-populated name with the other existing sound's name.
-            composeTestRule.onNode(hasSetTextAction()).performTextReplacement(OTHER_NAME)
+        setScreen(AddButtonMode.Edit(self))
+        // Replace the pre-populated name with the other existing sound's name.
+        composeTestRule.onNode(hasSetTextAction()).performTextReplacement(OTHER_NAME)
 
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
-            composeTestRule.onNodeWithText(hintText).assertIsDisplayed()
-        }
+        awaitHint()
+        composeTestRule.onNodeWithText(hintText).assertIsDisplayed()
     }
 
     @Test
     fun `save proceeds while the duplicate-name hint is showing (non-blocking)`() {
         seedSound(EXISTING_NAME, "existing.mp3")
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+        awaitHint()
 
-            // The save action must fire even with the hint visible — the hint is purely informational.
-            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
-            composeTestRule.waitForIdle()
+        // The save action must fire even with the hint visible — the hint is purely informational.
+        composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+        composeTestRule.waitForIdle()
 
-            assertThat(feature.saveNewCalls).isEqualTo(1)
-        }
+        assertThat(feature.saveNewCalls).isEqualTo(1)
     }
 
     @Test
@@ -213,20 +198,16 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         // production code legitimately accesses it.
         val ctrl = PlayerControllerFactory.instance
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+        awaitHint()
 
-            composeTestRule.onNodeWithContentDescription(playLabel).performClick()
-            composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription(playLabel).performClick()
+        composeTestRule.waitForIdle()
 
-            fake.assertEmitted("duplicate_name_hint_play")
-            verify { ctrl.startPlayingUri(any(), expected) }
-            verify(exactly = 0) { ctrl.startPlayingSound(any(), any()) }
-        }
+        fake.assertEmitted("duplicate_name_hint_play")
+        verify { ctrl.startPlayingUri(any(), expected) }
+        verify(exactly = 0) { ctrl.startPlayingSound(any(), any()) }
     }
 
     @Test
@@ -235,29 +216,25 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         val expected = expectedUri(match)
         val ctrl = PlayerControllerFactory.instance
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+        awaitHint()
 
-            // Simulate the controller transitioning into "playing this match" — the hint should
-            // morph to the stop affordance and the next tap should hit `stopPlayingSound`.
-            playbackStateFlow.value = PlaybackState(uri = expected, positionMs = 0, durationMs = 1_000, isPlaying = true)
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithContentDescription(stopLabel).fetchSemanticsNodes().isNotEmpty()
-            }
-
-            composeTestRule.onNodeWithContentDescription(stopLabel).performClick()
-            composeTestRule.waitForIdle()
-
-            verify { ctrl.stopPlayingSound() }
-            // No second start: a re-tap while playing must stop, never re-issue play.
-            verify(exactly = 0) { ctrl.startPlayingUri(any(), any()) }
-            // Stopping is not analytics-tracked — only the user-initiated play tap is.
-            fake.assertNotEmitted("duplicate_name_hint_play")
+        // Simulate the controller transitioning into "playing this match" — the hint should
+        // morph to the stop affordance and the next tap should hit `stopPlayingSound`.
+        playbackStateFlow.value = PlaybackState(uri = expected, positionMs = 0, durationMs = 1_000, isPlaying = true)
+        composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
+            composeTestRule.onAllNodesWithContentDescription(stopLabel).fetchSemanticsNodes().isNotEmpty()
         }
+
+        composeTestRule.onNodeWithContentDescription(stopLabel).performClick()
+        composeTestRule.waitForIdle()
+
+        verify { ctrl.stopPlayingSound() }
+        // No second start: a re-tap while playing must stop, never re-issue play.
+        verify(exactly = 0) { ctrl.startPlayingUri(any(), any()) }
+        // Stopping is not analytics-tracked — only the user-initiated play tap is.
+        fake.assertNotEmitted("duplicate_name_hint_play")
     }
 
     @Test
@@ -266,18 +243,14 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         val unrelated = Uri.parse("content://test/other-audio.mp3")
         playbackStateFlow.value = PlaybackState(uri = unrelated, positionMs = 0, durationMs = 1_000, isPlaying = true)
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+        awaitHint()
 
-            // Hint sees a non-matching playbackState → its toggle is "play" (not stop), regardless
-            // of whether something else is playing. This is the AudioPreview-coexistence case.
-            composeTestRule.onNodeWithContentDescription(playLabel).assertIsDisplayed()
-            composeTestRule.onAllNodesWithContentDescription(stopLabel).assertCountEquals(0)
-        }
+        // Hint sees a non-matching playbackState → its toggle is "play" (not stop), regardless
+        // of whether something else is playing. This is the AudioPreview-coexistence case.
+        composeTestRule.onNodeWithContentDescription(playLabel).assertIsDisplayed()
+        composeTestRule.onAllNodesWithContentDescription(stopLabel).assertCountEquals(0)
     }
 
     @Test
@@ -288,22 +261,18 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         playbackStateFlow.value = PlaybackState(uri = unrelated, positionMs = 0, durationMs = 1_000, isPlaying = true)
         val ctrl = PlayerControllerFactory.instance
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+        awaitHint()
 
-            composeTestRule.onNodeWithContentDescription(playLabel).performClick()
-            composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription(playLabel).performClick()
+        composeTestRule.waitForIdle()
 
-            // The hint calls `startPlayingUri` even though something else is already playing — the
-            // controller's `startPlayingUri` contract handles preemption (PlayerController.kt:53-63).
-            // This test pins the expectation that we *do* call the preemption-capable API.
-            verify { ctrl.startPlayingUri(any(), expected) }
-            verify(exactly = 0) { ctrl.stopPlayingSound() }
-        }
+        // The hint calls `startPlayingUri` even though something else is already playing — the
+        // controller's `startPlayingUri` contract handles preemption (PlayerController.kt:53-63).
+        // This test pins the expectation that we *do* call the preemption-capable API.
+        verify { ctrl.startPlayingUri(any(), expected) }
+        verify(exactly = 0) { ctrl.stopPlayingSound() }
     }
 
     @Test
@@ -311,17 +280,16 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         val match = seedSound(EXISTING_NAME, "existing.mp3")
         val expected = expectedUri(match)
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
-            playbackStateFlow.value = PlaybackState(uri = expected, positionMs = 0, durationMs = 1_000, isPlaying = true)
-            composeTestRule.waitForIdle()
-        }
-        // The Activity is destroyed on `use` exit → DisposableEffect.onDispose runs and, because
-        // the controller's playbackState still owns our match's uri, fires `stopPlayingSound`.
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+        awaitHint()
+        playbackStateFlow.value = PlaybackState(uri = expected, positionMs = 0, durationMs = 1_000, isPlaying = true)
+        composeTestRule.waitForIdle()
+
+        unmountScreen()
+
+        // DisposableEffect.onDispose ran and, because the controller's playbackState still owns our
+        // match's uri, it fired `stopPlayingSound`.
         verify { PlayerControllerFactory.instance.stopPlayingSound() }
     }
 
@@ -332,13 +300,12 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
         playbackStateFlow.value = PlaybackState(uri = unrelated, positionMs = 0, durationMs = 1_000, isPlaying = true)
         val ctrl = PlayerControllerFactory.instance
 
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use {
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
-            composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
-                composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
-            }
-        }
+        setScreen(AddButtonMode.Create(SAMPLE_URI))
+        composeTestRule.onNode(hasSetTextAction()).performTextInput(EXISTING_NAME)
+        awaitHint()
+
+        unmountScreen()
+
         // Hint disposal sees `playbackState.uri != ours` and must not preempt the unrelated playback.
         verify(exactly = 0) { ctrl.stopPlayingSound() }
     }
@@ -354,17 +321,31 @@ internal class AddButtonScreenDuplicateNameHintTest : AbstractRobolectricTest() 
 
     private fun expectedUri(sound: Sound): Uri = getFile(context, sound.file!!).toUri()
 
-    private fun createIntent(): Intent =
-        Intent(context, AddButtonActivity::class.java).apply {
-            action = Intent.ACTION_SEND
-            type = "audio/*"
-            putExtra(Intent.EXTRA_STREAM, SAMPLE_URI)
+    private fun setScreen(mode: AddButtonMode) {
+        val host = composeTestRule.activity
+        composeTestRule.setContent {
+            AppTheme {
+                if (screenMounted.value) {
+                    AddButtonScreen(
+                        context = host,
+                        mode = mode,
+                        source = AddSoundSource.SHARE,
+                        onSaved = {},
+                        onNavigateUp = {},
+                    )
+                }
+            }
         }
+        composeTestRule.waitForIdle()
+    }
 
-    private fun editIntent(sound: Sound): Intent =
-        Intent(context, AddButtonActivity::class.java).apply {
-            putExtra(LandingActivity.EXTRA_EDIT_SOUND, sound)
+    private fun unmountScreen() = disposeAddButtonScreen(composeTestRule, screenMounted)
+
+    private fun awaitHint() {
+        composeTestRule.waitUntil(WAIT_TIMEOUT_MS) {
+            composeTestRule.onAllNodesWithText(hintText).fetchSemanticsNodes().isNotEmpty()
         }
+    }
 
     private class FakeAddButtonFeature : AddButtonFeature {
         var saveNewFeedback: Int = R.string.app_addbutton_feedback_saved_ok

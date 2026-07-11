@@ -76,6 +76,12 @@
 
         </activity>
 
+        <!-- Share-sheet trampoline (ADR 0024 D4). Exported ONLY for the external ACTION_SEND audio/*
+             intent below; every internal creation/edit flow is a destination in Landing's graph. It
+             stays an Activity because excludeFromRecents (no ghost entry in Recents) and "back/save
+             returns to the app the audio was shared from" are task-level guarantees a destination
+             inside Landing's task cannot honor. Inbound URIs are validated by AddButtonFeature before
+             the stream is opened — CLAUDE.md § Security boundaries. -->
         <activity
             android:name=".feature.addbutton.AddButtonActivity"
             android:exported="true"
@@ -112,17 +118,6 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
-
-        <!-- In-app recorder (ADR 0019). Not exported: launched only by the import Hub via an explicit
-             intent; it hands the captured clip to AddButtonActivity for naming + save. -->
-        <activity
-            android:name=".feature.recorder.RecordingActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:launchMode="singleTask"
-            android:parentActivityName=".ui.home.LandingActivity"
-            tools:ignore="Instantiatable" />
 
     </application>
 

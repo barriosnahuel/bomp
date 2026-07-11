@@ -4,6 +4,7 @@
  * See LICENSE in the project root for full license information.
  */
 package com.github.barriosnahuel.vossosunboton.feature.vault
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,7 +57,6 @@ import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessio
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsList
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
@@ -81,6 +81,7 @@ fun VaultScreen(
     listState: LazyListState,
     onActiveFilterEditClick: (String) -> Unit,
     onImmersivePlay: (Sound) -> Unit,
+    onEditSound: (Sound) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -147,6 +148,7 @@ fun VaultScreen(
                     listState = listState,
                     onActiveFilterEditClick = onActiveFilterEditClick,
                     onImmersivePlay = onImmersivePlay,
+                    onEditSound = onEditSound,
                 )
         }
     }
@@ -293,6 +295,7 @@ private fun VaultBody(
     listState: LazyListState,
     onActiveFilterEditClick: (String) -> Unit,
     onImmersivePlay: (Sound) -> Unit,
+    onEditSound: (Sound) -> Unit,
 ) {
     // Read BEFORE `vaultAudios`: loadSounds() writes the vault list before flipping the flag, so
     // the mirrored flag→list read order guarantees a `true` flag never pairs with a stale empty
@@ -359,9 +362,7 @@ private fun VaultBody(
                     onShareClick = { sound -> viewModel.share(sound) },
                     onDelete = { sound -> viewModel.deleteSound(sound) },
                     onPinClick = { sound -> viewModel.togglePin(sound) },
-                    onEdit = { sound ->
-                        context.startActivity(LandingActivity.editIntent(context, sound))
-                    },
+                    onEdit = onEditSound,
                     onAddToCollection = { sound -> viewModel.requestAssignCollections(sound.id) },
                 )
             }

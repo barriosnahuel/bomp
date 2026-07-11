@@ -6,19 +6,19 @@
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -26,6 +26,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.SoundSource
+import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -39,12 +40,14 @@ import org.robolectric.annotation.Config
 @Config(sdk = [Build.VERSION_CODES.VANILLA_ICE_CREAM])
 internal class AddButtonScreenHapticTest : AbstractRobolectricTest() {
     @get:Rule
-    val composeTestRule = createEmptyComposeRule()
+    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
     private lateinit var fake: FakeAnalyticsTracker
     private lateinit var feature: FakeAddButtonFeature
+
+    private val screenMounted = mutableStateOf(true)
 
     @Before
     fun setUp() {
@@ -56,48 +59,43 @@ internal class AddButtonScreenHapticTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
+        disposeAddButtonScreen(composeTestRule, screenMounted)
         AnalyticsTrackerProvider.setForTest(null)
         AddButtonFeatureProvider.setForTest(null)
     }
 
     @Test
     fun `tapping Save with a blank name triggers reject haptic and keeps the user on the form`() {
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use { scenario ->
-            composeTestRule.waitForIdle()
-            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
-            composeTestRule.waitForIdle()
+        setCreateScreen()
 
-            var lastHaptic = HAPTIC_NEVER_PERFORMED
-            scenario.onActivity { activity ->
-                lastHaptic = activity.window.decorView.findHapticPerformed()
-            }
+        composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+        composeTestRule.waitForIdle()
 
-            assertThat(lastHaptic).isEqualTo(HapticFeedbackConstants.REJECT)
-            assertThat(feature.saveNewCalls).isEqualTo(0)
-            composeTestRule
-                .onNodeWithText(context.getString(R.string.app_addbutton_name_is_required_error))
-                .assertIsDisplayed()
-        }
+        val decorView = composeTestRule.activity.window.decorView
+        val lastHaptic = decorView.findHapticPerformed()
+
+        assertThat(lastHaptic).isEqualTo(HapticFeedbackConstants.REJECT)
+        assertThat(feature.saveNewCalls).isEqualTo(0)
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.app_addbutton_name_is_required_error))
+            .assertIsDisplayed()
     }
 
     @Test
     fun `tapping Save with a valid name does not trigger reject haptic`() {
-        ActivityScenario.launch<AddButtonActivity>(createIntent()).use { scenario ->
-            composeTestRule.waitForIdle()
-            composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
-            composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
-            composeTestRule.waitForIdle()
+        setCreateScreen()
 
-            var lastHaptic = HAPTIC_NEVER_PERFORMED
-            scenario.onActivity { activity ->
-                lastHaptic = activity.window.decorView.findHapticPerformed()
-            }
+        composeTestRule.onNode(hasSetTextAction()).performTextInput(NEW_NAME)
+        composeTestRule.onNodeWithText(context.getString(R.string.app_addbutton_save)).performClick()
+        composeTestRule.waitForIdle()
 
-            // The contract guarded here is "REJECT is reserved for failed validation".
-            // Other haptic constants (CONFIRM from the success overlay, etc.) are out of scope for this test.
-            assertThat(lastHaptic).isNotEqualTo(HapticFeedbackConstants.REJECT)
-            assertThat(feature.saveNewCalls).isEqualTo(1)
-        }
+        val decorView = composeTestRule.activity.window.decorView
+        val lastHaptic = decorView.findHapticPerformed()
+
+        // The contract guarded here is "REJECT is reserved for failed validation".
+        // Other haptic constants (CONFIRM from the success overlay, etc.) are out of scope for this test.
+        assertThat(lastHaptic).isNotEqualTo(HapticFeedbackConstants.REJECT)
+        assertThat(feature.saveNewCalls).isEqualTo(1)
     }
 
     // Walks the view tree depth-first and returns the first non-default haptic constant recorded by any
@@ -117,12 +115,23 @@ internal class AddButtonScreenHapticTest : AbstractRobolectricTest() {
         }
     }
 
-    private fun createIntent(): Intent =
-        Intent(context, AddButtonActivity::class.java).apply {
-            action = Intent.ACTION_SEND
-            type = "audio/*"
-            putExtra(Intent.EXTRA_STREAM, SAMPLE_URI)
+    private fun setCreateScreen() {
+        val host = composeTestRule.activity
+        composeTestRule.setContent {
+            AppTheme {
+                if (screenMounted.value) {
+                    AddButtonScreen(
+                        context = host,
+                        mode = AddButtonMode.Create(SAMPLE_URI),
+                        source = AddSoundSource.SHARE,
+                        onSaved = {},
+                        onNavigateUp = {},
+                    )
+                }
+            }
         }
+        composeTestRule.waitForIdle()
+    }
 
     private class FakeAddButtonFeature : AddButtonFeature {
         var saveNewFeedback: Int = R.string.app_addbutton_feedback_saved_ok

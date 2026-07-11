@@ -35,8 +35,8 @@ data class RecorderDraft(
 
 /**
  * Persists the *pending recording draft* — a clip the user captured but neither saved nor discarded —
- * so it survives backgrounding, a launcher re-entry (which `clearTop`s [RecordingActivity]), and a
- * process death (ADR 0019 § Draft recovery). The clip bytes already live in `cacheDir/recordings/`;
+ * so it survives backgrounding, leaving the recorder destination, and a process death
+ * (ADR 0019 § Draft recovery). The clip bytes already live in `cacheDir/recordings/`;
  * this only records which file is the draft and its duration, so the Landing banner can offer to
  * resume it. Interface + [DataStoreRecorderDraftStore] impl mirrors the `FirstFlagStore` precedent so
  * the ViewModels can take a deterministic fake.

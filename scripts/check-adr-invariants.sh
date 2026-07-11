@@ -326,6 +326,36 @@ The normalized bar floor is single-sourced as WAVEFORM_MIN_BAR. Reuse it instead
 fi
 
 # ============================================================================
+# ADR 0024 — docs/adr/0024-jetpack-navigation-3.md
+# Invariant: internal navigation goes through the Nav3 graph, never startActivity.
+# Name-ban on the app's own Activities as a startActivity/Intent target from within
+# app code: reintroducing one would fork the back stack out of the graph and lose the
+# continuous predictive back the epic bought. Intents to SYSTEM activities (share
+# chooser, app settings, ACTION_VIEW links) are legitimate and unaffected — they never
+# name one of our classes. The one allowed mention is the share-sheet trampoline
+# declaring itself (AddButtonActivity.kt), which the manifest, not the graph, routes.
+# ============================================================================
+# Two idioms, because the retired edit intent used the second one precisely to dodge an import:
+# a direct class reference (Intent(ctx, FooActivity::class.java)) and a stringly-typed component
+# (setClassName(ctx, "…feature.addbutton.AddButtonActivity")). AddButtonActivity naming *itself* is
+# exempt — the trampoline is routed by the manifest, not by the graph.
+NAV_DIRS="app/src/main/java/com/github/barriosnahuel/vossosunboton"
+internal_activity_nav=$(
+    {
+        grep -rnE --include="*.kt" \
+            '(startActivity\(|Intent\()[^)]*\b(LandingActivity|AddButtonActivity)\b' $NAV_DIRS 2>/dev/null || true
+        grep -rnE --include="*.kt" \
+            'setClassName\(|"com\.github\.barriosnahuel\.vossosunboton\.[a-z.]*[A-Z][A-Za-z]*Activity"' \
+            $NAV_DIRS 2>/dev/null || true
+    } | grep -v '/feature/addbutton/AddButtonActivity.kt:' || true
+)
+if [ -n "$internal_activity_nav" ]; then
+    fail "ADR 0024 broken: internal navigation via startActivity/Intent to one of our own Activities:
+$internal_activity_nav
+Creation/edit flows are graph destinations (NameSoundRoute, RecorderRoute) — navigate with LandingNavigator instead of minting an Intent. The share-sheet trampoline is the sole Activity entry point and is routed by the manifest. See docs/adr/0024-jetpack-navigation-3.md § D4."
+fi
+
+# ============================================================================
 if [ "$errors" -gt 0 ]; then
     echo
     echo "$errors ADR invariant(s) violated. See messages above for which ADR(s) to revisit." >&2
