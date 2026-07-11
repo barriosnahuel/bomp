@@ -149,6 +149,19 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
 
    Prioritize funnels with signal; if a funnel has 0 events, summarize it in one line, don't break it down.
 
+   **0-in-window ≠ broken instrumentation (recency check first).** Before attributing a 0 to an
+   instrumentation gap, verify the event's most recent occurrence (a 30–90 day count / last-seen date). If
+   it fired recently *outside* the current window, the instrumentation is healthy and the 0 is **real
+   usage** — report it as such, never as a "possible gap". Only call it an instrumentation gap when the
+   event never appears at all, or stopped appearing right after a release that touched it. (Lesson: a
+   week with `sound_add`=0 in-window but `sound_add` last-seen 3 weeks ago is a quiet week, not a gap.)
+
+   **Funnel coherence (read steps together, not in isolation).** When an upstream step has signal and its
+   downstream step is 0, that is a **drop-off** to surface — not a contradiction and not a gap. Never frame
+   the same behavior as "activity happened" in one place and "no activity / maybe not instrumented" in
+   another. Canonical: `recording_completed` > 0 with `sound_add` (`source=record`) = 0 → users record but
+   don't save; the finding is the abandonment at the save step, not "no creations recorded".
+
 3. **QUALITY:** crash-free, number and top crashes (Crashlytics), ANRs (Play) — ALWAYS broken down by
    version. These are **counts/rates, not medianable** (no "median of a crash count"): keep raw
    crash-free % and counts, but apply the per-device + min-N + single-device-domination guards from the
