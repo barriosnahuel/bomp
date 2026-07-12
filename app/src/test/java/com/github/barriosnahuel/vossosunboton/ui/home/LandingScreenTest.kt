@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
@@ -152,8 +153,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
-        viewModel.selectTab(AppTab.VAULT)
-        composeTestRule.waitForIdle()
+        composeTestRule.selectTab(AppTab.VAULT)
 
         // Vault's job is to listen — it stays FAB-less (design "regla por tab").
         composeTestRule.onNodeWithContentDescription("Add a Bomp").assertDoesNotExist()
@@ -167,11 +167,49 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
         viewModel.injectHasBundledSounds(true)
         composeTestRule.waitForIdle()
-        viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
-        composeTestRule.waitForIdle()
+        composeTestRule.selectTab(AppTab.EXPLORE_SOUNDS)
 
         // Explore is a consumption surface — no create affordance there.
         composeTestRule.onNodeWithContentDescription("Add a Bomp").assertDoesNotExist()
+    }
+
+    @Test
+    fun `tapping a tab tells the ViewModel which list to project`() {
+        // The graph owns the active tab; the ViewModel mirrors it to project the sounds list. Drop
+        // that mirror and nothing else breaks visibly — the bar and the FAB read the graph directly
+        // — while the list silently keeps projecting the tab the user left.
+        val viewModel = givenAViewModel()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        composeTestRule.selectTab(AppTab.VAULT)
+
+        assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.VAULT)
+    }
+
+    @Test
+    fun `a deep link arriving while About is open lands on the tab it names`() {
+        // A link is "take me here", not "stack this under whatever was open": arriving while About
+        // is up must leave the user on the sounds list, not still reading About.
+        val viewModel = givenAViewModel()
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+
+        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithContentDescription(context.getString(R.string.app_overflow_menu))
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.app_about)).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_about_back)).assertIsDisplayed()
+
+        // What LandingActivity.handleDeeplink emits once the allowlist has resolved the URI.
+        viewModel.onDeepLink(AppTab.MY_SOUNDS)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_about_back)).assertDoesNotExist()
+        composeTestRule.assertOnTab(AppTab.MY_SOUNDS)
     }
 
     @Test
@@ -262,15 +300,6 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         // races with the in-flight load and gets overwritten.
         runBlocking { vm.isInitialLoadComplete.first { it } }
         return vm
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun SoundsViewModel.injectHasBundledSounds(value: Boolean) {
-        SoundsViewModel::class.java
-            .getDeclaredField("_hasBundledSounds")
-            .also { it.isAccessible = true }
-            // Safe: _hasBundledSounds is always MutableStateFlow<Boolean> — type parameter erased at runtime
-            .let { (it.get(this) as MutableStateFlow<Boolean>).value = value }
     }
 
     // Drives the global library (allSoundsCache) to a known value. The debug build's loadSounds

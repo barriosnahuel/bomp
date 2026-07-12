@@ -233,7 +233,7 @@ Canonical implementation: `AddButtonFeature.saveNewButtonAsync`. Any future inbo
 
 ### Deep link path allowlist
 
-`push-me://open<path>` routes against a closed allowlist in `LandingActivity.handleDeeplink`. Today: `/home` → `MY_SOUNDS`, `/explore` → `EXPLORE_SOUNDS`. **Unknown paths fall back to `MY_SOUNDS`** (the safe default) — never silently route to Explore or any other tab. New destinations require an explicit branch in the `when`; the `else` stays `MY_SOUNDS`.
+`push-me://open<path>` routes against a closed allowlist in `LandingActivity.handleDeeplink`. Today: `/home` → `MY_SOUNDS`, `/explore` → `EXPLORE_SOUNDS`. **Unknown paths fall back to `MY_SOUNDS`** (the safe default) — never silently route to Explore or any other tab. New destinations require an explicit branch in the `when`; the `else` stays `MY_SOUNDS`. The resolved tab reaches the graph as a one-shot event that resets that tab to its root.
 
 ### Backup hygiene
 
@@ -326,7 +326,7 @@ Hard rules (calque examples, reserved-term list with ✓/❌, read-aloud detail 
 
 ## Store listing asset generation
 
-Store listing PNGs (icon, feature graphic) render from SVG masters under `store-listing/`. Canonical pipeline: `rsvg-convert` (`brew install librsvg`); brand font Inter must be installed system-wide. Tooling tradeoffs, install command, exact export commands, and screenshot capture all live in `CONTRIBUTING.md` § *Store listing*. For copy in screenshots / feature graphic taglines, see § *Copy & localization*.
+Store listing PNGs (icon, feature graphic) render from SVG masters under `store-listing/` via `rsvg-convert`; brand font Inter must be installed system-wide. Pipeline, install and export commands, screenshot capture: CONTRIBUTING.md § *Store listing*. Copy in screenshots / taglines: § *Copy & localization*.
 
 ## Labels and milestone
 

@@ -7,9 +7,7 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -135,7 +133,6 @@ data class PlaybackProgress(
 @Suppress("TooManyFunctions", "LargeClass")
 class SoundsViewModel(
     application: Application,
-    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val searchDebounceMs: Long = 200L,
     private val welcomeStore: WelcomeStickerStore = WelcomeStickerStore(application),
@@ -199,10 +196,12 @@ class SoundsViewModel(
     @Volatile
     private var welcomeHintConsumed = false
 
-    // SavedStateHandle-backed so the selected tab survives process death: the Nav3 back stack
-    // restores itself (rememberNavBackStack) and the VM->graph sync in LandingScreen would
-    // otherwise see the default MY_SOUNDS and snap the restored graph back to Home.
-    val selectedTab: StateFlow<AppTab> = savedStateHandle.getStateFlow(KEY_SELECTED_TAB, AppTab.MY_SOUNDS)
+    // Mirror of the graph's active tab, NOT a second source of truth: the Nav3 back stack is what
+    // says where the user is, and it restores itself across process death (rememberNavBackStack).
+    // The VM only needs the tab to project the sounds list — LandingScreen pushes it in via
+    // [setActiveTab] on every graph change, including the first composition after a restore.
+    private val _selectedTab = MutableStateFlow(AppTab.MY_SOUNDS)
+    val selectedTab: StateFlow<AppTab> = _selectedTab.asStateFlow()
 
     private val _sounds = MutableStateFlow<List<Sound>>(emptyList())
     val sounds: StateFlow<List<Sound>> = _sounds.asStateFlow()
@@ -347,6 +346,12 @@ class SoundsViewModel(
 
     private val _scrollToTopEvent = Channel<Unit>(Channel.BUFFERED)
     val scrollToTopEvent: Flow<Unit> = _scrollToTopEvent.receiveAsFlow()
+
+    // CONFLATED, not BUFFERED: the Activity resolves the deep link in onCreate, before LandingScreen
+    // composes and starts collecting, so the event has to wait — and if a second link arrives first,
+    // only the latest destination is worth honouring.
+    private val _deepLinkEvent = Channel<AppTab>(Channel.CONFLATED)
+    val deepLinkEvent: Flow<AppTab> = _deepLinkEvent.receiveAsFlow()
 
     // One-shot informative snackbar shown the first time the welcome audio plays to completion —
     // "it's yours, delete it whenever". Replaces the old self-destruct-on-completion flow (ADR 0003
@@ -722,16 +727,24 @@ class SoundsViewModel(
         }
     }
 
-    fun selectTab(tab: AppTab) {
-        savedStateHandle[KEY_SELECTED_TAB] = tab
+    /**
+     * Mirrors the graph's active tab into the projection state. Called by `LandingScreen` on every
+     * `topLevelRoute` change — never to *perform* navigation, which belongs to `LandingNavigator`.
+     */
+    fun setActiveTab(tab: AppTab) {
+        if (_selectedTab.value == tab) return
+        _selectedTab.value = tab
         // Optimistically rebuild `_sounds` from the in-memory caches before kicking off the
         // async loadSounds. Without this, the freshly selected tab renders an empty list (the
         // previous tab's filtered view) until the IO chain settles — the user sees the empty
-        // state flash on every tab swap. The tab is passed explicitly: reading it back through
-        // the SavedStateHandle flow here observed the PREVIOUS value, which re-emptied the list
-        // when leaving the Vault (whose projection is empty by design).
+        // state flash on every tab swap.
         applyTabFilterFromCache(tab)
         viewModelScope.launch(ioDispatcher) { loadSounds() }
+    }
+
+    /** Resolved deep-link destination, handed to the graph as a one-shot event (ADR 0003). */
+    fun onDeepLink(tab: AppTab) {
+        _deepLinkEvent.trySend(tab)
     }
 
     /**
@@ -1698,14 +1711,11 @@ class SoundsViewModel(
                 .thenByDescending { it.dateAdded ?: Long.MIN_VALUE }
                 .thenBy { it.name.lowercase() }
 
-        private const val KEY_SELECTED_TAB = "selected_tab"
-
         val Factory: ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
                     SoundsViewModel(
                         application = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]!!,
-                        savedStateHandle = createSavedStateHandle(),
                     )
                 }
             }

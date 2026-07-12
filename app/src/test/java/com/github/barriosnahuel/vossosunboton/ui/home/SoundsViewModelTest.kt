@@ -135,7 +135,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
     fun `selectTab updates the selected tab`() {
         val viewModel = givenAViewModel()
 
-        viewModel.selectTab(AppTab.MY_SOUNDS)
+        viewModel.setActiveTab(AppTab.MY_SOUNDS)
 
         assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
     }
@@ -516,8 +516,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         val sound = viewModel.sounds.value.first()
 
         viewModel.deleteSound(sound)
-        viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
-        viewModel.selectTab(AppTab.MY_SOUNDS)
+        viewModel.setActiveTab(AppTab.EXPLORE_SOUNDS)
+        viewModel.setActiveTab(AppTab.MY_SOUNDS)
 
         assertThat(viewModel.sounds.value.none { it.name == sound.name }).isTrue()
     }
@@ -619,8 +619,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             val playingSound = viewModel.sounds.value.single { it.name == "custom" }
 
             viewModel.onPlayerStart(playingSound, durationMs = 1000)
-            viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
-            viewModel.selectTab(AppTab.MY_SOUNDS)
+            viewModel.setActiveTab(AppTab.EXPLORE_SOUNDS)
+            viewModel.setActiveTab(AppTab.MY_SOUNDS)
 
             assertThat(
                 viewModel.sounds.value
@@ -852,7 +852,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
                 .getApplicationContext<android.content.Context>()
                 .getString(R.string.app_welcome_sticker_title)
 
-        viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+        viewModel.setActiveTab(AppTab.EXPLORE_SOUNDS)
         // selectTab launches loadSounds asynchronously on ioDispatcher. Wait for the welcome to
         // drop out of _sounds before asserting — isInitialLoadComplete already flipped on the first
         // load and is no longer a useful sync signal.
@@ -1085,7 +1085,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             val shareFeature = mockShareFeatureReturning(CanonicalScreenName.MY_SOUNDS)
             val viewModel = givenAViewModel(shareFeature = shareFeature)
             val sound = testSound("s", file = "s.mp3")
-            viewModel.selectTab(AppTab.MY_SOUNDS)
+            viewModel.setActiveTab(AppTab.MY_SOUNDS)
 
             viewModel.share(sound)
             withTimeoutOrNull(1000) { viewModel.shareIntentEvent.first() }
@@ -1099,7 +1099,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
             val shareFeature = mockShareFeatureReturning(CanonicalScreenName.EXPLORE_SOUNDS)
             val viewModel = givenAViewModel(shareFeature = shareFeature)
             val sound = testSound("s", file = "s.mp3")
-            viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+            viewModel.setActiveTab(AppTab.EXPLORE_SOUNDS)
 
             viewModel.share(sound)
             withTimeoutOrNull(1000) { viewModel.shareIntentEvent.first() }

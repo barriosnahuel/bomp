@@ -116,7 +116,6 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // list. Reordering these reads reintroduces the cold-start empty-state flash.
     val initialLoadComplete by viewModel.isInitialLoadComplete.collectAsStateWithLifecycle()
     val sounds by viewModel.sounds.collectAsState()
-    val selectedTab by viewModel.selectedTab.collectAsState()
     val hasBundledSounds by viewModel.hasBundledSounds.collectAsState()
     val playbackProgress by viewModel.playbackProgress.collectAsState()
     val pausedProgress by viewModel.pausedProgress.collectAsState()
@@ -130,30 +129,26 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
 
     // Navigation 3 backbone (ADR 0024): one saveable back stack per tab + typed child destinations.
-    // The Navigator keeps SoundsViewModel.selectedTab in sync — the ViewModel still projects the
-    // sounds list off the selected tab.
+    // The graph is the single source of truth for where the user is (ADR 0024 § Consequences).
     val navState = rememberLandingNavigationState()
-    val navigator = remember(navState) { LandingNavigator(navState) { tab -> viewModel.selectTab(tab) } }
+    val navigator = remember(navState) { LandingNavigator(navState) { viewModel.stopPlayback() } }
+    val selectedTab = navState.topLevelRoute.toTabOrNull() ?: AppTab.MY_SOUNDS
 
-    // ViewModel → graph sync: deep links (LandingActivity.handleDeeplink → selectTab) and any other
-    // programmatic tab change reach the graph through here. Navigator-side changes call selectTab
-    // themselves and StateFlow de-dups equal values, so this cannot loop. selectedTab survives
-    // process death (SavedStateHandle) so this never fights the restored back stack.
-    LaunchedEffect(selectedTab) {
-        if (navState.topLevelRoute.toTabOrNull() != selectedTab) {
-            // Leaving the current stack programmatically: an open immersive listen must not keep
-            // playing headless behind another tab, and the modal Hub sheet must not resurrect on a
-            // later visit — close both. Full-screen destinations stay: they are tab history (D2).
-            when (val visible = navState.visibleRoute) {
-                is ImmersiveListenRoute -> {
-                    viewModel.stopPlayback()
-                    navigator.close(visible)
-                }
-                ImportHubRoute -> navigator.close(visible)
-                else -> Unit
-            }
-            navigator.navigate(selectedTab.toRoute())
-        }
+    // Graph → ViewModel: the VM projects the sounds list off the active tab, so it mirrors whatever
+    // the graph says — taps, back pops, deep links, and a back stack restored after process death
+    // (which is why this reads the graph on first composition rather than trusting a VM default).
+    LaunchedEffect(navState) {
+        snapshotFlow { navState.topLevelRoute.toTabOrNull() }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .collect { viewModel.setActiveTab(it) }
+    }
+
+    // Deep links arrive on the Activity (Intent) and reach the graph as one-shot events (ADR 0003):
+    // the allowlist resolves the URI to a tab, and the graph resets that tab to its root — a link is
+    // "take me here", not "stack this on whatever was open".
+    LaunchedEffect(navigator) {
+        viewModel.deepLinkEvent.collect { tab -> navigator.switchToTabRoot(tab) }
     }
 
     // System file picker for the Hub's "import audio" path. OpenDocument(arrayOf("audio/*")) opens the
@@ -214,6 +209,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val tabContent: @Composable (AppTab) -> Unit = { tab ->
         TabContent(
             tab = tab,
+            activeTab = selectedTab,
             viewModel = viewModel,
             sounds = sounds,
             initialLoadComplete = initialLoadComplete,
@@ -282,12 +278,12 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                         AboutScreen(onBack = { navigator.close(AboutRoute) })
                     }
                     entry<ManageCollectionsRoute> { key ->
-                        // close(key), not goBack(): Manage's "view collection" action switches tab before
-                        // closing, and a plain pop would hit the new tab's stack (see LandingNavigator.close).
                         com.github.barriosnahuel.vossosunboton.feature.collections.ManageCollectionsScreen(
                             viewModel = viewModel,
                             focusedCollectionId = key.focusedCollectionId,
                             onBack = { navigator.close(key) },
+                            // Resetting the destination tab also drops this screen's entry — no explicit close.
+                            onViewCollectionIn = { tab -> navigator.switchToTabRoot(tab) },
                         )
                     }
                     entry<ImmersiveListenRoute> { key ->
@@ -546,6 +542,9 @@ private fun SearchOverlayHost(
 @Composable
 private fun TabContent(
     tab: AppTab,
+    // The tab the graph currently shows. Each TabContent binds its own constant [tab]; comparing the
+    // two is how a composed-but-outgoing tab knows it is not the active one.
+    activeTab: AppTab,
     viewModel: SoundsViewModel,
     sounds: List<Sound>,
     // Read at the LandingScreen head BEFORE `sounds` (release/acquire pairing with loadSounds) —
@@ -586,9 +585,10 @@ private fun TabContent(
     val coroutineScope = rememberCoroutineScope()
     // Only the ACTIVE tab collects the one-shot scroll event: during a tab transition (or a
     // predictive-back preview) two TabContent instances are composed at once, and the Channel's
-    // single delivery (ADR 0003) must not be consumed by the outgoing tab's collector.
-    val selectedTabNow by viewModel.selectedTab.collectAsStateWithLifecycle()
-    val isActiveTab = selectedTabNow == tab
+    // single delivery (ADR 0003) must not be consumed by the outgoing tab's collector. Read from
+    // the graph, not the ViewModel's mirror of it: the mirror lands a dispatch later, which would
+    // leave the outgoing tab owning the collector for that window.
+    val isActiveTab = activeTab == tab
     LaunchedEffect(isActiveTab) {
         if (isActiveTab) {
             viewModel.scrollToTopEvent.collect {

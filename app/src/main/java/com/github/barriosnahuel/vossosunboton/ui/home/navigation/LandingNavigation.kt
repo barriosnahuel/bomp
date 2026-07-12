@@ -205,22 +205,46 @@ internal class LandingNavigationState(
 }
 
 /**
- * Handles navigation events by updating [LandingNavigationState], keeping `SoundsViewModel`'s
- * `selectedTab` in sync through [onTabChange] — the ViewModel still projects the sounds list off
- * the selected tab, so every tab change (taps, back pops, deep links) must reach it.
+ * Handles navigation events by updating [LandingNavigationState]. The graph is the single source of
+ * truth for where the user is: `SoundsViewModel` mirrors the active tab (it projects the sounds list
+ * off it) by observing [LandingNavigationState.topLevelRoute], never by driving it.
+ *
+ * [onStopPlayback] is the one effect the navigator cannot own: leaving a tab with an immersive
+ * listen open must silence it, and playback lives in the ViewModel.
  */
 internal class LandingNavigator(
     val state: LandingNavigationState,
-    private val onTabChange: (AppTab) -> Unit,
+    private val onStopPlayback: () -> Unit,
 ) {
+    /**
+     * Tab taps and destination pushes. A tab tap *keeps* that tab's history (D2 multiple back
+     * stacks): the user who left About open on Home expects it there when they come back.
+     */
     fun navigate(route: NavKey) {
         val tab = route.toTabOrNull()
         if (tab != null) {
             state.topLevelRoute = route
-            onTabChange(tab)
         } else {
             state.activeStack.add(route)
         }
+    }
+
+    /**
+     * Programmatic navigation to a tab — a deep link, or Manage Collections' "view collection".
+     * Unlike a tab tap it lands on the tab's *root*: the caller named a destination, so leaving the
+     * user under whatever screen happened to be open (or under another tab's leftover history, which
+     * "exit through home" would surface later) would ignore what was asked for.
+     *
+     * Every stack is reset, not just the destination's: the leftovers are only reachable *because*
+     * of history the user didn't choose to keep, and Home's stack is always below the active tab.
+     */
+    fun switchToTabRoot(tab: AppTab) {
+        // An immersive listen being left behind must not keep playing headless under the new tab.
+        if (state.visibleRoute is ImmersiveListenRoute) onStopPlayback()
+        state.backStacks.values.forEach { stack ->
+            while (stack.size > 1) stack.removeAt(stack.lastIndex)
+        }
+        state.topLevelRoute = tab.toRoute()
     }
 
     fun goBack() {
@@ -228,34 +252,16 @@ internal class LandingNavigator(
         if (currentStack.lastOrNull() == state.topLevelRoute) {
             // At the base of the current tab: exit through home.
             state.topLevelRoute = state.startRoute
-            onTabChange(AppTab.MY_SOUNDS)
         } else {
             currentStack.removeLastOrNull()
         }
     }
 
-    /**
-     * Removes [route] from whichever stack holds it — not necessarily the active one. Needed by
-     * destinations whose actions switch tabs before closing themselves (e.g. Manage Collections'
-     * "view collection"): a plain [goBack] would pop the *new* tab's stack and leave the closed
-     * screen resurrectable on the old one.
-     */
+    /** Removes [route] from the active stack — the only stack a visible destination can live on. */
     fun close(route: NavKey) {
-        // Exactly one instance is removed, preferring the active stack: routes are value-equal
-        // (@Serializable objects/data classes), and a route legitimately duplicated as another
-        // tab's history must survive closing the visible one.
-        val stacks =
-            buildList {
-                add(state.activeStack)
-                state.backStacks.values.forEach { if (it !== state.activeStack) add(it) }
-            }
-        for (stack in stacks) {
-            val index = stack.lastIndexOf(route)
-            if (index >= 0) {
-                stack.removeAt(index)
-                return
-            }
-        }
+        val stack = state.activeStack
+        val index = stack.lastIndexOf(route)
+        if (index >= 0) stack.removeAt(index)
     }
 
     /**

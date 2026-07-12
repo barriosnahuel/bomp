@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Opening a Vault audio's listen screen now always starts it from the beginning — previously a reopened audio silently resumed from where it was left mid-clip
 
 ### Fixed
+- Opening a collection from "Manage collections" now takes you straight to it — the manage screen no longer stays behind, waiting to reappear when you come back to the tab you opened it from
 - Sharing an audio into Bomp from another app now returns you to that app once you save it, even when Bomp was already open in your recent apps — previously it left you inside Bomp, having to go back through its screens to get out
 - Opening the app no longer briefly flashes an empty state — inspirational or a collection filter's "no results" — while your Bomps are still loading; the list now waits for the first load before deciding what to show
 - An audio hidden from My Bomps (Vault-only) can no longer briefly reappear in the list right after opening the app — concurrent list refreshes could land out of order and show a stale view
@@ -33,6 +34,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Creation flows are graph destinations (ADR 0024 D4): `RecordingActivity` is gone (now the `RecorderHost` destination) and `AddButtonActivity` is reduced to the share-sheet trampoline, keeping the task-level `excludeFromRecents` + return-to-source contract that a destination cannot honor. Screen-lifetime ViewModels scope per `NavEntry` (`lifecycle-viewmodel-navigation3`), and a grep invariant now fails the build if internal navigation reintroduces `startActivity` on one of our own Activities
 - Release tags, GitHub release titles and CHANGELOG headers move from day-precision CalVer (`vYYYY.MM.DD`) to month + sequential counter (`vYYYY.MM.N`), so the month's milestone can be created up front and assigned to every PR at creation (ADR 0023 amending ADR 0021)
 - Waveform envelope extraction demuxes via Media3's `MediaExtractorCompat` instead of the AEP-prohibited `MediaExtractor` (`MediaCodec` decode unchanged); all sources normalize to per-decode temp files to route around a Media3 1.10.1 truncation bug with fd/content/resource sources — envelope verified bit-comparable (1 of 48 bars off by 0.014)
+
+#### Changed
+- The Nav3 back stack is now the single source of truth for the active tab (ADR 0024, amended): `SoundsViewModel` mirrors it instead of persisting a second copy in `SavedStateHandle`, and programmatic navigation (deep links, "view collection") goes through `LandingNavigator`, landing on the destination tab's root. The ADR's "declarative deep links" wording is corrected — Navigation 3 ships no such API; the Activity-side matcher is the official recipe, and the allowlist + Home-fallback security invariant is unchanged
 
 #### Fixed
 - `screen_view` for the add/edit-Bomp and recorder screens now fires from composition instead of `Activity.onCreate`, where the GA4 SDK silently dropped it — `add_sound`, `edit_sound` and `record_sound` had never reached the analytics export

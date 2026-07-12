@@ -16,6 +16,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.CustomBuildTypeApplication
 import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.resolveDeepLinkTab
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
 // FragmentActivity (vs the smaller ComponentActivity) is required so androidx.biometric's
@@ -34,12 +35,21 @@ class LandingActivity : FragmentActivity() {
                 LandingScreen(viewModel = viewModel)
             }
         }
-        handleDeeplink(intent)
+        // Only on a fresh start: the launching Intent survives in `getIntent()` across recreates, so
+        // replaying it on every rotation would re-navigate — and a deep link now resets the tab it
+        // names, which would silently discard whatever the user had opened since (an unsaved take,
+        // a half-typed name). A restored Activity already has its back stack; it needs no link.
+        if (savedInstanceState == null) {
+            handleDeeplink(intent)
+        }
         maybeSeedDebugSounds(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // Keep getIntent() pointing at the newest Intent, so a later recreate restores from the one
+        // the user actually arrived on rather than the stale launcher Intent.
+        setIntent(intent)
         handleDeeplink(intent)
         maybeSeedDebugSounds(intent)
     }
@@ -53,23 +63,9 @@ class LandingActivity : FragmentActivity() {
 
     private fun handleDeeplink(intent: Intent) {
         val uri = intent.data ?: return
-        // Closed allowlist of known deep-link destinations. Unknown paths fall back to MY_SOUNDS
-        // (the safe default) so we never silently route to a tab the link did not name.
-        val requested =
-            when (uri.path) {
-                "/home" -> AppTab.MY_SOUNDS
-                "/explore" -> AppTab.EXPLORE_SOUNDS
-                else -> AppTab.MY_SOUNDS
-            }
-        // Explore is empty in release builds (no bundled audios) and in any debug build that
-        // hasn't populated model/src/debug/res/raw/. Routing there would land on a blank tab,
-        // so fall back to Home when there's nothing to explore.
-        val resolved =
-            if (requested == AppTab.EXPLORE_SOUNDS && PackagedAudios.get(this).isEmpty()) {
-                AppTab.MY_SOUNDS
-            } else {
-                requested
-            }
-        viewModel.selectTab(resolved)
+        val resolved = resolveDeepLinkTab(uri.path, hasBundledAudios = PackagedAudios.get(this).isNotEmpty())
+        // Handed to the graph as a one-shot event: the link resets the destination tab to its root,
+        // so it lands the user on the tab it names rather than under whatever was left open.
+        viewModel.onDeepLink(resolved)
     }
 }

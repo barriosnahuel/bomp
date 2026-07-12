@@ -199,8 +199,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
         // Open the tour from the overflow (reachable on every tab) while standing on the Vault tab.
-        viewModel.selectTab(AppTab.VAULT)
-        composeTestRule.waitForIdle()
+        composeTestRule.selectTab(AppTab.VAULT)
 
         composeTestRule.onNodeWithContentDescription(OVERFLOW_LABEL).performClick()
         composeTestRule.waitForIdle()

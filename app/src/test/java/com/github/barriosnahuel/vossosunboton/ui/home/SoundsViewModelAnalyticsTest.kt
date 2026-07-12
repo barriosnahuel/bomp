@@ -137,7 +137,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
     @Test
     fun `playOrStop emits sound_play with surface = explore_sounds when explore tab is active`() {
         val viewModel = givenAViewModel()
-        viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+        viewModel.setActiveTab(AppTab.EXPLORE_SOUNDS)
         val sound = testSound("test", null, 0, isPlaying = false)
 
         viewModel.playOrStop(sound)
