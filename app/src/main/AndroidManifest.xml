@@ -76,13 +76,30 @@
 
         </activity>
 
+        <!--
+            Share-sheet entry point. The task attributes ARE the product contract: saving an audio the
+            user shared from another app must return them to that app, leaving whatever they had open in
+            Bomp untouched.
+
+            singleTop, not singleTask: singleTask "locates the activity on an existing task with the same
+            affinity", so once Bomp was in Recents the share landed inside Bomp's own task and pulled it
+            to the foreground — finishing then dropped the user into Bomp's history instead of back into
+            the app they shared from. singleTop is "launched into the task that called startActivity()",
+            which is exactly the wanted behavior, and still routes a re-share to the live instance
+            through onNewIntent.
+
+            Empty taskAffinity so a caller sharing with FLAG_ACTIVITY_NEW_TASK cannot pull it into Bomp's
+            task on affinity alone; excludeFromRecents then keeps that fallback task out of Recents. No
+            parentActivityName: Landing is not this screen's Up parent — the way out is finish(), back to
+            the sharing app.
+        -->
         <activity
             android:name=".feature.addbutton.AddButtonActivity"
             android:exported="true"
             android:label="@string/app_addbutton_activity_label"
             android:excludeFromRecents="true"
-            android:launchMode="singleTask"
-            android:parentActivityName=".ui.home.LandingActivity"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
             tools:ignore="Instantiatable">
 
             <intent-filter>
