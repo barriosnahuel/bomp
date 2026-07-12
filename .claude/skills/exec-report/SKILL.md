@@ -149,6 +149,34 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
 
    Prioritize funnels with signal; if a funnel has 0 events, summarize it in one line, don't break it down.
 
+   **0-in-window ≠ broken instrumentation — but cut by version before deciding.** A 0 has two very
+   different causes (a quiet week vs. a tracker that died); recency alone can't tell them apart, because a
+   fresh regression looks exactly like a quiet week if the event fired fine on the previous version. Work
+   the checks in this order:
+
+   1. **Recency** — get the event's last-seen date / 30–90 day count. Never fired at all → instrumentation
+      gap, stop here.
+   2. **Version** — if it fired historically, cut it by `app_info.version`. Still emitting on the version
+      that dominates the window → instrumentation is healthy and the 0 is **real usage**; report it as such,
+      never as a "possible gap". Alive on older versions and 0 on the current one → suspect a **regression
+      introduced by that release** and say so, *even when nothing in the release obviously "touched" the
+      event* — an R8 rule, a nav refactor, or a screen that quietly stopped calling the tracker all break it
+      without naming it.
+   3. **Corroborate before crying wolf** — a 0 on a new version means nothing if barely anyone is on it, or
+      if the whole surface is idle. Require enough users on that version (same min-N guard as the
+      QUALITY/PERFORMANCE cuts) and check a **sibling event on the same screen**: siblings alive + this one
+      dead = instrumentation; the whole screen dead = real usage.
+
+   (Lesson: `sound_add`=0 in-window, last-seen 3 weeks ago, and the current version still emits it elsewhere
+   → quiet week, not a gap. Same 0 with the event alive on the previous version, dead on the new one, while
+   `recording_completed` keeps firing there → regression, not a quiet week.)
+
+   **Funnel coherence (read steps together, not in isolation).** When an upstream step has signal and its
+   downstream step is 0, that is a **drop-off** to surface — not a contradiction and not a gap. Never frame
+   the same behavior as "activity happened" in one place and "no activity / maybe not instrumented" in
+   another. Canonical: `recording_completed` > 0 with `sound_add` (`source=record`) = 0 → users record but
+   don't save; the finding is the abandonment at the save step, not "no creations recorded".
+
 3. **QUALITY:** crash-free, number and top crashes (Crashlytics), ANRs (Play) — ALWAYS broken down by
    version. These are **counts/rates, not medianable** (no "median of a crash count"): keep raw
    crash-free % and counts, but apply the per-device + min-N + single-device-domination guards from the

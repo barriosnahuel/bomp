@@ -76,19 +76,35 @@
 
         </activity>
 
-        <!-- Share-sheet trampoline (ADR 0024 D4). Exported ONLY for the external ACTION_SEND audio/*
-             intent below; every internal creation/edit flow is a destination in Landing's graph. It
-             stays an Activity because excludeFromRecents (no ghost entry in Recents) and "back/save
-             returns to the app the audio was shared from" are task-level guarantees a destination
-             inside Landing's task cannot honor. Inbound URIs are validated by AddButtonFeature before
-             the stream is opened — CLAUDE.md § Security boundaries. -->
+        <!--
+            Share-sheet trampoline (ADR 0024 D4). Exported ONLY for the external ACTION_SEND audio
+            intent below; every internal creation/edit flow is a destination in Landing's graph. It
+            stays an Activity because the task attributes below ARE the product contract, and a
+            destination inside Landing's task cannot honor them: saving an audio shared from another
+            app must return the user to that app, leaving whatever they had open in Bomp untouched.
+
+            singleTop, not singleTask: singleTask "locates the activity on an existing task with the
+            same affinity", so once Bomp was in Recents the share landed inside Bomp's own task and
+            pulled it to the foreground — finishing then dropped the user into Bomp's history instead
+            of back into the app they shared from. singleTop is "launched into the task that called
+            startActivity()", and still routes a re-share to the live instance through onNewIntent.
+
+            Empty taskAffinity so a caller sharing with FLAG_ACTIVITY_NEW_TASK cannot pull it into
+            Bomp's task on affinity alone; excludeFromRecents then keeps that fallback task out of
+            Recents. No parentActivityName: Landing is not this screen's Up parent — the way out is
+            finish(), back to the sharing app.
+
+            Inbound URIs are validated by AddButtonFeature before the stream is opened — CLAUDE.md
+            § Security boundaries.
+        -->
+
         <activity
             android:name=".feature.addbutton.AddButtonActivity"
             android:exported="true"
             android:label="@string/app_addbutton_activity_label"
             android:excludeFromRecents="true"
-            android:launchMode="singleTask"
-            android:parentActivityName=".ui.home.LandingActivity"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
             tools:ignore="Instantiatable">
 
             <intent-filter>

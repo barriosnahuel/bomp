@@ -15,7 +15,7 @@ appcompat                 = "1.7.1"
 annotation                = "1.10.0"
 activityCompose           = "1.13.0"
 coreSplashscreen          = "1.2.0"
-tracing                   = "1.2.0"
+tracing                   = "1.3.0"
 media3                    = "1.10.1"
 composeBom                = "2026.06.01"
 lifecycleCompose          = "2.11.0"
@@ -23,7 +23,7 @@ nav3                      = "1.1.4"
 material                  = "1.14.0"
 
 # Firebase
-firebaseBom               = "34.15.0"
+firebaseBom               = "34.16.0"
 
 # Other
 timber                    = "5.0.1"
