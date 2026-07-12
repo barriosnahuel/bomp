@@ -22,9 +22,7 @@ import androidx.compose.ui.test.swipeRight
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.intent.Intents.intended
 import androidx.test.espresso.intent.Intents.intending
-import androidx.test.espresso.intent.matcher.ComponentNameMatchers.hasClassName
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
-import androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -71,20 +69,16 @@ internal class HomeTabFlowTest : AbstractUiTest() {
     }
 
     @Test
-    fun editMenuItemLaunchesAddButtonActivityWithSoundExtras() {
+    fun editMenuItemOpensTheRenameScreen() {
         val sound = TestData.seedCustomSounds(context, count = 1).single()
-        intending(hasComponent(hasClassName(ADD_BUTTON_ACTIVITY)))
-            .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithText(sound.name).performTouchInput { longClick() }
             composeRule.awaitNodeWithText(renameLabel()).performClick()
-            composeRule.waitForIdle()
 
-            // Hamcrest 1.3 (transitively pinned in the test APK) lacks the 2-arg `allOf`
-            // that Kotlin compiles to. Stick to the most discriminating matcher per
-            // `intended()` call — extras are covered by Robolectric unit tests.
-            intended(hasComponent(hasClassName(ADD_BUTTON_ACTIVITY)))
+            // Rename is a destination inside Landing (no Activity hop): its title anchors the assertion,
+            // since the audio's name renders in both the list row and the naming screen's preview header.
+            composeRule.awaitNodeWithText(renameTitle()).assertIsDisplayed()
         }
     }
 
@@ -175,6 +169,8 @@ internal class HomeTabFlowTest : AbstractUiTest() {
 
     private fun renameLabel() = context.getString(R.string.app_edit)
 
+    private fun renameTitle() = context.getString(R.string.app_addbutton_activity_title_edit)
+
     private fun pinLabel() = context.getString(R.string.app_pin)
 
     private fun unpinLabel() = context.getString(R.string.app_unpin)
@@ -189,7 +185,5 @@ internal class HomeTabFlowTest : AbstractUiTest() {
 
     companion object {
         private const val SNACKBAR_LONG_TIMEOUT_MS = 15_000L
-        private const val ADD_BUTTON_ACTIVITY =
-            "com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity"
     }
 }

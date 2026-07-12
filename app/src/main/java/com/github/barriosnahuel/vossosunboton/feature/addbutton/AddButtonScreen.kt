@@ -56,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -100,7 +101,7 @@ fun AddButtonScreen(
     mode: AddButtonMode,
     // Surface that opened this Create flow, forwarded to the `sound_add` event. Defaults to share
     // (the manifest ACTION_SEND path); the import Hub passes SOURCE_IMPORT. Ignored in Edit mode.
-    source: String = AddButtonActivity.SOURCE_SHARE,
+    source: String = AddSoundSource.SHARE,
     // Host-provided intent sequence: bumped per user intent so screen_view re-emits even when a
     // new intent carries a payload structurally equal to the live one (same audio re-shared).
     intentKey: Int = 0,
@@ -218,7 +219,7 @@ fun AddButtonScreen(
                     // A recording carries its provenance into persistence; every other entry point is
                     // an import (ADR 0019). The same `source` string keeps feeding `trackSoundAdd`.
                     val provenance =
-                        if (source == AddButtonActivity.SOURCE_RECORD) {
+                        if (source == AddSoundSource.RECORD) {
                             SoundSource.RECORDED
                         } else {
                             SoundSource.IMPORTED
@@ -237,7 +238,7 @@ fun AddButtonScreen(
                         stopActivePreviewPlayback()
                         // The recording is now a persisted Sound — forget its recoverable draft so the
                         // Landing banner doesn't re-offer an already-saved clip (ADR 0019 § Draft recovery).
-                        if (source == AddButtonActivity.SOURCE_RECORD) {
+                        if (source == AddSoundSource.RECORD) {
                             RecorderDraftStoreProvider.get(context).clear()
                         }
                         trackSoundAdd(context, trimmedName, source, tracker)
@@ -603,6 +604,15 @@ private suspend fun handleSaveError(
     }
 }
 
+/**
+ * Emits the abandon-after-error event when the user walks away from a failed save instead of retrying.
+ *
+ * Two exits, because this screen has two hosts (ADR 0024 D4): as the share trampoline it leaves via
+ * `finish()` → `ON_STOP`; as a graph destination it leaves by being popped, and the hosting Activity
+ * stays RESUMED — Nav3 gives no per-destination lifecycle, so `ON_STOP` never arrives and only the
+ * disposal marks the exit. A config-change recreate also disposes and is not an abandonment, hence the
+ * guard; `wasTracked` keeps the two paths from double-counting.
+ */
 @Composable
 private fun TrackAbandonOnStop(
     pendingErrorReason: () -> String?,
@@ -610,18 +620,23 @@ private fun TrackAbandonOnStop(
     onTrack: (String) -> Unit,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val activity = LocalContext.current.findFragmentActivity()
     DisposableEffect(lifecycleOwner) {
+        val trackIfAbandoned = {
+            val reason = pendingErrorReason()
+            if (reason != null && !wasTracked()) {
+                onTrack(reason)
+            }
+        }
         val observer =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_STOP) {
-                    val reason = pendingErrorReason()
-                    if (reason != null && !wasTracked()) {
-                        onTrack(reason)
-                    }
-                }
+                if (event == Lifecycle.Event.ON_STOP) trackIfAbandoned()
             }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            if (activity?.isChangingConfigurations != true) trackIfAbandoned()
+        }
     }
 }
 

@@ -71,9 +71,9 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
-import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddSoundSource
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.NameSoundDestination
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
-import com.github.barriosnahuel.vossosunboton.feature.recorder.RecordingActivity
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareAppIntent
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.feature.vault.requestUnlock
@@ -94,7 +94,9 @@ import com.github.barriosnahuel.vossosunboton.ui.home.navigation.ImmersiveListen
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.ImportHubRoute
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.LandingNavigator
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.ManageCollectionsRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.NameSoundRoute
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.OnboardingRoute
+import com.github.barriosnahuel.vossosunboton.ui.home.navigation.RecorderRoute
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.VaultRoute
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.instantTabTransitions
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.rememberLandingNavigationState
@@ -157,13 +159,14 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // System file picker for the Hub's "import audio" path. OpenDocument(arrayOf("audio/*")) opens the
     // full SAF browser filtered to audio (non-audio files are not selectable) — better at surfacing
     // on-device audio across OEMs than GetContent's "Recent" view. We copy the audio at save time, so we
-    // never take persistable permission; cancel returns null → no-op, no message. The picked content URI
-    // reaches AddButtonActivity through the same inbound validator as the share sheet — createIntent
-    // forwards the read grant to that Activity. (App-private media like WhatsApp voice notes is not
-    // browsable by any SAF picker on Android 11+; that content arrives via the share sheet instead.)
+    // never take persistable permission; cancel returns null → no-op, no message. The picked URI goes
+    // straight to the naming destination and through the same inbound validator as the share sheet — the
+    // read grant now lives on this Activity, which hosts the destination, so nothing has to forward it.
+    // (App-private media like WhatsApp voice notes is not browsable by any SAF picker on Android 11+;
+    // that content arrives via the share sheet instead.)
     val importPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            uri?.let { context.startActivity(AddButtonActivity.createIntent(context, it)) }
+            uri?.let { navigator.navigate(NameSoundRoute(source = AddSoundSource.IMPORT, uri = it.toString())) }
         }
 
     // Single import-Hub entry point: logs the funnel's ENTRY with the [source] surface, then opens.
@@ -253,6 +256,18 @@ fun LandingScreen(viewModel: SoundsViewModel) {
             // One source-parameterized entry point (mirrors onCreateClick): each surface binds its own
             // AnalyticsSource at the leaf call site below, so no per-surface callback has to be threaded.
             onShowOnboarding = openOnboarding,
+            // Both edit entry points (My Sounds list, Vault list) land on the same naming destination,
+            // carrying the audio's id — the route resolves it against the live library at render time.
+            onEditSound = { sound ->
+                if (navState.visibleRoute !is NameSoundRoute) {
+                    navigator.navigate(NameSoundRoute(editSoundId = sound.id))
+                }
+            },
+            onResumeDraft = {
+                if (navState.visibleRoute !is RecorderRoute) {
+                    navigator.navigate(RecorderRoute(resumeDraft = true))
+                }
+            },
         )
     }
 
@@ -307,6 +322,37 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                             onClose = { navigator.close(BringFromAppsRoute) },
                         )
                     }
+                    entry<RecorderRoute> { key ->
+                        com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderHost(
+                            resumeDraft = key.resumeDraft,
+                            onExit = { navigator.close(key) },
+                            // Keep the clip → naming, pushed ON TOP of the recorder: back from naming
+                            // returns to the review, so a user who changes their mind about the name does
+                            // not lose the take. The save pops both (closeCreationFlow).
+                            onKeepClip = { uri ->
+                                navigator.navigate(
+                                    NameSoundRoute(source = AddSoundSource.RECORD, uri = uri.toString()),
+                                )
+                            },
+                            // Mic-denied escape hatch: the picked audio replaces the recorder in the stack
+                            // (close then navigate) — there is no take to come back to.
+                            onImportInstead = { uri ->
+                                navigator.close(key)
+                                navigator.navigate(
+                                    NameSoundRoute(source = AddSoundSource.IMPORT, uri = uri.toString()),
+                                )
+                            },
+                        )
+                    }
+                    entry<NameSoundRoute> { key ->
+                        NameSoundDestination(
+                            key = key,
+                            viewModel = viewModel,
+                            context = context,
+                            onDone = { navigator.closeCreationFlow() },
+                            onBack = { navigator.close(key) },
+                        )
+                    }
                     entry<ImportHubRoute>(metadata = BottomSheetSceneStrategy.bottomSheet()) {
                         ImportHubSheet(
                             // Guard on visibility so a double-tap on a row (both taps land before the pop
@@ -322,7 +368,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                                 if (navigator.isVisible(ImportHubRoute)) {
                                     tracker.log(AnalyticsEvent.ImportHubRecordSelected)
                                     navigator.close(ImportHubRoute)
-                                    context.startActivity(RecordingActivity.createIntent(context))
+                                    navigator.navigate(RecorderRoute())
                                 }
                             },
                             onBringFromApps = {
@@ -372,6 +418,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
  * Routes with no screen of their own (Hub sheet, immersive listen) are transparent: the name
  * resolves to the entry beneath them in the stack, so opening/closing them never re-emits and a
  * tab change underneath them still surfaces — the pre-Nav3 semantics.
+ *
+ * The creation destinations (recorder, naming) are absent here on purpose, not by omission: they log
+ * their own `screen_view` from composition, because `add_sound` carries a `source` bundle this mapper
+ * has no way to reconstruct. Leaving them unnamed keeps the two paths from double-emitting.
  */
 private fun screenNameFor(
     navState: com.github.barriosnahuel.vossosunboton.ui.home.navigation.LandingNavigationState,
@@ -520,6 +570,10 @@ private fun TabContent(
     // Opens the import Hub, carrying the funnel `source` of the surface that triggered it (the FAB
     // vs the empty-state CTA), so `import_hub_opened` is attributed honestly.
     onCreateClick: (String) -> Unit,
+    // Creation/edit flows are graph destinations now (ADR 0024 D4): the leaf rows raise the intent and
+    // LandingScreen navigates, instead of each surface minting its own Activity intent.
+    onEditSound: (com.github.barriosnahuel.vossosunboton.model.Sound) -> Unit,
+    onResumeDraft: () -> Unit,
     // Opens the onboarding tour, carrying the funnel `source` of the surface that triggered it (empty
     // state, welcome footer, or overflow). Each leaf surface binds its own constant.
     onShowOnboarding: (String) -> Unit,
@@ -601,6 +655,7 @@ private fun TabContent(
                     listState = listState,
                     onActiveFilterEditClick = onActiveFilterEditClick,
                     onImmersivePlay = onImmersivePlay,
+                    onEditSound = onEditSound,
                     modifier = Modifier.padding(innerPadding),
                 )
             else -> {
@@ -620,6 +675,8 @@ private fun TabContent(
                     onActiveFilterEditClick = onActiveFilterEditClick,
                     onImportClick = { onCreateClick(AnalyticsSource.EMPTY_STATE) },
                     onShowOnboarding = onShowOnboarding,
+                    onEditSound = onEditSound,
+                    onResumeDraft = onResumeDraft,
                     viewModel = viewModel,
                     context = context,
                 )
@@ -1093,6 +1150,8 @@ private fun MySoundsBody(
     // Source-parameterized tour opener; this body binds EMPTY_STATE for the empty-state secondary and
     // WELCOME_FOOTER for the welcome footer at their respective leaf call sites.
     onShowOnboarding: (String) -> Unit,
+    onEditSound: (com.github.barriosnahuel.vossosunboton.model.Sound) -> Unit,
+    onResumeDraft: () -> Unit,
     viewModel: SoundsViewModel,
     context: Context,
 ) {
@@ -1128,7 +1187,7 @@ private fun MySoundsBody(
             RecorderDraftBanner(
                 onContinue = {
                     draftTracker.log(AnalyticsEvent.RecordingDraftResumed)
-                    context.startActivity(RecordingActivity.createIntent(context, resumeDraft = true))
+                    onResumeDraft()
                 },
                 onDiscard = {
                     draftTracker.log(AnalyticsEvent.RecordingDraftDiscarded)
@@ -1188,9 +1247,7 @@ private fun MySoundsBody(
                     onShareClick = { sound -> viewModel.share(sound) },
                     onDelete = { sound -> viewModel.deleteSound(sound) },
                     onPinClick = { sound -> viewModel.togglePin(sound) },
-                    onEdit = { sound ->
-                        context.startActivity(LandingActivity.editIntent(context, sound))
-                    },
+                    onEdit = onEditSound,
                     onAddToCollection = { sound -> viewModel.requestAssignCollections(sound.id) },
                     welcomeHintPending = welcomeHintPending,
                     onWelcomeHintShown = { viewModel.markWelcomeHintShown() },

@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
@@ -25,6 +26,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.runtime.serialization.NavKeySerializer
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.compose.serialization.serializers.MutableStateSerializer
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddSoundSource
 import com.github.barriosnahuel.vossosunboton.ui.home.AppTab
 import kotlinx.serialization.Serializable
 
@@ -63,6 +65,35 @@ data object BringFromAppsRoute : NavKey
 /** Rendered as a modal bottom sheet via [BottomSheetSceneStrategy] metadata. */
 @Serializable
 data object ImportHubRoute : NavKey
+
+/**
+ * In-app recorder (ADR 0019) as a destination (ADR 0024 D4). [resumeDraft] true — the Landing draft
+ * banner — restores the pending clip into Review, matching the Activity's old `EXTRA_RESUME_DRAFT`.
+ * Record and Review are states of `RecorderViewModel`, not separate routes: the capture screen morphs
+ * in place, so a "preview" route would be a destination the user can never navigate back to.
+ */
+@Serializable
+data class RecorderRoute(
+    val resumeDraft: Boolean = false,
+) : NavKey
+
+/**
+ * Naming + save, the shared tail of every creation/edit flow (ADR 0024 D4). Exactly one of
+ * [uri]/[editSoundId] is set: [uri] (a `content`/`file` URI, string-encoded because `Uri` is not
+ * `@Serializable`) drives Create; [editSoundId] drives Edit, resolved against the live library so the
+ * route stays a value type — the graph never carries a `Sound` snapshot that could go stale.
+ * [source] tags the `sound_add` funnel and the persisted provenance ([AddSoundSource]); Edit ignores it,
+ * which is why it defaults rather than being spelled at the edit call sites.
+ *
+ * The URI still flows through `AddButtonFeature`'s inbound validator at save time, exactly as it did
+ * from the Activity — see CLAUDE.md § *Security boundaries*.
+ */
+@Serializable
+data class NameSoundRoute(
+    val source: String = AddSoundSource.IMPORT,
+    val uri: String? = null,
+    val editSoundId: String? = null,
+) : NavKey
 
 /**
  * Tab entries switch instantly (no cross-scaffold animation), matching the pre-Nav3 body swap —
@@ -157,6 +188,11 @@ internal class LandingNavigationState(
                 val decorators =
                     listOf(
                         rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
+                        // Screen-lifetime ViewModels (today the recorder) scope to their NavEntry, not to
+                        // the Activity (ADR 0024 D3): popping the destination clears the ViewModel, so a
+                        // second visit starts fresh instead of resurrecting the previous capture's state.
+                        // SoundsViewModel is unaffected — it is Activity-scoped and passed in by hand.
+                        rememberViewModelStoreNavEntryDecorator<NavKey>(),
                     )
                 rememberDecoratedNavEntries(
                     backStack = stack,
@@ -219,6 +255,21 @@ internal class LandingNavigator(
                 stack.removeAt(index)
                 return
             }
+        }
+    }
+
+    /**
+     * Pops the whole creation flow, landing back on the tab the user started from.
+     *
+     * A save reached from the recorder leaves `[tab, RecorderRoute, NameSoundRoute]` on the stack, and
+     * popping one entry would drop the user back into the recorder — on a clip they just saved. Popping
+     * only the contiguous creation routes on top (rather than truncating to the tab) keeps any other
+     * history below intact.
+     */
+    fun closeCreationFlow() {
+        val stack = state.activeStack
+        while (stack.lastOrNull().let { it is NameSoundRoute || it is RecorderRoute }) {
+            stack.removeLastOrNull()
         }
     }
 

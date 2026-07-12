@@ -224,7 +224,7 @@ class RecorderViewModel(
         }
     }
 
-    /** True when there is unsaved captured audio — the Activity gates its back discard-confirm on this. */
+    /** True when there is unsaved captured audio — the host gates its back discard-confirm on this. */
     fun hasUnsavedClip(): Boolean = mutableState.value !is RecorderState.Ready
 
     /**

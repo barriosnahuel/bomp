@@ -60,7 +60,7 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
 /**
  * The immersive recorder (ADR 0019) — the listen screen "in reverse". Stateless: driven by
- * [RecorderState] and callbacks; the host (`RecordingActivity`) owns the VM, permission, and discard
+ * [RecorderState] and callbacks; the host ([RecorderHost]) owns the VM, permission, and discard
  * dialog. Always-dark via [ImmersiveListenTheme]; colours come from M3 roles only (acid record button,
  * `error` REC dot) — no hardcoded literals (CLAUDE.md § Design system).
  */

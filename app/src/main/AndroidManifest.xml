@@ -77,22 +77,27 @@
         </activity>
 
         <!--
-            Share-sheet entry point. The task attributes ARE the product contract: saving an audio the
-            user shared from another app must return them to that app, leaving whatever they had open in
-            Bomp untouched.
+            Share-sheet trampoline (ADR 0024 D4). Exported ONLY for the external ACTION_SEND audio
+            intent below; every internal creation/edit flow is a destination in Landing's graph. It
+            stays an Activity because the task attributes below ARE the product contract, and a
+            destination inside Landing's task cannot honor them: saving an audio shared from another
+            app must return the user to that app, leaving whatever they had open in Bomp untouched.
 
-            singleTop, not singleTask: singleTask "locates the activity on an existing task with the same
-            affinity", so once Bomp was in Recents the share landed inside Bomp's own task and pulled it
-            to the foreground — finishing then dropped the user into Bomp's history instead of back into
-            the app they shared from. singleTop is "launched into the task that called startActivity()",
-            which is exactly the wanted behavior, and still routes a re-share to the live instance
-            through onNewIntent.
+            singleTop, not singleTask: singleTask "locates the activity on an existing task with the
+            same affinity", so once Bomp was in Recents the share landed inside Bomp's own task and
+            pulled it to the foreground — finishing then dropped the user into Bomp's history instead
+            of back into the app they shared from. singleTop is "launched into the task that called
+            startActivity()", and still routes a re-share to the live instance through onNewIntent.
 
-            Empty taskAffinity so a caller sharing with FLAG_ACTIVITY_NEW_TASK cannot pull it into Bomp's
-            task on affinity alone; excludeFromRecents then keeps that fallback task out of Recents. No
-            parentActivityName: Landing is not this screen's Up parent — the way out is finish(), back to
-            the sharing app.
+            Empty taskAffinity so a caller sharing with FLAG_ACTIVITY_NEW_TASK cannot pull it into
+            Bomp's task on affinity alone; excludeFromRecents then keeps that fallback task out of
+            Recents. No parentActivityName: Landing is not this screen's Up parent — the way out is
+            finish(), back to the sharing app.
+
+            Inbound URIs are validated by AddButtonFeature before the stream is opened — CLAUDE.md
+            § Security boundaries.
         -->
+
         <activity
             android:name=".feature.addbutton.AddButtonActivity"
             android:exported="true"
@@ -129,17 +134,6 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
-
-        <!-- In-app recorder (ADR 0019). Not exported: launched only by the import Hub via an explicit
-             intent; it hands the captured clip to AddButtonActivity for naming + save. -->
-        <activity
-            android:name=".feature.recorder.RecordingActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:launchMode="singleTask"
-            android:parentActivityName=".ui.home.LandingActivity"
-            tools:ignore="Instantiatable" />
 
     </application>
 

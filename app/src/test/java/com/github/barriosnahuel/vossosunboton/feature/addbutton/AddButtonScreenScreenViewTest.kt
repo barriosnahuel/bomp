@@ -8,6 +8,7 @@ package com.github.barriosnahuel.vossosunboton.feature.addbutton
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
@@ -38,6 +39,8 @@ internal class AddButtonScreenScreenViewTest : AbstractRobolectricTest() {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
     private val fake = FakeAnalyticsTracker()
 
+    private val screenMounted = mutableStateOf(true)
+
     @Before
     fun setUp() {
         AnalyticsTrackerProvider.setForTest(fake)
@@ -45,6 +48,7 @@ internal class AddButtonScreenScreenViewTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
+        disposeAddButtonScreen(composeTestRule, screenMounted)
         AnalyticsTrackerProvider.setForTest(null)
     }
 
@@ -52,31 +56,35 @@ internal class AddButtonScreenScreenViewTest : AbstractRobolectricTest() {
     fun `Create mode logs screen_view add_sound from the composable, tagged with its source`() {
         composeTestRule.setContent {
             AppTheme {
-                AddButtonScreen(
-                    context = context,
-                    mode = AddButtonMode.Create(Uri.parse(SAMPLE_URI)),
-                    source = AddButtonActivity.SOURCE_IMPORT,
-                    onSaved = {},
-                    onNavigateUp = {},
-                )
+                if (screenMounted.value) {
+                    AddButtonScreen(
+                        context = context,
+                        mode = AddButtonMode.Create(Uri.parse(SAMPLE_URI)),
+                        source = AddSoundSource.IMPORT,
+                        onSaved = {},
+                        onNavigateUp = {},
+                    )
+                }
             }
         }
         composeTestRule.waitForIdle()
 
         val screen = fake.assertScreenView(CanonicalScreenName.ADD_SOUND)
-        assertThat(screen.extras["source"]).isEqualTo(AddButtonActivity.SOURCE_IMPORT)
+        assertThat(screen.extras["source"]).isEqualTo(AddSoundSource.IMPORT)
     }
 
     @Test
     fun `Edit mode logs screen_view edit_sound from the composable`() {
         composeTestRule.setContent {
             AppTheme {
-                AddButtonScreen(
-                    context = context,
-                    mode = AddButtonMode.Edit(testSound(EXISTING_NAME, file = "existing.mp3")),
-                    onSaved = {},
-                    onNavigateUp = {},
-                )
+                if (screenMounted.value) {
+                    AddButtonScreen(
+                        context = context,
+                        mode = AddButtonMode.Edit(testSound(EXISTING_NAME, file = "existing.mp3")),
+                        onSaved = {},
+                        onNavigateUp = {},
+                    )
+                }
             }
         }
         composeTestRule.waitForIdle()

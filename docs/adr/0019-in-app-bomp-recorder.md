@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-21
 - **Supersedes:** —
-- **Amended:** 2026-06-23 (§ Draft recovery)
+- **Amended:** 2026-06-23 (§ Draft recovery) · 2026-07-11 (§ Entry point & screen host — the retrofit into the Nav3 graph landed)
 
 ## Context
 
@@ -74,6 +74,14 @@ graph destinations. We are **not** blocking the recorder on that migration: it s
 full-screen `RecordingActivity` (the same `singleTask`/`exported=false` shape as `AddButtonActivity`),
 launched from the existing "Record" row in `ImportHubSheet` (today visible but inert, badged "Soon").
 Retrofitting it into the Nav3 graph once `v2.3.0-02` lands is mechanical and tracked there.
+
+> **Amended 2026-07-11 — the retrofit landed (ADR 0024 D4).** `RecordingActivity` is gone; the recorder
+> is the `RecorderRoute` destination (`RecorderHost`), and "Use this" pushes the naming destination on
+> top of it rather than starting an Activity — so back from naming returns to the Review instead of
+> tearing the flow down. Two consequences for the decisions below: the "clear at save-completion, not
+> handoff" rule (§ Draft recovery) now matters *more*, since backing out of naming lands the user back on
+> their take; and the `singleTask` launcher-relaunch hazard that motivated persisting the draft is gone
+> with the second Activity, but the draft persistence stays — it is what still survives process death.
 
 ### Permission
 Add `RECORD_AUDIO` to the manifest. First record → an on-brand priming screen, then the system

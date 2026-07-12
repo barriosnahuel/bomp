@@ -81,6 +81,7 @@ lifecycle-viewmodel-compose       = { module = "androidx.lifecycle:lifecycle-vie
 lifecycle-runtime-compose         = { module = "androidx.lifecycle:lifecycle-runtime-compose",   version.ref = "lifecycleCompose" }
 androidx-navigation3-runtime      = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3" }
 androidx-navigation3-ui           = { module = "androidx.navigation3:navigation3-ui",      version.ref = "nav3" }
+lifecycle-viewmodel-navigation3   = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleCompose" }
 
 # ---------- Material ----------
 material                          = { module = "com.google.android.material:material", version.ref = "material" }

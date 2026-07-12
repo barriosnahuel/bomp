@@ -17,8 +17,6 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Canonica
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.SoundSource
-import com.github.barriosnahuel.vossosunboton.testSound
-import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -31,20 +29,20 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 
 /**
- * SDK-boundary coverage for [AddButtonActivity.handleIntent], which reads its Parcelable extras
- * (the edit [Sound] and the shared [Uri]) through `Intent.getParcelableExtra(name, Class)` on
- * TIRAMISU+ and the deprecated single-arg overload below it. The matrix straddles that boundary:
- * M (23) exercises the legacy branch, TIRAMISU (33) the typed one.
+ * SDK-boundary coverage for [AddButtonActivity.handleIntent], which reads the shared [Uri] through
+ * `Intent.getParcelableExtra(name, Class)` on TIRAMISU+ and the deprecated single-arg overload below
+ * it. The matrix straddles that boundary: M (23) exercises the legacy branch, TIRAMISU (33) the typed
+ * one.
  *
- * Assertions are deliberately SDK-independent — they observe the *effect* of a successful
- * extraction (the Activity recomposes into Create/Edit and logs the screen, and does not finish)
- * rather than calling the typed two-arg API, which does not exist below TIRAMISU and would fail the
- * M run on the test side instead of the production side. [AddButtonActivityIntentDispatchTest]
- * covers the TIRAMISU behaviour in depth; this test only adds the legacy-branch leg.
+ * Assertions are deliberately SDK-independent — they observe the *effect* of a successful extraction
+ * (the trampoline composes the Create screen, logs it, and does not finish) rather than calling the
+ * typed two-arg API, which does not exist below TIRAMISU and would fail the M run on the test side
+ * instead of the production side. [AddButtonTrampolineTest] covers the TIRAMISU behaviour in depth;
+ * this test only adds the legacy-branch leg.
  */
 @Config(sdk = [Build.VERSION_CODES.M, Build.VERSION_CODES.TIRAMISU]) // sdk-boundary: handleIntent branches on SDK_INT >= TIRAMISU
 internal class AddButtonActivitySdkBoundaryTest : AbstractRobolectricTest() {
-    // screen_view now fires from AddButtonScreen's composition (not the Activity): flush the
+    // screen_view fires from AddButtonScreen's composition (not the Activity): flush the
     // pending frame (waitForIdle in launch) before asserting on fake.screens.
     @get:Rule
     val composeTestRule = createEmptyComposeRule()
@@ -77,14 +75,6 @@ internal class AddButtonActivitySdkBoundaryTest : AbstractRobolectricTest() {
         assertThat(fake.screens.map { it.name }).contains(CanonicalScreenName.ADD_SOUND)
     }
 
-    @Test
-    fun `edit intent resolves the Sound on both the typed and legacy getParcelableExtra branches`() {
-        val activity = launch(editIntent())
-
-        assertThat(activity.isFinishing).isFalse()
-        assertThat(fake.screens.map { it.name }).contains(CanonicalScreenName.EDIT_SOUND)
-    }
-
     private fun launch(intent: Intent): AddButtonActivity {
         val newController = Robolectric.buildActivity(AddButtonActivity::class.java, intent)
         controller = newController
@@ -108,11 +98,6 @@ internal class AddButtonActivitySdkBoundaryTest : AbstractRobolectricTest() {
             putExtra(Intent.EXTRA_STREAM, SAMPLE_URI)
         }
 
-    private fun editIntent(): Intent =
-        Intent(context, AddButtonActivity::class.java).apply {
-            putExtra(LandingActivity.EXTRA_EDIT_SOUND, testSound(EXISTING_NAME, file = "existing.mp3"))
-        }
-
     private class FakeAddButtonFeature : AddButtonFeature {
         override fun saveNewButtonAsync(
             context: Context,
@@ -132,6 +117,5 @@ internal class AddButtonActivitySdkBoundaryTest : AbstractRobolectricTest() {
 
     private companion object {
         val SAMPLE_URI: Uri = Uri.parse("content://test/audio.mp3")
-        const val EXISTING_NAME = "Existing sound"
     }
 }

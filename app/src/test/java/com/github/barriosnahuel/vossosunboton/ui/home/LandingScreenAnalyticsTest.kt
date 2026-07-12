@@ -19,12 +19,14 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
+import com.github.barriosnahuel.vossosunboton.feature.playback.PlaybackState
+import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerController
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
-import io.mockk.mockkObject
+import io.mockk.mockk
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,14 +47,21 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
 
     private lateinit var fake: FakeAnalyticsTracker
     private val createdViewModels = mutableListOf<SoundsViewModel>()
+    private val playbackStateFlow = MutableStateFlow<PlaybackState?>(null)
+    private lateinit var originalController: PlayerController
 
     @Before
     fun setUp() {
         fake = FakeAnalyticsTracker()
         AnalyticsTrackerProvider.setForTest(fake)
-        mockkObject(PlayerControllerFactory)
-        every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
-        every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
+        // The whole controller, not a partial stub of the factory: the Hub's record row now opens the
+        // recorder as a destination in this composition (ADR 0024 D4), and that destination collects
+        // `playbackState` for its preview transport — which a partially-stubbed singleton would throw on.
+        originalController = PlayerControllerFactory.instance
+        PlayerControllerFactory.instance =
+            mockk(relaxed = true) {
+                every { playbackState } returns playbackStateFlow
+            }
     }
 
     @After
@@ -62,6 +71,7 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
         // into a later test's `FakeAnalyticsTracker` — see ViewModelTestCleanup.kt.
         createdViewModels.cancelAndJoinAll()
         createdViewModels.clear()
+        PlayerControllerFactory.instance = originalController
         AnalyticsTrackerProvider.setForTest(null)
         unmockkAll()
     }

@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -16,7 +15,6 @@ import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.CustomBuildTypeApplication
-import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.local.defaultaudios.PackagedAudios
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
@@ -73,22 +71,5 @@ class LandingActivity : FragmentActivity() {
                 requested
             }
         viewModel.selectTab(resolved)
-    }
-
-    companion object {
-        /** Single Parcelable [Sound] extra for the edit flow — carries the full entity, [Sound.id] included. */
-        const val EXTRA_EDIT_SOUND = "extra_edit_sound"
-
-        private const val ADD_BUTTON_ACTIVITY_CLASS =
-            "com.github.barriosnahuel.vossosunboton.feature.addbutton.AddButtonActivity"
-
-        fun editIntent(
-            context: Context,
-            sound: Sound,
-        ): Intent =
-            Intent().apply {
-                setClassName(context, ADD_BUTTON_ACTIVITY_CLASS)
-                putExtra(EXTRA_EDIT_SOUND, sound)
-            }
     }
 }
