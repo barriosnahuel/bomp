@@ -95,6 +95,9 @@ internal fun ManageCollectionsScreen(
     viewModel: SoundsViewModel,
     focusedCollectionId: String?,
     onBack: () -> Unit,
+    // Opening a collection is navigation, not a ViewModel state poke: the caller sends the graph to
+    // that tab's root, which also closes this screen (its entry lives on a stack being reset).
+    onViewCollectionIn: (AppTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val collections by viewModel.collections.collectAsState()
@@ -158,11 +161,10 @@ internal fun ManageCollectionsScreen(
                         isHighlighted = highlightedId == collection.id,
                         onViewClick = {
                             viewModel.trackCollectionView(isPublic = true)
-                            // Set tab + filter before closing so LandingScreen re-renders against
-                            // both new values in a single composition pass.
-                            viewModel.selectTab(AppTab.MY_SOUNDS)
+                            // Filter first, then navigate: LandingScreen renders the destination tab
+                            // against the new filter in a single composition pass.
                             viewModel.selectMySoundsFilter(collection.id)
-                            onBack()
+                            onViewCollectionIn(AppTab.MY_SOUNDS)
                         },
                         onRenameClick = { viewModel.requestRenameCollection(collection.id) },
                         onDeleteClick = { viewModel.requestDeleteConfirmation(collection.id) },
@@ -205,9 +207,8 @@ internal fun ManageCollectionsScreen(
                         isHighlighted = highlightedId == collection.id,
                         onViewClick = {
                             viewModel.trackCollectionView(isPublic = false)
-                            viewModel.selectTab(AppTab.VAULT)
                             viewModel.selectVaultFilter(collection.id)
-                            onBack()
+                            onViewCollectionIn(AppTab.VAULT)
                         },
                         onRenameClick = { viewModel.requestRenameCollection(collection.id) },
                         onDeleteClick = { viewModel.requestDeleteConfirmation(collection.id) },

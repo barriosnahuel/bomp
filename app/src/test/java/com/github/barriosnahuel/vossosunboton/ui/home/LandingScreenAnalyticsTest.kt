@@ -92,8 +92,10 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
-        viewModel.selectTab(AppTab.EXPLORE_SOUNDS)
+        // The Explore tab only exists in the bar when there are bundled audios to explore.
+        viewModel.injectHasBundledSounds(true)
         composeTestRule.waitForIdle()
+        composeTestRule.selectTab(AppTab.EXPLORE_SOUNDS)
 
         fake.assertScreenView(CanonicalScreenName.EXPLORE_SOUNDS)
     }

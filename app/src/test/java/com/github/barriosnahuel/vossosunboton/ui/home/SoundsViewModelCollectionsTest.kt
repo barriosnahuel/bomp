@@ -283,7 +283,7 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         // Switch to Vault — vm.sounds keeps the previous tab's projection (emptying it flashed the
         // outgoing tab's empty state mid-transition), and the library snapshot must keep the user
         // catalog so ImmersiveListenScreen can resolve collection.audioIds to real Sounds.
-        vm.selectTab(AppTab.VAULT)
+        vm.setActiveTab(AppTab.VAULT)
 
         assertThat(vm.sounds.value.map { it.name }).containsExactly("audio-a", "audio-b")
         val userLibraryNames =
@@ -314,7 +314,7 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         runBlocking { vm.vaultAudios.first { it.size == 1 } }
         // The user is on the Vault tab when they swipe-to-delete; the main list is empty here only
         // because the seeded audio is Vault-only (VaultScreen itself reads `_vaultAudios` directly).
-        vm.selectTab(AppTab.VAULT)
+        vm.setActiveTab(AppTab.VAULT)
         runBlocking { vm.sounds.first { it.isEmpty() } }
 
         val target = vm.vaultAudios.value.single()
@@ -345,7 +345,7 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         val vm = givenAViewModel()
         runBlocking { vm.collections.first { it.isNotEmpty() } }
         runBlocking { vm.vaultAudios.first { it.size == 1 } }
-        vm.selectTab(AppTab.VAULT)
+        vm.setActiveTab(AppTab.VAULT)
         runBlocking { vm.sounds.first { it.isEmpty() } }
 
         val target = vm.vaultAudios.value.single()
@@ -458,7 +458,7 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
             .that(vm.sounds.value.map { it.name })
             .containsExactly("first", "second")
 
-        vm.selectTab(AppTab.VAULT)
+        vm.setActiveTab(AppTab.VAULT)
         scheduler.advanceTimeBy(1_000)
         scheduler.runCurrent()
         mainLooper.idle()
@@ -470,7 +470,7 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
             .that(vm.sounds.value.map { it.name })
             .containsExactly("first", "second")
 
-        vm.selectTab(AppTab.MY_SOUNDS)
+        vm.setActiveTab(AppTab.MY_SOUNDS)
 
         // No scheduler advance: loadSounds has not run. The synchronous cache projection alone
         // must repopulate the list — otherwise the tab renders its empty state until IO lands.

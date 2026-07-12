@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-05
+- **Amended:** 2026-07-12 — § *Deep links* rewritten (Navigation 3 ships no declarative deep-link
+  API; the original wording described a capability the library does not have) and § *Consequences*
+  corrected on the Vault, which ships self-gating rather than as conditional navigation.
 - **Supersedes:** Amends [ADR 0011](0011-predictive-back-navigation.md) (its revisit
   criterion — "when the Navigation 3 migration lands" — fires with this epic: the manual
   `predictiveBackTransition` machinery is simplified or removed for every surface that becomes a
@@ -81,12 +84,23 @@ contract; keeping full Activities for internal flows was rejected because it for
 user-visible payoff. Inbound-URI validation (CLAUDE.md § *Security boundaries*) is untouched —
 the same validator runs regardless of who invokes it.
 
-### Deep links: declarative, same allowlist
+### Deep links: resolved in the Activity, applied to the back stack
 
-The `push-me://open` allowlist moves into the graph as declarative mappings (`/home` → Home,
-`/explore` → Explore) with the **unknown-path → Home fallback preserved as the `else`** — the
-security invariant of CLAUDE.md § *Deep link path allowlist* survives the API change verbatim,
-including the extra "Explore without bundled audios → Home" guard.
+**Navigation 3 has no declarative deep-link API** — there is no `navDeepLink { uriPattern }`
+equivalent, and the official recipe (`deeplinks-basic`) parses the `Intent` in the Activity against
+a hand-written matcher, resolves it to a `NavKey`, and applies it to the back stack. `DeepLinkPattern`
+in that recipe belongs to the sample, not to `androidx.navigation3`. This ADR originally promised
+"declarative mappings in the graph"; that capability does not exist, so the `when (uri.path)` in
+`LandingActivity.handleDeeplink` **is** the prescribed shape, not a leftover of the old model.
+
+What the migration owes is therefore not the *form* but the *destination*: the resolved tab is handed
+to the graph as a one-shot event (ADR 0003) and **resets that tab to its root** — a link names a
+place, so it must not leave the user under whatever screen happened to be open, nor under history
+that "exit through home" would surface on the way back.
+
+**The security invariant is unchanged and is the part that matters**: a closed allowlist (`/home`,
+`/explore`), **unknown paths → Home** as the `else`, plus the "Explore without bundled audios → Home"
+guard (CLAUDE.md § *Deep link path allowlist*).
 
 ### Execution: three PRs
 
@@ -123,8 +137,20 @@ radius (share-sheet contract, back semantics). Rationale lives in the master spe
 - Overlay payloads currently carried by hand-written `Saver`s (e.g. the `ManageRequest` sealed
   class) become typed route arguments; the back stack itself is saveable/restorable across
   process death (`rememberNavBackStack` + `@Serializable` keys).
-- `VaultSessionState` keeps its process-scoped, non-persisted semantics: Vault access is modeled
-  as conditional navigation, and a restored back stack must re-request biometrics.
+- `VaultSessionState` keeps its process-scoped, non-persisted semantics: a restored back stack
+  re-requests biometrics. **The Vault ships self-gating, not as conditional navigation** (the
+  `conditional` recipe): the gate lives in `VaultScreen`'s body, which already had to render a
+  locked state — the same tab is a legitimate destination both locked and unlocked, so routing it
+  through the graph would add a second place that decides Vault access without removing the first.
+  Revisit when the Vault gains destinations *below* it (a private collection detail, an immersive
+  listen reachable by link): a gate that must protect a sub-graph rather than one screen belongs in
+  the graph, where every entry into that sub-graph passes it.
+- **The graph is the single source of truth for where the user is.** The ViewModel mirrors the
+  active tab (it projects the sounds list off it) but never drives it: programmatic navigation
+  (deep links, Manage Collections' "view collection") goes through `LandingNavigator`. A second
+  persisted copy of the current tab in `SavedStateHandle` was the original shape and is what let
+  the graph and the ViewModel disagree — the reconciliation it needed silently skipped the back
+  stacks, so a programmatic tab change left destinations stranded on the tab it left.
 - Once internal navigation goes through the graph, `startActivity` stops being a legitimate
   internal-navigation mechanism; a grep invariant for it is added to
   `scripts/check-adr-invariants.sh` by `003b`/`003c` (where the code changes), not by this PR.

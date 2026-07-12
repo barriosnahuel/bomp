@@ -14,7 +14,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
@@ -35,6 +34,8 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
     val composeTestRule = createEmptyComposeRule()
 
     private val context: Context get() = ApplicationProvider.getApplicationContext()
+
+    private fun assertOnTab(tab: AppTab) = composeTestRule.assertOnTab(tab)
 
     @Before
     fun setUp() {
@@ -58,11 +59,9 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
     @Test
     fun `deep link with home path opens MY_SOUNDS tab`() {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open/home"))
-        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
-                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
-            }
+        ActivityScenario.launch<LandingActivity>(intent).use {
+            composeTestRule.waitForIdle()
+            assertOnTab(AppTab.MY_SOUNDS)
         }
     }
 
@@ -75,33 +74,28 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
             return
         }
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open/explore"))
-        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
-                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.EXPLORE_SOUNDS)
-            }
+        ActivityScenario.launch<LandingActivity>(intent).use {
+            composeTestRule.waitForIdle()
+            assertOnTab(AppTab.EXPLORE_SOUNDS)
         }
     }
 
+    /** OWASP MASVS-PLATFORM-1 / CWE-939 (deep-link allowlist: unknown path never routes off Home). */
     @Test
     fun `deep link with unknown path falls back to MY_SOUNDS tab`() {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open/unknown"))
-        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
-                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
-            }
+        ActivityScenario.launch<LandingActivity>(intent).use {
+            composeTestRule.waitForIdle()
+            assertOnTab(AppTab.MY_SOUNDS)
         }
     }
 
     @Test
     fun `deep link with no path falls back to MY_SOUNDS tab`() {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open"))
-        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
-                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
-            }
+        ActivityScenario.launch<LandingActivity>(intent).use {
+            composeTestRule.waitForIdle()
+            assertOnTab(AppTab.MY_SOUNDS)
         }
     }
 
@@ -115,10 +109,26 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
             composeTestRule.waitForIdle()
             scenario.recreate()
             composeTestRule.waitForIdle()
-            scenario.onActivity { activity ->
-                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
-            }
+            assertOnTab(AppTab.MY_SOUNDS)
+        }
+    }
+
+    @Test
+    fun `rotating after arriving on a deep link does not replay it over what the user opened since`() {
+        // The launching Intent survives in getIntent() across recreates. Replaying it would re-run
+        // the link — which resets the tab to its root — so a rotation would silently throw away
+        // whatever the user opened after arriving (here About; in the wild, an unsaved recording).
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("push-me://open/home"))
+        ActivityScenario.launch<LandingActivity>(intent).use { scenario ->
+            composeTestRule.waitForIdle()
+            openAboutFromOverflow()
+
+            scenario.recreate()
+            composeTestRule.waitForIdle()
+
+            composeTestRule
+                .onNodeWithContentDescription(context.getString(R.string.app_about_back))
+                .assertIsDisplayed()
         }
     }
 
@@ -128,19 +138,13 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
         // Home tab instead of leaving the app; only the Home base exits.
         ActivityScenario.launch(LandingActivity::class.java).use { scenario ->
             composeTestRule.waitForIdle()
-            composeTestRule
-                .onNodeWithText(context.getString(R.string.app_navigation_menu_item_vault))
-                .performClick()
-            composeTestRule.waitForIdle()
+            composeTestRule.selectTab(AppTab.VAULT)
 
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
             composeTestRule.waitForIdle()
 
-            scenario.onActivity { activity ->
-                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
-                assertThat(activity.isFinishing).isFalse()
-            }
+            assertOnTab(AppTab.MY_SOUNDS)
+            scenario.onActivity { activity -> assertThat(activity.isFinishing).isFalse() }
         }
     }
 
@@ -152,35 +156,20 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
         // Explore-based variant silently skipped there, leaving this behavior unguarded).
         ActivityScenario.launch(LandingActivity::class.java).use { scenario ->
             composeTestRule.waitForIdle()
-            scenario.onActivity { activity ->
-                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                viewModel.selectTab(AppTab.VAULT)
-            }
-            composeTestRule.waitForIdle()
-            composeTestRule
-                .onNodeWithContentDescription(context.getString(R.string.app_overflow_menu))
-                .performClick()
-            composeTestRule.waitForIdle()
-            composeTestRule.onNodeWithText(context.getString(R.string.app_about)).performClick()
-            composeTestRule.waitForIdle()
+            composeTestRule.selectTab(AppTab.VAULT)
+            openAboutFromOverflow()
             composeTestRule
                 .onNodeWithContentDescription(context.getString(R.string.app_about_back))
                 .assertIsDisplayed()
 
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
             composeTestRule.waitForIdle()
-            scenario.onActivity { activity ->
-                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.VAULT)
-            }
+            assertOnTab(AppTab.VAULT)
 
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
             composeTestRule.waitForIdle()
-            scenario.onActivity { activity ->
-                val viewModel = ViewModelProvider(activity, SoundsViewModel.Factory)[SoundsViewModel::class.java]
-                assertThat(viewModel.selectedTab.value).isEqualTo(AppTab.MY_SOUNDS)
-                assertThat(activity.isFinishing).isFalse()
-            }
+            assertOnTab(AppTab.MY_SOUNDS)
+            scenario.onActivity { activity -> assertThat(activity.isFinishing).isFalse() }
 
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
             composeTestRule.waitForIdle()
@@ -188,6 +177,15 @@ internal class LandingActivityTest : AbstractRobolectricTest() {
                 assertThat(activity.isFinishing).isTrue()
             }
         }
+    }
+
+    private fun openAboutFromOverflow() {
+        composeTestRule
+            .onNodeWithContentDescription(context.getString(R.string.app_overflow_menu))
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.app_about)).performClick()
+        composeTestRule.waitForIdle()
     }
 
     @Test
