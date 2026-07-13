@@ -159,6 +159,20 @@ jobs:
           name: "Behaviour test for the stall watchdog in scripts/run-instrumented-tests.sh"
           command: ./scripts/test-run-instrumented-tests.sh
 
+  # Same reasoning as instrumented-watchdog-test: the suite itself can't run in CI,
+  # but the bookkeeping that decides "known flaky vs. new regression" is pure bash
+  # over fabricated history — and a wrong verdict there is expensive in both
+  # directions (ship a bug, or debug a test that was already lying).
+  "flaky-report-test":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+    steps:
+      - checkout
+      - run:
+          name: "Behaviour test for the instrumented run history + flaky report"
+          command: ./scripts/test-flaky-report.sh
+
   "bundle":
     executor:
       name: android/android_docker
@@ -203,6 +217,7 @@ workflows:
       - security-test-count-guard
       - worktree-cleanup-test
       - instrumented-watchdog-test
+      - flaky-report-test
       - bundle:
           requires:
             - detekt
