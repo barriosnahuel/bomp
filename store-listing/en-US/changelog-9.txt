@@ -1,0 +1,8 @@
+What's new in this version.
+
+▸ Long listens now reach your media controls: play from the Vault and you get a lock-screen notification, with headset keys to pause and resume.
+▸ Recording, importing and editing happen inside the app — back moves one step at a time, and saving returns you where you started.
+▸ Reopening a Vault audio starts it from the beginning, not mid-clip.
+▸ Opening the app no longer flashes an empty screen while your Bomps load.
+
+Thanks for bomping.

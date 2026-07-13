@@ -1,0 +1,8 @@
+Novedades de esta versión.
+
+▸ Las escuchas largas llegan a tus controles multimedia: reproducí desde el Baúl y tenés notificación en la pantalla bloqueada, con el auricular para pausar y seguir.
+▸ Grabar, importar y editar pasan a ser parte de la app: el atrás va paso a paso y, al guardar, volvés a donde arrancaste.
+▸ Al reabrir un audio del Baúl, empieza del principio y no por la mitad.
+▸ Abrir la app ya no muestra un destello de pantalla vacía mientras cargan tus Bomps.
+
+Gracias por bompear.
