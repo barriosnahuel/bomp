@@ -259,6 +259,40 @@ To hunt flakes, run several cold-booted passes in a row:
 RUNS=3 ./scripts/run-instrumented-tests.sh
 ```
 
+#### The run always ends — reading the exit code
+
+The wrapper supervises the run under a watchdog, so it can no longer hang forever waiting on a wedged emulator (it used to: past ~test 100 the emulator could freeze and the run would simply never return, unnoticed for hours — [ADR 0001 § *Bounded termination*](docs/adr/0001-local-ui-test-suite.md)). **Read the exit code before you read the test report** — it tells you whether the reds are even real:
+
+**Only one exit code means "go read the test report".**
+
+| Exit | Meaning | What to do |
+|---|---|---|
+| `0` | All runs passed | — |
+| `1` | Real test failures | Debug the test. Triage first with § *Is the red the emulator, or a real bug?* below |
+| `124` | **Stall / hard cap — the emulator hung** | **Not a test failure.** Re-run the suite. Do not go debugging the test it died on — it never finished running |
+| `3` | The build/install never reached the tests (compile error, `INSTALL_FAILED`, no device) | Read the Gradle log. There is no test report — no test ran |
+| `2` | The emulator never booted | Check the emulator log; usually a broken AVD or a busy port |
+
+While it runs, the wrapper prints a live per-test counter (`103/134 SearchOverlayTest#pinsACustomSound`), parsed from AndroidJUnitRunner's own logcat narration. That is the progress signal Gradle never gave you: a healthy run and a hung one used to look identical from the outside (both silent).
+
+Three clocks bound the run, all env-overridable. There are two stall clocks rather than one because a run has two regimes, and using the tight one on the build phase is how a watchdog starts killing healthy runs:
+
+- **`STALL_TIMEOUT_SECONDS`** (default `360`) — **test phase only**, i.e. after the runner announces `run started:`. From here TestRunner narrates every test, so silence really does mean the guest stopped executing.
+- **`BUILD_STALL_TIMEOUT_SECONDS`** (default `900`) — **build phase**. Gradle's output isn't a tty, so there's no progress bar: a cold daemon, a cold Kotlin/Compose compile, or dependency resolution on a slow network are each legitimately silent for minutes.
+- **`HARD_CAP_SECONDS`** (default `2700`) — total wall clock for one run, whatever it's doing. Backstop for a hang that keeps dribbling output.
+
+Raise them rather than fight them if you legitimately add a much slower test — a stall timeout below the slowest honest test turns slowness into a false stall.
+
+On a stall, a diagnostics bundle lands in `$TMPDIR/push-me-instrumented/diagnostics/run-<n>/` (per run, so a later stall doesn't wipe an earlier one's evidence): `summary.txt` — the phase, the test it died on, its index, and a **liveness probe** saying whether the *emulator froze* or the *device was fine and Gradle/ddmlib was stuck* (different bugs, different fixes) — plus the heartbeat, the TestRunner capture, the Gradle log, the emulator log and a full logcat. Read `summary.txt` first.
+
+Two things the watchdog deliberately does **not** do: it never runs `./gradlew --stop` (that would kill every daemon on the machine, including the one your IDE is mid-sync on — killing the emulator is what actually frees a daemon wedged in ddmlib), and it never `pkill`s by emulator port (that would take down an unrelated emulator you happen to have on `5554`; it matches on the AVD name instead).
+
+#### If a run hangs, suspect your laptop before the emulator
+
+The original "the emulator freezes past test 100" turned out to be **the Mac going to sleep**. A full suite outlasts the default idle-sleep timer, so kicking off a run and walking away is exactly what suspends the host mid-run: the guest freezes along with it, the instrumentation link doesn't survive the wake, and the run hangs forever — looking, from outside, just like a wedged emulator.
+
+The wrapper now holds sleep off with `caffeinate -i` while it runs, and if the host suspends anyway it discounts that time instead of blaming the device (`summary.txt` reports `host_slept:`). If you ever see a stall with `host_slept: ~900s`, confirm with `pmset -g log | grep Sleep` — the bug is your power settings, not the AVD.
+
 HTML report: `app/build/reports/androidTests/connected/debug/index.html`. Raw XML: `app/build/outputs/androidTest-results/connected/debug/`.
 
 #### Is the red the emulator, or a real bug?
