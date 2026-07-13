@@ -20,8 +20,8 @@ android {
         applicationId "com.github.barriosnahuel.vossosunboton"
         minSdkVersion 23
         targetSdkVersion 37
-        versionCode 8
-        versionName '2.3.0' // last SemVer release; CalVer from the next cut (CONTRIBUTING § Versioning)
+        versionCode 9
+        versionName '2026.07' // CalVer: year + month of the cut (CONTRIBUTING § Versioning)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Keep capture/utility drivers out of the default suite (connectedDebugAndroidTest /
         // run-instrumented-tests.sh). The store-screenshot driver still runs via

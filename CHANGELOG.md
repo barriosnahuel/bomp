@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+## \[v2026.07.1] - 2026-07-13
+
 ### Added
 - Long listens now show up in your system media controls — playing an audio from the Vault's listen screen (or reviewing a recording) surfaces a media notification with lock-screen controls, and headset/media keys pause and resume it; quick soundboard taps stay notification-free
 
@@ -34,8 +36,6 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Creation flows are graph destinations (ADR 0024 D4): `RecordingActivity` is gone (now the `RecorderHost` destination) and `AddButtonActivity` is reduced to the share-sheet trampoline, keeping the task-level `excludeFromRecents` + return-to-source contract that a destination cannot honor. Screen-lifetime ViewModels scope per `NavEntry` (`lifecycle-viewmodel-navigation3`), and a grep invariant now fails the build if internal navigation reintroduces `startActivity` on one of our own Activities
 - Release tags, GitHub release titles and CHANGELOG headers move from day-precision CalVer (`vYYYY.MM.DD`) to month + sequential counter (`vYYYY.MM.N`), so the month's milestone can be created up front and assigned to every PR at creation (ADR 0023 amending ADR 0021)
 - Waveform envelope extraction demuxes via Media3's `MediaExtractorCompat` instead of the AEP-prohibited `MediaExtractor` (`MediaCodec` decode unchanged); all sources normalize to per-decode temp files to route around a Media3 1.10.1 truncation bug with fd/content/resource sources — envelope verified bit-comparable (1 of 48 bars off by 0.014)
-
-#### Changed
 - The Nav3 back stack is now the single source of truth for the active tab (ADR 0024, amended): `SoundsViewModel` mirrors it instead of persisting a second copy in `SavedStateHandle`, and programmatic navigation (deep links, "view collection") goes through `LandingNavigator`, landing on the destination tab's root. The ADR's "declarative deep links" wording is corrected — Navigation 3 ships no such API; the Activity-side matcher is the official recipe, and the allowlist + Home-fallback security invariant is unchanged
 
 #### Fixed
