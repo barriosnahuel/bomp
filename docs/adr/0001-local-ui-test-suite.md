@@ -120,6 +120,122 @@ timing-sensitive tests. If a cold-booted run is still slow or flaky, check the h
 before suspecting a test: close other heavy work and re-run, rather than chasing a
 non-existent test bug.
 
+### Bounded termination — the stall watchdog
+
+The *Cold boot per run* note above ends with "or the run failing to start at all". In its
+worst form that was literal: past roughly the hundredth test, the emulator would wedge and
+the run would **never end**. Not slowly — never. Hours later someone would notice by hand.
+
+Nothing in the stack was in a position to notice on its own:
+
+- **ddmlib** (under AGP) waits on the instrumentation's output with `maxTimeToOutputResponse`,
+  whose default is *wait indefinitely*. A frozen emulator whose adb socket stays open sends
+  neither data nor EOF, so ddmlib blocks forever — no exception, no timeout.
+- **Gradle** waits on ddmlib. **The wrapper** waited on Gradle. Each layer faithfully waited
+  on the one below, and the bottom one never came back.
+- **Nobody printed anything.** `connectedDebugAndroidTest` emits no per-test output, so a
+  healthy run and a hung one produced the same thing from the outside: silence. There was no
+  signal to miss, so neither a human nor an agent could tell the two apart — which is why the
+  hang could go unnoticed for hours rather than minutes.
+
+The wrapper therefore guarantees **bounded termination**: every run ends, and announces which
+kind of ending it was. Three pieces:
+
+1. **A progress heartbeat.** `AndroidJUnitRunner` narrates itself to logcat under the
+   `TestRunner` tag (`run started: N tests`, then `started:` / `finished:` / `failed:` per
+   test). That stream is the only per-test progress signal that exists, and the wrapper
+   parses it into a running `N/total` counter — on stdout for whoever is watching, and to a
+   heartbeat file for the watchdog and the run history. The suite size comes from the runner
+   itself rather than being hardcoded, so it can't drift.
+2. **Two stall clocks, because a run has two regimes.** This is the part that is easy to get
+   wrong, and getting it wrong is worse than the original bug.
+   - *Build phase* (`BUILD_STALL_TIMEOUT_SECONDS`, default 900 s): Gradle configures,
+     compiles, dexes and installs two APKs. Its output is not a tty, so there is no progress
+     bar — a cold daemon, a cold Kotlin/Compose compile, or dependency resolution on a slow
+     network are each **legitimately silent for minutes**. No TestRunner line exists yet, by
+     definition.
+   - *Test phase* (`STALL_TIMEOUT_SECONDS`, default 360 s): from `run started:` onward, the
+     runner narrates every test, so silence is meaningful — the guest really has stopped
+     executing.
+
+   A single clock tight enough for the test phase kills healthy builds, and it **cascades**:
+   killing a run leaves the next one with a cold daemon, whose slow silent build trips the
+   same clock — one real stall manufacturing a suite of fake ones. `HARD_CAP_SECONDS`
+   (default 2700 s) backstops the whole run.
+3. **A distinguishable exit code.** `124` (the `timeout(1)` convention) means the emulator
+   hung; `3` means the build or install never reached the tests (compile error,
+   `INSTALL_FAILED`, no device — there is no test report to read); `2` means the emulator
+   never booted. **Only `1` means a test is genuinely red.** Conflating any of these with `1`
+   is the expensive mistake — it sends you debugging a test that never actually ran.
+
+Before killing anything, the wrapper dumps a diagnostics bundle (heartbeat, TestRunner
+capture, Gradle log, emulator log, full logcat) and probes the device with a bounded
+`adb shell`. That probe answers the one question the outside world cannot otherwise ask:
+**did the emulator freeze, or is the device fine and Gradle/ddmlib the stuck party?** Those
+are different bugs with different fixes.
+
+#### The hang was the host sleeping, not the emulator
+
+Building the watchdog is what finally identified the original bug, and it was **not an
+emulator bug at all**. The wrapper's first stalls fired with `idle ≈ 902s` — and `pmset -g log`
+showed the machine had entered `Idle Sleep` for exactly 900 seconds in that window. The
+supervision loop, which polls every 5 s, had ticked **once**: it was suspended along with
+everything else. The liveness probe agreed — the emulator answered `adb shell` perfectly the
+moment it woke.
+
+A full suite takes longer than macOS's default idle-sleep timer, so **starting a run and
+walking away is precisely the situation that suspends the host mid-run.** The guest freezes
+with it, the instrumentation connection does not survive the wake, and the run hangs forever.
+From the outside it is indistinguishable from a wedged emulator — which is why it was
+misdiagnosed as one for so long, and why "it dies somewhere past test 100" was really "it dies
+about fifteen minutes in, whatever test that happens to be".
+
+Two mitigations, in the order that matters:
+
+1. **`caffeinate -i` for the lifetime of the run** — hold off idle sleep, so the failure does
+   not happen. With it, the same suite that stalled twice runs 134/134 green.
+2. **The watchdog discounts a host sleep instead of charging it to the emulator.** It cannot
+   observe the suspend directly, but it can see its shadow: a loop that sleeps 5 s and finds
+   900 s of wall clock gone did not stall — it was not *running*. That gap is subtracted from
+   the idle budget and the device is re-armed with a fresh one, so if the emulator genuinely
+   did not survive the wake it is still caught — but the diagnosis names the host.
+
+This is the whole point of the exit-code contract stated in the negative: a watchdog that
+confidently blames the wrong component is worse than one that says nothing.
+
+**Calibrating the clocks is the whole risk.** A stall timeout below the slowest legitimate
+test converts slowness into a false stall, and a watchdog that kills healthy runs is strictly
+worse than the hang it replaces. So the behaviour test (`scripts/test-run-instrumented-tests.sh`,
+CI job `instrumented-watchdog-test`) asserts the *healthy* paths at least as hard as the stall
+paths — a clean pass, honest test failures, and a build that stays silent for longer than the
+test-phase clock must all survive untouched. It also drives the failure modes of the watchdog's
+own machinery: a Gradle that must be killed for real rather than orphaned behind a subshell, and
+a logcat stream that dies mid-run (the adb server is machine-wide — an IDE starting up or a
+flaky USB device restarts it, freezing our capture while the emulator runs on perfectly well;
+that must be recovered from, never blamed on the device).
+
+Reference points from a measured healthy run on the reference machine: 134 tests in ~4 min of
+test phase, with the slowest single test at 6 s — two orders of magnitude under the 360 s
+test-phase clock.
+
+AGP's own timeouts are kept as defence in depth for anyone bypassing the wrapper, with their
+scope stated precisely rather than generously:
+
+- `installation.timeOutInMs` bounds `installDebug` and ddmlib's device-detection shell
+  commands. It is **not** confirmed to bound the APK install on the UTP connected-test path,
+  which uses a separate `installApkTimeout` knob.
+- The runner's `timeout_msec` bounds a single test deadlocking *on-device*: AndroidJUnitRunner
+  kills it and moves on. Note the consequence — the test is then reported as **failed**
+  (exit 1), not as a stall. That is the right call (a test that deadlocks the app is a real
+  bug, not a wedged emulator), but it means `timeout_msec` must stay *below*
+  `STALL_TIMEOUT_SECONDS`: raise it above and the watchdog starts killing runs the runner was
+  about to handle by itself.
+
+Neither can save a frozen emulator: a wedged guest cannot run the code that would enforce its
+own timeout. That is precisely why the watchdog lives *outside* the device — and why every adb
+call it makes once the device is suspect is itself bounded, in pure bash rather than with
+`timeout(1)`, which is GNU coreutils and absent on the macOS hosts this suite runs on.
+
 ### Not every red is the emulator — deterministic vs. degradation reds
 
 The *Cold boot per run* note above explains the reds that **are** the emulator. There is a

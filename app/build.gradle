@@ -27,7 +27,15 @@ android {
         // run-instrumented-tests.sh). The store-screenshot driver still runs via
         // capture-store-screenshots.sh, which targets it with `am instrument -e class …` and so
         // doesn't inherit these Gradle-passed runner arguments.
-        testInstrumentationRunnerArguments notAnnotation: 'com.github.barriosnahuel.vossosunboton.ScreenshotCapture'
+        //
+        // timeout_msec bounds a single deadlocked test on-device: AndroidJUnitRunner kills it and
+        // moves on, instead of ddmlib waiting forever for output that is never coming. Sized far
+        // above the slowest legitimate test so it can never fire on a merely slow one. It cannot
+        // save a *frozen* emulator — a wedged guest can't run the code that enforces its own
+        // timeout — which is why the real watchdog lives outside the device, in
+        // scripts/run-instrumented-tests.sh.
+        testInstrumentationRunnerArguments notAnnotation: 'com.github.barriosnahuel.vossosunboton.ScreenshotCapture',
+                                           timeout_msec: '300000'
     }
 
     androidResources {
@@ -65,6 +73,21 @@ android {
                 storePassword "android"
             }
         }
+    }
+
+    // Defence in depth for anyone bypassing scripts/run-instrumented-tests.sh and calling
+    // `:app:connectedDebugAndroidTest` straight. The wrapper's watchdog is the primary
+    // mechanism — it is the only layer that can see a frozen emulator, because the layers
+    // below it are the ones that hang. These bound the two failure modes AGP *can* bound:
+    //   timeOutInMs        : an `adb install` that never returns.
+    //   timeout_msec       : a single test that deadlocks on-device. AndroidJUnitRunner
+    //                        kills it and moves on, instead of ddmlib waiting forever for
+    //                        output that is never coming. Sized far above the slowest
+    //                        legitimate test so it can never fire on a merely slow one.
+    // Neither can save a wedged emulator: a frozen guest cannot run the code that would
+    // enforce its own timeout. That is exactly why the watchdog lives outside the device.
+    installation {
+        timeOutInMs = 300_000
     }
 
     testOptions {

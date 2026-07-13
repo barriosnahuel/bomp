@@ -146,6 +146,19 @@ jobs:
           name: "Behaviour test for scripts/cleanup-merged-worktrees.sh"
           command: ./scripts/test-cleanup-merged-worktrees.sh
 
+  # The instrumented suite itself is not run in CI (ADR 0001) — but the watchdog that
+  # decides when to kill it is pure bash over stubbed adb/emulator/gradlew, so it is,
+  # and it must be: a watchdog bug kills healthy runs and reads as a flaky suite.
+  "instrumented-watchdog-test":
+    executor:
+      name: android/android_docker
+      tag: "2026.03"
+    steps:
+      - checkout
+      - run:
+          name: "Behaviour test for the stall watchdog in scripts/run-instrumented-tests.sh"
+          command: ./scripts/test-run-instrumented-tests.sh
+
   "bundle":
     executor:
       name: android/android_docker
@@ -189,6 +202,7 @@ workflows:
       - adr-invariants
       - security-test-count-guard
       - worktree-cleanup-test
+      - instrumented-watchdog-test
       - bundle:
           requires:
             - detekt

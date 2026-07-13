@@ -149,17 +149,17 @@ For a value aggregated from **multiple** flows, await **each** upstream before t
 
 ## Activity smoke tests
 
-Every `Activity` in `app` must have a smoke test in `app/src/test/` (extending `AbstractRobolectricTest`) that reaches `Lifecycle.State.RESUMED` without crashing — mock singleton factories (e.g. `PlayerControllerFactory`) that crash under Robolectric. Full-screen Composables with business logic (PackageManager calls, raw resources, significant state) need a `createComposeRule()` smoke test. The `ActivityScenario.launch(...).use { … }` snippet + canonical `LandingActivityTest` / `AboutScreenTest`: CONTRIBUTING.md § *Testing → Activity smoke tests*.
+Every `Activity` in `app` must have a smoke test in `app/src/test/` (extending `AbstractRobolectricTest`) that reaches `Lifecycle.State.RESUMED` without crashing — mock singleton factories (e.g. `PlayerControllerFactory`) that crash under Robolectric. Full-screen Composables with business logic (PackageManager calls, raw resources, significant state) need a `createComposeRule()` smoke test. Snippet + canonical tests: CONTRIBUTING.md § *Testing → Activity smoke tests*.
 
 ## Local UI test suite
 
-Instrumented UI/functional tests live under `app/src/androidTest/`. CircleCI intentionally does not run them — see [ADR 0001](docs/adr/0001-local-ui-test-suite.md). When to run, setup, run commands, report paths: CONTRIBUTING.md § *Testing → Local UI test suite*.
+Instrumented tests live under `app/src/androidTest/`; CircleCI intentionally does not run them ([ADR 0001](docs/adr/0001-local-ui-test-suite.md)). When to run, setup, commands, reports, exit codes: CONTRIBUTING.md § *Testing → Local UI test suite*.
 
-**Always run the suite via `./scripts/run-instrumented-tests.sh`** (cold-boots the AVD), never `./gradlew :app:connectedDebugAndroidTest` against a warm emulator — a degraded AVD makes flakes masquerade as `ComposeTimeoutException` / `Process crashed`. If the suite flakes, re-run via the wrapper before suspecting a test or production bug. Rationale: [ADR 0001 § *Cold boot per run*](docs/adr/0001-local-ui-test-suite.md).
+**Always run the suite via `./scripts/run-instrumented-tests.sh`** (cold-boots the AVD), never `./gradlew :app:connectedDebugAndroidTest` against a warm emulator — a degraded AVD makes flakes masquerade as `ComposeTimeoutException` / `Process crashed`. **The run always terminates: check the exit code before the report.** Only `1` means a test is genuinely red. `124` = the emulator hung — **re-run**, don't debug the test it died on; `3` = the build never reached the tests; `2` = never booted. Rationale: [ADR 0001 § *Cold boot per run* + § *Bounded termination*](docs/adr/0001-local-ui-test-suite.md).
 
 ### Synchronization (avoid bare `waitForIdle()` for state-dependent nodes)
 
-`waitForIdle()` only flushes Compose recompositions — not the `DataStore → StateFlow → render` chain (canonical race, PR #1111). For nodes whose existence depends on ViewModel/DataStore state, use the `awaitNode*` helpers in `app/src/androidTest/.../ComposeTestExtensions.kt`. Bare `waitForIdle()` / `waitUntil { … }` stays correct after deterministic actions (`performClick`, `pressBack`), before negative assertions, before `.onFirst()` chains, and when a matcher would multi-match. Examples + the full when-which list: CONTRIBUTING.md § *Testing → Local UI test suite → Synchronization*.
+`waitForIdle()` only flushes Compose recompositions — not the `DataStore → StateFlow → render` chain. For nodes whose existence depends on ViewModel/DataStore state, use the `awaitNode*` helpers in `app/src/androidTest/.../ComposeTestExtensions.kt`. Bare `waitForIdle()` / `waitUntil { … }` stays correct after deterministic actions (`performClick`, `pressBack`), before negative assertions, before `.onFirst()` chains, and when a matcher would multi-match. Full when-which list: CONTRIBUTING.md § *Synchronization*.
 
 ## Pre-PR and pre-push checklists
 
