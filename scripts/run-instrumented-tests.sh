@@ -739,6 +739,44 @@ record_status() {
   return 0
 }
 
+# Files this run away in the local history, whatever happened to it. Every outcome
+# is recorded, not just the reds: a failure rate needs a denominator, and "how many
+# times did this test pass" is exactly the thing you cannot reconstruct afterwards.
+# Best-effort by design — losing the bookkeeping must never fail a run that is
+# otherwise fine.
+record_run_history() {
+  local outcome="$1" started="$2"
+  local script="$REPO_ROOT/scripts/record-instrumented-run.sh"
+  [ -x "$script" ] || return 0
+  BOMP_RUN_OUTCOME="$outcome" \
+    BOMP_RUN_DURATION="$(($(date +%s) - started))" \
+    BOMP_RUN_TMP="$RUN_TMP" \
+    BOMP_RUN_LAST_TEST="$HEARTBEAT_LAST_TEST" \
+    BOMP_RUN_INDEX="$HEARTBEAT_INDEX" \
+    BOMP_RUN_TOTAL="$HEARTBEAT_TOTAL" \
+    BOMP_RUN_HOST_SLEPT="${HOST_SLEPT_SECONDS:-0}" \
+    BOMP_RUN_MARKER="$RUN_MARKER" \
+    BOMP_RUN_XML_DIR="$REPO_ROOT/app/build/outputs/androidTest-results/connected/debug" \
+    "$script" || true
+}
+
+# Stamped at the start of each run. Gradle leaves its result XML in place between
+# runs, so a run that never reaches the tests (failed boot, build error) would
+# otherwise be recorded against the *previous* run's results — inventing passes.
+# The marker is what lets the recorder tell this run's output from last run's.
+RUN_MARKER="$RUN_TMP/run.marker"
+
+outcome_name() {
+  case "$1" in
+    "$EXIT_OK") echo pass ;;
+    "$EXIT_TEST_FAILURE") echo failure ;;
+    "$EXIT_STALL") echo stall ;;
+    "$EXIT_INFRA_FAILURE") echo infra ;;
+    "$EXIT_BOOT_FAILURE") echo boot ;;
+    *) echo unknown ;;
+  esac
+}
+
 # Hold off idle sleep for the whole session — armed here, before the first cold boot,
 # so run 1's boot is covered too (not only the Gradle phase). A full run outlasts the
 # default idle-sleep timer, so "start it and walk away" is exactly what suspends the
@@ -753,6 +791,9 @@ fi
 
 for run in $(seq 1 "$RUNS"); do
   CURRENT_RUN="$run"
+  run_started_at=$(date +%s)
+  # Anything in the XML dir older than this belongs to the previous run.
+  touch "$RUN_MARKER"
   if [ "$RUNS" -gt 1 ]; then
     echo ""
     echo "================ instrumented run ${run} / ${RUNS} ================"
@@ -762,12 +803,14 @@ for run in $(seq 1 "$RUNS"); do
   if ! cold_boot_emulator; then
     echo "✘ run ${run}/${RUNS}: emulator failed to boot" >&2
     record_status "$EXIT_BOOT_FAILURE"
+    record_run_history boot "$run_started_at"
     continue
   fi
 
   supervise_gradle "$@"
   run_status=$?
   record_status "$run_status"
+  record_run_history "$(outcome_name "$run_status")" "$run_started_at"
 
   case "$run_status" in
     "$EXIT_OK")

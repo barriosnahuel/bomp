@@ -287,6 +287,29 @@ On a stall, a diagnostics bundle lands in `$TMPDIR/push-me-instrumented/diagnost
 
 Two things the watchdog deliberately does **not** do: it never runs `./gradlew --stop` (that would kill every daemon on the machine, including the one your IDE is mid-sync on — killing the emulator is what actually frees a daemon wedged in ddmlib), and it never `pkill`s by emulator port (that would take down an unrelated emulator you happen to have on `5554`; it matches on the AVD name instead).
 
+#### Run history & flaky detection
+
+Every run — green, red, stalled, or dead on boot — appends itself to a local history. Read it with:
+
+```bash
+./scripts/flaky-report.sh          # all recorded runs
+./scripts/flaky-report.sh 10       # just the last 10
+```
+
+It exists to answer the one question a red actually raises: **is this a known flaky, or did I just break it?** Without history that gets answered by feel, and both wrong answers are expensive — call a real regression "flaky" and you re-run it until it's green and ship the bug; call a flaky a "regression" and you lose an afternoon debugging a test that was already lying to you last week.
+
+**Verdicts are decided per commit, and that is the entire algorithm.** Pooling runs across commits isn't a simplification, it's the bug: a test that was green for a month and that you broke today has "passed on other runs", so a pooled view would call it *flaky* and invite you to re-run a real regression until it goes green. Only same-commit evidence means anything.
+
+- **🟡 FLAKY** — passed **and** failed within a single commit. That is what proves non-determinism: identical code, different outcome. Re-running is legitimate.
+- **🔴 CONSISTENT** — failed *every* run of the commit it most recently failed on, and that commit ran more than once. Re-running will not help; this is a real red.
+- **⚪ UNKNOWN** — seen failing, but only once for that commit. Not enough to tell the two apart, so it doesn't guess. **Re-run it** — that's what settles it.
+- **💤 stalls** — runs that never finished, grouped by where they died and whether **the host was asleep** (see below). A stall is not a test result: the tests after it never ran, so they can't be judged. Neither is a failed boot or a build error — those contribute no evidence about any test, because they executed none.
+- **slowest tests (p95)** — the headroom left on `STALL_TIMEOUT_SECONDS`. Keep an eye on it as tests are added: a stall timeout below the slowest honest test turns slowness into a false hang.
+
+Where it lives: `.instrumented-history/` in the **primary worktree** (resolved via `git rev-parse --git-common-dir`, so runs launched from sibling worktrees append to the *same* history instead of fragmenting it). Gitignored, and outside `build/` so `./gradlew clean` doesn't erase it. `runs.jsonl` is the permanent ledger (one line per run, forever); the per-run artefact dirs — result XML, heartbeat, and full forensics for a stall — are pruned to the newest 30.
+
+This covers the **instrumented** suite only. The known JVM flakes (`SoundsViewModelSearch`'s vault-flip race, `SoundsViewModelVisibility`'s timeout) live in `./gradlew test` and are not recorded here.
+
 #### If a run hangs, suspect your laptop before the emulator
 
 The original "the emulator freezes past test 100" turned out to be **the Mac going to sleep**. A full suite outlasts the default idle-sleep timer, so kicking off a run and walking away is exactly what suspends the host mid-run: the guest freezes along with it, the instrumentation link doesn't survive the wake, and the run hangs forever — looking, from outside, just like a wedged emulator.

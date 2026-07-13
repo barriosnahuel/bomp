@@ -26,6 +26,13 @@ gradle/gradle-daemon-jvm.properties
 !.claude/hooks/
 !.claude/settings.json
 
+### Instrumented run history
+# Local observation of the local-only suite (ADR 0001): what ran, what failed, what
+# stalled. Deliberately outside build/ so `./gradlew clean` doesn't wipe months of
+# evidence, and deliberately not committed — it would put a merge conflict in the
+# path of every run. Read it with ./scripts/flaky-report.sh.
+.instrumented-history/
+
 ### Static Code Analyzers
 config/*
 !config/android/android-lint.xml
