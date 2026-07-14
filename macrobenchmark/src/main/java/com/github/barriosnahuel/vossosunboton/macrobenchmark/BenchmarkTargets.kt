@@ -13,8 +13,14 @@ package com.github.barriosnahuel.vossosunboton.macrobenchmark
  */
 internal const val TARGET_PACKAGE = "com.github.barriosnahuel.vossosunboton.debug"
 
-/** Iterations per benchmark. Kept modest so a full local run stays under a few minutes. */
-internal const val DEFAULT_ITERATIONS = 5
+/**
+ * Iterations per benchmark. `StartupMode.COLD` makes the **first** iteration a warmup outlier — a
+ * 30-iteration TapLatency run measured 263 ms on iteration 1 and 35–64 ms on the other 29 — so the
+ * count has to be high enough that one such sample doesn't swing the median the gates are read from.
+ * At 5 the median moved 13% run-to-run (56.5 vs 49.9 ms); 15 keeps it stable while a full local run
+ * still takes a few minutes.
+ */
+internal const val DEFAULT_ITERATIONS = 15
 
 /** Number of fling gestures per scroll-benchmark iteration. */
 internal const val SCROLL_GESTURES = 3
