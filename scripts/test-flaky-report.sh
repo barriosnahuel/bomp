@@ -85,26 +85,40 @@ at junit.framework.Assert.fail(Assert.java:50)
 EOF
 
   cat >"$xml_src/TEST-stable.xml" <<'EOF'
-<testsuite name="com.example.ui.home.StableTest" tests="1" failures="0" errors="0" skipped="0" time="0.8">
+<testsuite name="com.example.ui.home.StableTest" tests="2" failures="0" errors="0" skipped="0" time="22.3">
 <testcase name="alwaysGreen" classname="com.example.ui.home.StableTest" time="0.800" />
 <testcase name="theSlowOne" classname="com.example.ui.home.StableTest" time="21.500" />
 </testsuite>
 EOF
 }
 
-# record <outcome> [last_test] [index] [slept] — a run of the CURRENT fake commit.
-# The commit is faked by running each scenario inside a throwaway git repo whose HEAD
-# we move, because the verdict is decided per commit and a test that cannot vary the
-# commit cannot test the thing that matters.
+# record <outcome> [last_test] [index] [slept] [announced_total] — a run of the CURRENT
+# fake commit. The commit is faked by running each scenario inside a throwaway git repo
+# whose HEAD we move, because the verdict is decided per commit and a test that cannot
+# vary the commit cannot test the thing that matters.
+#
+# `announced_total` defaults to the number of tests in the fixture XML — i.e. the run
+# finished the suite it announced. Passing a LARGER number is how a truncated run is
+# simulated: the runner announced N, the process died, and only some landed.
+count_fixture_tests() {
+  grep -c '<testcase ' "$xml_src"/*.xml 2>/dev/null | awk -F: '{ s += $NF } END { print s + 0 }'
+}
 record() {
-  local outcome="$1" last_test="${2:-}" index="${3:-0}" slept="${4:-0}"
+  local outcome="$1" last_test="${2:-}" index="${3:-0}" slept="${4:-0}" total="${5:-}"
+  if [ -z "$total" ]; then
+    case "$outcome" in
+      pass | failure) total="$(count_fixture_tests)" ;;
+      *) total=134 ;;
+    esac
+    [ "${total:-0}" -eq 0 ] && total=134
+  fi
   ( cd "$fake_repo" && BOMP_HISTORY_DIR="$history" \
     BOMP_RUN_OUTCOME="$outcome" \
     BOMP_RUN_DURATION=300 \
     BOMP_RUN_TMP="$run_tmp" \
     BOMP_RUN_LAST_TEST="$last_test" \
     BOMP_RUN_INDEX="$index" \
-    BOMP_RUN_TOTAL=134 \
+    BOMP_RUN_TOTAL="$total" \
     BOMP_RUN_HOST_SLEPT="$slept" \
     BOMP_RUN_XML_DIR="$xml_src" \
     bash "$RECORD" )
@@ -263,16 +277,16 @@ echo "── a boot failure with a STALE heartbeat index still records zero test
 # The subtle case the plain boot test above misses. In a multi-run session the wrapper
 # resets HEARTBEAT_INDEX inside supervise_gradle, which a boot failure skips — so a boot
 # run can forward the PREVIOUS run's index. The recorder must not turn that into passes.
-history6="$tmp/history6"
-mkdir -p "$history6"
+history_si="$tmp/history_si"
+mkdir -p "$history_si"
 history_backup="$history"
-history="$history6"
+history="$history_si"
 new_commit "stale-index"
 write_xml no
 record pass                                              # run 1 leaves a high heartbeat index
 record boot "SearchOverlayTest#pinsACustomSound" 134     # run 2 boot-fails, index 134 leaks in
 history="$history_backup"
-boot_line="$(grep '"outcome":"boot"' "$history6/runs.jsonl" | tail -1)"
+boot_line="$(grep '"outcome":"boot"' "$history_si/runs.jsonl" | tail -1)"
 case "$boot_line" in
   *'"tests":0,"passed":0'*) pass "a boot failure with a stale index=134 records zero tests, not 133 phantom passes" ;;
   *) fail "a boot failure fabricated passes from a stale index: $boot_line" ;;
@@ -283,27 +297,27 @@ echo "── stalls before any test started are blamed on the environment, not a
 # A stall during boot/build never reaches a `started:` line, so its last_test stays the
 # placeholder '(none yet)'. Folding those into the distinct-test count lets the
 # placeholder pose as "the one test they all died on", sending you after a ghost.
-history7="$tmp/history7"
-mkdir -p "$history7"
+history_ny="$tmp/history_ny"
+mkdir -p "$history_ny"
 history_backup="$history"
-history="$history7"
+history="$history_ny"
 new_commit "boot-stalls"
 rm -f "$xml_src"/*.xml            # a stall reads XML; none here — it died before any test
 record stall "(none yet)" 0
 record stall "(none yet)" 0
-report7="$(BOMP_HISTORY_DIR="$history7" bash "$REPORT" 2>&1)"
+report_ny="$(BOMP_HISTORY_DIR="$history_ny" bash "$REPORT" 2>&1)"
 history="$history_backup"
-assert_contains "a stall before any test is diagnosed as environment" "$report7" "died before any test started"
-assert_not_contains "and is never blamed on a nonexistent test" "$report7" "died on the SAME test"
+assert_contains "a stall before any test is diagnosed as environment" "$report_ny" "died before any test started"
+assert_not_contains "and is never blamed on a nonexistent test" "$report_ny" "died on the SAME test"
 
 echo ""
 echo "── the slowest-test p95 uses nearest-rank, not floor ──────────────────"
 # With few runs, floor(0.95*n) rounds a [5s, 300s] pair down to the 5s and hides the test
 # running a breath from the stall timeout. Nearest-rank ceil surfaces the 300s.
-history8="$tmp/history8"
-mkdir -p "$history8"
+history_p95="$tmp/history_p95"
+mkdir -p "$history_p95"
 history_backup="$history"
-history="$history8"
+history="$history_p95"
 new_commit "p95"
 rm -f "$xml_src"/*.xml
 cat >"$xml_src/TEST-slow.xml" <<'EOF'
@@ -321,11 +335,86 @@ EOF
 record pass
 # LC_ALL=C so the decimal is a dot regardless of the dev's locale (this machine is es_AR,
 # where printf renders "300,0"); CI runs in C, and the assertion should match both.
-report8="$(LC_ALL=C BOMP_HISTORY_DIR="$history8" bash "$REPORT" 2>&1)"
+report_p95="$(LC_ALL=C BOMP_HISTORY_DIR="$history_p95" bash "$REPORT" 2>&1)"
 history="$history_backup"
-slow_section8="$(echo "$report8" | awk '/Slowest tests/,0')"
-assert_contains "the near-max duration is surfaced, not floored away" "$slow_section8" "300.0s  SlowTest#sometimesSlow"
-assert_not_contains "the p95 is not floored down to the fast run" "$slow_section8" "5.0s  SlowTest#sometimesSlow"
+slow_section_p95="$(echo "$report_p95" | awk '/Slowest tests/,0')"
+assert_contains "the near-max duration is surfaced, not floored away" "$slow_section_p95" "300.0s  SlowTest#sometimesSlow"
+assert_not_contains "the p95 is not floored down to the fast run" "$slow_section_p95" "5.0s  SlowTest#sometimesSlow"
+
+echo ""
+echo "── a red's timeout is not mistaken for the slowest honest test ────────"
+# The slowest-test figure is what calibrates STALL_TIMEOUT_SECONDS. A test killed by
+# `timeout_msec` reports a flat 300s — not work done, just the clock that ran out.
+# Counted as a "slow test", it would demand a stall timeout above itself: the watchdog
+# calibrated against its own failure mode, spiralling upward with every deadlock.
+history_dl="$tmp/history_dl"
+mkdir -p "$history_dl"
+history_backup="$history"
+history="$history_dl"
+new_commit "deadlock-scenario"
+rm -f "$xml_src"/*.xml
+cat >"$xml_src/TEST-deadlock.xml" <<'EOF'
+<testsuite name="com.example.ui.home.DeadlockTest" tests="1" failures="1" errors="0" skipped="0" time="300.0">
+<testcase name="hangs" classname="com.example.ui.home.DeadlockTest" time="300.000">
+<failure>org.junit.runners.model.TestTimedOutException: test timed out after 300000 milliseconds
+</failure>
+</testcase>
+</testsuite>
+EOF
+cat >"$xml_src/TEST-stable.xml" <<'EOF'
+<testsuite name="com.example.ui.home.StableTest" tests="1" failures="0" errors="0" skipped="0" time="20.0">
+<testcase name="theSlowOne" classname="com.example.ui.home.StableTest" time="20.000" />
+</testsuite>
+EOF
+record failure
+report_dl="$(BOMP_HISTORY_DIR="$history_dl" bash "$REPORT" 2>&1)"
+history="$history_backup"
+
+slow_section_dl="$(echo "$report_dl" | awk '/Slowest tests/,0')"
+assert_not_contains "a test killed by its own timeout is not listed as a slow test" "$slow_section_dl" "DeadlockTest#hangs"
+assert_contains "the slowest HONEST test is the one that measures anything" "$report_dl" "Slowest honest test observed: 20s"
+assert_contains "the deadlocked test is still reported — as a failure, where it belongs" "$report_dl" "TestTimedOutException"
+
+echo ""
+echo "── a run that died mid-suite says so, instead of passing for a normal red ──"
+# A StrictMode kill (or any native crash) takes the instrumentation process with it: the
+# run exits 1, reports its one failure, and every test after it simply never ran. Nothing
+# in a plain red says "and 110 tests were skipped", so a truncated run reads far greener
+# than it was — and its silence about those tests must not count as evidence either.
+history_tr="$tmp/history_tr"
+mkdir -p "$history_tr"
+history_backup="$history"
+history="$history_tr"
+new_commit "truncation-scenario"
+write_xml yes
+record failure "" 0 0 134   # the runner announced 134; the process died with 4 recorded
+report_tr="$(BOMP_HISTORY_DIR="$history_tr" bash "$REPORT" 2>&1)"
+history="$history_backup"
+
+assert_contains "a run that never finished the suite is called out" "$report_tr" "never finished the suite"
+assert_contains "and it says how far it got" "$report_tr" "/134"
+assert_contains "and that the tests it never reached prove nothing" "$report_tr" "prove nothing"
+
+echo ""
+echo "── the reds outlive the artefacts they came from ──────────────────────"
+# Artefacts are pruned at 30 runs; the ledger is kept forever. If the reds only lived in
+# the artefacts, the flaky memory would quietly shorten to the last month of runs — and
+# the whole point of the history is knowing what fails OVER TIME.
+history_ret="$tmp/history_ret"
+mkdir -p "$history_ret"
+history_backup="$history"
+history="$history_ret"
+new_commit "retention-scenario"
+write_xml yes
+record failure
+write_xml no
+record pass
+rm -rf "$history_ret"/20*    # retention, simulated: every artefact gone, ledger intact
+report_ret="$(BOMP_HISTORY_DIR="$history_ret" bash "$REPORT" 2>&1)"
+history="$history_backup"
+
+assert_contains "the failing test is still named after its artefacts are pruned" "$report_ret" "SearchOverlayTest#pinsACustomSound"
+assert_contains "and so is the exception it died with" "$report_ret" "ComposeTimeoutException"
 
 echo ""
 echo "── every ledger line is valid JSON ────────────────────────────────────"

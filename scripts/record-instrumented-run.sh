@@ -198,6 +198,23 @@ json_escape() {
   printf '%s' "$1" | tr -d '\000-\037' | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+# The reds ride INSIDE the ledger line, not only in the artefact folder next to it.
+# Artefacts are pruned at 30 runs; the ledger is kept forever — and "which test failed,
+# when, with what" is precisely the history that has to outlive the pruning, or the
+# flaky verdicts silently narrow to the last month of runs.
+failures_json() {
+  [ -s "$run_dir/failures.txt" ] || { printf '[]'; return; }
+  local first=1 test kind
+  printf '['
+  while IFS="$(printf '\t')" read -r test kind; do
+    [ -n "$test" ] || continue
+    [ "$first" -eq 1 ] || printf ','
+    first=0
+    printf '{"test":"%s","exception":"%s"}' "$(json_escape "$test")" "$(json_escape "${kind:-unknown}")"
+  done <"$run_dir/failures.txt"
+  printf ']'
+}
+
 {
   printf '{'
   printf '"ts":"%s",' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
@@ -210,6 +227,7 @@ json_escape() {
   printf '"passed":%s,' "${passed:-0}"
   printf '"failed":%s,' "${failures:-0}"
   printf '"skipped":%s,' "${skipped:-0}"
+  printf '"failures":%s,' "$(failures_json)"
   printf '"last_test":"%s",' "$(json_escape "$LAST_TEST")"
   printf '"test_index":%s,' "${TEST_INDEX:-0}"
   printf '"test_total":%s,' "${TEST_TOTAL:-0}"
