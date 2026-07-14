@@ -67,6 +67,20 @@ fi
 field() { echo "$1" | sed -n "s/.*\"$2\":\"\([^\"]*\)\".*/\1/p"; }
 num_field() { echo "$1" | sed -n "s/.*\"$2\":\([0-9-]*\).*/\1/p"; }
 
+# The reds of a run, straight out of its ledger line, as `test<TAB>exception`. The
+# ledger is the long-term source here on purpose: artefacts are pruned at 30 runs, so
+# reading the reds from disk would quietly shorten the flaky memory to the last month.
+# `has_failures_key` distinguishes "this run had no reds" from "this line predates the
+# field" — the latter still has its reds on disk, and dropping them would rewrite
+# history as greener than it was.
+has_failures_key() { case "$1" in *'"failures":'*) return 0 ;; *) return 1 ;; esac; }
+failures_of() {
+  echo "$1" |
+    sed -n 's/.*"failures":\[\(.*\)\],"last_test".*/\1/p' |
+    tr '}' '\n' |
+    sed -n 's/.*"test":"\([^"]*\)","exception":"\([^"]*\)".*/\1	\2/p'
+}
+
 runs_file="$(mktemp)"
 trap 'rm -f "$runs_file"' EXIT
 if [ "$LAST_N" -gt 0 ] 2>/dev/null; then
@@ -83,13 +97,31 @@ test_failures=0
 stalls=0
 infra=0
 boot=0
+truncated=0
+truncated_worst=""
 while IFS= read -r line; do
-  case "$(field "$line" outcome)" in
+  outcome="$(field "$line" outcome)"
+  case "$outcome" in
     pass) passes=$((passes + 1)) ;;
     failure) test_failures=$((test_failures + 1)) ;;
     stall) stalls=$((stalls + 1)) ;;
     infra) infra=$((infra + 1)) ;;
     boot) boot=$((boot + 1)) ;;
+  esac
+
+  # A run that reported fewer tests than the runner announced did not finish the suite:
+  # the instrumentation process died under a test (a StrictMode kill, a native crash) and
+  # everything after it never ran. It exits 1 like any red, so nothing else says so — and
+  # a "1 failure" that silently skipped 110 tests reads far greener than it was.
+  case "$outcome" in
+    pass | failure)
+      t="$(num_field "$line" tests)"
+      tt="$(num_field "$line" test_total)"
+      if [ "${t:-0}" -gt 0 ] && [ "${tt:-0}" -gt 0 ] && [ "$t" -lt "$tt" ]; then
+        truncated=$((truncated + 1))
+        [ -z "$truncated_worst" ] && truncated_worst="$t/$tt"
+      fi
+      ;;
   esac
 done <"$runs_file"
 
@@ -97,8 +129,8 @@ echo "════════════════════════�
 echo " Instrumented suite health — last $total_runs run(s)"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
-echo "  (the ledger keeps every run; per-test verdicts below can only use the"
-echo "   runs whose artefacts are still on disk — retention keeps the newest 30)"
+echo "  (every red is kept forever in the ledger; the artefacts behind them — XML,"
+echo "   heartbeat, logcat — are pruned to the newest 30 runs)"
 echo ""
 printf "  %-22s %s\n" "green" "$passes"
 printf "  %-22s %s\n" "red (test failures)" "$test_failures"
@@ -106,6 +138,12 @@ printf "  %-22s %s\n" "stalled (never ended)" "$stalls"
 printf "  %-22s %s\n" "build/install failed" "$infra"
 printf "  %-22s %s\n" "emulator never booted" "$boot"
 echo ""
+if [ "$truncated" -gt 0 ]; then
+  printf "  ⚠  %s run(s) never finished the suite (one recorded only %s tests): the\n" "$truncated" "$truncated_worst"
+  echo "     instrumentation process died under a test and everything after it never ran."
+  echo "     Those runs prove nothing about the tests they never reached."
+  echo ""
+fi
 
 # ── per-test reliability ───────────────────────────────────────────────────
 # A test is only judged against the runs that actually reached it: a run that
@@ -116,17 +154,11 @@ appearances="$(mktemp)"
 failures="$(mktemp)"
 trap 'rm -f "$runs_file" "$appearances" "$failures"' EXIT
 
-artefact_runs=0
 while IFS= read -r line; do
-  art="$(field "$line" artefacts)"
-  run_dir="$HISTORY_DIR/$art"
-  # Artefacts get pruned by retention while the ledger line survives, so a dangling
-  # reference is normal, not corruption. It just can't contribute per-test evidence.
-  [ -d "$run_dir" ] || continue
-  artefact_runs=$((artefact_runs + 1))
   ts="$(field "$line" ts)"
   sha="$(field "$line" sha)"
   outcome="$(field "$line" outcome)"
+  run_dir="$HISTORY_DIR/$(field "$line" artefacts)"
 
   # A run that never executed tests contributes NO evidence about any test. Counting
   # its (stale, left over from the previous run) XML as "everyone passed" would
@@ -136,15 +168,30 @@ while IFS= read -r line; do
     *) continue ;;
   esac
 
-  if [ -f "$run_dir/durations.tsv" ]; then
-    cut -f1 "$run_dir/durations.tsv" 2>/dev/null | sort -u |
-      while IFS= read -r t; do printf '%s\t%s\n' "$t" "$sha"; done >>"$appearances"
+  # The reds: from the ledger, so they outlive retention. Pre-`failures` lines fall
+  # back to the artefact they still point at.
+  if has_failures_key "$line"; then
+    reds="$(failures_of "$line")"
+  else
+    reds="$(cat "$run_dir/failures.txt" 2>/dev/null)"
   fi
-  if [ -s "$run_dir/failures.txt" ]; then
+  if [ -n "$reds" ]; then
     while IFS=$'\t' read -r test kind; do
       [ -z "$test" ] && continue
       printf '%s\t%s\t%s\t%s\n' "$test" "${kind:-unknown}" "$ts" "$sha" >>"$failures"
-    done <"$run_dir/failures.txt"
+    done <<EOF
+$reds
+EOF
+  fi
+
+  # The denominator — which runs actually reached which test — can only come from the
+  # artefacts, so it is the one figure that narrows as they are pruned. A dangling
+  # reference is normal, not corruption: the reds above still count, and the awk below
+  # floors the denominator at the number of failures, so a pruned run never turns a
+  # known red into a division by zero.
+  if [ -f "$run_dir/durations.tsv" ]; then
+    cut -f1 "$run_dir/durations.tsv" 2>/dev/null | sort -u |
+      while IFS= read -r t; do printf '%s\t%s\n' "$t" "$sha"; done >>"$appearances"
   fi
 done <"$runs_file"
 
@@ -279,9 +326,32 @@ fi
 # the one failure mode that would make the watchdog worse than the bug it fixes.
 all_durations="$(mktemp)"
 trap 'rm -f "$runs_file" "$appearances" "$failures" "$all_durations"' EXIT
+red_keys="$(mktemp)"
+trap 'rm -f "$runs_file" "$appearances" "$failures" "$all_durations" "$red_keys"' EXIT
 while IFS= read -r line; do
   art="$(field "$line" artefacts)"
-  [ -f "$HISTORY_DIR/$art/durations.tsv" ] && cat "$HISTORY_DIR/$art/durations.tsv" >>"$all_durations"
+  durations="$HISTORY_DIR/$art/durations.tsv"
+  [ -f "$durations" ] || continue
+
+  # A red test's `time=` is not a duration, it is whatever clock ran out: a test killed
+  # by `timeout_msec` reports a flat 300s. Left in, it becomes the "slowest test" — and
+  # since that figure is what calibrates STALL_TIMEOUT_SECONDS, the timeout would be
+  # calibrated against itself. Dropped per RUN, not globally: a test that deadlocks
+  # sometimes and finishes in 4s the rest of the time still has an honest duration, and
+  # it is worth knowing.
+  if has_failures_key "$line"; then
+    failures_of "$line" | cut -f1 >"$red_keys"
+  else
+    cut -f1 "$HISTORY_DIR/$art/failures.txt" 2>/dev/null >"$red_keys"
+  fi
+  if [ -s "$red_keys" ]; then
+    awk -F'\t' -v red_file="$red_keys" '
+      FILENAME == red_file { red[$1] = 1; next }
+      !($1 in red)
+    ' "$red_keys" "$durations" >>"$all_durations"
+  else
+    cat "$durations" >>"$all_durations"
+  fi
 done <"$runs_file"
 
 if [ -s "$all_durations" ]; then
@@ -313,17 +383,30 @@ if [ -s "$all_durations" ]; then
     printf "  %6ss  %s\n" "$secs" "$test"
   done
   echo ""
+  # Only tests that finished are in here (see record-instrumented-run.sh) — a red's
+  # `time=` is the clock that ran out, not work done.
   slowest=$(awk -F'\t' '{ if ($2+0 > m) m = $2+0 } END { printf "%.0f", m }' "$all_durations")
-  # Parse the wrapper's default rather than hardcoding it — two copies drift, and the
-  # copy that drifts is the one in the report nobody re-reads, producing a confidently
-  # wrong headroom exactly where this section is meant to keep the timeout honest.
+  # Parsed, not hardcoded: two copies of this number would drift, and the one that
+  # drifts is always the one in the report nobody re-reads.
   stall_default="$(sed -n 's/^STALL_TIMEOUT_SECONDS="${STALL_TIMEOUT_SECONDS:-\([0-9]*\)}"/\1/p' \
     "$(dirname "$0")/run-instrumented-tests.sh" 2>/dev/null)"
-  stall_default="${stall_default:-360}"
-  echo "  Slowest single test observed: ${slowest}s. STALL_TIMEOUT_SECONDS default: ${stall_default}s."
-  if [ "${slowest:-0}" -gt 0 ]; then
-    echo "  Headroom: $((stall_default / (slowest > 0 ? slowest : 1)))×. Keep it comfortable — a stall timeout"
-    echo "  below the slowest honest test turns slowness into a false hang."
+  stall_default="${stall_default:-420}"
+  per_test_timeout="$(sed -n "s/.*timeout_msec: '\([0-9]*\)'.*/\1/p" \
+    "$(dirname "$0")/../app/build.gradle" 2>/dev/null)"
+  per_test_timeout=$((${per_test_timeout:-300000} / 1000))
+  echo "  Slowest honest test observed: ${slowest}s. STALL_TIMEOUT_SECONDS: ${stall_default}s."
+  if [ "${slowest:-0}" -gt 0 ] && [ "$slowest" -lt "$stall_default" ]; then
+    echo "  Headroom over the suite: $((stall_default / slowest))×."
+  elif [ "${slowest:-0}" -ge "$stall_default" ]; then
+    echo "  ⚠  A legitimate test now outlasts the stall clock. Raise STALL_TIMEOUT_SECONDS,"
+    echo "     or the next slow-but-honest run is killed as a hang."
+  fi
+  # The binding constraint is not the suite, it is the per-test timeout: a test
+  # deadlocked on-device goes silent for exactly that long before the runner names it.
+  if [ "$stall_default" -le "$per_test_timeout" ]; then
+    echo "  ⚠  STALL_TIMEOUT_SECONDS (${stall_default}s) does not clear timeout_msec (${per_test_timeout}s)."
+    echo "     The watchdog will kill the run blind just as the runner was about to name"
+    echo "     the deadlocked test. Keep the stall clock above the per-test timeout."
   fi
   echo ""
 fi

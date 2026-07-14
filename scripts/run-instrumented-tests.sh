@@ -60,17 +60,20 @@ EMULATOR_PORT="${EMULATOR_PORT:-5554}"
 BOOT_TIMEOUT_SECONDS="${BOOT_TIMEOUT_SECONDS:-300}"
 EMULATOR_SERIAL="emulator-${EMULATOR_PORT}"
 
-# Watchdog clocks.
+# Watchdog clocks. Calibrated from 8 cold-booted runs — docs/adr/0001 § Bounded
+# termination.
 #   STALL_TIMEOUT_SECONDS : no sign of life — no new TestRunner event, no new
-#     Gradle output — for this long ⇒ the emulator is hung. Must stay comfortably
-#     above the slowest legitimate test, or a slow-but-honest test reads as a
-#     stall: the one failure mode that would make this watchdog worse than the
-#     bug it fixes.
+#     Gradle output — for this long ⇒ the emulator is hung. The floor is NOT the
+#     slowest honest test (35s measured); it is `timeout_msec` in app/build.gradle
+#     (300s), because a test deadlocked on-device emits nothing until its own
+#     timeout fires and names it. Undercut that and the watchdog kills the run
+#     blind at the very moment the runner was about to hand us the culprit. Keep
+#     STALL_TIMEOUT_SECONDS > timeout_msec, and move it if timeout_msec moves.
 #   HARD_CAP_SECONDS : total wall clock for a single run, whatever it is doing.
-#     Backstop for a hang that somehow keeps dribbling output.
-# Both are calibrated against measured runs — docs/adr/0001 § Bounded termination.
-STALL_TIMEOUT_SECONDS="${STALL_TIMEOUT_SECONDS:-360}"
-HARD_CAP_SECONDS="${HARD_CAP_SECONDS:-2700}"
+#     Backstop for a hang that somehow keeps dribbling output. 2× the slowest
+#     complete run measured (1186s — a full suite plus one 300s per-test timeout).
+STALL_TIMEOUT_SECONDS="${STALL_TIMEOUT_SECONDS:-420}"
+HARD_CAP_SECONDS="${HARD_CAP_SECONDS:-2400}"
 
 # The build phase gets its own, far larger silence budget. Gradle's output is not a
 # tty here, so there is no progress bar: dependency resolution on a slow network, a
