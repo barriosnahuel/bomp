@@ -51,6 +51,11 @@ internal abstract class CustomBuildTypeApplication : Application() {
         val sounds =
             (0 until count).map { index ->
                 Sound("$SYNTHETIC_ID_PREFIX$index", "$SYNTHETIC_NAME_PREFIX $index", "$SYNTHETIC_FILE_PREFIX$index.dat")
+                    // Sound 0 is the row TapLatencyBenchmark taps, and `By.text` only matches composed
+                    // nodes: on a device that already holds audios, an unpinned synthetic row falls below
+                    // the fold and the LazyColumn never composes it. Pinning sorts it first (SOUND_ORDER),
+                    // so the row is on screen whatever the device already holds. Playback path is unchanged.
+                    .copy(isPinned = index == PLAYABLE_INDEX)
             }
         runBlocking {
             SoundsRepository(this@CustomBuildTypeApplication)
@@ -66,7 +71,7 @@ internal abstract class CustomBuildTypeApplication : Application() {
      * playback fidelity only needs the one tapped row. Idempotent; still synchronous in `onCreate`.
      */
     private fun seedPlayableAudioFile() {
-        val playableFile = getFile(this, "${SYNTHETIC_FILE_PREFIX}0.dat")
+        val playableFile = getFile(this, "$SYNTHETIC_FILE_PREFIX$PLAYABLE_INDEX.dat")
         if (playableFile.exists()) {
             return
         }
@@ -83,6 +88,9 @@ const val SEED_COUNT_EXTRA = "benchmark_seed_count"
 const val SYNTHETIC_NAME_PREFIX = "Benchmark sound"
 
 private const val SYNTHETIC_ID_PREFIX = "benchmark:"
+
+/** The one synthetic row backed by real audio bytes — the row `TapLatencyBenchmark` taps. */
+private const val PLAYABLE_INDEX = 0
 
 /**
  * File-name prefix for synthetic rows. Deliberately NOT the id prefix: a `:` is rejected by the
