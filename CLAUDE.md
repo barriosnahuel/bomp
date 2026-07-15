@@ -347,10 +347,11 @@ Full "when to use" per label + worked combinations: CONTRIBUTING.md § *Labels &
 
 `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); released headers are CalVer `## [vYYYY.MM.N]` (CONTRIBUTING § *Versioning*):
 - Sections `Added` / `Changed` / `Fixed` / `Removed` under `## [unreleased]`. Each entry: single sentence, capital, no trailing period.
-- Dependency bumps → one line for the overall bump (`"Bumped all dependencies to latest stable"`), not one per library.
-- Update `[unreleased]` per commit when the change is user-visible or architecturally significant.
+- Dependency bumps → one line (`"Bumped all dependencies to latest stable"`), not one per library.
+- Update `[unreleased]` per commit for user-visible or architecturally significant changes.
 - Don't add `Fixed` for a bug introduced in the same `[unreleased]` cycle — git history is the traceability.
-- **User-facing first; technical under "For nerds":** user-facing → `### Added/Changed/Fixed/Removed`. Technical (build/CI, deps, refactors, test infra, docs, analytics) → `### For nerds 🤓` with `#### Added/Changed/Fixed/Removed` sub-headings (omit empty). `[unreleased]` only; released versions stay as written.
+- **User-facing first, technical under "For nerds":** user-facing → `### Added/Changed/Fixed/Removed`; technical (build/CI, deps, refactors, tests, docs, analytics) → `### For nerds 🤓` `#### …` sub-headings (omit empty). `[unreleased]` only; released stay as written.
+- Store *What's New* is marketing, not this file: CONTRIBUTING § *Copy guide*.
 
 ## Handoff notes & issue tracking
 

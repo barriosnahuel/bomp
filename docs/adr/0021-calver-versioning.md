@@ -1,6 +1,6 @@
 # ADR 0021 — Calendar Versioning for the app + GitHub releases
 
-- **Status:** Accepted (the tag / release-title / CHANGELOG-header scheme `vYYYY.MM.DD` amended to `vYYYY.MM.N` by [ADR 0023](0023-monthly-sequential-release-tags.md); everything else stands)
+- **Status:** Accepted (the tag / release-title / CHANGELOG-header scheme `vYYYY.MM.DD` amended to `vYYYY.MM.N` by [ADR 0023](0023-monthly-sequential-release-tags.md); the `versionName` = `YYYY.MM` scheme amended to `YYYY.MM.N` by [ADR 0025](0025-versionname-carries-monthly-counter.md); the CalVer rationale, `versionCode` and SemVer frontier stand)
 - **Date:** 2026-07-04
 - **Supersedes:** the implicit Semantic Versioning convention used through v2.3.0 (never recorded as an ADR)
 

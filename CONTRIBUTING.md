@@ -570,9 +570,9 @@ Release-only Gradle commands (need the signing files above in the project root):
 
 ### Versioning
 
-**Calendar Versioning**, at two granularities — the user-facing version reads as a month, the GitHub tag adds a sequential counter:
+**Calendar Versioning** — the user-facing version and the GitHub tag are the same string (bar the `v` prefix): cut month plus a monthly counter.
 
-- **`versionName`** (what the Bomper sees in Play / "Acerca de") is **`YYYY.MM`** — year + month of the cut (e.g. `2026.07`). The date *is* the version: it tells the Bomper how fresh the app is. No SemVer `MAJOR.MINOR.PATCH`, **no sequential counter**. Two releases in the same month share a `versionName` — Play allows it; they stay distinct by `versionCode`.
+- **`versionName`** (what the Bomper sees in Play / "Acerca de") is **`YYYY.MM.N`** — cut month + a 1-based counter within the month (e.g. `2026.07.1`; a second July release is `2026.07.2`). The date *is* the version: it tells the Bomper how fresh the app is, and the `.N` matches the release tag / title / CHANGELOG header 1:1, so an "Acerca de" string maps straight to a GitHub release. No SemVer `MAJOR.MINOR.PATCH`. Two same-month releases differ by `.N` (and by `versionCode`). Rationale for carrying the counter here (not just on the tag): [ADR 0025](docs/adr/0025-versionname-carries-monthly-counter.md).
 - **`versionCode`** stays a **monotonic integer**, bumped +1 per release, independent of `versionName` (Play Store requirement). It is the true build identity.
 - **GitHub tags + release titles + `CHANGELOG.md` headers** are **`vYYYY.MM.N`** — the `v`-prefixed cut month plus a 1-based counter within the month (e.g. `v2026.07.1`; a second July release is `v2026.07.2`). The counter keeps tags unique at any cadence, and — unlike a cut *date* — the name is knowable from the start of the month, which is what lets the month's **milestone** exist while PRs are still being opened (CLAUDE.md § *Labels and milestone*); git already records the cut date on the tag. Rationale + trade-off vs the earlier day-precision scheme: [ADR 0023](docs/adr/0023-monthly-sequential-release-tags.md).
 - **Forward-only frontier:** releases through `v2.3.0` were SemVer and stay as-is in tags / CHANGELOG / history. CalVer governs from the first cut after this change onward.
@@ -584,7 +584,7 @@ A **seed** — expand it as the release process is formalized (store rollout ste
 - [ ] **Regenerate the Baseline Profile** — `./scripts/generate-baseline-profile.sh`, then validate on a **real device** (`StartupBenchmark.startupBaselineProfile` near `DEFAULT`, well under `None`). It's a frozen snapshot of the cold-start path (§ *Baseline Profile*); refresh it so accumulated startup changes are precompiled.
 - [ ] **Run the tap-to-sound latency gate** — `TapLatencyBenchmark` on a **real device** (§ *Performance → What it measures*): median must stay ≤ 100 ms and in line with the last row of `macrobenchmark/RESULTS.md`; **append this run's row** there (that file is the versioned before/today series — there is no automatic threshold).
 - [ ] **Finalize `CHANGELOG.md`** — stamp `## [unreleased]` as `## [vYYYY.MM.N] - YYYY-MM-DD`, the cut month + the month's next counter (`.1` for the month's first release), keeping the Keep-a-Changelog cut-date suffix (§ CLAUDE.md *Changelog*). The tag must match the month's open milestone — if the milestone was carried over from an earlier no-release month, rename it to the cut month first.
-- [ ] **Bump `versionCode` + `versionName`** in `app/build.gradle` — `versionCode` +1; `versionName` to the CalVer `YYYY.MM` cut month (§ *Versioning*).
+- [ ] **Bump `versionCode` + `versionName`** in `app/build.gradle` — `versionCode` +1; `versionName` to the CalVer `YYYY.MM.N` cut month + monthly counter, the same string as the tag / CHANGELOG header without the `v` (§ *Versioning*).
 - [ ] **Release lint gate** — `./gradlew app:lintVitalRelease` green.
 - [ ] **Build the AAB** — `./gradlew app:bundle`.
 - [ ] **Write the store change notes** — `store-listing/{en-US,es-AR}/changelog-<versionCode>.txt`; the GitHub release notes are sourced from the en-US file (§ *Creating the GitHub release*).
@@ -700,6 +700,16 @@ ls -lh store-listing/<locale>/images/*.png # confirms weight (Play caps icon at 
 ## Copy guide ✍️
 
 Hard rules and brand-DNA invariants for user-facing copy live in `CLAUDE.md` § *Copy & localization*. This section collects the **pedagogical examples** — concrete calques we hit (and fixed) during real listings — so contributors writing or reviewing copy can recognise the failure modes without re-deriving them.
+
+### Store "What's New" voice
+
+The store *What's New* (`store-listing/{en-US,es-AR}/changelog-<versionCode>.txt`) is **marketing copy, not a `CHANGELOG.md` mirror**. `CHANGELOG.md` is a factual ledger (Keep a Changelog, one flat sentence per entry); the store note is the pitch the Bomper reads *before* updating. Don't paste the CHANGELOG bullets in — rewrite them:
+
+- **Lead with the benefit / what it unlocks, not the mechanism.** The reader cares what they can now *do*, not how it's wired. A media-notification feature isn't "a notification appears for immersive playback" (the plumbing) — it's "your treasured Vault audios come with you: background playback, screen off, on the go" (the payoff). Name the trigger only as much as the benefit needs. This is the exact miss that shipped once as a duration framing ("Long listens…") when the real hook was portability of the audios you treasure.
+- **Fixes can be a playful before/after.** For corrections, an exaggerated "before X — who wants that? — now Y" reads warmer and more human than a flat "Fixed Z". Use it where it fits; keep each to a line so the note stays scannable.
+- **Native voice per locale** (§ above): en-US → contractions, concrete nouns; es-AR → voseo + warmth. es-AR is *not* a translation of en-US — write it native.
+- **500-character hard cap per locale, counted *with* the trailing newline** (Play truncates over it). es-AR runs longer than en-US, so it's the binding constraint — count it (`python3 -c "print(len(open('path').read()))"`), don't eyeball. If four benefit-led + before/after bullets don't fit, compress the before/after to one-liners or drop the lowest-value bullet — never ship a truncated note.
+- All brand-DNA invariants, reserved-term and policy-contradiction checks in `CLAUDE.md` § *Copy & localization* still apply.
 
 ### Calque examples (en-US listing post-mortem)
 

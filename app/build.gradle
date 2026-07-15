@@ -21,7 +21,7 @@ android {
         minSdkVersion 23
         targetSdkVersion 37
         versionCode 9
-        versionName '2026.07' // CalVer: year + month of the cut (CONTRIBUTING § Versioning)
+        versionName '2026.07.1' // CalVer: cut month + monthly counter, matches the release tag (CONTRIBUTING § Versioning)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Keep capture/utility drivers out of the default suite (connectedDebugAndroidTest /
         // run-instrumented-tests.sh). The store-screenshot driver still runs via
