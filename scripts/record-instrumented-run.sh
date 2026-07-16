@@ -50,14 +50,11 @@ DURATION="$(numeric_or_zero "$DURATION")"
 TEST_INDEX="$(numeric_or_zero "$TEST_INDEX")"
 TEST_TOTAL="$(numeric_or_zero "$TEST_TOTAL")"
 HOST_SLEPT="$(numeric_or_zero "$HOST_SLEPT")"
-# Overridable so the behaviour test can point the whole thing at a scratch dir.
-HISTORY_DIR="${BOMP_HISTORY_DIR:-}"
-
-if [ -z "$HISTORY_DIR" ]; then
-  common_dir="$(git rev-parse --git-common-dir 2>/dev/null)" || exit 0
-  primary_worktree="$(cd "$common_dir/.." 2>/dev/null && pwd)" || exit 0
-  HISTORY_DIR="$primary_worktree/.instrumented-history"
-fi
+# shellcheck source=scripts/instrumented-history-dir.sh
+. "$(dirname "${BASH_SOURCE[0]}")/instrumented-history-dir.sh"
+# Best-effort: if we can't locate the history, recording must never fail an otherwise-fine run.
+HISTORY_DIR="$(resolve_instrumented_history_dir)" || exit 0
+[ -n "$HISTORY_DIR" ] || exit 0
 
 RUNS_JSONL="$HISTORY_DIR/runs.jsonl"
 # Retention applies to the per-run artefact directories only. runs.jsonl is one
@@ -171,7 +168,12 @@ fi
 # A stall leaves no XML, so the heartbeat is the only record of how far it got — and
 # the test it died ON did not pass: it never finished. Counting it would overstate the
 # run by exactly the one test the whole stall is about.
-if [ "$tests" -eq 0 ] && [ "$TEST_INDEX" -gt 0 ]; then
+#
+# STALL ONLY. A boot or build failure ran zero tests, so its count must be zero — but the
+# wrapper resets HEARTBEAT_INDEX inside supervise_gradle, which a boot failure skips, so
+# TEST_INDEX can still hold the *previous* run's index. Applying this fallback there would
+# invent `passed` tests from a run that never started one, corrupting the permanent ledger.
+if [ "$OUTCOME" = "stall" ] && [ "$tests" -eq 0 ] && [ "$TEST_INDEX" -gt 0 ]; then
   tests=$((TEST_INDEX - 1))
   [ "$tests" -lt 0 ] && tests=0
 fi

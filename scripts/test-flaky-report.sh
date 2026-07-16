@@ -259,6 +259,75 @@ esac
 assert_contains "the boot failure is still counted as a run" "$report5" "emulator never booted"
 
 echo ""
+echo "── a boot failure with a STALE heartbeat index still records zero tests ──"
+# The subtle case the plain boot test above misses. In a multi-run session the wrapper
+# resets HEARTBEAT_INDEX inside supervise_gradle, which a boot failure skips — so a boot
+# run can forward the PREVIOUS run's index. The recorder must not turn that into passes.
+history6="$tmp/history6"
+mkdir -p "$history6"
+history_backup="$history"
+history="$history6"
+new_commit "stale-index"
+write_xml no
+record pass                                              # run 1 leaves a high heartbeat index
+record boot "SearchOverlayTest#pinsACustomSound" 134     # run 2 boot-fails, index 134 leaks in
+history="$history_backup"
+boot_line="$(grep '"outcome":"boot"' "$history6/runs.jsonl" | tail -1)"
+case "$boot_line" in
+  *'"tests":0,"passed":0'*) pass "a boot failure with a stale index=134 records zero tests, not 133 phantom passes" ;;
+  *) fail "a boot failure fabricated passes from a stale index: $boot_line" ;;
+esac
+
+echo ""
+echo "── stalls before any test started are blamed on the environment, not a test ──"
+# A stall during boot/build never reaches a `started:` line, so its last_test stays the
+# placeholder '(none yet)'. Folding those into the distinct-test count lets the
+# placeholder pose as "the one test they all died on", sending you after a ghost.
+history7="$tmp/history7"
+mkdir -p "$history7"
+history_backup="$history"
+history="$history7"
+new_commit "boot-stalls"
+rm -f "$xml_src"/*.xml            # a stall reads XML; none here — it died before any test
+record stall "(none yet)" 0
+record stall "(none yet)" 0
+report7="$(BOMP_HISTORY_DIR="$history7" bash "$REPORT" 2>&1)"
+history="$history_backup"
+assert_contains "a stall before any test is diagnosed as environment" "$report7" "died before any test started"
+assert_not_contains "and is never blamed on a nonexistent test" "$report7" "died on the SAME test"
+
+echo ""
+echo "── the slowest-test p95 uses nearest-rank, not floor ──────────────────"
+# With few runs, floor(0.95*n) rounds a [5s, 300s] pair down to the 5s and hides the test
+# running a breath from the stall timeout. Nearest-rank ceil surfaces the 300s.
+history8="$tmp/history8"
+mkdir -p "$history8"
+history_backup="$history"
+history="$history8"
+new_commit "p95"
+rm -f "$xml_src"/*.xml
+cat >"$xml_src/TEST-slow.xml" <<'EOF'
+<testsuite name="com.example.SlowTest" tests="1" failures="0" errors="0" skipped="0" time="5.0">
+<testcase name="sometimesSlow" classname="com.example.SlowTest" time="5.000" />
+</testsuite>
+EOF
+record pass
+rm -f "$xml_src"/*.xml
+cat >"$xml_src/TEST-slow.xml" <<'EOF'
+<testsuite name="com.example.SlowTest" tests="1" failures="0" errors="0" skipped="0" time="300.0">
+<testcase name="sometimesSlow" classname="com.example.SlowTest" time="300.000" />
+</testsuite>
+EOF
+record pass
+# LC_ALL=C so the decimal is a dot regardless of the dev's locale (this machine is es_AR,
+# where printf renders "300,0"); CI runs in C, and the assertion should match both.
+report8="$(LC_ALL=C BOMP_HISTORY_DIR="$history8" bash "$REPORT" 2>&1)"
+history="$history_backup"
+slow_section8="$(echo "$report8" | awk '/Slowest tests/,0')"
+assert_contains "the near-max duration is surfaced, not floored away" "$slow_section8" "300.0s  SlowTest#sometimesSlow"
+assert_not_contains "the p95 is not floored down to the fast run" "$slow_section8" "5.0s  SlowTest#sometimesSlow"
+
+echo ""
 echo "── every ledger line is valid JSON ────────────────────────────────────"
 # The wrapper passes "?" for the test counters until the runner announces itself, so
 # a boot/infra failure used to emit `"test_total":?` — unparseable, and the file

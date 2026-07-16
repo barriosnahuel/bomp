@@ -46,14 +46,12 @@ set -uo pipefail
 
 LAST_N="${1:-0}"
 
-HISTORY_DIR="${BOMP_HISTORY_DIR:-}"
+# shellcheck source=scripts/instrumented-history-dir.sh
+. "$(dirname "${BASH_SOURCE[0]}")/instrumented-history-dir.sh"
+HISTORY_DIR="$(resolve_instrumented_history_dir)" || true
 if [ -z "$HISTORY_DIR" ]; then
-  common_dir="$(git rev-parse --git-common-dir 2>/dev/null)" || {
-    echo "✘ not in a git repo — cannot locate the run history" >&2
-    exit 1
-  }
-  primary_worktree="$(cd "$common_dir/.." && pwd)"
-  HISTORY_DIR="$primary_worktree/.instrumented-history"
+  echo "✘ not in a git repo — cannot locate the run history" >&2
+  exit 1
 fi
 
 RUNS_JSONL="$HISTORY_DIR/runs.jsonl"
@@ -251,15 +249,25 @@ if [ "$stalls" -gt 0 ]; then
   # A test-bound hang means a specific test or leak; a time-bound one means the
   # environment (the host sleeping, cumulative guest degradation) and no amount of
   # staring at the test it "died on" will help, because that test is arbitrary.
-  distinct=$(grep '"outcome":"stall"' "$runs_file" | sed -n 's/.*"last_test":"\([^"]*\)".*/\1/p' | sort -u | wc -l | tr -d ' ')
+  # Stalls that died BEFORE the runner announced a test carry the '(none yet)' placeholder
+  # as last_test. Those are boot/build-time hangs with no test to blame, so they must be
+  # counted apart — folding them in would let '(none yet)' pose as "the one test they all
+  # died on" and send you chasing a test that never ran.
+  stall_tests="$(grep '"outcome":"stall"' "$runs_file" | sed -n 's/.*"last_test":"\([^"]*\)".*/\1/p')"
+  before_any=$(printf '%s\n' "$stall_tests" | grep -c '^(none yet)$')
+  in_test=$(printf '%s\n' "$stall_tests" | grep -v '^(none yet)$' | grep -c .)
+  distinct=$(printf '%s\n' "$stall_tests" | grep -v '^(none yet)$' | sort -u | grep -c .)
   echo "  Diagnosis:"
   if [ "$host_sleep_stalls" -gt 0 ]; then
     echo "    $host_sleep_stalls of $stalls stall(s) happened while the HOST was asleep — the emulator was never at fault."
   fi
-  if [ "$distinct" -eq 1 ] && [ "$stalls" -gt 1 ]; then
-    echo "    All stalls died on the SAME test → test-bound. Suspect that test or a leak it triggers."
-  elif [ "$stalls" -gt 1 ]; then
-    echo "    Stalls died on $distinct DIFFERENT tests → time-bound, not test-bound. The test it died on is"
+  if [ "$before_any" -gt 0 ]; then
+    echo "    $before_any stall(s) died before any test started (boot/build) → not test-bound; look at the environment."
+  fi
+  if [ "$distinct" -eq 1 ] && [ "$in_test" -gt 1 ]; then
+    echo "    All in-test stalls died on the SAME test → test-bound. Suspect that test or a leak it triggers."
+  elif [ "$in_test" -gt 1 ]; then
+    echo "    In-test stalls died on $distinct DIFFERENT tests → time-bound, not test-bound. The test it died on is"
     echo "    incidental; suspect the environment (host sleep, cumulative guest degradation)."
   fi
   echo ""
@@ -291,7 +299,13 @@ if [ -s "$all_durations" ]; then
         for (i = 1; i <= n; i++) if (a[i] != "") { d[++c] = a[i] + 0 }
         if (c == 0) continue
         for (i = 1; i < c; i++) for (j = i+1; j <= c; j++) if (d[j] < d[i]) { tmp=d[i]; d[i]=d[j]; d[j]=tmp }
-        idx = int(0.95 * c); if (idx < 1) idx = 1
+        # Nearest-rank p95 = ceil(0.95 * n), not floor: with a handful of runs, floor
+        # rounds a two-sample [5s, 300s] down to the 5s and hides the test that ran a
+        # breath from the stall timeout — the exact thing this table exists to surface.
+        r = 0.95 * c
+        idx = int(r); if (idx < r) idx++
+        if (idx < 1) idx = 1
+        if (idx > c) idx = c
         printf "%.1f\t%s\n", d[idx], t
       }
     }
@@ -300,7 +314,12 @@ if [ -s "$all_durations" ]; then
   done
   echo ""
   slowest=$(awk -F'\t' '{ if ($2+0 > m) m = $2+0 } END { printf "%.0f", m }' "$all_durations")
-  stall_default=360
+  # Parse the wrapper's default rather than hardcoding it — two copies drift, and the
+  # copy that drifts is the one in the report nobody re-reads, producing a confidently
+  # wrong headroom exactly where this section is meant to keep the timeout honest.
+  stall_default="$(sed -n 's/^STALL_TIMEOUT_SECONDS="${STALL_TIMEOUT_SECONDS:-\([0-9]*\)}"/\1/p' \
+    "$(dirname "$0")/run-instrumented-tests.sh" 2>/dev/null)"
+  stall_default="${stall_default:-360}"
   echo "  Slowest single test observed: ${slowest}s. STALL_TIMEOUT_SECONDS default: ${stall_default}s."
   if [ "${slowest:-0}" -gt 0 ]; then
     echo "  Headroom: $((stall_default / (slowest > 0 ? slowest : 1)))×. Keep it comfortable — a stall timeout"
