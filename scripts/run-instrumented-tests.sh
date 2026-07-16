@@ -70,10 +70,14 @@ EMULATOR_SERIAL="emulator-${EMULATOR_PORT}"
 #     blind at the very moment the runner was about to hand us the culprit. Keep
 #     STALL_TIMEOUT_SECONDS > timeout_msec, and move it if timeout_msec moves.
 #   HARD_CAP_SECONDS : total wall clock for a single run, whatever it is doing.
-#     Backstop for a hang that somehow keeps dribbling output. 2× the slowest
-#     complete run measured (1186s — a full suite plus one 300s per-test timeout).
+#     Backstop for a hang that somehow keeps dribbling output — the STALL clock, not
+#     this one, is the primary stall detector, so this stays deliberately generous.
+#     Erring high only delays catching that exotic hang; erring low false-aborts a
+#     healthy cold-cache/slow-network run as a hang — the failure mode the whole PR
+#     exists to avoid. 2.3× the slowest complete run measured (1186s), and the 8
+#     calibration runs were warm-cache same-commit, so they under-measure a cold build.
 STALL_TIMEOUT_SECONDS="${STALL_TIMEOUT_SECONDS:-420}"
-HARD_CAP_SECONDS="${HARD_CAP_SECONDS:-2400}"
+HARD_CAP_SECONDS="${HARD_CAP_SECONDS:-2700}"
 
 # The build phase gets its own, far larger silence budget. Gradle's output is not a
 # tty here, so there is no progress bar: dependency resolution on a slow network, a

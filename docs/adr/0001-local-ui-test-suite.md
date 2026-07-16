@@ -161,7 +161,7 @@ kind of ending it was. Three pieces:
    A single clock tight enough for the test phase kills healthy builds, and it **cascades**:
    killing a run leaves the next one with a cold daemon, whose slow silent build trips the
    same clock — one real stall manufacturing a suite of fake ones. `HARD_CAP_SECONDS`
-   (default 2400 s) backstops the whole run.
+   (default 2700 s) backstops the whole run.
 3. **A distinguishable exit code.** `124` (the `timeout(1)` convention) means the emulator
    hung; `3` means the build or install never reached the tests (compile error,
    `INSTALL_FAILED`, no device — there is no test report to read); `2` means the emulator
@@ -226,10 +226,11 @@ happening at all). What those runs measured:
 | Slowest test that actually finished | 35 s | — |
 | Longest silence in a *healthy* run | ~35 s (that same test) | — |
 | Longest silence in *any* run | **300 s** — a test deadlocked on-device, silent until `timeout_msec` fired and named it | `STALL_TIMEOUT_SECONDS` = 420 s |
-| Slowest complete run, wall clock | 1186 s (a full suite plus one 300 s per-test timeout) | `HARD_CAP_SECONDS` = 2400 s |
+| Slowest complete run, wall clock | 1186 s (a full suite plus one 300 s per-test timeout) | `HARD_CAP_SECONDS` = 2700 s |
 
 The counter-intuitive line is the third: **the stall clock's floor is not the suite, it is
-`timeout_msec`** — 12× the slowest honest test. A deadlocked test emits nothing at all until
+`timeout_msec`** (300 s ≈ 8.6× the slowest honest test); `STALL_TIMEOUT_SECONDS` sits above it
+at 420 s (12×). A deadlocked test emits nothing at all until
 its own timeout fires, so a stall clock under 300 s would kill the run *blind* at the exact
 moment the runner was about to hand over the culprit's name. Calibrating against the slowest
 test alone (35 s ⇒ "60 s is plenty") produces a watchdog that turns the most informative
