@@ -155,7 +155,7 @@ Every `Activity` in `app` must have a smoke test in `app/src/test/` (extending `
 
 Instrumented tests live under `app/src/androidTest/`; CircleCI intentionally does not run them ([ADR 0001](docs/adr/0001-local-ui-test-suite.md)). When to run, setup, commands, reports, exit codes: CONTRIBUTING.md § *Testing → Local UI test suite*.
 
-**Always run the suite via `./scripts/run-instrumented-tests.sh`** (cold-boots the AVD), never `./gradlew :app:connectedDebugAndroidTest` against a warm emulator — a degraded AVD makes flakes masquerade as `ComposeTimeoutException` / `Process crashed`. **The run always terminates: check the exit code before the report.** Only `1` means a test is genuinely red. `124` = the emulator hung — **re-run**, don't debug the test it died on; `3` = the build never reached the tests; `2` = never booted. Rationale: [ADR 0001 § *Cold boot per run* + § *Bounded termination*](docs/adr/0001-local-ui-test-suite.md).
+**Always run the suite via `./scripts/run-instrumented-tests.sh`** (cold-boots the AVD), never `./gradlew :app:connectedDebugAndroidTest` against a warm emulator — a degraded AVD makes flakes masquerade as `ComposeTimeoutException` / `Process crashed`. **The run always terminates; check the exit code before the report.** Only `1` is a genuinely red test; `124` means the emulator hung — **re-run**, don't debug the test it died on. Exit-code table (incl. `2`/`3`) + rationale: [ADR 0001 § *Cold boot per run* + § *Bounded termination*](docs/adr/0001-local-ui-test-suite.md).
 
 ### Synchronization (avoid bare `waitForIdle()` for state-dependent nodes)
 

@@ -193,12 +193,15 @@ about fifteen minutes in, whatever test that happens to be".
 Two mitigations, in the order that matters:
 
 1. **`caffeinate -i` for the lifetime of the run** — hold off idle sleep, so the failure does
-   not happen. With it, the same suite that stalled twice runs 134/134 green.
+   not happen. With it, the same suite that stalled twice runs 134/134 green. Armed before the
+   first cold boot, not just around Gradle, so run 1's boot is covered too — but `-i` only stops
+   *idle* sleep, so a lid close still suspends, which is why mitigation 2 is not redundant.
 2. **The watchdog discounts a host sleep instead of charging it to the emulator.** It cannot
    observe the suspend directly, but it can see its shadow: a loop that sleeps 5 s and finds
    900 s of wall clock gone did not stall — it was not *running*. That gap is subtracted from
-   the idle budget and the device is re-armed with a fresh one, so if the emulator genuinely
-   did not survive the wake it is still caught — but the diagnosis names the host.
+   **both** the idle budget and the hard cap (charging it to either would kill a healthy run on
+   wake), and the device is re-armed with a fresh budget, so if the emulator genuinely did not
+   survive the wake it is still caught — but the diagnosis names the host.
 
 This is the whole point of the exit-code contract stated in the negative: a watchdog that
 confidently blames the wrong component is worse than one that says nothing.
