@@ -73,7 +73,12 @@ if [ "$1" = "-s" ]; then
 fi
 
 case "$1 ${2:-}" in
-  "emu avd")   echo "${STUB_AVD_NAME:-FakeAVD}"; exit 0 ;;
+  "emu avd")
+    # STUB_CONSOLE_WEDGED=1 models a host-sleep-corrupted emulator whose console thread
+    # is frozen: `emu avd name` returns nothing, exactly what a real timed-out probe
+    # leaves behind.
+    [ "${STUB_CONSOLE_WEDGED:-0}" = "1" ] && exit 0
+    echo "${STUB_AVD_NAME:-FakeAVD}"; exit 0 ;;
   "emu kill")  rm -f "$alive"; exit 0 ;;
 esac
 
@@ -112,14 +117,21 @@ case "$1" in
     esac
     # Streaming capture: replay the fixture, then stay alive but silent (a real
     # logcat blocks waiting for more lines; a frozen device simply never sends any).
-    #
-    # `-T 1` is how the wrapper reattaches after the stream dies: it means "start at
-    # the tail", so the fixture must NOT be replayed — replaying it is precisely the
-    # double-count the flag exists to prevent.
+    last_line_file="$STUB_STATE/logcat_last_line"
     reattach=0
     [ "${2:-}" = "-T" ] && reattach=1
     echo "--------- beginning of main"
-    if [ "$reattach" = "0" ] && [ -f "$STUB_LOGCAT_FIXTURE" ]; then
+    if [ "$reattach" = "1" ]; then
+      # `-T 1` is how the wrapper reattaches after the stream dies. Real adb prints the
+      # most recent buffered line before it starts following — reproduced here verbatim
+      # so the parser's replay dedup is actually exercised, rather than the shim
+      # pretending a reattach never repeats a line. The "beginning of main" marker above
+      # lands between that replay and the live tail, just as real adb emits it.
+      [ -f "$last_line_file" ] && cat "$last_line_file"
+      sleep 300
+      exit 0
+    fi
+    if [ -f "$STUB_LOGCAT_FIXTURE" ]; then
       emitted=0
       while IFS= read -r l; do
         # STUB_LOGCAT_DIE_AFTER=n: the stream drops dead after n lines, as it does
@@ -128,6 +140,7 @@ case "$1" in
           exit 1
         fi
         echo "$l"
+        printf '%s\n' "$l" >"$last_line_file"
         emitted=$((emitted + 1))
         sleep "${STUB_LOGCAT_LINE_DELAY:-0}"
       done <"$STUB_LOGCAT_FIXTURE"
@@ -218,6 +231,19 @@ exit 0
 SHIM
 chmod +x "$fake_repo/gradlew"
 
+# A minimal app/build.gradle so the wrapper's stall-clock guard can read the real
+# on-device per-test timeout. 1000ms (1s) keeps it below every scenario's turned-down
+# STALL_TIMEOUT, so the guard stays quiet except in the test that deliberately trips it.
+mkdir -p "$fake_repo/app"
+cat >"$fake_repo/app/build.gradle" <<'EOF'
+android {
+    defaultConfig {
+        testInstrumentationRunnerArguments notAnnotation: 'x.ScreenshotCapture',
+                                           timeout_msec: '1000'
+    }
+}
+EOF
+
 # ── logcat fixtures ────────────────────────────────────────────────────────
 # The real format, verbatim from a live AVD run.
 full_run="$tmp/logcat-full.txt"
@@ -262,7 +288,7 @@ empty_run="$tmp/logcat-empty.txt"
 run_wrapper() {
   local mode="$1" fixture="$2"
   shift 2
-  rm -f "$state/emulator_alive" "$state/gradle_pid" "$state/boot_count"
+  rm -f "$state/emulator_alive" "$state/gradle_pid" "$state/boot_count" "$state/logcat_last_line"
   env -i \
     PATH="$bindir:/usr/bin:/bin:/usr/sbin:/sbin" \
     HOME="$tmp" \
@@ -412,6 +438,46 @@ status=$?
 assert_eq "a run that survives a host sleep still exits 0" "$status" "0"
 assert_contains "names the host as the thing that slept" "$out" "host appears to have slept"
 assert_not_contains "never blames the emulator for the host sleeping" "$out" "EMULATOR STALL"
+
+echo ""
+echo "── a reattach that replays a line does not double-count the test ──────"
+# When the machine-wide adb server restarts, the wrapper reattaches with `-T 1`, and
+# real adb replays the most recent buffered line. If that line was a `started:` event, a
+# naive parser counts the test twice and the index runs past the total ("died at 4/3").
+# The stream here dies right after the first test's `started:`, so the reattach replays
+# exactly that line — the dedup must absorb it.
+out="$(run_wrapper pass "$full_run" \
+  STUB_LOGCAT_DIE_AFTER=2 STUB_LOGCAT_LINE_DELAY=1 STUB_PASS_SECONDS=8 STALL_TIMEOUT_SECONDS=30)"
+status=$?
+assert_eq "the run still passes through a replaying reattach" "$status" "0"
+assert_contains "the first test is counted once" "$out" "1/3 SearchOverlayTest#pinsACustomSound"
+assert_not_contains "the replayed started: is not counted a second time" "$out" "2/3 SearchOverlayTest#pinsACustomSound"
+
+echo ""
+echo "── a console-wedged emulator is SIGKILLed, not left holding the port ──"
+# Identifying "our" emulator via `adb emu avd name` talks to the console — the very
+# thread that freezes on a host-sleep-corrupted emulator. When that probe comes back
+# empty, an emulator on our port must STILL be escalated to a SIGKILL by AVD name (which
+# reads the qemu command line, not the console), or it survives and the next run's cold
+# boot collides with it on the same port. Before this fix the SIGKILL fallback was
+# unreachable for exactly the wedged case it was written for.
+out="$(run_wrapper hang "$partial_run" STUB_CONSOLE_WEDGED=1 EMULATOR_KILL_WAIT_SECONDS=2)"
+status=$?
+assert_eq "the stalled run still exits 124" "$status" "124"
+assert_contains "a console-wedged emulator on our port is recognised as ours" "$out" "isn't answering its console"
+assert_contains "and escalated to a SIGKILL by AVD name" "$out" "SIGKILLing the FakeAVD emulator process"
+
+echo ""
+echo "── the stall clock is never left below the on-device per-test timeout ──"
+# A test deadlocked on-device is silent until the runner's timeout_msec fires and names
+# it. If STALL_TIMEOUT_SECONDS is set under that, the watchdog kills the run blind — as a
+# stall to "re-run" — right when the runner was about to report the deadlock as a real
+# red. The wrapper reads timeout_msec from build.gradle (1000ms in the fake repo) and
+# refuses to sit at or below it.
+out="$(run_wrapper pass "$full_run" STALL_TIMEOUT_SECONDS=1)"
+status=$?
+assert_eq "the run still passes after the guard raises the clock" "$status" "0"
+assert_contains "an undercutting stall timeout is called out and raised" "$out" "does not clear the on-device per-test timeout"
 
 echo ""
 echo "── file_mtime returns an integer on this platform's stat ──────────────"

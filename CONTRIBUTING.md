@@ -277,9 +277,9 @@ While it runs, the wrapper prints a live per-test counter (`103/134 SearchOverla
 
 Three clocks bound the run, all env-overridable. There are two stall clocks rather than one because a run has two regimes, and using the tight one on the build phase is how a watchdog starts killing healthy runs:
 
-- **`STALL_TIMEOUT_SECONDS`** (default `360`) — **test phase only**, i.e. after the runner announces `run started:`. From here TestRunner narrates every test, so silence really does mean the guest stopped executing.
+- **`STALL_TIMEOUT_SECONDS`** (default `360`) — **test phase only**, i.e. after the runner announces `run started:`. From here TestRunner narrates every test, so silence really does mean the guest stopped executing. Floored at the runner's on-device `timeout_msec` (read from `app/build.gradle`): a value at or below it is raised automatically, because a deadlocked test is silent until that fires and names it — a tighter clock would kill the run blind, as a stall, right when the runner was about to report the deadlock as a real red.
 - **`BUILD_STALL_TIMEOUT_SECONDS`** (default `900`) — **build phase**. Gradle's output isn't a tty, so there's no progress bar: a cold daemon, a cold Kotlin/Compose compile, or dependency resolution on a slow network are each legitimately silent for minutes.
-- **`HARD_CAP_SECONDS`** (default `2700`) — total wall clock for one run, whatever it's doing. Backstop for a hang that keeps dribbling output.
+- **`HARD_CAP_SECONDS`** (default `2700`) — total wall clock for one run, whatever it's doing. Backstop for a hang that keeps dribbling output. Discounts an observed host sleep, like the stall clock does, so a suspend doesn't cap a healthy run.
 
 Raise them rather than fight them if you legitimately add a much slower test — a stall timeout below the slowest honest test turns slowness into a false stall.
 

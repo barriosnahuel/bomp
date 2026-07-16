@@ -78,12 +78,8 @@ android {
     // Defence in depth for anyone bypassing scripts/run-instrumented-tests.sh and calling
     // `:app:connectedDebugAndroidTest` straight. The wrapper's watchdog is the primary
     // mechanism — it is the only layer that can see a frozen emulator, because the layers
-    // below it are the ones that hang. These bound the two failure modes AGP *can* bound:
-    //   timeOutInMs        : an `adb install` that never returns.
-    //   timeout_msec       : a single test that deadlocks on-device. AndroidJUnitRunner
-    //                        kills it and moves on, instead of ddmlib waiting forever for
-    //                        output that is never coming. Sized far above the slowest
-    //                        legitimate test so it can never fire on a merely slow one.
+    // below it are the ones that hang. timeOutInMs bounds an `adb install` that never
+    // returns; the per-test on-device timeout is timeout_msec, set in defaultConfig above.
     // Neither can save a wedged emulator: a frozen guest cannot run the code that would
     // enforce its own timeout. That is exactly why the watchdog lives outside the device.
     installation {

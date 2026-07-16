@@ -87,6 +87,10 @@ WATCHDOG_POLL_SECONDS="${WATCHDOG_POLL_SECONDS:-5}"
 # How long a killed Gradle gets to shut down cleanly on SIGTERM before SIGKILL.
 GRADLE_TERM_GRACE_SECONDS="${GRADLE_TERM_GRACE_SECONDS:-15}"
 
+# How long an emulator gets to honour `adb emu kill` before we SIGKILL its qemu
+# process by AVD name. Overridable only so the behaviour test can turn it down.
+EMULATOR_KILL_WAIT_SECONDS="${EMULATOR_KILL_WAIT_SECONDS:-60}"
+
 # A poll loop that sleeps WATCHDOG_POLL_SECONDS and comes back to find *this* much
 # wall clock gone did not run slowly — it did not run at all, because the host
 # suspended. Comfortably above any plausible scheduling delay, comfortably below the
@@ -129,6 +133,22 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Gradle — and the instrumentation it is driving — running orphaned against an
 # emulator we are about to destroy.
 cd "$REPO_ROOT" || exit 1
+
+# The stall clock's floor is the runner's on-device per-test timeout, not the slowest
+# test: a test deadlocked on-device is silent until timeout_msec fires and names it, so
+# a STALL_TIMEOUT below it kills the run blind — exit 124 ("re-run") — exactly when the
+# runner was about to hand over the culprit as a real red (exit 1). The env override can
+# undercut that, so enforce it here rather than trust the default. Read from build.gradle
+# so the two never drift (the same value flaky-report.sh checks in the run-history PR).
+# If it can't be read, warn-less skip rather than clamp against a guessed floor.
+runner_timeout_ms="$(sed -n "s/.*timeout_msec: '\([0-9]*\)'.*/\1/p" "$REPO_ROOT/app/build.gradle" 2>/dev/null)"
+if [ -n "$runner_timeout_ms" ]; then
+  RUNNER_TIMEOUT_SECONDS=$(( runner_timeout_ms / 1000 ))
+  if [ "$STALL_TIMEOUT_SECONDS" -le "$RUNNER_TIMEOUT_SECONDS" ]; then
+    echo "⚠ STALL_TIMEOUT_SECONDS=${STALL_TIMEOUT_SECONDS}s does not clear the on-device per-test timeout (${RUNNER_TIMEOUT_SECONDS}s); raising it to $((RUNNER_TIMEOUT_SECONDS + 60))s so a deadlocked test is named, not blind-killed" >&2
+    STALL_TIMEOUT_SECONDS=$((RUNNER_TIMEOUT_SECONDS + 60))
+  fi
+fi
 
 RUN_TMP="${TMPDIR:-/tmp}/push-me-instrumented"
 mkdir -p "$RUN_TMP"
@@ -202,6 +222,17 @@ kill_existing_emulator() {
       echo "→ Killing running emulator $serial ($AVD_NAME)"
       run_bounded 10 adb -s "$serial" emu kill >/dev/null 2>&1
       killed_serials="$killed_serials $serial"
+    elif [ -z "$name" ] && [ "$serial" = "$EMULATOR_SERIAL" ]; then
+      # `emu avd name` talks to the emulator console — the very thread that freezes
+      # when the host sleeps mid-run. A timed-out probe leaves the name empty, so a
+      # console-wedged emulator on OUR port would never be identified as ours and the
+      # SIGKILL fallback below (written precisely for the wedged case) would never
+      # run. A device on $EMULATOR_PORT that will not answer its console is almost
+      # certainly our own AVD; mark it for the escalation. `emu kill` is skipped — it
+      # needs the same dead console — and the pkill matches the qemu command line
+      # (`-avd $AVD_NAME`), which does not, so it still cannot touch another AVD.
+      echo "→ Emulator $serial on our port isn't answering its console — will SIGKILL by AVD name"
+      killed_serials="$killed_serials $serial"
     fi
   done
   [ -z "$killed_serials" ] && return 0
@@ -217,14 +248,14 @@ kill_existing_emulator() {
     done
     [ -z "$still_up" ] && return 0
 
-    if [ "$waited" -ge 60 ]; then
+    if [ "$waited" -ge "$EMULATOR_KILL_WAIT_SECONDS" ]; then
       # A wedged emulator ignores `adb emu kill` — its console thread is exactly
       # what froze. SIGKILL the qemu process rather than leaving the operator to
       # clean up by hand, which is the state this whole watchdog exists to avoid.
       # Matched on the AVD name only: a port-based pattern would happily kill an
       # unrelated emulator the developer has on that port, which is precisely the
       # invariant this function promises to uphold.
-      echo "→$still_up survived 'adb emu kill' after 60s — SIGKILLing the $AVD_NAME emulator process"
+      echo "→$still_up survived 'adb emu kill' after ${EMULATOR_KILL_WAIT_SECONDS}s — SIGKILLing the $AVD_NAME emulator process"
       pkill -9 -f "qemu-system.*${AVD_NAME}" 2>/dev/null
       pkill -9 -f "emulator.*-avd ${AVD_NAME}" 2>/dev/null
       sleep 5
@@ -290,6 +321,7 @@ HEARTBEAT_TOTAL="?"
 HEARTBEAT_INDEX=0
 HEARTBEAT_LAST_TEST="(none yet)"
 LOGCAT_CURSOR=0
+LOGCAT_LAST_STARTED=""
 # Which phase the run is in. Everything before the runner's `run started:` line is
 # the build: compiling, dexing, installing two APKs. It is a different regime with
 # a different silence budget — see the two clocks in supervise_gradle.
@@ -327,6 +359,16 @@ parse_new_logcat_lines() {
         # `started: method(fully.qualified.Class)` → `Class#method`
         test_id="$(echo "$line" | sed -n 's/.*started: \([^(]*\)(\(.*\)).*/\2#\1/p' | sed 's/^.*\.\([A-Za-z0-9_]*#\)/\1/')"
         [ -z "$test_id" ] && test_id="(unparsed)"
+        # Dedup a replayed `started:`. A reattach after the stream died pulls the most
+        # recent buffered line back in (adb `-T 1`), and adb prints its own
+        # "--------- beginning of main" between it and the live tail, so a byte-adjacency
+        # check would miss it. AndroidJUnitRunner never starts the same test twice, so a
+        # `started:` whose id equals the last one counted is that replay — skip it, or
+        # HEARTBEAT_INDEX runs past the total ("died at test 4/3").
+        if [ "$test_id" != "(unparsed)" ] && [ "$test_id" = "$LOGCAT_LAST_STARTED" ]; then
+          continue
+        fi
+        LOGCAT_LAST_STARTED="$test_id"
         HEARTBEAT_INDEX=$((HEARTBEAT_INDEX + 1))
         HEARTBEAT_LAST_TEST="$test_id"
         printf '%s %s/%s %s\n' "$(date '+%H:%M:%S')" "$HEARTBEAT_INDEX" "$HEARTBEAT_TOTAL" "$test_id" >>"$HEARTBEAT"
@@ -343,9 +385,11 @@ parse_new_logcat_lines() {
 }
 
 # Attaches the TestRunner capture. `$1` carries extra logcat flags — empty on the
-# first attach (the buffer was just cleared), `-T 1` when reattaching after the
-# stream died, so the ring buffer isn't replayed into the parser.
-# Appends, so the cursor stays valid across a reattach.
+# first attach (the buffer was just cleared), `-T 1` when reattaching after the stream
+# died, which bounds the replay to a single line instead of the whole ring buffer. That
+# one line IS still replayed (adb `-T 1` prints the most recent line before following),
+# so parse_new_logcat_lines dedups it by byte-equality — the two together are what keep
+# a reattach from double-counting a test. Appends, so the cursor stays valid across it.
 LOGCAT_PID=0
 start_logcat_stream() {
   # shellcheck disable=SC2086 # $1 is a flag list, word-splitting is the point
@@ -363,7 +407,20 @@ start_logcat_stream() {
 classify_gradle_failure() {
   local status="$1"
 
-  if ! run_bounded 15 adb -s "$EMULATOR_SERIAL" shell true >/dev/null 2>&1; then
+  # Probe more than once before concluding the device is gone. Right after a non-zero
+  # Gradle exit the machine is often loaded (a failing build/install churns adb), and a
+  # single slow `adb shell true` (> 15s under contention) would misread a live device as
+  # a hung one — turning a real compile/install/test failure into a spurious stall and
+  # sending the operator to re-run instead of reading the actual error.
+  local probe_alive=0 attempt
+  for attempt in 1 2 3; do
+    if run_bounded 15 adb -s "$EMULATOR_SERIAL" shell true >/dev/null 2>&1; then
+      probe_alive=1
+      break
+    fi
+    sleep 2
+  done
+  if [ "$probe_alive" -eq 0 ]; then
     echo "" >&2
     echo "✘ THE EMULATOR IS GONE — Gradle exited ${status} because the device stopped answering, not because a test failed." >&2
     return "$EXIT_STALL"
@@ -504,18 +561,6 @@ supervise_gradle() {
   start_logcat_stream ""
   logcat_pid=$LOGCAT_PID
 
-  # `caffeinate -i` for the lifetime of Gradle: hold off idle sleep while the suite
-  # runs. This is not a nicety — it is the fix for the failure mode that motivated
-  # the whole watchdog. A full run takes longer than the default idle-sleep timer,
-  # so starting the suite and walking away is *exactly* the situation where macOS
-  # suspends the host mid-run. The guest is frozen along with everything else, the
-  # instrumentation connection does not survive the wake, and the run hangs forever —
-  # looking, from the outside, precisely like a wedged emulator. It never was one.
-  # Absent on Linux (CI, where nothing runs this anyway), hence the guard.
-  if command -v caffeinate >/dev/null 2>&1; then
-    caffeinate -i -w $$ &
-  fi
-
   ANDROID_SERIAL="$EMULATOR_SERIAL" ./gradlew :app:connectedDebugAndroidTest "$@" >"$GRADLE_LOG" 2>&1 &
   gradle_pid=$!
 
@@ -555,8 +600,9 @@ supervise_gradle() {
       wait "$logcat_pid" 2>/dev/null
       echo "  ⚠ logcat stream died (adb server restart?) — reattaching; progress may skip a test" >&2
       printf '%s watchdog: logcat stream died, reattaching\n' "$(date '+%H:%M:%S')" >>"$WATCHDOG_LOG"
-      # -T 1 attaches at the tail: without it logcat replays the whole ring buffer
-      # and every test already counted would be counted again.
+      # -T 1 bounds the replay to one line (without it the whole ring buffer replays);
+      # that one line is deduped by byte-equality in parse_new_logcat_lines, so no test
+      # already counted is counted again.
       start_logcat_stream "-T 1"
       logcat_pid=$LOGCAT_PID
       # Credit the run with a fresh sign of life ONLY if the device actually says
@@ -574,7 +620,6 @@ supervise_gradle() {
     fi
 
     now=$(date +%s)
-    elapsed=$((now - started_at))
 
     # Did the host sleep? Wall-clock time is not the same thing as "time this run
     # was given a chance to make progress". If the machine suspends — and a full
@@ -632,6 +677,11 @@ supervise_gradle() {
       return "$EXIT_STALL"
     fi
 
+    # Subtract the host-sleep gap here too, not only from the idle clock: the hard cap
+    # measures "time the run was given to make progress", and a host suspend is time the
+    # run was not running. Charging it would kill a healthy run on wake with exit 124 —
+    # the exact device-vs-host misattribution the idle-clock discount exists to prevent.
+    elapsed=$((now - started_at - HOST_SLEPT_SECONDS))
     if [ "$elapsed" -ge "$HARD_CAP_SECONDS" ]; then
       echo "" >&2
       echo "✘ HARD CAP — run exceeded ${HARD_CAP_SECONDS}s (still producing output, but never finishing)" >&2
@@ -688,6 +738,18 @@ record_status() {
   [ "$(status_rank "$status")" -gt "$(status_rank "$overall_status")" ] && overall_status="$status"
   return 0
 }
+
+# Hold off idle sleep for the whole session — armed here, before the first cold boot,
+# so run 1's boot is covered too (not only the Gradle phase). A full run outlasts the
+# default idle-sleep timer, so "start it and walk away" is exactly what suspends the
+# host mid-run: the guest freezes, the instrumentation link dies on wake, and the hang
+# looks like a wedged emulator but never was (ADR 0001 § Bounded termination). `-w $$`
+# ties it to this script's life, so it needs no teardown. Absent on Linux (CI), hence
+# the guard. Note this stops *idle* sleep only — a lid close still suspends, which is
+# why the watchdog also discounts an observed sleep instead of trusting caffeinate alone.
+if command -v caffeinate >/dev/null 2>&1; then
+  caffeinate -i -w $$ &
+fi
 
 for run in $(seq 1 "$RUNS"); do
   CURRENT_RUN="$run"
