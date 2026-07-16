@@ -543,19 +543,28 @@ abort_run() {
 # self-reinforcing one: killing a run leaves the next one with a cold daemon, whose
 # slow silent build then trips the same clock — one stall cascading into a suite of
 # fake ones. HARD_CAP_SECONDS backstops the whole thing.
-supervise_gradle() {
-  local started_at now last_life gradle_life idle elapsed gradle_pid logcat_pid status
-  local budget phase
-
+# Clears the per-run heartbeat counters and truncates the per-run logs. Called at the
+# TOP of every run — not just inside supervise_gradle — because a run that fails to boot
+# skips supervision entirely, and without this reset it would carry the *previous* run's
+# heartbeat index (inventing passes in the ledger) and archive the previous run's logs.
+reset_heartbeat_state() {
   : >"$GRADLE_LOG"
   : >"$LOGCAT_RAW"
   : >"$HEARTBEAT"
   : >"$WATCHDOG_LOG"
   LOGCAT_CURSOR=0
+  LOGCAT_LAST_STARTED=""
   HEARTBEAT_TOTAL="?"
   HEARTBEAT_INDEX=0
   HEARTBEAT_LAST_TEST="(none yet)"
   TESTS_STARTED=0
+}
+
+supervise_gradle() {
+  local started_at now last_life gradle_life idle elapsed gradle_pid logcat_pid status
+  local budget phase
+
+  reset_heartbeat_state
 
   run_bounded 15 adb -s "$EMULATOR_SERIAL" logcat -c >/dev/null 2>&1
   start_logcat_stream ""
@@ -794,6 +803,9 @@ for run in $(seq 1 "$RUNS"); do
   run_started_at=$(date +%s)
   # Anything in the XML dir older than this belongs to the previous run.
   touch "$RUN_MARKER"
+  # Clear last run's heartbeat/logs first, so a boot failure here records zero tests
+  # and its own (empty) forensics, not the previous run's index and logs.
+  reset_heartbeat_state
   if [ "$RUNS" -gt 1 ]; then
     echo ""
     echo "================ instrumented run ${run} / ${RUNS} ================"
