@@ -417,6 +417,85 @@ assert_contains "the failing test is still named after its artefacts are pruned"
 assert_contains "and so is the exception it died with" "$report_ret" "ComposeTimeoutException"
 
 echo ""
+echo "── an aged-out flaky is downgraded to UNKNOWN, never libelled CONSISTENT ──"
+# The asymmetry retention creates: reds survive it, the pass evidence does not. A test
+# that failed twice and passed once on a commit, then had its artefacts pruned, keeps its
+# two ledger reds but loses the green that proved it flaky. The floor that stops a
+# divide-by-zero then makes runs==fails, and pre-fix "failed every run" read as CONSISTENT
+# — telling you to stop re-running a test that only needed a re-run.
+history_af="$tmp/history_af"
+mkdir -p "$history_af"
+history_backup="$history"
+history="$history_af"
+new_commit "aged-flaky"
+write_xml yes; record failure     # fail 1
+write_xml yes; record failure     # fail 2
+write_xml no;  record pass        # the green run that proves it is flaky
+rm -rf "$history_af"/20*          # retention: every artefact gone, only the ledger reds remain
+report_af="$(BOMP_HISTORY_DIR="$history_af" bash "$REPORT" 2>&1)"
+history="$history_backup"
+
+assert_contains "the aged-out flaky is still named" "$report_af" "SearchOverlayTest#pinsACustomSound"
+assert_not_contains "but re-running is NOT declared futile off evidence that was pruned" "$report_af" "Re-running will NOT help"
+assert_contains "it is downgraded to UNKNOWN — re-run to settle it" "$report_af" "UNKNOWN"
+
+echo ""
+echo "── a green run that under-counts is not cried over as a truncation ────"
+# Only a failure can truncate: a pass ran every announced test by definition. A pass whose
+# XML records fewer tests than the runner announced is a recorder artefact, and flagging it
+# would raise a false 'the suite died' alarm on a perfectly green run.
+history_gt="$tmp/history_gt"
+mkdir -p "$history_gt"
+history_backup="$history"
+history="$history_gt"
+new_commit "green-undercount"
+rm -f "$xml_src"/*.xml
+cat >"$xml_src/TEST-stable.xml" <<'EOF'
+<testsuite name="com.example.ui.home.StableTest" tests="1" failures="0" errors="0" skipped="0" time="1.0">
+<testcase name="alwaysGreen" classname="com.example.ui.home.StableTest" time="1.000" />
+</testsuite>
+EOF
+record pass "" 0 0 130   # green, but the runner announced 130 and only 1 landed in XML
+report_gt="$(BOMP_HISTORY_DIR="$history_gt" bash "$REPORT" 2>&1)"
+history="$history_backup"
+assert_not_contains "a green under-count is never called a truncation" "$report_gt" "never finished the suite"
+
+echo ""
+echo "── the worst truncation is reported, not the first one seen ───────────"
+# With several truncated runs the banner must name the most catastrophic — the run that got
+# the fewest tests in — not whichever landed first in the window. A first-seen guard
+# understates how badly the suite died.
+history_wt="$tmp/history_wt"
+mkdir -p "$history_wt"
+history_backup="$history"
+history="$history_wt"
+new_commit "worst-truncation"
+rm -f "$xml_src"/*.xml
+cat >"$xml_src/TEST-a.xml" <<'EOF'
+<testsuite name="com.example.A" tests="3" failures="1" errors="0" skipped="0" time="3.0">
+<testcase name="one" classname="com.example.A" time="1.000" />
+<testcase name="two" classname="com.example.A" time="1.000" />
+<testcase name="three" classname="com.example.A" time="1.000">
+<failure>java.lang.AssertionError: boom</failure>
+</testcase>
+</testsuite>
+EOF
+record failure "" 0 0 110       # first: 3 of 110 landed
+rm -f "$xml_src"/*.xml
+cat >"$xml_src/TEST-b.xml" <<'EOF'
+<testsuite name="com.example.B" tests="1" failures="1" errors="0" skipped="0" time="1.0">
+<testcase name="only" classname="com.example.B" time="1.000">
+<failure>java.lang.AssertionError: boom</failure>
+</testcase>
+</testsuite>
+EOF
+record failure "" 0 0 110       # second, WORSE: only 1 of 110 landed
+report_wt="$(BOMP_HISTORY_DIR="$history_wt" bash "$REPORT" 2>&1)"
+history="$history_backup"
+assert_contains "the worst truncation (1/110) is the one reported" "$report_wt" "only 1/110"
+assert_not_contains "the milder first-seen truncation does not stand in for the worst" "$report_wt" "only 3/110"
+
+echo ""
 echo "── every ledger line is valid JSON ────────────────────────────────────"
 # The wrapper passes "?" for the test counters until the runner announces itself, so
 # a boot/infra failure used to emit `"test_total":?` — unparseable, and the file

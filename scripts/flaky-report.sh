@@ -81,6 +81,18 @@ failures_of() {
     sed -n 's/.*"test":"\([^"]*\)","exception":"\([^"]*\)".*/\1	\2/p'
 }
 
+# The reds for one run as `test<TAB>exception`, from the ledger when the line carries
+# them (survives artefact retention) and from the artefact the pre-`failures` line still
+# points at otherwise. One definition so the reliability table and the slowest-test
+# exclusion can never disagree about which tests are red for the same run.
+reds_of_line() {
+  if has_failures_key "$1"; then
+    failures_of "$1"
+  else
+    cat "$2/failures.txt" 2>/dev/null
+  fi
+}
+
 runs_file="$(mktemp)"
 trap 'rm -f "$runs_file"' EXIT
 if [ "$LAST_N" -gt 0 ] 2>/dev/null; then
@@ -98,7 +110,8 @@ stalls=0
 infra=0
 boot=0
 truncated=0
-truncated_worst=""
+truncated_worst_t=""
+truncated_worst_tt=""
 while IFS= read -r line; do
   outcome="$(field "$line" outcome)"
   case "$outcome" in
@@ -112,14 +125,22 @@ while IFS= read -r line; do
   # A run that reported fewer tests than the runner announced did not finish the suite:
   # the instrumentation process died under a test (a StrictMode kill, a native crash) and
   # everything after it never ran. It exits 1 like any red, so nothing else says so — and
-  # a "1 failure" that silently skipped 110 tests reads far greener than it was.
+  # a "1 failure" that silently skipped 110 tests reads far greener than it was. Only a
+  # `failure` can truncate: a `pass` (exit 0) ran every announced test by definition, so
+  # `pass` with tests < test_total is a recorder artefact, not a death — flagging it would
+  # cry wolf on a green run.
   case "$outcome" in
-    pass | failure)
+    failure)
       t="$(num_field "$line" tests)"
       tt="$(num_field "$line" test_total)"
       if [ "${t:-0}" -gt 0 ] && [ "${tt:-0}" -gt 0 ] && [ "$t" -lt "$tt" ]; then
         truncated=$((truncated + 1))
-        [ -z "$truncated_worst" ] && truncated_worst="$t/$tt"
+        # Keep the WORST run (smallest completed fraction), not the first seen:
+        # t/tt < tw_t/tw_tt ⇔ t*tw_tt < tw_t*tt (integer cross-multiply, no floats in sh).
+        if [ -z "$truncated_worst_t" ] || [ $((t * truncated_worst_tt)) -lt $((truncated_worst_t * tt)) ]; then
+          truncated_worst_t="$t"
+          truncated_worst_tt="$tt"
+        fi
       fi
       ;;
   esac
@@ -139,7 +160,7 @@ printf "  %-22s %s\n" "build/install failed" "$infra"
 printf "  %-22s %s\n" "emulator never booted" "$boot"
 echo ""
 if [ "$truncated" -gt 0 ]; then
-  printf "  ⚠  %s run(s) never finished the suite (one recorded only %s tests): the\n" "$truncated" "$truncated_worst"
+  printf "  ⚠  %s run(s) never finished the suite (the worst recorded only %s/%s tests): the\n" "$truncated" "$truncated_worst_t" "$truncated_worst_tt"
   echo "     instrumentation process died under a test and everything after it never ran."
   echo "     Those runs prove nothing about the tests they never reached."
   echo ""
@@ -168,13 +189,9 @@ while IFS= read -r line; do
     *) continue ;;
   esac
 
-  # The reds: from the ledger, so they outlive retention. Pre-`failures` lines fall
-  # back to the artefact they still point at.
-  if has_failures_key "$line"; then
-    reds="$(failures_of "$line")"
-  else
-    reds="$(cat "$run_dir/failures.txt" 2>/dev/null)"
-  fi
+  # The reds: from the ledger, so they outlive retention (reds_of_line handles the
+  # pre-`failures` fallback to the artefact).
+  reds="$(reds_of_line "$line" "$run_dir")"
   if [ -n "$reds" ]; then
     while IFS=$'\t' read -r test kind; do
       [ -z "$test" ] && continue
@@ -205,7 +222,9 @@ if [ -s "$failures" ]; then
   #   FLAKY       — some commit shows both a pass and a fail. Non-determinism, proven.
   #   CONSISTENT  — the commit it most recently failed on ran >1 time and it failed
   #                 every time. Re-running will not help.
-  #   UNKNOWN     — only one run of that commit. Not enough to say, so it doesn't.
+  #   UNKNOWN     — only one run of that commit, or its passing runs aged out of
+  #                 retention so "failed every time" can no longer be proven. Not enough
+  #                 to say, so it doesn't.
   #
   # `-v marker` rather than the NR==FNR idiom: NR==FNR is true for the first record
   # of the *second* file whenever the first file is empty, which silently eats a
@@ -228,15 +247,21 @@ if [ -s "$failures" ]; then
         split(key, p, SUBSEP)
         t = p[1]; sha = p[2]
         runs = seen[t SUBSEP sha]
-        # A failure always implies the test ran, even if durations.tsv missed it.
-        if (runs < fails[key]) runs = fails[key]
+        # A failure always implies the test ran, even if durations.tsv missed it — so the
+        # denominator floors at the failure count. But when it HAS to floor (appearances
+        # pruned below the reds), the passing runs of this same commit were pruned too and
+        # their green evidence is gone. The reds still show (ledger), yet failed-every-run
+        # is no longer provable, so this sha cannot earn the CONSISTENT verdict below —
+        # that would libel a flaky test whose green runs merely aged out of retention.
+        floored = 0
+        if (runs < fails[key]) { runs = fails[key]; floored = 1 }
         if (fails[key] > 0 && fails[key] < runs) proven_flaky[t] = 1
-        if (sha == last_fail_sha[t]) { last_runs[t] = runs; last_fails[t] = fails[key] }
+        if (sha == last_fail_sha[t]) { last_runs[t] = runs; last_fails[t] = fails[key]; last_floored[t] = floored }
       }
       for (t in total_fails) {
         if (proven_flaky[t]) {
           verdict = "FLAKY"
-        } else if (last_runs[t] > 1 && last_fails[t] == last_runs[t]) {
+        } else if (last_runs[t] > 1 && last_fails[t] == last_runs[t] && !last_floored[t]) {
           verdict = "CONSISTENT"
         } else {
           verdict = "UNKNOWN"
@@ -339,11 +364,7 @@ while IFS= read -r line; do
   # calibrated against itself. Dropped per RUN, not globally: a test that deadlocks
   # sometimes and finishes in 4s the rest of the time still has an honest duration, and
   # it is worth knowing.
-  if has_failures_key "$line"; then
-    failures_of "$line" | cut -f1 >"$red_keys"
-  else
-    cut -f1 "$HISTORY_DIR/$art/failures.txt" 2>/dev/null >"$red_keys"
-  fi
+  reds_of_line "$line" "$HISTORY_DIR/$art" | cut -f1 >"$red_keys"
   if [ -s "$red_keys" ]; then
     awk -F'\t' -v red_file="$red_keys" '
       FILENAME == red_file { red[$1] = 1; next }
