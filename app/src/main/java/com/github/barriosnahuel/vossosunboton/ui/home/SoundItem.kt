@@ -4,8 +4,9 @@
  * See LICENSE in the project root for full license information.
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
-import android.provider.Settings
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -50,7 +51,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -69,10 +69,12 @@ import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performConfirmHaptic
 import com.github.barriosnahuel.vossosunboton.ui.haptics.performRejectHaptic
+import com.github.barriosnahuel.vossosunboton.ui.rememberReduceMotionEnabled
 import com.github.barriosnahuel.vossosunboton.ui.theme.DISABLED_TRACK_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.MUTED_TEXT_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.PLAYING_TINT_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
+import com.github.barriosnahuel.vossosunboton.ui.theme.bompEffectsSpec
 import kotlinx.coroutines.CancellationException
 import kotlin.math.roundToInt
 
@@ -147,21 +149,15 @@ fun SoundItem(
         val hintOffsetX = remember { Animatable(0f) }
         val density = LocalDensity.current
         val peekPx = remember(density) { with(density) { WELCOME_HINT_PEEK.toPx() } }
-        val hintContext = LocalView.current.context
+        val reduceMotion = rememberReduceMotionEnabled()
         val currentOnHintShown by rememberUpdatedState(onSwipeHintShown)
         LaunchedEffect(showSwipeHint) {
             if (!showSwipeHint) return@LaunchedEffect
             // Wait for the first frame so the node is laid out before animating, mirroring the
             // FocusRequester incantation documented in CLAUDE.md.
             withFrameNanos { }
-            val animationsEnabled =
-                Settings.Global.getFloat(
-                    hintContext.contentResolver,
-                    Settings.Global.ANIMATOR_DURATION_SCALE,
-                    1f,
-                ) != 0f
             try {
-                if (animationsEnabled) {
+                if (!reduceMotion) {
                     hintOffsetX.animateTo(-peekPx, tween(WELCOME_HINT_OUT_MS))
                     hintOffsetX.animateTo(0f, tween(WELCOME_HINT_BACK_MS))
                 }
@@ -456,15 +452,27 @@ private fun SoundCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
             ) {
+                val reduceMotion = rememberReduceMotionEnabled()
                 val playContainerColor = MaterialTheme.colorScheme.primaryContainer
+                // Tint fades with an effects spring (no bounce on colour); reduce-motion snaps it.
+                val playTint by animateColorAsState(
+                    // Fade to the same hue at alpha 0 (not Color.Transparent): interpolating toward
+                    // transparent black would dip the tint dark in sRGB while the alpha drops.
+                    targetValue =
+                        if (sound.isPlaying) {
+                            playContainerColor.copy(alpha = PLAYING_TINT_ALPHA)
+                        } else {
+                            playContainerColor.copy(alpha = 0f) // alpha-ok
+                        },
+                    animationSpec = if (reduceMotion) snap() else bompEffectsSpec(),
+                    label = "play_tint",
+                )
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
                         Modifier
-                            .background(
-                                color = if (sound.isPlaying) playContainerColor.copy(alpha = PLAYING_TINT_ALPHA) else Color.Transparent,
-                                shape = CircleShape,
-                            ).padding(6.dp),
+                            .background(color = playTint, shape = CircleShape)
+                            .padding(6.dp),
                 ) {
                     FilledIconButton(
                         onClick = onPlayClick,
@@ -588,6 +596,14 @@ private fun SoundCardHeader(
     onDeleteClick: (() -> Unit)?,
     shareEnabled: Boolean = true,
 ) {
+    val reduceMotion = rememberReduceMotionEnabled()
+    // Pin/unpin tint crossfades with an effects spring (no bounce on colour); reduce-motion snaps it.
+    val pinTint by animateColorAsState(
+        targetValue =
+            if (sound.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = if (reduceMotion) snap() else bompEffectsSpec(),
+        label = "pin_tint",
+    )
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -611,7 +627,7 @@ private fun SoundCardHeader(
                 Icon(
                     imageVector = if (sound.isPinned) AppIcons.PushPin else AppIcons.PushPinOutlined,
                     contentDescription = stringResource(if (sound.isPinned) R.string.app_unpin else R.string.app_pin),
-                    tint = if (sound.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = pinTint,
                 )
             }
         }

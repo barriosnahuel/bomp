@@ -11,9 +11,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
@@ -102,7 +106,10 @@ import com.github.barriosnahuel.vossosunboton.ui.home.navigation.instantTabTrans
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.rememberLandingNavigationState
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.toRoute
 import com.github.barriosnahuel.vossosunboton.ui.home.navigation.toTabOrNull
+import com.github.barriosnahuel.vossosunboton.ui.rememberReduceMotionEnabled
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
+import com.github.barriosnahuel.vossosunboton.ui.theme.bompEffectsSpec
+import com.github.barriosnahuel.vossosunboton.ui.theme.bompSpatialSpec
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -127,6 +134,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
+    val reduceMotion = rememberReduceMotionEnabled()
 
     // Navigation 3 backbone (ADR 0024): one saveable back stack per tab + typed child destinations.
     // The graph is the single source of truth for where the user is (ADR 0024 § Consequences).
@@ -396,7 +404,20 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     com.github.barriosnahuel.vossosunboton.feature.collections
         .CollectionDeleteDialog(viewModel = viewModel)
 
-    if (isSearchVisible) {
+    // Only the entry animates here: the overlay's dismissal is already gesture-driven by
+    // `predictiveBackTransition` inside SearchOverlay, so `ExitTransition.None` leaves that path
+    // untouched. Reduce-motion collapses the entry to an instant fade (WCAG 2.3.3).
+    AnimatedVisibility(
+        visible = isSearchVisible,
+        enter =
+            if (reduceMotion) {
+                fadeIn(snap())
+            } else {
+                fadeIn(bompEffectsSpec()) + scaleIn(initialScale = SEARCH_OVERLAY_INITIAL_SCALE, animationSpec = bompSpatialSpec())
+            },
+        exit = ExitTransition.None,
+        label = "search_overlay",
+    ) {
         SearchOverlayHost(
             viewModel = viewModel,
             query = searchQuery,
@@ -954,6 +975,7 @@ private fun AppBottomBar(
 }
 
 private const val DELETE_ANIMATION_DURATION_MS = 300
+private const val SEARCH_OVERLAY_INITIAL_SCALE = 0.96f
 private val WELCOME_BORDER_WIDTH = 1.5.dp
 
 // Reserve room below the last card on My Bomps so it scrolls clear of the + FAB (56dp FAB + margin).
@@ -1032,6 +1054,12 @@ internal fun SoundsList(
                             fadeOutSpec = null,
                             placementSpec = spring(),
                         ),
+                    // No entry animation on purpose: AnimatedVisibility's enter fires for every item
+                    // added to the dataset (filter changes, Vault unlock) — not just an undo — so
+                    // animating it would burst-scale unrelated items on a filter toggle. The list's
+                    // placementSpec already springs the reflow. The exit stays a fixed 300ms tween,
+                    // coupled to the `delay(DELETE_ANIMATION_DURATION_MS)` below that commits the
+                    // removal; a non-deterministic spring there would desync visual from data drop.
                     enter = EnterTransition.None,
                     exit =
                         scaleOut(
