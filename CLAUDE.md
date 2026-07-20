@@ -16,16 +16,14 @@ Small canonical snippets (≤ 5 lines) may live in both files when needed at wri
 
 ```bash
 ./gradlew test                 # Unit tests
-./gradlew check                # Tests + linting
-./gradlew check -x test        # Linting only (detekt + ktlint + spotless + Android Lint)
+./gradlew check                # Tests + linting (detekt + ktlint + spotless + Android Lint)
+./gradlew check -x test        # Linting only
 ./gradlew ktlintFormat         # Auto-fix Kotlin style
-./gradlew detekt               # Static analysis
 ./gradlew spotlessApply        # Auto-fix AGPLv3 copyright headers
-./gradlew app:build -x check   # Build, skip checks
 ./gradlew :model:test --tests "com.github.barriosnahuel.vossosunboton.model.SomeTest"   # Single test class
 ```
 
-Release-only commands (`app:lintVitalRelease`, `app:bundle`) in CONTRIBUTING.md § *Release builds*; emulator workflows in § *Testing → Local UI test suite*. The Android CLI tools — `adb`, `fastboot`, `emulator` — are on `PATH`.
+Standalone `detekt`, `app:build -x check` (build, skip checks), release-only `app:lintVitalRelease` / `app:bundle`: CONTRIBUTING.md § *Release builds*; emulator workflows in § *Testing → Local UI test suite*. The Android CLI tools — `adb`, `fastboot`, `emulator` — are on `PATH`.
 
 ## Module Architecture
 
@@ -87,8 +85,6 @@ Two write-time invariants below; the full procedure (Firebase projects, signing 
 - Real `google-services.json` lives only in the working tree via `git update-index --skip-worktree` (the committed copies are scrubbed dummies so CI compiles) — **never** unmark + `git add` without first stashing the real file, or you leak real keys.
 - The `post-merge` hook that auto-cleans merged worktrees is installed by **copy** into `.git/hooks/` (via `scripts/install-hooks.sh`, re-armed by the committed `SessionStart` hook) — **never** rewire it through `git config core.hooksPath` (it breaks the remote env's commit-signing; see [ADR 0014](docs/adr/0014-worktree-lifecycle-sibling-layout-and-cleanup.md)).
 
-After creating a worktree by hand, run `./scripts/setup-worktree.sh` from its root (idempotent; the `WorktreeCreate` hook invokes it automatically) — it copies the real google-services configs + bundled debug audio and re-arms skip-worktree.
-
 ## Android resources naming
 
 Every resource name must start with the `resourcePrefix` from the module's `build.gradle`:
@@ -112,7 +108,7 @@ Every `.kt` source file must start with the AGPLv3 copyright block (`SPDX-Licens
 
 **KDoc = contract.** Document what the code can't say itself: the contract (what/params/returns), invariants & gotchas you'd break unknowingly (thread-safety, main-looper post, ordering, reflection probe), and grep-anchor markers. **Decision rationale — why this design, rejected alternatives, revisit criteria — goes in `docs/adr/*.md`**, referenced by a one-line pointer (e.g. `… : docs/adr/00XX-name.md`). Re-deriving an ADR's rationale in a comment is two sources of truth that drift; the worked trim is [ADR 0016](docs/adr/0016-jankstats-frozen-frame-crash-gate.md) ↔ `FrozenFrameGate.kt`. **"How" comments stay ≤ 2-3 lines** — no truth is truer than the code itself. **No traceability breadcrumbs** in comments (PR/issue/feedback refs) — that lives in git/CHANGELOG/ADR/PR.
 
-Audit case-by-case, never blind-delete: a long block that is *local justification* with no ADR home (a multi-key contract, the `StrictModeConfigurator` matchers) stays. A single comment block over **26 lines** is flagged by `scripts/check-adr-invariants.sh` (an awk line-count over a contiguous comment run); trim it to a pointer, or acknowledge a genuinely-legit long block with a `long-comment-ok` marker **on its own line inside the block** — kin to the `// alpha-ok` / `// button-ok` hatches, but placed in the comment itself rather than trailing a code line (there is no offending code line to trail).
+Audit case-by-case, never blind-delete: a long block that is *local justification* with no ADR home (a multi-key contract, the `StrictModeConfigurator` matchers) stays. A single comment block over **26 lines** is flagged by `scripts/check-adr-invariants.sh` (an awk line-count over a contiguous comment run); trim it to a pointer, or acknowledge a genuinely-legit long block with a `long-comment-ok` marker **on its own line inside the block** (like the `// alpha-ok` / `// button-ok` hatches, but inside the comment since there's no code line to trail).
 
 ## Bug fixes — TDD workflow
 
@@ -167,7 +163,7 @@ Full checklists: CONTRIBUTING.md § *Testing → Pre-PR checklist* / *Pre-push c
 
 - Smoke tests required: new `Activity` (§ *Activity smoke tests*); new full-screen Composable with business logic (`createComposeRule()`); Composables with durable state need at least one `scenario.recreate()` test (§ *Stateful Composables*).
 - Run `./gradlew check -x test && ./gradlew test` before pushing — same failures CI reports. Detekt max line length: **150**.
-- **`.githooks/pre-push` enforces the cheap CI checks locally** (ADR/security/analytics/assertion grep guards, then `ktlintCheck detekt spotlessCheck`) so style/format/guard failures block the push instead of round-tripping CircleCI. Heavy unit-test + Android-lint are opt-in via `PREPUSH_FULL=1`. Escape hatch for cosmetic-only pushes: `git push --no-verify`. Auto-fix: `ktlintFormat` / `spotlessApply`.
+- **`.githooks/pre-push` runs the cheap CI guards locally** (grep guards + `ktlintCheck detekt spotlessCheck`) so format/guard failures block the push instead of round-tripping CircleCI. Heavy unit-test + Android-lint opt-in via `PREPUSH_FULL=1`; escape hatch `git push --no-verify`; auto-fix `ktlintFormat` / `spotlessApply`.
 - **Functional changes also require the local UI test suite** (§ *Local UI test suite*). Touching Composables, ViewModels, intents, navigation, deep links, or persistence → run `./scripts/run-instrumented-tests.sh` (cold-boots the emulator; never run the Gradle task against a warm AVD). CircleCI does not execute it. Cosmetic-only changes (CHANGELOG, copy, README, comments) are exempt.
 - **Changing the app startup path** (Application/Activity `onCreate`, first-frame Composables, startup-time deps): regenerate the committed Baseline Profile — procedure + when in CONTRIBUTING.md § *Baseline Profile*. Stale = slower first launches, never broken.
 
@@ -214,7 +210,7 @@ When a new violation surfaces, the fix order is: **(1)** top app-code frame is o
 
 ## JankStats frozen-frame gate
 
-Debug-only rendering sibling of StrictMode: `app/src/debug/.../FrozenFrameGate.kt` + `JankStatsLogger.kt`. A **repeated frozen frame** (UI-thread duration ≥ 700 ms — a main-thread block, *not* GPU slowness) crashes the process via `Tracker.track(FrozenFrameException)` + a main-looper throw, static message `"JankStats: frozen frame…"`. Unlike StrictMode it is **manual / real-device debug only** — the crash is armed off under instrumentation (the cold-boot emulator emits multi-second frozen frames from its own starvation; a real device produces none). Slow-frame jank stays log-only; its regression gate is the Macrobenchmark, not this. Don't gate on `isJank` (too frequent) or total frame duration (GPU isn't a block). Two tiers: a single **egregious** frame (≥ 1.5 s) crashes at once; the ambiguous 700 ms–1.5 s band needs a 2nd frozen frame within 5 s. Calibration (per-screen startup window, the two tiers, allowlist) + the test-harness-disable rationale: [ADR 0016](docs/adr/0016-jankstats-frozen-frame-crash-gate.md). Triage when it fires (StrictMode-style fix order) + the perf-tool trio: CONTRIBUTING.md § *Performance*.
+Debug-only rendering sibling of StrictMode: `app/src/debug/.../FrozenFrameGate.kt` + `JankStatsLogger.kt`. A **repeated frozen frame** (UI-thread duration ≥ 700 ms — a main-thread block, *not* GPU slowness) crashes the process via `Tracker.track(FrozenFrameException)` + a main-looper throw, static message `"JankStats: frozen frame…"`. Unlike StrictMode it is **manual / real-device debug only** — armed off under instrumentation (the cold-boot emulator's own starvation emits false frozen frames). Slow-frame jank stays log-only; its regression gate is the Macrobenchmark, not this. Don't gate on `isJank` (too frequent) or total frame duration (GPU isn't a block). The two crash tiers (an egregious single frame vs. the ambiguous 700 ms–1.5 s band needing a repeat), the per-screen calibration + allowlist, and the test-harness-disable rationale: [ADR 0016](docs/adr/0016-jankstats-frozen-frame-crash-gate.md). Triage when it fires (StrictMode-style fix order) + the perf-tool trio: CONTRIBUTING.md § *Performance*.
 
 ## Security boundaries
 
@@ -297,11 +293,7 @@ Use the smallest tier that fits the action's hierarchy. **Never** `OutlinedButto
 
 ## Product & brand context (when relevant)
 
-Sibling backlog repo `../push-me-backlog/` holds product specs, brand language, canonical naming. Consult for user-facing strings, micro-copy, feature/level naming, gamification, social-layer behavior:
-
-- [`docs/brand-dna.md`](../push-me-backlog/docs/brand-dna.md) — canonical terminology (Bomp/Bomper/Bompear, Richter levels Bompín → Bompión, Inmortal cloud-state descriptor)
-- [`CLAUDE.md`](../push-me-backlog/CLAUDE.md) — Product Language glossary and spec conventions
-- [`backlog/`](../push-me-backlog/backlog/) — pending feature specs (the "why")
+Sibling backlog repo `../push-me-backlog/` holds product specs, brand language, canonical naming — consult for user-facing strings, micro-copy, feature/level naming, gamification, social-layer behavior: [`docs/brand-dna.md`](../push-me-backlog/docs/brand-dna.md) (canonical terms — Bomp/Bomper/Bompear, Richter levels Bompín → Bompión, Inmortal), [`CLAUDE.md`](../push-me-backlog/CLAUDE.md) (Product Language glossary + spec conventions), [`backlog/`](../push-me-backlog/backlog/) (pending feature specs — the "why").
 
 Skip for refactors, dep bumps, build config, platform-wiring fixes. Sibling path absent → in-repo strings are authoritative; surface the gap.
 
@@ -317,7 +309,7 @@ Sources of truth: `../push-me-backlog/docs/brand-dna.md` (canonical terms, anti-
 
 Hard rules (calque examples, reserved-term list with ✓/❌, read-aloud detail → CONTRIBUTING.md § *Copy guide*):
 
-- **No calque; locale-aware register.** US-EN marketing → contractions, short imperatives, concrete nouns; es-AR → voseo + warmth. Verify with a native speaker, not Google Translate.
+- **No calque; locale-aware register.** Verify with a native speaker, not Google Translate. Per-locale register (US-EN contractions/imperatives, es-AR voseo + warmth): CONTRIBUTING.md § *Copy guide*.
 - **ASO without breaching brand-DNA positioning bans** (`soundboard`, `audio sticker`, `panel`, `viralizá`, `share with friends/followers` as CTA). Positioning bans, not vocabulary bans — `voice notes` is fine (names the input, not the position).
 - **Brand-DNA invariants.** Proper nouns Bomp / Bomper / Bompear / Bompeable NEVER translate. The manifesto closing ("Un audio de los tuyos no es un mensaje, es un abrazo que se escucha." or a meaning-preserving locale equivalent) is invariant across surfaces and locales.
 - **Reserved-term check.** Don't use a term reserved for a non-shipped feature/state — `Inmortal`/`immortal` (Pro, not shipped), `Bompardo` / `Bompión` (Escala Richter levels 4/5), `Bomptástico` (telemetry only).
