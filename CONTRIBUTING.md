@@ -632,7 +632,8 @@ Release-only Gradle commands (need the signing files above in the project root):
 
 - **`versionName`** (what the Bomper sees in Play / "Acerca de") is **`YYYY.MM.N`** — cut month + a 1-based counter within the month (e.g. `2026.07.1`; a second July release is `2026.07.2`). The date *is* the version: it tells the Bomper how fresh the app is, and the `.N` matches the release tag / title / CHANGELOG header 1:1, so an "Acerca de" string maps straight to a GitHub release. No SemVer `MAJOR.MINOR.PATCH`. Two same-month releases differ by `.N` (and by `versionCode`). Rationale for carrying the counter here (not just on the tag): [ADR 0025](docs/adr/0025-versionname-carries-monthly-counter.md).
 - **`versionCode`** stays a **monotonic integer**, bumped +1 per release, independent of `versionName` (Play Store requirement). It is the true build identity.
-- **GitHub tags + release titles + `CHANGELOG.md` headers** are **`vYYYY.MM.N`** — the `v`-prefixed cut month plus a 1-based counter within the month (e.g. `v2026.07.1`; a second July release is `v2026.07.2`). The counter keeps tags unique at any cadence, and — unlike a cut *date* — the name is knowable from the start of the month, which is what lets the month's **milestone** exist while PRs are still being opened (CLAUDE.md § *Labels and milestone*); git already records the cut date on the tag. Rationale + trade-off vs the earlier day-precision scheme: [ADR 0023](docs/adr/0023-monthly-sequential-release-tags.md).
+- **GitHub tags + `CHANGELOG.md` headers** are **`vYYYY.MM.N`** — the `v`-prefixed cut month plus a 1-based counter within the month (e.g. `v2026.07.1`; a second July release is `v2026.07.2`). The counter keeps tags unique at any cadence, and — unlike a cut *date* — the name is knowable from the start of the month, which is what lets the month's **milestone** exist while PRs are still being opened (CLAUDE.md § *Labels and milestone*); git already records the cut date on the tag. Rationale + trade-off vs the earlier day-precision scheme: [ADR 0023](docs/adr/0023-monthly-sequential-release-tags.md).
+- **The GitHub release *title*** (the release name, separate from the tag) is **`vYYYY.MM.N - <short description>`** — the same version anchor plus a warm one-line hook in the What's New voice (§ *Copy guide → Store "What's New" voice*), e.g. `v2026.07.1 - Your Vault comes with you`. Content-forward and warm (say *what* shipped), not technical. The tag and CHANGELOG header stay bare `vYYYY.MM.N` — the milestone is named after the bare tag — so only the cosmetic title carries the description. Rationale: [ADR 0026](docs/adr/0026-release-title-carries-short-description.md).
 - **Forward-only frontier:** releases through `v2.3.0` were SemVer and stay as-is in tags / CHANGELOG / history. CalVer governs from the first cut after this change onward.
 
 ### Pre-release checklist
@@ -656,12 +657,12 @@ After the checklist above is green and the version bump is merged to `develop`:
 2. **Create the release + tag from `develop`**, notes from the store change file, attaching **only** the R8 mapping as the single asset:
 
    ```bash
-   gh release create vYYYY.MM.N --target develop --title "vYYYY.MM.N" \
+   gh release create vYYYY.MM.N --target develop --title "vYYYY.MM.N - <short description>" \
      --notes-file store-listing/en-US/changelog-<versionCode>.txt \
      app/build/outputs/mapping/release/mapping.txt
    ```
 
-   `<versionCode>` is the value in `app/build.gradle`. Add a footer line linking to the full `CHANGELOG.md` on `develop` if the notes file omits it.
+   `<versionCode>` is the value in `app/build.gradle`. The `<short description>` in the title is a warm one-line hook in the What's New voice, derived from the release's hero (§ *Versioning*; § *Copy guide → Store "What's New" voice*) — the tag (first arg) stays bare `vYYYY.MM.N`. Add a footer line linking to the full `CHANGELOG.md` on `develop` if the notes file omits it.
 3. **Attach nothing else.** The mapping is a backup for offline `retrace`; **never** attach the keystore, `secure.properties`, the real `google-services.json`, or the `.aab` (the `.aab` carries no mapping anyway).
 4. **Verify the asset landed** — `gh release view vYYYY.MM.N --json assets -q '.assets[].name'` must list `mapping.txt`. Print an explicit line for the maintainer to confirm, e.g. `✅ mapping.txt attached to vYYYY.MM.N` (or ⚠️ + re-run `gh release upload vYYYY.MM.N app/build/outputs/mapping/release/mapping.txt` if missing).
 5. **Verify Firebase actually got the mapping** — the build log must show `uploadCrashlyticsMappingFileRelease` *ran* (not skipped). Within minutes, a fresh crash on this version should de-obfuscate in the Console / via the Firebase MCP (real frames, **not** `r8-map-id-…`). This step exists because past releases shipped **without** the mapping (§ *BigQuery export* → *Stack frames come R8-obfuscated*) — so Crashlytics couldn't deobfuscate them either.
@@ -768,6 +769,14 @@ The store *What's New* (`store-listing/{en-US,es-AR}/changelog-<versionCode>.txt
 - **Native voice per locale** (§ above): en-US → contractions, concrete nouns; es-AR → voseo + warmth. es-AR is *not* a translation of en-US — write it native.
 - **500-character hard cap per locale, counted *with* the trailing newline** (Play truncates over it). es-AR runs longer than en-US, so it's the binding constraint — count it (`python3 -c "print(len(open('path').read()))"`), don't eyeball. If four benefit-led + before/after bullets don't fit, compress the before/after to one-liners or drop the lowest-value bullet — never ship a truncated note.
 - All brand-DNA invariants, reserved-term and policy-contradiction checks in `CLAUDE.md` § *Copy & localization* still apply.
+
+**The voice — a note from Nahu (first person, signed).** This is the canonical What's New identity; keep it consistent release to release. Every note reads as if Nahu, the person who makes Bomp, is talking to the reader directly.
+
+- **Open with a warm hook, never a label.** The first line is the one everyone reads — spend it on what this release is about, in Nahu's voice (e.g. `I'd been waiting for this one more than anyone:`). Never open with `What's new in this version.` / `Novedades de esta versión.`: the store already titles the section "What's new", so the label is redundant and burns that line.
+- **Tell the bullets from the maker's side.** Still benefit-led (rule above), but voiced as what bugged him or what he wanted you to have; the playful before/after for fixes still applies.
+- **Sign it.** Close with the canonical signature — `Hugs, Nahu` (en-US) / `Un abrazo, Nahu` (es-AR). It echoes the manifesto ("a hug you can hear" / "un abrazo que se escucha") and puts a person behind the note. This replaces the old `Thanks for bomping.` / `Gracias por bompear.` close. Native per locale, never a calque (`A hug, Nahu` would be one).
+- **No emojis** — the warmth comes from the words.
+- Applies from the next cut onward — the already-shipped `changelog-6…9` predate this voice and stay as they shipped. The same voice is the GitHub release body (sourced from the en-US file) and feeds the release-title short description (§ *Versioning*).
 
 ### Calque examples (en-US listing post-mortem)
 
