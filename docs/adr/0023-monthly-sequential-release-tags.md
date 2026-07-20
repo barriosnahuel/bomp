@@ -1,6 +1,6 @@
 # ADR 0023 — Monthly-sequential release tags (`vYYYY.MM.N`)
 
-- **Status:** Accepted (the § *Trade-off accepted* aside that `versionName` keeps ADR 0021's no-counter rationale is amended by [ADR 0025](0025-versionname-carries-monthly-counter.md) — `versionName` now also carries the counter, `YYYY.MM.N`)
+- **Status:** Accepted (the § *Trade-off accepted* aside that `versionName` keeps ADR 0021's no-counter rationale is amended by [ADR 0025](0025-versionname-carries-monthly-counter.md) — `versionName` now also carries the counter, `YYYY.MM.N`. The *release-title* clause of § *Decision* is amended by [ADR 0026](0026-release-title-carries-short-description.md) — the release title/name is now `vYYYY.MM.N - <short description>`; the tag and CHANGELOG header stay bare `vYYYY.MM.N`)
 - **Date:** 2026-07-05
 - **Amends:** [ADR 0021](0021-calver-versioning.md) — only the tag / release-title / CHANGELOG-header scheme (`vYYYY.MM.DD` → `vYYYY.MM.N`). The rest of ADR 0021 — `versionName` = `YYYY.MM`, small monotonic `versionCode`, the forward-only SemVer frontier — stands unchanged.
 
