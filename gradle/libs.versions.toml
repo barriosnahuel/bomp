@@ -8,7 +8,7 @@ kotlin                    = "2.4.10"
 detekt                    = "1.23.8"
 ktlintGradle              = "14.2.0"
 ktlint                    = "1.6.0"
-spotless                  = "8.8.0"
+spotless                  = "8.9.0"
 
 # AndroidX / Jetpack
 appcompat                 = "1.7.1"
