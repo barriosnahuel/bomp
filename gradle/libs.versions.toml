@@ -23,7 +23,7 @@ nav3                      = "1.1.4"
 material                  = "1.14.0"
 
 # Firebase
-firebaseBom               = "34.16.0"
+firebaseBom               = "34.17.0"
 
 # Other
 timber                    = "5.0.1"
