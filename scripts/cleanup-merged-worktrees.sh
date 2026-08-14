@@ -3,7 +3,7 @@
 # Removes linked worktrees (and their local branch) whose PR has already been
 # MERGED on GitHub, plus prunes dead remote-tracking refs.
 #
-# Why this exists: worktrees created per task — by the `overnight-work` Claude
+# Why this exists: worktrees created per task — by the `delegate` Claude
 # Code skill (user-level, not in this repo), by harness subagents, or by hand —
 # linger after their PR merges. GitHub's `deleteBranchOnMerge` removes the
 # *remote* branch on merge, but the local worktree + local branch stay. We can't

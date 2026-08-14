@@ -7,10 +7,11 @@
 ## Context
 
 This repo is worked on heavily through git worktrees: the Claude Code harness
-and its subagents spin one up per task, the `overnight-work` skill (a user-level
-Claude Code skill — it lives in `~/.claude/skills/`, **not** in this repo) opens
-one worktree + branch + PR per task, and humans create them by hand. Two ends of
-that lifecycle need a policy.
+and its subagents spin one up per task, the `delegate` skill (named
+`overnight-work` when this ADR was written; a user-level Claude Code skill — it
+lives in `~/.claude/skills/`, **not** in this repo) opens one worktree + branch +
+PR per task, and humans create them by hand. Two ends of that lifecycle need a
+policy.
 
 **Creation.** The harness default places worktrees under `.claude/worktrees/<name>`.
 Nested there, the IDE indexes each as a separate project and clutters navigation.
@@ -19,7 +20,7 @@ Nested there, the IDE indexes each as a separate project and clutters navigation
 merges, and the harness has its own automatic cleanup for the *unchanged* scratch
 worktrees it created (branches named `worktree-<name>`). Neither covers the common
 case: a worktree whose PR has **merged** but which has local commits — exactly the
-`overnight-work` / manual-PR shape. Those linger until removed by hand (one session
+`delegate` / manual-PR shape. Those linger until removed by hand (one session
 removed 17 worktrees + 17 branches that had accumulated this way). And the obvious
 "is it merged?" check is a trap: PRs land as **squash** merges, which rewrite SHAs,
 so `git branch -d` / `merge-base --is-ancestor` report the branch as not merged.

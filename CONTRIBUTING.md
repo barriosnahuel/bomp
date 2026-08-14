@@ -460,7 +460,7 @@ This is distinct from the swap-from-disk procedure above (used the first time yo
 
 ### Cleaning up merged worktrees
 
-Worktrees created per task — by the `overnight-work` Claude Code skill (user-level, **not** in this repo), by harness subagents, or by hand — accumulate after their PR merges: `deleteBranchOnMerge` drops the *remote* branch, but the **local** worktree and branch linger. `scripts/cleanup-merged-worktrees.sh` removes them automatically. The full rationale (why keyed on the PR's merged commit and not git ancestry/branch name, why copy-install instead of `core.hooksPath`, how it relates to the harness's own cleanup) is in [ADR 0014](docs/adr/0014-worktree-lifecycle-sibling-layout-and-cleanup.md) — this section is the operator's how-to.
+Worktrees created per task — by the `delegate` Claude Code skill (user-level, **not** in this repo), by harness subagents, or by hand — accumulate after their PR merges: `deleteBranchOnMerge` drops the *remote* branch, but the **local** worktree and branch linger. `scripts/cleanup-merged-worktrees.sh` removes them automatically. The full rationale (why keyed on the PR's merged commit and not git ancestry/branch name, why copy-install instead of `core.hooksPath`, how it relates to the harness's own cleanup) is in [ADR 0014](docs/adr/0014-worktree-lifecycle-sibling-layout-and-cleanup.md) — this section is the operator's how-to.
 
 **Trigger.** The committed `.githooks/post-merge` hook runs the script on the `git pull` of `develop` that follows a merge (only on `develop`; always exits 0, so it can never block a pull).
 
