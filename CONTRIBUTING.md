@@ -253,6 +253,16 @@ The wrapper cold-boots the AVD with wiped userdata, waits for it, then runs `./g
 
 **Always go through the wrapper — do not run `./gradlew :app:connectedDebugAndroidTest` against an already-running emulator.** A warm emulator degrades across back-to-back runs (`system_server` watchdog ANRs, hundreds of skipped frames), which surfaces as `ComposeTimeoutException` / `ComposeNotIdleException` flakes or an outright `Process crashed`. A cold boot resets that — a clean run finishes in ~3 min; a degraded one takes 15+ min or never completes. Rationale: [ADR 0001 § *Cold boot per run*](docs/adr/0001-local-ui-test-suite.md).
 
+**When the run ends, so does the emulator — unless there is a failure on it to inspect.** The wrapper keeps the AVD up in exactly one case: the last run ended with **red tests**, so you can open the app on that device and read the state that failed. Every other outcome reclaims it (green: nothing left to see; boot failure: never a usable device; infra failure: no test ran; stall: the AVD is wedged and already killed). When it is left up it tells you on stderr, with the serial spelled out:
+
+```bash
+adb -s emulator-5554 emu kill                          # what the wrapper tells you to run
+KEEP_EMULATOR=1 ./scripts/run-instrumented-tests.sh    # keep it even when green (debugging a flake)
+KEEP_EMULATOR=0 ./scripts/run-instrumented-tests.sh    # always reclaim, even on red (chained/unattended runs)
+```
+
+With `RUNS>1` the decision follows the **last** run, since that is whose device is still standing. Rationale: [ADR 0001 § *Emulator lifetime after the run*](docs/adr/0001-local-ui-test-suite.md).
+
 To hunt flakes, run several cold-booted passes in a row:
 
 ```bash

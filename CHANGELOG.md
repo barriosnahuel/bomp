@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### For nerds 🤓
+
+#### Changed
+- The instrumented wrapper now reclaims the emulator when the run ends, keeping it up only when the last run had red tests to inspect (`KEEP_EMULATOR` forces either way)
+
 ## \[v2026.07.1] - 2026-07-13
 
 ### Added

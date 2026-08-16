@@ -480,6 +480,73 @@ assert_eq "the run still passes after the guard raises the clock" "$status" "0"
 assert_contains "an undercutting stall timeout is called out and raised" "$out" "does not clear the on-device per-test timeout"
 
 echo ""
+echo "── only red tests keep the emulator; every other outcome reclaims it ──"
+# An AVD left up after a run nobody will inspect is pure waste — it holds GPU, cores and
+# memory until someone notices it by hand. Red *tests* are the one outcome that earns the
+# keep: the operator opens the app on that device and reads the state that failed. The
+# other non-green outcomes look like they qualify and do not — a failed boot never
+# produced a usable device, an infra failure ran no test, and a stall's AVD is wedged
+# (already killed by the run loop). Survival is read off the shim's device-state file, which
+# `emu kill` really clears, so a shutdown that is only *claimed* still fails here.
+emulator_is_up() { [ -f "$state/emulator_alive" ] && echo up || echo down; }
+
+out="$(run_wrapper pass "$full_run")"; status=$?
+assert_eq "a green run still exits 0" "$status" "0"
+assert_eq "a green run leaves no emulator behind" "$(emulator_is_up)" "down"
+assert_contains "and says so, since the AVD vanishing is otherwise unexplained" "$out" "emulator shut down"
+assert_not_contains "a green run never invites an inspection" "$out" "still up so you can inspect"
+
+out="$(run_wrapper fail "$failing_run")"; status=$?
+assert_eq "a red run still exits 1" "$status" "1"
+assert_eq "red tests keep the emulator up for inspection" "$(emulator_is_up)" "up"
+assert_contains "and announce it, so it is never left running unnoticed" "$out" "still up so you can inspect"
+assert_contains "naming a kill command that targets our serial, not 'any device'" "$out" "adb -s emulator-5554 emu kill"
+assert_not_contains "a kept emulator is never also reported as shut down" "$out" "emulator shut down"
+
+out="$(run_wrapper hang "$partial_run")"; status=$?
+assert_eq "a stalled run still exits 124" "$status" "124"
+assert_eq "a stalled run's wedged AVD stays killed, as the run loop left it" "$(emulator_is_up)" "down"
+assert_not_contains "and is never advertised as inspectable — it is frozen" "$out" "still up so you can inspect"
+
+out="$(run_wrapper pass "$full_run" STUB_BOOT_COMPLETED=never)"; status=$?
+assert_eq "a boot failure still exits 2" "$status" "2"
+assert_eq "a half-launched AVD is reclaimed, not left behind" "$(emulator_is_up)" "down"
+
+out="$(run_wrapper build-failure "$empty_run")"; status=$?
+assert_eq "an infra failure still exits 3" "$status" "3"
+assert_eq "a run that never reached the tests has nothing to inspect" "$(emulator_is_up)" "down"
+
+echo ""
+echo "── with RUNS>1 the decision follows the run whose emulator survived ────"
+# Every run cold-boots a fresh, wiped AVD, so the device standing at the end is the LAST
+# run's. Keying the keep on the worst-of-all status would hand the operator run 3's clean
+# green device while telling them to go inspect run 1's failure.
+out="$(run_wrapper fail "$failing_run" RUNS=2 STUB_BOOT_FAIL_ON_RUN=2)"; status=$?
+assert_eq "run 1's red tests still decide the exit code over run 2's boot failure" "$status" "1"
+assert_eq "but the AVD is judged by run 2, which left nothing to inspect" "$(emulator_is_up)" "down"
+
+echo ""
+echo "── KEEP_EMULATOR overrides the outcome, and says when it cannot ────────"
+# Both directions have a real caller: an unattended/chained run wants the host reclaimed
+# even on red, and someone debugging a flake wants the device alive even on green.
+out="$(run_wrapper pass "$full_run" KEEP_EMULATOR=1)"
+assert_eq "KEEP_EMULATOR=1 keeps a green run's emulator" "$(emulator_is_up)" "up"
+assert_contains "and still announces the emulator it left running" "$out" "still up so you can inspect"
+
+out="$(run_wrapper fail "$failing_run" KEEP_EMULATOR=0)"; status=$?
+assert_eq "KEEP_EMULATOR=0 shuts down even after red tests" "$(emulator_is_up)" "down"
+assert_eq "and does not disturb the exit code" "$status" "1"
+
+out="$(run_wrapper pass "$full_run" KEEP_EMULATOR=TRUE)"
+assert_eq "a truthy spelling means what it reads like, not its opposite" "$(emulator_is_up)" "up"
+
+# An unrecognised value silently doing the opposite of what it reads like is the trap
+# this guards: it falls back to the default and says so, rather than guessing.
+out="$(run_wrapper pass "$full_run" KEEP_EMULATOR=maybe)"
+assert_contains "an unrecognised KEEP_EMULATOR is called out, not guessed at" "$out" "ignoring KEEP_EMULATOR='maybe'"
+assert_eq "and the outcome-based default still applies" "$(emulator_is_up)" "down"
+
+echo ""
 echo "── file_mtime returns an integer on this platform's stat ──────────────"
 # The one function the whole watchdog rests on: its result is fed straight into
 # arithmetic. GNU's `stat -f` means --file-system (prints '?', exits 0) while BSD's
