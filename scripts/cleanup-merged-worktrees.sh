@@ -7,8 +7,9 @@
 # Code skill (user-level, not in this repo), by harness subagents, or by hand —
 # linger after their PR merges. GitHub's `deleteBranchOnMerge` removes the
 # *remote* branch on merge, but the local worktree + local branch stay. We can't
-# lean on `git branch -d` to detect "merged" because PRs land as **squash**
-# merges, which rewrite SHAs — so `merge-base --is-ancestor` reports false.
+# lean on `git branch -d` to detect "merged": PRs routinely land via merge methods
+# that **rewrite SHAs** (squash or rebase), so `merge-base --is-ancestor` reports
+# false.
 # Full rationale + revisit criteria: docs/adr/0014-worktree-lifecycle-sibling-layout-and-cleanup.md.
 #
 # Removal signal (see pr_verdict): for the branch's OWN PR, REMOVE only when a
