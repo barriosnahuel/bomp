@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-04-26
 - **Supersedes:** —
+- **Amended:** 2026-08-16 (§ Emulator lifetime after the run)
 
 ## Context
 
@@ -119,6 +120,46 @@ suite dozens of times back-to-back) makes even a freshly booted guest janky enou
 timing-sensitive tests. If a cold-booted run is still slow or flaky, check the host load
 before suspecting a test: close other heavy work and re-run, rather than chasing a
 non-existent test bug.
+
+### Emulator lifetime after the run
+
+*Cold boot per run* above settles how the AVD **starts**; this settles how it **ends**. The
+wrapper used to simply exit and leave it running, on the reasoning that the next run kills it
+anyway. That is true and still costs: between runs the AVD sits there holding GPU, cores and
+memory, invisible until the host starts swapping — and "the next run" may be tomorrow, or
+never. Whoever ends up killing it by hand is the person least likely to know it is there.
+
+So the wrapper reclaims the emulator, and keeps it in exactly one case: **the last run ended
+with red tests**. That is the only outcome with something on the device worth looking at — the
+operator's first move is to open the app there and read the state that failed, and shutting it
+down destroys precisely that evidence. The other non-green outcomes look like they qualify and
+do not: a **boot failure** never produced a usable device, an **infra failure** ran no test at
+all, and a **stall**'s AVD is wedged — the run loop already kills that one, because a frozen
+console cannot be inspected and its corpse would collide with the next cold boot on the same
+port.
+
+The keep is judged on the **last** run, not the worst of them. Every run cold-boots its own
+wiped AVD, so with `RUNS=3` and only run 1 red, the device left standing is run 3's clean one:
+keying on the worst status would hand the operator a freshly-wiped emulator and tell them to go
+inspect a failure that is not on it.
+
+Whenever the emulator is left up it says so on stderr, naming the `adb -s <serial> emu kill`
+that ends it — serial included, because a bare `adb emu kill` has no target once a physical
+device or a second AVD is attached. `KEEP_EMULATOR` overrides the default in both directions:
+`1`/`true`/`yes` to keep a green run's device for debugging, `0`/`false`/`no` to reclaim the
+host even after red tests (the useful setting for chained or unattended runs). An unrecognised
+value falls back to the default and says so, rather than silently doing the opposite of what it
+reads like.
+
+Deliberately **not** a `trap`: the existing `INT`/`TERM` handler exits before this runs, so an
+interrupted run keeps its emulator. Someone who hits Ctrl-C mid-suite did it to go look at
+something, and a teardown firing on that signal would take the device away at the exact moment
+they asked for it.
+
+**Trade-off accepted:** after a green run there is no longer a warm device to poke at — the next
+thing you do pays a cold boot. That is the intended bias: the suite's own contract is that every
+run cold-boots anyway (§ *Cold boot per run*), so the warm device was never reusable *by the
+suite*; it only ever served ad-hoc manual poking, which `KEEP_EMULATOR=1` still covers.
 
 ### Bounded termination — the stall watchdog
 

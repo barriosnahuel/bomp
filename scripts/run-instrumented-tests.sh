@@ -47,7 +47,7 @@
 # Environment overrides: AVD_NAME, RUNS, EMULATOR_PORT, BOOT_TIMEOUT_SECONDS,
 # EMULATOR_GPU, EMULATOR_CORES, EMULATOR_MEMORY, STALL_TIMEOUT_SECONDS,
 # BUILD_STALL_TIMEOUT_SECONDS, HARD_CAP_SECONDS, WATCHDOG_POLL_SECONDS,
-# GRADLE_TERM_GRACE_SECONDS.
+# GRADLE_TERM_GRACE_SECONDS, KEEP_EMULATOR.
 #
 # Requires the Android SDK CLI on PATH (emulator, adb) and the AVD created by
 # ./scripts/setup-test-emulator.sh.
@@ -727,6 +727,7 @@ trap 'cleanup_on_exit; exit 130' INT TERM
 trap cleanup_on_exit EXIT
 
 overall_status=$EXIT_OK
+last_run_status=$EXIT_OK
 
 # A stall in one run must not abort the remaining ones — when hunting a flake with
 # RUNS=n, the stalls *are* the data. The worst outcome across runs wins, by an
@@ -752,6 +753,12 @@ status_rank() {
 record_status() {
   local status="$1"
   [ "$(status_rank "$status")" -gt "$(status_rank "$overall_status")" ] && overall_status="$status"
+  # The emulator standing at the end belongs to the *last* run, and every run starts by
+  # wiping and cold-booting a new one. So the decision to keep it must read this run's
+  # outcome, not the worst-of-all: with RUNS=3 and only run 1 red, `overall_status` is
+  # red while the surviving device is run 3's freshly-wiped green one — nothing to
+  # inspect, and an invitation to inspect it would be a lie.
+  last_run_status="$status"
   return 0
 }
 
@@ -850,6 +857,45 @@ for run in $(seq 1 "$RUNS"); do
   esac
 done
 
+# The AVD outlives the run only when there is something on it worth looking at, which
+# is a narrower set than "the run was not green". Red *tests* qualify: the operator's
+# first move is to open the app on that device and read the state that failed, and
+# shutting it down destroys exactly that evidence. Nothing else does — a green run has
+# nothing left to see; a boot failure never produced a usable device; an infra failure
+# ran no test at all; and a stall's AVD is wedged (the run loop already killed it,
+# since a frozen console cannot be inspected and its corpse would collide with the next
+# cold boot's port). Everything outside that one case is reclaimed, because an emulator
+# nobody is going to look at is just the host's RAM held hostage until someone notices.
+# Deliberately not a `trap`: the INT/TERM handler exits before reaching this, so a run
+# someone interrupted keeps its device — they hit Ctrl-C to go look at something.
+# Rationale + overrides: docs/adr/0001-local-ui-test-suite.md § Emulator lifetime after the run.
+shutdown_emulator_unless_inspectable() {
+  local keep
+  case "$(printf '%s' "${KEEP_EMULATOR:-}" | tr '[:upper:]' '[:lower:]')" in
+    "")             keep=auto ;;
+    1|true|yes)     keep=yes ;;
+    0|false|no)     keep=no ;;
+    *)
+      echo "⚠ ignoring KEEP_EMULATOR='${KEEP_EMULATOR}' — expected 1/true/yes or 0/false/no" >&2
+      keep=auto
+      ;;
+  esac
+  if [ "$keep" = auto ]; then
+    if [ "$last_run_status" = "$EXIT_TEST_FAILURE" ]; then keep=yes; else keep=no; fi
+  fi
+
+  if [ "$keep" = no ]; then
+    kill_existing_emulator
+    echo "→ $AVD_NAME emulator shut down"
+  else
+    # Always announced, never silent: an emulator left running is invisible until it is
+    # competing for the host's RAM, and whoever ends up killing it is the one least
+    # likely to know it is there. The serial is spelled out because a bare
+    # `adb emu kill` has no target when a physical device or a second AVD is attached.
+    echo "⚠ the $AVD_NAME emulator is still up so you can inspect the failure — 'adb -s $EMULATOR_SERIAL emu kill' when done (KEEP_EMULATOR=0 to always shut down)" >&2
+  fi
+}
+
 echo ""
 case "$overall_status" in
   "$EXIT_OK")
@@ -869,5 +915,7 @@ case "$overall_status" in
     echo "✘ test failures — report: app/build/reports/androidTests/connected/debug/index.html" >&2
     ;;
 esac
+
+shutdown_emulator_unless_inspectable
 
 exit "$overall_status"
