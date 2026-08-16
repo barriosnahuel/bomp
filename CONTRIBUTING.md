@@ -31,14 +31,16 @@ But, before going deeper I suggest you to take a look to the [opensource.guide](
 ## Local setup ⚙
 
 1. Clone/Fork this repo.
-2. The repo commits scrubbed dummy `google-services.json` files at `app/src/debug/google-services.json` and `app/src/release/google-services.json` so the build works out of the box. To run the app against the maintainer's Firebase projects (`bomp-debug` for the `.debug` build, `bomp-prod` for release) or your own fork, replace those two files with the real ones downloaded from Firebase Console, then follow [Firebase config file](#firebase-config-file-) to keep your real keys out of git.
-3. Run:
+2. Install a **JDK 21** and make sure it is discoverable (`/usr/libexec/java_home -v21` on macOS). `gradle/gradle-daemon-jvm.properties` pins the Gradle daemon to Java 21, so Gradle will not start a daemon on any other major — [ADR 0027](docs/adr/0027-jdk-21-daemon-jvm.md) explains why 21 (detekt's embedded compiler cannot host a newer JVM) and how to move the pin. Without a JDK 21 the daemon refuses to start, naming the version it wants; on an unpinned setup the symptom is subtler — detekt fails with `Invalid value (NN) passed to --jvm-target`.
+    - **Android Studio** launches its own daemon with its bundled JBR, which runs several majors ahead. Set *Gradle JDK* to `GRADLE_LOCAL_JAVA_HOME` (Settings → Build, Execution, Deployment → Build Tools → Gradle) — that macro reads `java.home` from the project's `.gradle/config.properties`, which is gitignored and per-worktree, so point it at your own JDK 21. Otherwise detekt fails inside the IDE and Gradle forks a second daemon to satisfy the criteria.
+3. The repo commits scrubbed dummy `google-services.json` files at `app/src/debug/google-services.json` and `app/src/release/google-services.json` so the build works out of the box. To run the app against the maintainer's Firebase projects (`bomp-debug` for the `.debug` build, `bomp-prod` for release) or your own fork, replace those two files with the real ones downloaded from Firebase Console, then follow [Firebase config file](#firebase-config-file-) to keep your real keys out of git.
+4. Run:
     > ./gradlew check
 
     It must return **`BUILD SUCCESS`**.
-4. *(Optional)* To let Claude Code diagnose CI failures, set up the CircleCI MCP server — see [§ Continuous Integration](#continuous-integration-). An agent can wire it up; you provide the token and restart Claude Code.
-5. *(Optional)* To let Claude Code read **deobfuscated** Crashlytics stacks, install the Firebase CLI (`npm install -g firebase-tools`) and wire the Firebase MCP — per-user, not committed (`claude mcp add -s local firebase -- firebase experimental:mcp --dir .`), then `firebase login` + restart Claude Code. An agent can wire it up; you provide the login. When to use it (deobfuscated traces) vs BQ (aggregation): [§ BigQuery export](#bigquery-export-).
-6. *(Optional, maintainer)* To re-arm the weekly executive report on a fresh machine, follow [§ BigQuery export → Weekly executive report](#weekly-executive-report-versioned-source-of-truth) — it rebuilds the scheduled task from scratch (prerequisites → create → wire → validate).
+5. *(Optional)* To let Claude Code diagnose CI failures, set up the CircleCI MCP server — see [§ Continuous Integration](#continuous-integration-). An agent can wire it up; you provide the token and restart Claude Code.
+6. *(Optional)* To let Claude Code read **deobfuscated** Crashlytics stacks, install the Firebase CLI (`npm install -g firebase-tools`) and wire the Firebase MCP — per-user, not committed (`claude mcp add -s local firebase -- firebase experimental:mcp --dir .`), then `firebase login` + restart Claude Code. An agent can wire it up; you provide the login. When to use it (deobfuscated traces) vs BQ (aggregation): [§ BigQuery export](#bigquery-export-).
+7. *(Optional, maintainer)* To re-arm the weekly executive report on a fresh machine, follow [§ BigQuery export → Weekly executive report](#weekly-executive-report-versioned-source-of-truth) — it rebuilds the scheduled task from scratch (prerequisites → create → wire → validate).
 
 ## Directory structure 🎄
 - [app/](/app) Android application module which depends on all other submodules to be the great app you're building. The Add Button flow lives at `app/src/main/java/com/github/barriosnahuel/vossosunboton/feature/addbutton/`.
