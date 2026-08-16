@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 #### Changed
 - The instrumented wrapper now reclaims the emulator when the run ends, keeping it up only when the last run had red tests to inspect (`KEEP_EMULATOR` forces either way)
+- The Gradle daemon is now pinned to JDK 21, so detekt runs locally instead of failing on newer JVMs (ADR 0027)
 
 ## \[v2026.07.1] - 2026-07-13
 

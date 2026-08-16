@@ -44,6 +44,14 @@ subprojects {
     }
 }
 
+// `updateDaemonJvm` regenerates gradle/gradle-daemon-jvm.properties (the JDK 21 pin, ADR 0027).
+// No platforms means no `toolchainUrl.*` auto-provisioning entries — the build resolves an already
+// installed JDK 21 instead of downloading one, so it needs no toolchain download repositories.
+// Without this the task fails outright: "Toolchain download repositories have not been configured".
+tasks.named('updateDaemonJvm') {
+    toolchainPlatforms = []
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
