@@ -22,8 +22,9 @@ worktrees it created (branches named `worktree-<name>`). Neither covers the comm
 case: a worktree whose PR has **merged** but which has local commits — exactly the
 `delegate` / manual-PR shape. Those linger until removed by hand (one session
 removed 17 worktrees + 17 branches that had accumulated this way). And the obvious
-"is it merged?" check is a trap: PRs land as **squash** merges, which rewrite SHAs,
-so `git branch -d` / `merge-base --is-ancestor` report the branch as not merged.
+"is it merged?" check is a trap: PRs routinely land via merge methods that **rewrite
+SHAs** (squash or rebase), so `git branch -d` / `merge-base --is-ancestor` report the
+branch as not merged.
 
 ## Decision drivers
 
@@ -56,7 +57,8 @@ so `git branch -d` / `merge-base --is-ancestor` report the branch as not merged.
   unset, so pulls merge and `post-merge` fires (no `post-rewrite` needed).
 
 **"Is it merged?" signal**
-- *Git ancestry (`merge-base --is-ancestor`).* Rejected — squash rewrites SHAs.
+- *Git ancestry (`merge-base --is-ancestor`).* Rejected — both squash and GitHub's
+  rebase-merge rewrite SHAs.
 - *Branch name in the set of merged PRs.* Rejected — two data-loss traps:
   *branch-name reuse* (`deleteBranchOnMerge` frees the name; a new worktree reusing
   it would be classified as merged) and *post-merge local commits* (a clean tree,
@@ -112,10 +114,14 @@ so `git branch -d` / `merge-base --is-ancestor` report the branch as not merged.
 - Creation is a *harness* hook (a harness event); teardown is a *git* hook (a git
   event that also covers terminal pulls). The asymmetry is intentional, not accidental.
 - **Revisit when:** the remote env stops owning `core.hooksPath` (then the standard
-  `core.hooksPath .githooks` convention becomes viable); the project stops squash-merging
-  (then ancestry checks suffice and the PR query can go); or `pull.rebase` is turned on
-  (add a `post-rewrite` hook). A worktree that is *changed but never got a merged PR*
-  is out of scope — it lingers, by design, for manual cleanup.
+  `core.hooksPath .githooks` convention becomes viable); the merge method stops rewriting
+  SHAs — today PRs land by **rebase**, which rewrites them exactly as squash did, so the
+  merged-at-this-commit query is here to stay. It could only go if squash **and** rebase
+  were disabled outright, making *every* PR a merge commit whose SHAs survive (the
+  `OPEN`-PR guard stays either way); all three methods remain enabled, so an occasional
+  merge-commit landing is not that signal. Or `pull.rebase` is turned on (add a
+  `post-rewrite` hook). A worktree that is *changed but never got a merged PR* is out of
+  scope — it lingers, by design, for manual cleanup.
 
 ## Invariants
 
