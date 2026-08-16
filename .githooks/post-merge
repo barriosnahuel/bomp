@@ -10,8 +10,9 @@
 # installing here fires in both environments. See CLAUDE.md § Worktree setup.
 #
 # Fires after every successful merge (including the fast-forward `git pull` that
-# follows a GitHub squash-merge). `pull.rebase` is unset, so pulls merge and this
-# runs — no post-rewrite needed. post-merge passes a squash flag arg we ignore.
+# follows a PR landing on GitHub, whatever merge method that PR used). `pull.rebase`
+# is unset, so pulls merge and this runs — no post-rewrite needed. post-merge passes
+# a squash flag arg we ignore — git's own `merge --squash` signal, not GitHub's.
 
 # Only act in the primary worktree on the default branch. `develop` can be
 # checked out in exactly one worktree at a time, so this also implies primary.
