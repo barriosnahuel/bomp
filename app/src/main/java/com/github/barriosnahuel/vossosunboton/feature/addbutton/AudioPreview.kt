@@ -26,11 +26,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.barriosnahuel.vossosunboton.R
-import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.seekTargetMs
 import com.github.barriosnahuel.vossosunboton.ui.AppIcons
@@ -49,9 +45,6 @@ import com.github.barriosnahuel.vossosunboton.ui.home.formatDuration
 import com.github.barriosnahuel.vossosunboton.ui.home.formatRelativeDate
 import com.github.barriosnahuel.vossosunboton.ui.theme.DISABLED_TRACK_ALPHA
 import com.github.barriosnahuel.vossosunboton.ui.theme.PLAYING_TINT_ALPHA
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * Stops in-flight URI-bound preview playback. Used by [StopPreviewOnDispose] and by
@@ -68,33 +61,20 @@ internal fun stopActivePreviewPlayback() {
     }
 }
 
+/**
+ * Play/scrub card for the audio being added or edited. [durationMs] arrives already resolved from
+ * [rememberPreviewMedia] — 0 while the metadata read is in flight or after it failed, which keeps the
+ * card hidden rather than showing a player that can't prepare.
+ */
 @Composable
 internal fun AudioPreview(
     context: Context,
     source: Uri,
     soundName: String,
     dateAdded: Long?,
+    durationMs: Int,
 ) {
     val controller = remember { PlayerControllerFactory.instance }
-    var durationMs by remember(source) { mutableStateOf(0) }
-
-    LaunchedEffect(source) {
-        // Metadata extraction runs off-thread to avoid blocking the main looper. Failure leaves
-        // durationMs at 0 which keeps the Card hidden — same UX as a player that can't prepare.
-        // Mirrors AddButtonFeature's canonical pattern (same wrapper message so both call-sites
-        // group under one Crashlytics issue; the breadcrumb disambiguates the path).
-        durationMs =
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    readDurationMs(context, source)
-                }.onFailure {
-                    // A disposed preview cancels the extraction — propagate, don't report it as a failure.
-                    if (it is CancellationException) throw it
-                    Tracker.log("addbutton.preview.uri=$source")
-                    Tracker.track(RuntimeException("Failed to extract duration metadata", it))
-                }.getOrDefault(0)
-            }
-    }
 
     val playbackState by controller.playbackState.collectAsStateWithLifecycle()
     val isOurPreview = playbackState?.uri == source

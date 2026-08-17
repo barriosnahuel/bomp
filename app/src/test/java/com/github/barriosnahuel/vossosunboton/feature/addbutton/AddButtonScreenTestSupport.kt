@@ -12,7 +12,7 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
  * Take [AddButtonScreen] out of the composition from a subclass `@After`, which JUnit runs *before*
  * `AbstractRobolectricTest` un-mocks [com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker].
  *
- * Mandatory for any test that mounts the screen with an unresolvable audio URI: `AudioPreview`'s
+ * Mandatory for any test that mounts the screen with an unresolvable audio URI: `rememberPreviewMedia`'s
  * metadata read blocks an IO thread until its 10 s timeout, and only disposal interrupts it
  * (`readDurationMs` is cancellation-cooperative). Left mounted past the test, that thread times out
  * after the mock is gone, reports to a real (uninitialised) Crashlytics, and the escaping

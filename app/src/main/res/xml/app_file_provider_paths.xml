@@ -8,4 +8,8 @@
     <cache-path
         name="recordings"
         path="recordings/" />
+    <!-- Add-flow trim output (ADR 0028): handed to the save pipeline as a content:// URI. -->
+    <cache-path
+        name="trims"
+        path="trims/" />
 </paths>

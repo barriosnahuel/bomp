@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.feature.addbutton
 import android.content.Context
-import android.net.Uri
 import android.os.Bundle
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
@@ -45,7 +44,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
@@ -65,7 +63,6 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -76,7 +73,11 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
-import com.github.barriosnahuel.vossosunboton.commons.file.getFile
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.trim.TrimSection
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.trim.TrimSelection
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.trim.TrimSelectionSaver
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.trim.applyTrim
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.trim.rememberTrimEnvelope
 import com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraftStoreProvider
 import com.github.barriosnahuel.vossosunboton.feature.vault.bumpVaultUnlockCounter
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.BiometricGate
@@ -122,6 +123,10 @@ fun AddButtonScreen(
     }
     var pendingErrorReason by rememberSaveable { mutableStateOf<String?>(null) }
     var abandonTracked by rememberSaveable { mutableStateOf(false) }
+    // Durable, not transient: an opened trim editor and a dragged range are user progress, so a rotation
+    // (or a system-killed Activity) must not silently rewind them — CLAUDE.md § Stateful Composables.
+    var trimExpanded by rememberSaveable { mutableStateOf(false) }
+    var trimSelection by rememberSaveable(stateSaver = TrimSelectionSaver) { mutableStateOf(TrimSelection.WHOLE) }
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -184,6 +189,7 @@ fun AddButtonScreen(
         },
     )
 
+    val previewMedia = rememberPreviewMedia(context = context, mode = mode)
     val collectionsState = rememberCollectionsState(context = context, mode = mode)
     // Start revealed if the session already proved access to the Vault. Avoids forcing a second
     // biometric prompt inside the same session.
@@ -224,12 +230,16 @@ fun AddButtonScreen(
                         } else {
                             SoundSource.IMPORTED
                         }
+                    // The cut runs before the pipeline so the audio that gets validated, copied and
+                    // duration-probed is already the trimmed one — the save path itself is untouched.
+                    // A failed cut comes back as the original URI, never as an error (ADR 0028 D2).
+                    val trim = applyTrim(context, m.uri, previewMedia.durationMs, trimSelection)
                     val feedbackId =
                         feature
                             .saveNewButtonAsync(
                                 context = context,
                                 name = trimmedName,
-                                uri = m.uri.toString(),
+                                uri = trim.uri.toString(),
                                 publicCollectionIds = collectionsState.publicSelection.value,
                                 privateCollectionIds = collectionsState.privateSelection.value,
                                 source = provenance,
@@ -242,7 +252,15 @@ fun AddButtonScreen(
                             RecorderDraftStoreProvider.get(context).clear()
                         }
                         trackSoundAdd(context, trimmedName, source, tracker)
-                        saveOutcome = SaveOutcome.Success(trimmedName)
+                        if (trim.trimmed) {
+                            trackSoundTrim(
+                                keptMs = trimSelection.keptMs(previewMedia.durationMs),
+                                sourceMs = previewMedia.durationMs,
+                                fellBack = trim.fellBack,
+                                tracker = tracker,
+                            )
+                        }
+                        saveOutcome = SaveOutcome.Success(trimmedName, trimFellBack = trim.fellBack)
                     } else {
                         pendingErrorReason = mapFeedbackToReason(feedbackId)
                         saveOutcome = SaveOutcome.Idle
@@ -288,7 +306,7 @@ fun AddButtonScreen(
                     }
                     stopActivePreviewPlayback()
                     trackSoundEdit(trimmedName, m.sound.name, tracker)
-                    saveOutcome = SaveOutcome.Success(trimmedName)
+                    saveOutcome = SaveOutcome.Success(trimmedName, trimFellBack = false)
                 }
             }
         }
@@ -324,7 +342,16 @@ fun AddButtonScreen(
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState()),
                 ) {
-                    PreviewSlot(context = context, mode = mode, displayedName = name.text)
+                    PreviewSlot(
+                        context = context,
+                        mode = mode,
+                        media = previewMedia,
+                        displayedName = name.text,
+                        trimExpanded = trimExpanded,
+                        trimSelection = trimSelection,
+                        onTrimExpandedChange = { trimExpanded = it },
+                        onTrimSelectionChange = { trimSelection = it },
+                    )
 
                     OutlinedTextField(
                         value = name,
@@ -454,35 +481,47 @@ fun AddButtonScreen(
     }
 }
 
+/**
+ * The preview card plus, in Create mode, the trim editor under it. Both hang off the same resolved
+ * [media] — the null/zero window before it lands renders nothing, which is why neither shows a
+ * half-initialised control.
+ *
+ * Trim is Create-only: in Edit the audio is already persisted, and re-cutting it is the unmade
+ * replace-vs-save-as-copy decision, not something to slip in here (ADR 0028 D4).
+ */
 @Composable
 private fun PreviewSlot(
     context: Context,
     mode: AddButtonMode,
+    media: PreviewMedia,
     displayedName: String,
+    trimExpanded: Boolean,
+    trimSelection: TrimSelection,
+    onTrimExpandedChange: (Boolean) -> Unit,
+    onTrimSelectionChange: (TrimSelection) -> Unit,
 ) {
-    // Edit mode resolves the file Uri via getExternalFilesDir(), which trips a StrictMode
-    // DiskReadViolation if it runs synchronously during composition (see develop's 3f514cb).
-    // produceState + Dispatchers.IO keeps composition non-blocking; the null window is invisible
-    // because AudioPreview itself gates rendering on durationMs > 0.
-    val source: Uri? by produceState<Uri?>(initialValue = null, mode) {
-        value =
-            withContext(Dispatchers.IO) {
-                when (val m = mode) {
-                    is AddButtonMode.Create -> m.uri
-                    is AddButtonMode.Edit -> m.sound.file?.let { getFile(context, it).toUri() }
-                }
-            }
-    }
-    source?.let { resolvedSource ->
-        val dateAdded = (mode as? AddButtonMode.Edit)?.sound?.dateAdded
-        AudioPreview(
+    val resolvedSource = media.source ?: return
+    val dateAdded = (mode as? AddButtonMode.Edit)?.sound?.dateAdded
+    AudioPreview(
+        context = context,
+        source = resolvedSource,
+        soundName = displayedName,
+        dateAdded = dateAdded,
+        durationMs = media.durationMs,
+    )
+    if (mode is AddButtonMode.Create && TrimSelection.isTrimmable(media.durationMs)) {
+        TrimSection(
             context = context,
             source = resolvedSource,
-            soundName = displayedName,
-            dateAdded = dateAdded,
+            durationMs = media.durationMs,
+            expanded = trimExpanded,
+            selection = trimSelection,
+            peaks = rememberTrimEnvelope(context = context, source = resolvedSource, enabled = trimExpanded),
+            onExpandedChange = onTrimExpandedChange,
+            onSelectionChange = onTrimSelectionChange,
         )
-        Spacer(modifier = Modifier.height(16.dp))
     }
+    Spacer(modifier = Modifier.height(16.dp))
 }
 
 @Composable
@@ -493,10 +532,26 @@ private fun SaveSuccessOverlayHost(
 ) {
     if (outcome !is SaveOutcome.Success) return
     val isEdit = mode is AddButtonMode.Edit
+    // A cut that could not be produced is told here rather than in a snackbar: the overlay is the last
+    // thing on screen before the flow closes, so a snackbar racing it would be missed by design.
+    val subtitleId =
+        when {
+            isEdit -> R.string.app_addbutton_overlay_subtitle_renamed
+            outcome.trimFellBack -> R.string.app_addbutton_overlay_subtitle_trim_fallback
+            else -> R.string.app_addbutton_overlay_subtitle_saved
+        }
+    // The announcement carries the fallback too. It is the live-region text a screen-reader user gets
+    // instead of the subtitle, so leaving it at the plain "saved" would tell them the cut worked.
+    val announcementTemplate =
+        when {
+            isEdit -> R.string.app_feedback_button_renamed
+            outcome.trimFellBack -> R.string.app_feedback_button_saved_trim_fallback
+            else -> R.string.app_feedback_button_saved
+        }
     SaveSuccessOverlay(
         name = outcome.name,
-        announcementTemplate = if (isEdit) R.string.app_feedback_button_renamed else R.string.app_feedback_button_saved,
-        subtitleId = if (isEdit) R.string.app_addbutton_overlay_subtitle_renamed else R.string.app_addbutton_overlay_subtitle_saved,
+        announcementTemplate = announcementTemplate,
+        subtitleId = subtitleId,
         onFinished = { onSaved(outcome.name) },
     )
 }
@@ -512,6 +567,8 @@ private sealed interface SaveOutcome {
 
     data class Success(
         val name: String,
+        /** The save carried a requested trim that could not be produced, so the whole audio was saved. */
+        val trimFellBack: Boolean,
     ) : SaveOutcome
 }
 
@@ -519,21 +576,28 @@ private sealed interface SaveOutcome {
  * Persists [SaveOutcome] across Activity recreate (e.g. rotation during the success overlay).
  * [SaveOutcome.Loading] deliberately collapses to [SaveOutcome.Idle] on save: the save coroutine is
  * launched in `rememberCoroutineScope`, which is cancelled with the composition — restoring
- * `Loading` would leave the spinner running with no completer. The `Loading` window is sub-second,
- * so the cost of the rare re-tap is bounded.
+ * `Loading` would leave the spinner running with no completer. The cost of the rare re-tap is bounded
+ * by how long that window is: sub-second for a plain save, and as long as the export for a save that
+ * carries a trim (ADR 0028) — a rotation mid-export loses the cut and the user re-taps Save, which is
+ * the same recovery the plain path already has.
  */
 private val SaveOutcomeSaver: Saver<SaveOutcome, Any> =
     Saver(
         save = { outcome ->
             when (outcome) {
                 SaveOutcome.Idle, SaveOutcome.Loading -> IDLE_TAG
-                is SaveOutcome.Success -> outcome.name
+                is SaveOutcome.Success -> arrayListOf<Any>(outcome.name, outcome.trimFellBack)
             }
         },
         restore = { value ->
-            when (value) {
-                IDLE_TAG -> SaveOutcome.Idle
-                is String -> SaveOutcome.Success(value)
+            // Read defensively rather than with checked casts: a restore is the one place a shape
+            // mismatch would surface as a crash on a screen the user already finished with.
+            when {
+                value == IDLE_TAG -> SaveOutcome.Idle
+                value is ArrayList<*> ->
+                    (value.getOrNull(0) as? String)?.let { name ->
+                        SaveOutcome.Success(name = name, trimFellBack = value.getOrNull(1) as? Boolean == true)
+                    } ?: SaveOutcome.Idle
                 else -> SaveOutcome.Idle
             }
         },
@@ -564,6 +628,31 @@ private suspend fun trackSoundAdd(
             nameWordCount = trimmedName.split(WORD_SPLIT_REGEX).count(),
             nameHitLimit = trimmedName.length == MAX_NAME_LENGTH,
             currentSounds = totalSounds,
+        ),
+    )
+}
+
+/**
+ * Emits the `sound_trim` event for a save that carried a trim. Internal (not private) so the wire
+ * contract — name, params, and the applied-vs-fallback slug — has a regression test: the save path
+ * that calls it needs a real audio duration, which no JVM test can produce.
+ */
+internal fun trackSoundTrim(
+    keptMs: Int,
+    sourceMs: Int,
+    fellBack: Boolean,
+    tracker: AnalyticsTracker,
+) {
+    tracker.log(
+        AnalyticsEvent.SoundTrim(
+            keptMs = keptMs,
+            sourceMs = sourceMs,
+            outcome =
+                if (fellBack) {
+                    AnalyticsEvent.SoundTrim.OUTCOME_FALLBACK
+                } else {
+                    AnalyticsEvent.SoundTrim.OUTCOME_APPLIED
+                },
         ),
     )
 }
