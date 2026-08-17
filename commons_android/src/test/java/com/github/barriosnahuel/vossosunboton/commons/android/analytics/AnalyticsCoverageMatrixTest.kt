@@ -57,6 +57,7 @@ internal class AnalyticsCoverageMatrixTest {
                 "SoundAdd",
                 "SoundAddAbandonedAfterError",
                 "SoundEdit",
+                "SoundTrim",
                 "SoundDelete",
                 "SoundDeleteUndone",
                 "SoundPlay",

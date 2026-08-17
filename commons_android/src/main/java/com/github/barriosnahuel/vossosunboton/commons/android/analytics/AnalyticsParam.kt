@@ -38,6 +38,9 @@ object AnalyticsParam {
     const val STEP_KEY = "step_key"
     const val STEP_COUNT = "step_count"
     const val METHOD = "method"
+    const val KEPT_MS = "kept_ms"
+    const val SOURCE_MS = "source_ms"
+    const val OUTCOME = "outcome"
 }
 
 /**

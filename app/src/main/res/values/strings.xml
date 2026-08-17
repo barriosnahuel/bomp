@@ -15,6 +15,7 @@
     <string name="app_feedback_audio_deleted">Deleted \"%1$s\"</string>
     <string name="app_feedback_audio_deleted_unnamed">Audio deleted</string>
     <string name="app_feedback_button_saved">%1$s is now yours!</string>
+    <string name="app_feedback_button_saved_trim_fallback">%1$s is saved — whole, the trim didn\'t work</string>
     <string name="app_addbutton_overlay_subtitle_saved">is now yours</string>
     <string name="app_addbutton_overlay_subtitle_renamed">renamed</string>
 <string name="app_feedback_generic_error_contact_support">Oops! I did it again, please contact support</string>
@@ -93,6 +94,13 @@
     <string name="app_addbutton_feedback_saved_ok">Saved!</string>
     <string name="app_addbutton_feedback_uri_unreadable">Couldn\'t read the audio you picked. Nahu\'s already on it.</string>
     <string name="app_addbutton_feedback_save_failed">Couldn\'t save this Bomp. Free up some space and try again — Nahu\'s already on it.</string>
+    <string name="app_addbutton_trim_cta">Trim this audio</string>
+    <string name="app_addbutton_trim_title">Keep just this part</string>
+    <string name="app_addbutton_trim_handles_description">Trim range: drag the handles to choose what you keep</string>
+    <string name="app_addbutton_trim_preview_description">Play the part you\'re keeping</string>
+    <string name="app_addbutton_trim_range">From %1$s · keeps %2$s</string>
+    <string name="app_addbutton_trim_keep_whole">Use the whole audio</string>
+    <string name="app_addbutton_overlay_subtitle_trim_fallback">saved whole — couldn\'t trim it</string>
 
     <!-- My Sounds empty state (welcome consumed, no custom sounds yet) -->
     <string name="app_my_sounds_empty_headline">This is where the voices live.</string>

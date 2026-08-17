@@ -15,6 +15,7 @@
     <string name="app_feedback_audio_deleted">Borraste «%1$s»</string>
     <string name="app_feedback_audio_deleted_unnamed">Audio borrado</string>
     <string name="app_feedback_button_saved">¡%1$s es tuyo!</string>
+    <string name="app_feedback_button_saved_trim_fallback">%1$s está guardado — entero, no pude recortarlo</string>
     <string name="app_addbutton_overlay_subtitle_saved">ahora es tuyo</string>
     <string name="app_addbutton_overlay_subtitle_renamed">renombrado</string>
     <string name="app_feedback_generic_error_contact_support">Uh! Por favor contactá con soporte</string>
@@ -87,6 +88,13 @@
     <string name="app_addbutton_feedback_saved_ok">Guardado</string>
     <string name="app_addbutton_feedback_uri_unreadable">No pude leer el audio que elegiste. Nahu ya se enteró y lo va a investigar.</string>
     <string name="app_addbutton_feedback_save_failed">No pude guardar este Bomp. Liberá un poco de espacio y probá de nuevo — Nahu ya se enteró.</string>
+    <string name="app_addbutton_trim_cta">Recortar este audio</string>
+    <string name="app_addbutton_trim_title">Quedate solo con esta parte</string>
+    <string name="app_addbutton_trim_handles_description">Recorte: arrastrá los extremos para elegir qué te quedás</string>
+    <string name="app_addbutton_trim_preview_description">Escuchar la parte que te quedás</string>
+    <string name="app_addbutton_trim_range">Desde %1$s · te quedás con %2$s</string>
+    <string name="app_addbutton_trim_keep_whole">Usar el audio entero</string>
+    <string name="app_addbutton_overlay_subtitle_trim_fallback">se guardó entero — no pude recortarlo</string>
 
     <!-- Mis audios — empty state (welcome consumido, sin Bomps propios todavía) -->
     <string name="app_my_sounds_empty_headline">Acá viven las voces que te importan.</string>

@@ -68,6 +68,29 @@ sealed class AnalyticsEvent(
         override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.REASON, reason) }
     }
 
+    /**
+     * The user trimmed an audio while adding it. Emitted once per save that carried a trim, whether the
+     * cut landed or fell back to the whole audio ([outcome]) — the fallback rate per source length is
+     * what tells us whether the cut engine is holding up on real-world codecs (ADR 0028).
+     */
+    data class SoundTrim(
+        val keptMs: Int,
+        val sourceMs: Int,
+        val outcome: String,
+    ) : AnalyticsEvent(name = "sound_trim", hasFirstVariant = true) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putInt(AnalyticsParam.KEPT_MS, keptMs)
+                putInt(AnalyticsParam.SOURCE_MS, sourceMs)
+                putString(AnalyticsParam.OUTCOME, outcome)
+            }
+
+        companion object {
+            const val OUTCOME_APPLIED = "applied"
+            const val OUTCOME_FALLBACK = "fallback"
+        }
+    }
+
     /** Audio deleted (post-snackbar commit). NOT emitted when the user taps "Undo" before the timeout. */
     object SoundDelete : AnalyticsEvent(name = "sound_delete", hasFirstVariant = true)
 

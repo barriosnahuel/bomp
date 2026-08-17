@@ -5,10 +5,19 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### Added
+- An audio you share into Bomp can now be cut down before you save it: open "Recortar este audio", drag the two handles over the waveform to pick the part you want, listen to just that part, and what gets saved is the piece you chose — a three-minute voice note finally becomes a two-second Bomp without leaving the app
+
 ### Fixed
 - Rotating your phone while listening to an audio you shared into Bomp no longer cuts it off — the preview keeps playing and its position bar keeps moving through the rotation
 
 ### For nerds 🤓
+
+#### Added
+- ADR 0028 decides the add-flow trimmer: Media3 `Transformer` with a clipping configuration does the cut (one code path across MP3/M4A/OPUS/OGG/WAV, none of the AEP-prohibited `MediaExtractor`/`MediaMuxer`), any export failure falls back to saving the original audio whole, and the range preview stays on the add flow's existing MediaPlayer engine so `PlayerControllerImpl` is untouched
+- `sound_trim` event (`kept_ms`, `source_ms`, `outcome`) so the per-codec fallback rate is observable instead of assumed
+- The inbound-audio validator (scheme allowlist, `audio/` MIME, 50 MB cap) moved out of `AddButtonFeature` into its own file, so the trimmer — which opens the URI before the save pipeline does — runs the same rules instead of a second copy that could drift
+- The trim editor leaves preview teardown to `StopPreviewOnDispose` on the card that owns the URI, instead of holding a second disposal of its own that would double-stop on exit and cut the audio on rotation
 
 #### Changed
 - The instrumented wrapper now reclaims the emulator when the run ends, keeping it up only when the last run had red tests to inspect (`KEEP_EMULATOR` forces either way)
