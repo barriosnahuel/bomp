@@ -17,7 +17,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -152,17 +151,9 @@ internal fun DuplicateNameHint(
     val isPlayingThisMatch =
         matchUri != null && playbackState?.uri == matchUri && playbackState?.isPlaying == true
 
-    DisposableEffect(matchUri) {
-        onDispose {
-            // Mirror AudioPreview: when the hint goes away (typed name no longer matches, screen
-            // backed out, match changes id), stop our own preview but never preempt an unrelated
-            // playback that may already own the controller.
-            val resolvedUri = matchUri ?: return@onDispose
-            if (controller.playbackState.value?.uri == resolvedUri) {
-                controller.stopPlayingSound()
-            }
-        }
-    }
+    // Same disposal contract as AudioPreview: when the hint goes away (typed name no longer
+    // matches, screen backed out, match changes id) our own preview stops.
+    StopPreviewOnDispose(matchUri)
 
     Row(
         modifier =

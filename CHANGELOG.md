@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### Fixed
+- Rotating your phone while listening to an audio you shared into Bomp no longer cuts it off — the preview keeps playing and its position bar keeps moving through the rotation
+
 ### For nerds 🤓
 
 #### Changed
