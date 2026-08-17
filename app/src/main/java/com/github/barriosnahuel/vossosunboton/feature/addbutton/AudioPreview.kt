@@ -26,7 +26,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,9 +54,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Stops in-flight URI-bound preview playback. Used by `AudioPreview`'s `DisposableEffect.onDispose`
- * and by `AddButtonScreen.save()` when transitioning to the success morph — without the latter the
- * only stop is the disposal path, which fires when the Activity tears down ~600 ms later, leaving
+ * Stops in-flight URI-bound preview playback. Used by [StopPreviewOnDispose] and by
+ * `AddButtonScreen.save()` when transitioning to the success morph — without the latter the only
+ * stop is the disposal path, which fires when the Activity tears down ~600 ms later, leaving
  * audio bleeding through the confirmation overlay. Guarded on a non-null URI to leave Sound-bound
  * playback owned by other surfaces (Home/Explore — reported via the listener, not [playbackState];
  * see ADR 0007) untouched.
@@ -107,15 +106,9 @@ internal fun AudioPreview(
             0f
         }
 
-    DisposableEffect(source) {
-        onDispose {
-            // Stop preview playback when the user backs out of AddButton. Guard against pre-empting
-            // an unrelated playback (e.g., user backed out and Home is now the active player).
-            if (controller.playbackState.value?.uri == source) {
-                controller.stopPlayingSound()
-            }
-        }
-    }
+    // Stops the preview when the user backs out of AddButton — but not when the host is merely
+    // recreated, which would cut the audio mid-audition on rotation.
+    StopPreviewOnDispose(source)
 
     if (durationMs > 0) {
         Card(
