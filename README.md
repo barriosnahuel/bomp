@@ -7,7 +7,7 @@ Bomp is your personal collection of the voices that matter. Save them, keep them
 [<img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="80"/>](https://play.google.com/store/apps/details?id=com.github.barriosnahuel.vossosunboton)
 
 ## Project status 📖
-[![version](https://img.shields.io/badge/version-2026.07.1-brightgreen.svg)](https://github.com/barriosnahuel/bomp/releases)
+[![version](https://img.shields.io/badge/version-2026.08.1-brightgreen.svg)](https://github.com/barriosnahuel/bomp/releases)
 [![CalVer](https://img.shields.io/badge/versioning-CalVer-green.svg)](https://calver.org/)
 [![stable](https://img.shields.io/badge/stability-experimental-green.svg)](https://nodejs.org/api/documentation.html#documentation_stability_index)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
