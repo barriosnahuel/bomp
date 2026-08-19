@@ -5,8 +5,13 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+## \[v2026.08.1] - 2026-08-18
+
 ### Added
-- An audio you share into Bomp can now be cut down before you save it: open "Recortar este audio", drag the two handles over the waveform to pick the part you want, listen to just that part, and what gets saved is the piece you chose — a three-minute voice note finally becomes a two-second Bomp without leaving the app
+- An audio you share into Bomp can now be cut down before you save it: open "Trim this audio", drag the two handles over the waveform to pick the part you want, listen to just that part, and what gets saved is the piece you chose — a three-minute voice note finally becomes a two-second Bomp without leaving the app
+
+### Changed
+- The search field now springs open instead of appearing all at once, and the play and pin icons fade between states instead of snapping — with reduce-motion on, all of it stays instant
 
 ### Fixed
 - Rotating your phone while listening to an audio you shared into Bomp no longer cuts it off — the preview keeps playing and its position bar keeps moving through the rotation
@@ -18,6 +23,8 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - `sound_trim` event (`kept_ms`, `source_ms`, `outcome`) so the per-codec fallback rate is observable instead of assumed
 - The inbound-audio validator (scheme allowlist, `audio/` MIME, 50 MB cap) moved out of `AddButtonFeature` into its own file, so the trimmer — which opens the URI before the save pipeline does — runs the same rules instead of a second copy that could drift
 - The trim editor leaves preview teardown to `StopPreviewOnDispose` on the card that owns the URI, instead of holding a second disposal of its own that would double-stop on exit and cut the audio on rotation
+- `ui/theme/Motion.kt` centralizes the project's two springs — spatial (subtle bounce, for enter/exit and layout) and effects (no bounce, for colour/alpha) — while Material 3's `MotionScheme` stays internal in material3 1.4.0; tab-switch motion was evaluated on device and dropped as imperceptible under the multi-stack nav
+- ADR 0026 gives the GitHub release title a short description alongside the version anchor, and the store "What's New" gets a canonical voice — a first-person note from Nahu, signed, replacing the old label-and-thanks shape
 
 #### Changed
 - The instrumented wrapper now reclaims the emulator when the run ends, keeping it up only when the last run had red tests to inspect (`KEEP_EMULATOR` forces either way)
@@ -25,6 +32,8 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - IDE sync now pins Tooling model building to parallel (`org.gradle.tooling.parallel`) instead of inheriting it from `org.gradle.parallel`, so the sync side keeps it if the build-side flag ever changes
 - Bumped all dependencies to latest stable
 - The committed Baseline Profile was regenerated against the current startup path, so the release build AOT-compiles what cold start actually runs after the latest dependency bumps instead of a stale snapshot
+- The Macrobenchmark gates now read a stable median: 15 iterations instead of 10, and the tapped synthetic row is pinned into the viewport so the tap-latency gate can always find it
+- ADR 0014's worktree-cleanup invariant is keyed on SHA rewriting rather than on squash merges, which is what actually breaks the merged-worktree detection
 
 ## \[v2026.07.1] - 2026-07-13
 
@@ -52,9 +61,6 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Audio duration extraction (import + add-preview) moved from the AEP-prohibited `MediaMetadataRetriever` to Media3's `MetadataRetriever` (`media3-inspector`), keeping the same failure UX and Crashlytics grouping (ADR 0022 / spec 002e)
 - ADR 0024 decides the navigation architecture: Jetpack Navigation 3 (multi-back-stack tabs, shared `SoundsViewModel`, hybrid creation flows keeping a share-sheet trampoline Activity), amending ADR 0011 — automatic predictive back replaces the manual per-surface machinery as screens become destinations
 - Instrumented runs now record themselves to a gitignored local history (`.instrumented-history/` in the primary worktree) that `scripts/flaky-report.sh` reads to tell a known flaky (fails *some* runs of a commit) from a real regression (fails *every* run), grouping stalls by where they died and whether the host was asleep and reporting per-test p95 so the stall timeout's headroom stays honest as tests are added
-
-#### Fixed
-- Instrumented runs no longer hang forever when the Mac goes to sleep: a full suite outlasts the default idle-sleep timer, so starting a run and walking away suspended the host mid-run — freezing the guest, breaking the instrumentation link on wake, and leaving a run that never returned and looked exactly like a wedged emulator (the long-assumed "the emulator freezes past test 100"). The wrapper now holds sleep off with `caffeinate` while it runs, and if the host suspends anyway the watchdog discounts that time rather than blaming the device (ADR 0001 § *Bounded termination*)
 
 #### Changed
 - The instrumented watchdog's clocks are calibrated from 8 measured cold-booted runs instead of guessed (`STALL_TIMEOUT_SECONDS` 360 → 420, `HARD_CAP_SECONDS` 2700 → 2400): the stall clock's floor turns out to be the runner's own `timeout_msec` (300 s), not the slowest test (35 s) — a test deadlocked on-device is completely silent until its timeout fires and names it, so a tighter clock would kill the run blind at the moment the culprit was about to be identified. `flaky-report.sh` warns if the two ever cross, keeps a red's `time=` out of the slowest-test figure (a timeout that fired is not a duration measured), and reads its verdicts from the ledger, so a red still names itself after its artefacts are pruned
