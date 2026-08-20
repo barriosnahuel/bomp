@@ -124,6 +124,11 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
         down before the audio's length loaded reports 0 and would divide by zero. **Trust
         `listen_session_start` as the denominator** — the end event is emitted on screen teardown, so a
         process kill mid-session drops it, and end/start below 1 is expected, not a bug.
+      - **How they drive it**: `listen_transport` split by `origin` — `system` (media notification, lock
+        screen, media key) vs `screen`. The `system` share is pocket listening *actually being handled*,
+        the sharper half of the promise: `listen_backgrounded` only says it kept playing. Break down by
+        `action` (play/pause/seek/restart) to see which control earns its place. Automatic pauses
+        (audio-focus loss, headphones out) are deliberately NOT emitted, so this counts people, not the OS.
       - **The promise**: `listen_backgrounded` / `listen_session_start` = the share of sessions that kept
         playing with the app away — the one number that says whether "they come with you" is real usage or
         just a feature we built. Emitted at most once per session, so the ratio is per-session, not per-event;

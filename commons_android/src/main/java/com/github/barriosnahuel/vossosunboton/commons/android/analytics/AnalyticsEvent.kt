@@ -148,6 +148,25 @@ sealed class AnalyticsEvent(
         override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
     }
 
+    /**
+     * A transport control was used during a listen session: [action] is what happened to the playback,
+     * [origin] is whether it came from the app's own screen or from a system surface (media
+     * notification, lock screen, media key). The origin split is what tells "it kept playing in my
+     * pocket" apart from "I listened staring at the screen", which [ListenBackgrounded] alone cannot.
+     * Automatic pauses (audio-focus loss, headphones unplugged) are NOT reported — they are not the
+     * Bomper doing something.
+     */
+    data class ListenTransport(
+        val action: String,
+        val origin: String,
+    ) : AnalyticsEvent(name = "listen_transport", hasFirstVariant = false) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString(AnalyticsParam.ACTION, action)
+                putString(AnalyticsParam.ORIGIN, origin)
+            }
+    }
+
     /** Audio pinned/unpinned via swipe. */
     data class PinToggle(
         val pinned: Boolean,

@@ -14,6 +14,9 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTransport
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import kotlinx.coroutines.CoroutineDispatcher
@@ -330,6 +333,11 @@ internal class PlayerControllerImpl(
             listenerProvider = { listener },
             playbackState = _playbackState,
             bridge = sessionBridge,
+            onSystemTransport = { context, action ->
+                AnalyticsTrackerProvider.get(context).log(
+                    AnalyticsEvent.ListenTransport(action = action, origin = AnalyticsTransport.ORIGIN_SYSTEM),
+                )
+            },
         )
 
     override fun startListenSession(

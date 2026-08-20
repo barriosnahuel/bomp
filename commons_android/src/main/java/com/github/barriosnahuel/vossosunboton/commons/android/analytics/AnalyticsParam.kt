@@ -43,6 +43,8 @@ object AnalyticsParam {
     const val OUTCOME = "outcome"
     const val LISTENED_MS = "listened_ms"
     const val DURATION_MS = "duration_ms"
+    const val ACTION = "action"
+    const val ORIGIN = "origin"
 }
 
 /**
@@ -110,4 +112,23 @@ object AnalyticsSource {
      */
     const val FAB = "fab"
     const val ONBOARDING_FINISH = "onboarding_finish"
+}
+
+/**
+ * Canonical values for the listen-transport event — WHAT the Bomper did to the playback and FROM
+ * WHERE. The origin split is the point of the event: handling a listen from the media notification
+ * or the lock screen is the pocket-listening payoff, and it is invisible if both surfaces report
+ * the same value.
+ */
+object AnalyticsTransport {
+    const val PLAY = "play"
+    const val PAUSE = "pause"
+    const val SEEK = "seek"
+    const val RESTART = "restart"
+
+    /** The app's own listening screen. */
+    const val ORIGIN_SCREEN = "screen"
+
+    /** Media notification, lock screen or a media key — the app was not on screen. */
+    const val ORIGIN_SYSTEM = "system"
 }

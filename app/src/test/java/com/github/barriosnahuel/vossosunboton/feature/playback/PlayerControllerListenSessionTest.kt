@@ -12,6 +12,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.google.common.truth.Truth.assertThat
@@ -29,6 +31,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -41,8 +44,16 @@ internal class PlayerControllerListenSessionTest : AbstractRobolectricTest() {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val playerListener = slot<Player.Listener>()
 
+    @Before
+    fun setUpTracker() {
+        // This suite drives the listener branches that now report transport use; without a fake the
+        // provider would build the real tracker, and TestApplication has no Firebase.
+        AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())
+    }
+
     @After
     fun tearDown() {
+        AnalyticsTrackerProvider.setForTest(null)
         unmockkAll()
     }
 

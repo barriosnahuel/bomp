@@ -14,6 +14,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTransport
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.commons.file.getFile
 import com.github.barriosnahuel.vossosunboton.model.Sound
@@ -42,6 +43,12 @@ internal class ListenSessionEngine(
     private val listenerProvider: () -> PlayerControllerListener?,
     private val playbackState: MutableStateFlow<PlaybackState?>,
     private val bridge: MediaSessionBridge,
+    /**
+     * Reports that a system surface (media notification, lock screen, media key) drove the
+     * playback, with the action that happened. Kept as a callback so this engine stays free of
+     * analytics and tests can assert the origin split without a tracker.
+     */
+    private val onSystemTransport: (Context, String) -> Unit = { _, _ -> },
 ) {
     private sealed class SessionTarget {
         data class SoundTarget(
@@ -67,6 +74,16 @@ internal class ListenSessionEngine(
      * notification, media key, audio-focus loss) and the event must be emitted from the callback.
      */
     private var publishedPlaying = false
+
+    /**
+     * Last reason Media3 gave for a playWhenReady flip. An automatic pause (audio-focus loss, the
+     * headphones coming out) is not the Bomper touching a control, so it must not be reported as
+     * transport use. Media3 delivers this alongside the isPlaying callback that reconciles state.
+     */
+    private var lastPlayWhenReadyReason = Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST
+
+    /** Set by [seekTo] so the discontinuity it causes is not mistaken for a lock-screen scrub. */
+    private var selfSeekPending = false
 
     val isActive: Boolean get() = target != null
 
@@ -96,6 +113,13 @@ internal class ListenSessionEngine(
                 }
             }
 
+            override fun onPlayWhenReadyChanged(
+                playWhenReady: Boolean,
+                reason: Int,
+            ) {
+                lastPlayWhenReadyReason = reason
+            }
+
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (startPending) return // The initial start is STATE_READY's to emit, whatever the callback order.
                 val t = target
@@ -109,9 +133,15 @@ internal class ListenSessionEngine(
                             handler.post(progressRunnable)
                         }
                     t == null || p == null -> Unit
-                    isPlaying -> publishPlaying(t, p)
+                    isPlaying -> {
+                        publishPlaying(t, p)
+                        reportSystemTransport(AnalyticsTransport.PLAY)
+                    }
                     // ENDED is onEnded's stop; playWhenReady still true is a transient re-buffer.
-                    p.playbackState != Player.STATE_ENDED && !p.playWhenReady -> publishPaused(t, p)
+                    p.playbackState != Player.STATE_ENDED && !p.playWhenReady -> {
+                        publishPaused(t, p)
+                        reportSystemTransport(AnalyticsTransport.PAUSE)
+                    }
                     else -> Unit
                 }
             }
@@ -124,6 +154,9 @@ internal class ListenSessionEngine(
                 // External seeks (lock-screen seekbar) move the head without passing through seekTo;
                 // publish the new position so a paused UI doesn't keep the stale one.
                 if (reason != Player.DISCONTINUITY_REASON_SEEK) return
+                val wasOurs = selfSeekPending
+                selfSeekPending = false
+                if (!wasOurs) reportSystemTransport(AnalyticsTransport.SEEK)
                 val position = newPosition.positionMs.toInt()
                 when (target) {
                     is SessionTarget.SoundTarget -> listenerProvider()?.onProgressUpdate(position)
@@ -259,6 +292,7 @@ internal class ListenSessionEngine(
     /** Moves the session head. Returns false when idle (caller falls through to MediaPlayer). */
     fun seekTo(positionMs: Int): Boolean {
         if (target == null) return false
+        selfSeekPending = true
         player?.let { runCatching { it.seekTo(positionMs.toLong()) } }
         playbackState.update { it?.copy(positionMs = positionMs) }
         return true
@@ -274,6 +308,20 @@ internal class ListenSessionEngine(
                 player = it
             }
         }
+
+    /**
+     * Reports a transport action that did NOT come from this engine's own API — by
+     * [publishedPlaying]'s contract, that means a system surface drove it. Automatic pauses are
+     * filtered out: they are the OS reacting, not the Bomper acting.
+     */
+    private val reportSystemTransport: (String) -> Unit = { action ->
+        val automatic =
+            lastPlayWhenReadyReason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS ||
+                lastPlayWhenReadyReason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY
+        if (!automatic || action == AnalyticsTransport.SEEK) {
+            appContext?.let { onSystemTransport(it, action) }
+        }
+    }
 
     /** Emits the paused state for [t] and stops progress ticking. Shared by [pause] and reconciliation. */
     private fun publishPaused(
