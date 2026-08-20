@@ -108,11 +108,32 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
    g) FRICTION: `sound_add_abandoned_after_error` (+ param `reason`); rate of `sound_add` with
       `name_hit_limit=true`; `duplicate_name_hint_shown` vs `duplicate_name_hint_play`.
    h) ENGAGEMENT: `sound_play` and `sound_add` totals and per active user; `pin_toggle`, `visibility_toggle`;
-      milestones (`event_name LIKE 'milestone_sounds_%'`).
+      milestones (`event_name LIKE 'milestone_sounds_%'`). Long-listen depth is its own block (j2) — a play
+      count alone cannot tell a 2-second tap from a 3-minute listen.
    i) VIRALITY: `share` and `first_share` (sharers / actives rate).
    j) FEATURE ADOPTION: Collections (`collection_create` by `scope=public/private` and by `source`;
       `collection_audio_toggle`, `collection_filter_apply`); Vault (`vault_unlock` rate `granted=true`;
       `vault_unprotected_warning_shown`; `vault_search_unlock_cta_shown`).
+   j2) LONG LISTENING (the Vault's reason to exist — audios you sit down to hear, not soundboard taps):
+      - **Reach**: `listen_session_start` totals, sessions per active user, and `first_listen_session_start`
+        as the adoption curve of the surface.
+      - **Depth**: over `listen_session_end`, `SUM(listened_ms)/SUM(duration_ms)` as the share of the audio
+        actually heard, plus the share of sessions above 80% (a proxy for "listened to the end"). Read
+        `listened_ms` as audio consumed, NOT time on screen: pauses do not accrue, a scrub back does not
+        subtract, and a scrub forward does not credit. **Always `WHERE duration_ms > 0`** — a session torn
+        down before the audio's length loaded reports 0 and would divide by zero. **Trust
+        `listen_session_start` as the denominator** — the end event is emitted on screen teardown, so a
+        process kill mid-session drops it, and end/start below 1 is expected, not a bug.
+      - **The promise**: `listen_backgrounded` / `listen_session_start` = the share of sessions that kept
+        playing with the app away — the one number that says whether "they come with you" is real usage or
+        just a feature we built. Emitted at most once per session, so the ratio is per-session, not per-event;
+        `first_listen_backgrounded` is the count of Bompers who ever got that payoff at all.
+      - **Segment plays by surface**: `sound_play` carries `surface`; `vault_listen` separates a long listen
+        from a Vault list tap. Data before the fix (releases up to v2026.08.1) reports those long listens as
+        `vault` — do not read the split backwards across that boundary.
+   j3) TRIMMER (does the cut engine hold up on real-world codecs, ADR 0028): `sound_trim` totals and
+      `first_sound_trim`; fallback rate = share with `outcome='fallback'` (the cut failed and the whole audio
+      was saved) — a rate creeping up means a codec regressed; `kept_ms/source_ms` as how much people cut.
    k) UNMET DEMAND: `search_zero_results` (+ `query_length`).
    l) MONETIZATION: `about_gratitude_cafecito_open` + `about_gratitude_kofi_open`.
    m) NAVIGATION: `screen_view` broken down by screen. Read the name from `event_params`

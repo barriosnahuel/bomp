@@ -63,6 +63,7 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.startPlayingSound(any(), any()) } answers { nothing }
         every { PlayerControllerFactory.instance.pause() } answers { nothing }
+        every { PlayerControllerFactory.instance.startListenSession(any(), any()) } answers { nothing }
         every { PlayerControllerFactory.instance.forgetSound(any()) } answers { nothing }
     }
 

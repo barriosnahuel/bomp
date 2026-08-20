@@ -35,6 +35,11 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - The Macrobenchmark gates now read a stable median: 15 iterations instead of 10, and the tapped synthetic row is pinned into the viewport so the tap-latency gate can always find it
 - ADR 0014's worktree-cleanup invariant is keyed on SHA rewriting rather than on squash merges, which is what actually breaks the merged-worktree detection
 
+#### Fixed
+- Long listening shipped in v2026.07.1 with no business tracking, so `listen_session_start`, `listen_session_end` (carrying audio actually consumed, not time on screen) and `listen_backgrounded` now report whether anyone listens to a whole audio and whether it keeps playing with the app away
+- `sound_play` from the immersive listen screen reported `vault` — the tab underneath — making a long listen indistinguishable from a list tap; it now reports `vault_listen`
+- The weekly report now reads `sound_trim`, whose per-codec fallback rate had been emitted but never queried
+
 ## \[v2026.07.1] - 2026-07-13
 
 ### Added

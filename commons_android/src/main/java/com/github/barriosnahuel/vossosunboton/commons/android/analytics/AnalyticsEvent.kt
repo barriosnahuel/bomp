@@ -104,6 +104,50 @@ sealed class AnalyticsEvent(
         override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
     }
 
+    /**
+     * A listen session started on the long-form engine — the surface the Bomper reaches to hear a whole
+     * audio, not to fire a soundboard tap (ADR 0022). Pairs with [ListenSessionEnd]: start counts reach,
+     * the pair counts how much of the audio actually got heard. `hasFirstVariant = true` so the first
+     * long listen is separable as an adoption milestone.
+     */
+    data class ListenSessionStart(
+        val surface: String,
+    ) : AnalyticsEvent(name = "listen_session_start", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
+    }
+
+    /**
+     * A listen session ended — the Bomper left the listening surface. [listenedMs] is audio actually
+     * consumed (advancing playback only: pauses do not accrue, and seeking backwards does not subtract),
+     * so `listened_ms / duration_ms` reads as depth of listening rather than time on screen. Emitted on
+     * teardown of the listening surface, so a process kill mid-session drops it — start counts are the
+     * denominator to trust, not end counts.
+     */
+    data class ListenSessionEnd(
+        val surface: String,
+        val listenedMs: Int,
+        val durationMs: Int,
+    ) : AnalyticsEvent(name = "listen_session_end", hasFirstVariant = false) {
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString(AnalyticsParam.SURFACE, surface)
+                putInt(AnalyticsParam.LISTENED_MS, listenedMs)
+                putInt(AnalyticsParam.DURATION_MS, durationMs)
+            }
+    }
+
+    /**
+     * A listen session kept playing while the app left the foreground — screen off, another app on top,
+     * pocket. This is the feature's whole promise ("they come with you"), and the only event that tells
+     * background listening apart from listening while staring at the screen. Emitted at most once per
+     * session; `hasFirstVariant = true` marks the first Bomper who ever got the payoff.
+     */
+    data class ListenBackgrounded(
+        val surface: String,
+    ) : AnalyticsEvent(name = "listen_backgrounded", hasFirstVariant = true) {
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
+    }
+
     /** Audio pinned/unpinned via swipe. */
     data class PinToggle(
         val pinned: Boolean,
