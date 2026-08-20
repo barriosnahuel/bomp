@@ -120,14 +120,20 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       - **Depth**: over `listen_session_end`, `SUM(listened_ms)/SUM(duration_ms)` as the share of the audio
         actually heard, plus the share of sessions above 80% (a proxy for "listened to the end"). Read
         `listened_ms` as audio consumed, NOT time on screen: pauses do not accrue, a scrub back does not
-        subtract, and a scrub forward does not credit. **Always `WHERE duration_ms > 0`** — a session torn
-        down before the audio's length loaded reports 0 and would divide by zero. **Trust
+        subtract, and a scrub forward does not credit. **The ratio can exceed 100%**, and that is a signal,
+        not an error: it means the audio was played more than once in the same session (back-to-start, or a
+        scrub back and listen again) — affection for that particular audio. Cap it at 1 before averaging if
+        you want "how much of it was heard", and read the >100% share separately as re-listening.
+        **Always `WHERE duration_ms > 0`** — a session torn down before the audio's length loaded reports 0
+        and would divide by zero. **Trust
         `listen_session_start` as the denominator** — the end event is emitted on screen teardown, so a
         process kill mid-session drops it, and end/start below 1 is expected, not a bug.
       - **How they drive it**: `listen_transport` split by `origin` — `system` (media notification, lock
         screen, media key) vs `screen`. The `system` share is pocket listening *actually being handled*,
         the sharper half of the promise: `listen_backgrounded` only says it kept playing. Break down by
-        `action` (play/pause/seek/restart) to see which control earns its place. Automatic pauses
+        `action` (play/pause/seek/restart) to see which control earns its place. System seeks are coalesced
+        per gesture (one drag of a lock-screen seekbar fires many discontinuities), so a seek count is
+        gestures on both sides, comparable across origins. Automatic pauses
         (audio-focus loss, headphones out) are deliberately NOT emitted, so this counts people, not the OS.
       - **The promise**: `listen_backgrounded` / `listen_session_start` = the share of sessions that kept
         playing with the app away — the one number that says whether "they come with you" is real usage or
