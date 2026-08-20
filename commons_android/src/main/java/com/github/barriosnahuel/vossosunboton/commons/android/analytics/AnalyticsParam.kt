@@ -41,6 +41,8 @@ object AnalyticsParam {
     const val KEPT_MS = "kept_ms"
     const val SOURCE_MS = "source_ms"
     const val OUTCOME = "outcome"
+    const val LISTENED_MS = "listened_ms"
+    const val DURATION_MS = "duration_ms"
 }
 
 /**

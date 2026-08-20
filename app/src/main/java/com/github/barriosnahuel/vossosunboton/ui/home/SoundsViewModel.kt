@@ -935,14 +935,18 @@ class SoundsViewModel(
 
     /**
      * Starts [sound] as an immersive listen session on the long-form engine — always from 0, no
-     * cross-open position retention (ADR 0022). Same play analytics as a list tap; playback events
+     * cross-open position retention (ADR 0022). Reports `sound_play` on the listening surface — the
+     * session pair (`listen_session_start`/`_end`) belongs to the screen, since a resume lands here
+     * too and would count one session per play tap; playback events
      * arrive through the same [PlayerControllerListener] callbacks, so the UI state
      * ([playingSound], [playbackProgress], [pausedProgress]) works unchanged. In-session toggles
      * keep routing through [playOrStop] — the controller resolves the engine.
      */
     fun startListenSession(sound: Sound) {
         PlayerControllerFactory.instance.startListenSession(getApplication(), sound)
-        tracker.log(AnalyticsEvent.SoundPlay(surface = currentSurface))
+        // The listening surface, not the tab underneath it: `currentSurface` resolves to `vault`
+        // here, which made every long listen indistinguishable from a Vault list tap.
+        tracker.log(AnalyticsEvent.SoundPlay(surface = CanonicalScreenName.VAULT_LISTEN))
         val newCount = tracker.incrementCounter(AnalyticsUserProperty.LIFETIME_PLAYS)
         tracker.setUserProperty(AnalyticsUserProperty.LIFETIME_PLAYS, newCount.toString())
     }
