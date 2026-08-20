@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 #### Fixed
 - Long listening shipped in v2026.07.1 with no business tracking, so `listen_session_start`, `listen_session_end` (carrying audio actually consumed, not time on screen) and `listen_backgrounded` now report whether anyone listens to a whole audio and whether it keeps playing with the app away
+- The listening screen's own transport reported nothing either: pause, back-to-start and scrubbing the waveform were invisible, and so was every command coming from the media notification or lock screen — `listen_transport` now reports both, split by `origin`, while automatic pauses (audio-focus loss, headphones out) are deliberately left out
 - `sound_play` from the immersive listen screen reported `vault` — the tab underneath — making a long listen indistinguishable from a list tap; it now reports `vault_listen`
 - The weekly report now reads `sound_trim`, whose per-codec fallback rate had been emitted but never queried
 

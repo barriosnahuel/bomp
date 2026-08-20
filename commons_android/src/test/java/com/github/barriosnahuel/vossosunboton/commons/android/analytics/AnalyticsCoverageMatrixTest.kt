@@ -58,6 +58,7 @@ internal class AnalyticsCoverageMatrixTest {
                 "ListenSessionStart",
                 "ListenSessionEnd",
                 "ListenBackgrounded",
+                "ListenTransport",
                 "SoundAddAbandonedAfterError",
                 "SoundEdit",
                 "SoundTrim",
