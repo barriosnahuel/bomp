@@ -8,6 +8,7 @@ package com.github.barriosnahuel.vossosunboton.feature.playback
 import android.content.Context
 import android.net.Uri
 import android.os.Handler
+import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -49,6 +50,8 @@ internal class ListenSessionEngine(
      * analytics and tests can assert the origin split without a tracker.
      */
     private val onSystemTransport: (Context, String) -> Unit = { _, _ -> },
+    /** Injectable clock: the system-seek coalescing window below is time-based. */
+    private val nowMs: () -> Long = { SystemClock.uptimeMillis() },
 ) {
     private sealed class SessionTarget {
         data class SoundTarget(
@@ -82,8 +85,25 @@ internal class ListenSessionEngine(
      */
     private var lastPlayWhenReadyReason = Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST
 
+    /**
+     * True while this engine is itself commanding the player. Media3 can deliver the state callback
+     * SYNCHRONOUSLY inside `player.pause()` / `player.play()`, i.e. before [publishedPlaying] has been
+     * updated — so the reconciliation would see a mismatch and report our own pause as a system one.
+     * Measured on device: a screen pause emitted both origins 5 ms apart.
+     */
+    private var selfCommandPending = false
+
     /** Set by [seekTo] so the discontinuity it causes is not mistaken for a lock-screen scrub. */
     private var selfSeekPending = false
+
+    /**
+     * When the last system seek was reported. Dragging the lock-screen seekbar emits a
+     * discontinuity per movement, so on device three gestures reported six events — which inflates a
+     * system scrub against the same gesture on our own waveform (that one reports once, on release).
+     * Reports inside [SYSTEM_SEEK_WINDOW_MS] of the previous one are the same gesture and collapse
+     * into it.
+     */
+    private var lastSystemSeekAtMs: Long? = null
 
     val isActive: Boolean get() = target != null
 
@@ -268,9 +288,11 @@ internal class ListenSessionEngine(
         val t = target ?: return false
         val p = player
         if (p != null) {
+            selfCommandPending = true
             runCatching { p.pause() }
             startPending = false
             publishPaused(t, p)
+            selfCommandPending = false
         }
         return true
     }
@@ -280,8 +302,10 @@ internal class ListenSessionEngine(
         val t = target ?: return false
         val p = player
         if (p != null && !p.isPlaying) {
+            selfCommandPending = true
             p.play()
             publishPlaying(t, p)
+            selfCommandPending = false
             // Re-publish to the system: after onTaskRemoved the service is gone while the paused
             // target survives, so an in-place resume must restore the notification (start is idempotent).
             appContext?.let { bridge.onSessionStarted(it) }
@@ -315,10 +339,21 @@ internal class ListenSessionEngine(
      * filtered out: they are the OS reacting, not the Bomper acting.
      */
     private val reportSystemTransport: (String) -> Unit = { action ->
+        val isSeek = action == AnalyticsTransport.SEEK
+        // Our own command, reported back to us before we published the new state.
+        val ours = selfCommandPending && !isSeek
+        // The OS reacting (focus lost, headphones out), not the Bomper touching anything.
         val automatic =
-            lastPlayWhenReadyReason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS ||
-                lastPlayWhenReadyReason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY
-        if (!automatic || action == AnalyticsTransport.SEEK) {
+            !isSeek &&
+                (
+                    lastPlayWhenReadyReason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS ||
+                        lastPlayWhenReadyReason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY
+                )
+        // Null, not 0: a zero sentinel would swallow the first seek whenever uptime is still low.
+        val withinGesture = isSeek && lastSystemSeekAtMs?.let { nowMs() - it < SYSTEM_SEEK_WINDOW_MS } == true
+
+        if (!ours && !automatic && !withinGesture) {
+            if (isSeek) lastSystemSeekAtMs = nowMs()
             appContext?.let { onSystemTransport(it, action) }
         }
     }
@@ -413,6 +448,14 @@ internal class ListenSessionEngine(
     }
 
     private companion object {
+        /**
+         * One drag of a system seekbar fires several discontinuities; this window folds them into one
+         * report. Calibrated on device: the bursts inside a single gesture spanned 17 ms and 96 ms, while
+         * two deliberate drags came 976 ms apart — so 300 ms clears the noise with room to spare and still
+         * counts two quick gestures as two.
+         */
+        const val SYSTEM_SEEK_WINDOW_MS = 300L
+
         private const val PROGRESS_INTERVAL_MS = 100L
     }
 }
