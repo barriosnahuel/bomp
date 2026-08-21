@@ -223,6 +223,30 @@ The write-time invariant — await *every* upstream a value is folded from, not 
 
 **Bound every `runBlocking` await with `withTimeout`.** An unbounded `runBlocking { … .first/.collect/.await/.single … }` that never resolves hangs the test until CircleCI's 10-min no-output timeout kills the whole job with a useless generic message (the PR #1186 hang). Wrap the await in `withTimeout(TIMEOUT_MS)` so it fails in seconds, by name. Pattern: `SoundsViewModelVisibilityTest`. A ratchet in `scripts/check-adr-invariants.sh` (job `adr-invariants`) enforces this for **new** test code via a grandfathered per-file baseline — a new file may not introduce one, and a baselined file may not grow past its count; the baseline only shrinks as the existing offenders are swept. Escape hatch for a genuinely-needed one-off: a trailing `// await-ok`. Multi-line `runBlocking {` openings are out of scope (most are legit setup).
 
+### Work that outlives a test
+
+A JVM test that mounts a screen can start coroutines that finish **after** it does. `AbstractRobolectricTest` mocks `Tracker` per test and `unmockkAll()` tears it down, so late work finds either no stub (`MockKException: can't find stub Tracker`) or the real `Tracker`, which needs a Firebase that `TestApplication` does not have. Either way the exception escapes into the coroutines exception collector and is reported against **whichever Compose test drains it next** — an innocent one. That is why these read as unrelated flakes, fail under some class orders only, and are far more reliable in CI than locally.
+
+Recognise it by the *stack*, not the summary line: read the full trace from `app/build/test-results/testDebugUnitTest/*.xml` (the one-line console summary names the victim, never the source). The frame under `Tracker.log` is the real culprit.
+
+Fix by stopping the work, not by re-mocking: stub the source in `@Before`. Mounting `ImmersiveListenHost` over a seeded audio, for instance, starts a waveform decode that fails (no real file behind it) and reports through `Tracker`:
+
+```kotlin
+mockkObject(WaveformExtractor)
+coEvery { WaveformExtractor.extract(any(), any<Sound>(), any(), any()) } returns null
+every { WaveformExtractor.cached(any()) } returns null
+```
+
+A test driving the **real** `PlayerControllerImpl` also needs `AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())`: its listen engine reports transport use through the provider, so without a fake it builds the real tracker from a player callback.
+
+**Reproduce before concluding anything.** These are invisible in a single run; loop the whole suite and dump the stack on the first red:
+
+```bash
+for i in 1 2 3 4 5; do ./gradlew :app:testDebugUnitTest --rerun-tasks || break; done
+```
+
+`scripts/flaky-report.sh` does **not** help here — it reads the instrumented history only (§ *Local UI test suite*). JVM flakes have no recorded history, so each one is investigated from scratch.
+
 ### Test fixtures: `clearForTest()`
 
 Every DataStore-backed store ships a `@VisibleForTesting(otherwise = NONE) suspend fun clearForTest()` so test setUp can reset state without poking the file system. Mirror the pattern when you add a new store. References: `WelcomeStickerStore`, `DataStoreFirstFlagStore`, `DataStoreCounterStore`.
