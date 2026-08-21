@@ -15,6 +15,8 @@ import androidx.media3.common.Player
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.Runs
@@ -30,6 +32,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Assert.assertThrows
+import org.junit.Before
 import org.junit.Test
 import org.robolectric.Shadows.shadowOf
 import java.util.concurrent.ExecutionException
@@ -47,8 +50,17 @@ internal class PlayerControllerMediaSessionBridgeTest : AbstractRobolectricTest(
     private val playerListener = slot<Player.Listener>()
     private val mediaItem = slot<MediaItem>()
 
+    @Before
+    fun setUpAnalytics() {
+        // This suite drives the real controller, whose engine reports transport use through the
+        // analytics provider; without a fake it would build the real tracker and TestApplication has
+        // no Firebase, leaving an escaping exception for an unrelated test to trip over.
+        AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())
+    }
+
     @After
     fun tearDown() {
+        AnalyticsTrackerProvider.setForTest(null)
         unmockkAll()
     }
 
