@@ -176,7 +176,7 @@ Hard rules:
 - Never call `FirebaseAnalytics.getInstance(...)` or `.logEvent(...)` outside the wrapper — the `analytics-wrapper-guard` CI job fails the build.
 - Auto `screen_view` is disabled via manifest meta-data; every screen emits `tracker.logScreen(CanonicalScreenName.X)` manually with a canonical literal — from composition (`LaunchedEffect`), never `Activity.onCreate`: GA4 silently drops a `screen_view` logged before the Activity is in focus (guard: `AddButtonScreenScreenViewTest`).
 - The `first_*` variant is emitted by the wrapper when the event declares `hasFirstVariant = true` — call-sites never reference `first_*` directly.
-- In tests: substitute with `AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())`, assert with `fake.assertEmitted(...)` / `fake.assertScreenView(...)`. Never mock `AnalyticsTracker` directly.
+- In tests: substitute with `AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())`, assert with `fake.assertEmitted(...)` / `fake.assertScreenView(...)`. Never mock `AnalyticsTracker` directly. A test driving the **real** `PlayerControllerImpl` needs the fake too — its engine reports transport use, and without it the real tracker is built and fails an *unrelated* test.
 
 Naming rules, regression-test matrix, and DebugView / logcat verification in CONTRIBUTING.md § *Analytics events 📊*. Don't skip the manual smoke before merging — aggregated Reports have a 24–48 h delay.
 
@@ -196,7 +196,7 @@ Hard rules:
 - **Don't say "button" for a Sound/Bomp in error or log messages.** Use neutral "audio" so the brand doesn't leak into ops/BigQuery. Framework/code identifiers (`addbutton/`, `AddButtonFeature`, Material `Button`) are out of scope.
 - For caught exceptions, follow the established pattern (see `PlayerControllerImpl.kt`): `Tracker.log("module.field=value")` then `Tracker.track(RuntimeException("static operation description", e))` — the static wrapper message becomes the Crashlytics title, the original throwable is preserved as `cause`, recovery UI (snackbar, fallback) follows.
 - Expected and recoverable exceptions (e.g. user dismissed a chooser) don't need `Tracker.track`. Reserve it for things you want to investigate.
-- In tests, `AbstractRobolectricTest` already mocks `Tracker.track`/`Tracker.log` to no-ops — **don't re-mock**; subclasses just `verify { Tracker.track(any()) }`. Capturing the throwable / breadcrumb-assertion detail: CONTRIBUTING.md § *Error tracking*.
+- In tests, `AbstractRobolectricTest` already mocks `Tracker.track`/`Tracker.log` to no-ops — **don't re-mock**; subclasses just `verify { Tracker.track(any()) }`. Background work outliving a test (waveform extraction, previews) reaches that mock after teardown undid it, failing whichever test runs next: stub the source instead — CONTRIBUTING.md § *Work that outlives a test*. Capturing the throwable / breadcrumb-assertion detail: CONTRIBUTING.md § *Error tracking*.
 
 SQL post-mortem on crash history: CONTRIBUTING.md § *BigQuery export*. Releases-only — `bomp-prod` exports Crashlytics/Analytics/Performance to BigQuery (`us`, daily). `bomp-debug` does not export.
 
