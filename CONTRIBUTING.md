@@ -237,6 +237,10 @@ coEvery { WaveformExtractor.extract(any(), any<Sound>(), any(), any()) } returns
 every { WaveformExtractor.cached(any()) } returns null
 ```
 
+The same decode reaches the recorder: mounting `RecorderHost` over a restored draft finds no live envelope and decodes the clip off the main thread, so a seeded take — an empty temp file behind an unresolvable `content://` URI — fails the same way. Stub the `Uri` overload there, and give the host a `FakeAnalyticsTracker` too, since it logs its screen view through the provider (`RecorderHostTest`). A third call-site sits latent behind `rememberTrimEnvelope`, gated on the trim editor being open: no JVM test opens it today, so the first one that does will need the same stub.
+
+The other known source is `rememberPreviewMedia`'s metadata read on `AddButtonScreen`. Its fix is the other shape of the same idea — take the screen out of the composition from the subclass `@After` (`disposeAddButtonScreen`), which JUnit runs *before* the base un-mocks `Tracker`. Reach for that shape when the work is the screen's own and has no single object to stub.
+
 A test driving the **real** `PlayerControllerImpl` also needs `AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())`: its listen engine reports transport use through the provider, so without a fake it builds the real tracker from a player callback.
 
 **Reproduce before concluding anything.** These are invisible in a single run; loop the whole suite and dump the stack on the first red:

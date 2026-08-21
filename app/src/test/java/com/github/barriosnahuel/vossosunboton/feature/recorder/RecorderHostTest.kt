@@ -14,13 +14,18 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlaybackState
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerController
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.feature.vault.WaveformExtractor
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
@@ -56,10 +61,23 @@ internal class RecorderHostTest : AbstractRobolectricTest() {
     private lateinit var viewModel: RecorderViewModel
     private val playbackStateFlow = MutableStateFlow<PlaybackState?>(null)
     private val draftStore = StubDraftStore()
+    private val fakeTracker = FakeAnalyticsTracker()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
+        // The host logs its screen view through the provider, which without a fake builds the real
+        // Firebase tracker TestApplication never initialised, and caches it globally for the rest of
+        // the fork.
+        AnalyticsTrackerProvider.setForTest(fakeTracker)
+
+        // The seeded take is an empty temp file behind an unresolvable content:// URI, so the review
+        // wave's decode fails in a background coroutine that OUTLIVES this test — and its failure path
+        // calls Tracker, whose global mock the teardown has already undone by then. The escaping
+        // Firebase error then fails whichever Compose test drains it next. Stub the extractor so no
+        // such work starts: CONTRIBUTING.md § Work that outlives a test.
+        mockkObject(WaveformExtractor)
+        coEvery { WaveformExtractor.extract(any(), any<Uri>(), any(), any()) } returns null
         Shadows
             .shadowOf(ApplicationProvider.getApplicationContext<Application>())
             .grantPermissions(Manifest.permission.RECORD_AUDIO)
@@ -82,6 +100,7 @@ internal class RecorderHostTest : AbstractRobolectricTest() {
 
     @After
     fun tearDown() {
+        AnalyticsTrackerProvider.setForTest(null)
         PlayerControllerFactory.instance = originalController
         Dispatchers.resetMain()
         unmockkAll()
