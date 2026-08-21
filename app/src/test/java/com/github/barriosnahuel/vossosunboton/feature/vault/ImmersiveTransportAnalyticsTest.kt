@@ -16,12 +16,14 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerController
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.home.cancelAndJoinAll
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -63,6 +65,14 @@ internal class ImmersiveTransportAnalyticsTest : AbstractRobolectricTest() {
         // A relaxed controller, not a chain of `every { ...instance.x() }`: chained stubbing builds a
         // NON-relaxed mock, so any controller call this flow happens to make without an explicit stub
         // throws MockKException — and which calls happen depends on timing, so it only bites in CI.
+        // The seeded audio has no real file behind it, so the host's waveform extraction fails in a
+        // background coroutine that OUTLIVES this test — and its failure path calls Tracker.log,
+        // whose global mock the teardown has already undone by then. The escaping Firebase error
+        // then fails whichever Compose test runs next. Stub the extractor so no such work starts.
+        mockkObject(WaveformExtractor)
+        coEvery { WaveformExtractor.extract(any(), any<Sound>(), any(), any()) } returns null
+        every { WaveformExtractor.cached(any()) } returns null
+
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance } returns controller
         every { controller.playbackState } returns MutableStateFlow(null)
