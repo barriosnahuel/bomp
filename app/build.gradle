@@ -94,6 +94,17 @@ android {
                 testLogging {
                     events 'PASSED', 'FAILED'
                 }
+
+                // Diagnostic only, for hunting a flake whose work outlives its test: starves the IO
+                // dispatcher so background work queues instead of landing in time, reproducing CI's
+                // scheduling locally. Aim it at ONE test and pass --rerun-tasks; over the whole suite
+                // it drowns the signal in timeouts of its own. CONTRIBUTING.md § Work that outlives a
+                // test. Toggling it re-runs configuration (the property is a config-cache input).
+                def starve = providers.gradleProperty('starveTests')
+                if (starve.present) {
+                    systemProperty 'kotlinx.coroutines.io.parallelism', starve.get()
+                    jvmArgs '-XX:ActiveProcessorCount=1'
+                }
             }
         }
     }

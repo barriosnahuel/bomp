@@ -243,6 +243,18 @@ The other known source is `rememberPreviewMedia`'s metadata read on `AddButtonSc
 
 A test driving the **real** `PlayerControllerImpl` also needs `AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())`: its listen engine reports transport use through the provider, so without a fake it builds the real tracker from a player callback.
 
+**Enforced on every push.** `scripts/check-outliving-work.sh` fails when a JVM test mounts one of the known hosts without neutralising its work — locally via `.githooks/pre-push`, and in CI via the `outliving-work-guard` job. Add a host to its `HOSTS` list when you introduce one; the guard only sees what it is told about. Escape hatch for a mount that genuinely cannot start work: a trailing `// outliving-ok`.
+
+**Reproducing the timing: sampling does not work, and starvation needs contention.** Looping the suite proves nothing here — six back-to-back full-suite runs came out green both before and after a real fix, because an idle machine lets the late work land in time. Write a probe that records *whether the `Tracker` call arrived before or after the test body returned* (the subclass `@After` runs before the base un-mocks `Tracker`), which answers the question in one run. When the probe says the work lands in time but CI disagrees, starve the IO dispatcher:
+
+```bash
+./gradlew :app:testDebugUnitTest --tests "*TheSuspectTest*" -PstarveTests=1 --rerun-tasks
+```
+
+Three measured caveats. **`--rerun-tasks` is mandatory** — without it the task stays `UP-TO-DATE`, the flag does nothing, and you get a "does not reproduce" from a run that never happened. **Shrinking the pool alone changes nothing**: one IO thread is plenty when nobody competes for it, so the test also has to occupy the dispatcher (`repeat(4) { CoroutineScope(Dispatchers.IO).launch { Thread.sleep(4_000) } }`); pool-of-one *plus* an occupant is what makes the work land after teardown. **Aim it at one test, never the suite** — over the whole suite it manufactures its own timeouts in `AddButtonScreen` tests and drowns the signal. It applies to `:app` only. Toggling the flag re-runs configuration, since the property is a configuration-cache input.
+
+The step-by-step triage lives in the `jvm-flake-triage` skill (`.claude/skills/`), which agents pick up on their own.
+
 **Reproduce before concluding anything.** These are invisible in a single run; loop the whole suite and dump the stack on the first red:
 
 ```bash

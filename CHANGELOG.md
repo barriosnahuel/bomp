@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### For nerds 🤓
+
+#### Tests
+- A CI guard now blocks JVM tests that mount a screen without stopping the background work it starts, the failure mode that used to surface as an unrelated test going red
+
 ## \[v2026.08.1] - 2026-08-18
 
 ### Added

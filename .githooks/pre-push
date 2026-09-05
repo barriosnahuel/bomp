@@ -50,6 +50,7 @@ echo "▶ pre-push: running CI's fast checks locally (PREPUSH_FULL=1 adds tests 
 ./scripts/check-security-test-count.sh || fail "security-test count mismatch (security-test-count-guard)" "restore the removed test, or bump EXPECTED_COUNT in the script"
 ./scripts/check-analytics-wrapper.sh   || fail "AnalyticsTracker wrapper bypassed (analytics-wrapper-guard)" "route the call through AnalyticsTrackerProvider / FirebaseAnalyticsTracker"
 ./scripts/check-test-assertions.sh     || fail "bare kotlin.assert(...) in tests (test-assertion-guard)" "use assertThat / assertEquals / assertCountEquals instead"
+./scripts/check-outliving-work.sh      || fail "a JVM test mounts a host without neutralising its async work (outliving-work-guard)" "stub the source in @Before (mockkObject(WaveformExtractor)) or dispose the screen before teardown"
 
 # ── 2. Cheap Gradle linters (detekt + ktlint + spotless) ────────────────────
 ./gradlew ktlintCheck detekt spotlessCheck \
