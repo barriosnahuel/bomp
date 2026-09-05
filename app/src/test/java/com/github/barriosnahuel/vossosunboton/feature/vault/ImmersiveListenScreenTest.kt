@@ -21,10 +21,12 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.home.cancelAndJoinAll
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
@@ -49,6 +51,16 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
     @Before
     fun setUp() {
         AnalyticsTrackerProvider.setForTest(fakeTracker)
+
+        // The host decodes the clip's envelope off the main thread, in work that OUTLIVES this test —
+        // and its failure path calls Tracker, whose global mock the teardown has already undone by
+        // then. Today the seeded id resolves to nothing so the host returns before decoding, but that
+        // is a property of the fixture, not a guarantee. Stub the extractor so no such work can start:
+        // CONTRIBUTING.md § Work that outlives a test.
+        mockkObject(WaveformExtractor)
+        coEvery { WaveformExtractor.extract(any(), any<Sound>(), any(), any()) } returns null
+        every { WaveformExtractor.cached(any()) } returns null
+
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
