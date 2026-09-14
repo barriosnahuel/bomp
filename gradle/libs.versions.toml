@@ -36,7 +36,7 @@ biometric                 = "1.4.0-alpha07"
 # Test
 junit                     = "4.13.2"
 androidxTestCore          = "1.7.0"
-robolectric               = "4.16.1"
+robolectric               = "4.17"
 truth                     = "1.4.5"
 mockk                     = "1.14.11"
 espresso                  = "3.7.0"
