@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 #### Tests
 - A CI guard now blocks JVM tests that mount a screen without stopping the background work it starts, the failure mode that used to surface as an unrelated test going red
 
-## \[v2026.08.1] - 2026-08-18
+## \[v2026.08.1] - 2026-08-21
 
 ### Added
 - An audio you share into Bomp can now be cut down before you save it: open "Trim this audio", drag the two handles over the waveform to pick the part you want, listen to just that part, and what gets saved is the piece you chose — a three-minute voice note finally becomes a two-second Bomp without leaving the app
