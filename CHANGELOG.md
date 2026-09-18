@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 #### Changed
 - Bumped all dependencies to latest stable
+- ADR 0029 makes the release cut roll the milestone — create the next, move PRs still in flight onto it, then close the old — so there is always exactly one open milestone for a PR to take; the rule used to pick "the current month's", which kept naming the release that had already shipped
 
 #### Tests
 - A CI guard now blocks JVM tests that mount a screen without stopping the background work it starts, the failure mode that used to surface as an unrelated test going red

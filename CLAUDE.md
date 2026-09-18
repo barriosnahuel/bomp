@@ -322,7 +322,7 @@ Store listing PNGs (icon, feature graphic) render from SVG masters under `store-
 
 ## Labels and milestone
 
-Apply exactly **one type label** (`a:*` or `an:*`) + **zero or more concern labels** (`c:*`) to every PR before merging. Don't call `gh label list`. Milestone: assign the current month's `vYYYY.MM.N` **at PR creation**, creating it if missing; a no-release month renames it to the next month. See [ADR 0023](docs/adr/0023-monthly-sequential-release-tags.md).
+Apply exactly **one type label** (`a:*` or `an:*`) + **zero or more concern labels** (`c:*`) to every PR before merging. Don't call `gh label list`. Milestone: assign **the one open milestone at PR creation**, never a closed one and never creating one — the cut creates the next, sweeps in-flight PRs onto it, then closes the old. See [ADR 0029](docs/adr/0029-one-open-milestone-invariant.md).
 
 - **Type — user-facing** (appear in CHANGELOG `### Added/Changed/Fixed/Removed`): `a:feature`, `a:fix`, `an:enhancement`.
 - **Type — internal** (under `### For nerds 🤓` or omitted): `a:refactor`, `a:test`, `a:build`, `a:docs`.
