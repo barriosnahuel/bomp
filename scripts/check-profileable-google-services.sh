@@ -9,8 +9,8 @@
 # process dies before Macrobenchmark can flush the profile, and the run fails with the cryptic
 # `never flushed profiles in any process` — costing real diagnosis time.
 #
-# This guard catches that BEFORE the build. Used by scripts/generate-baseline-profile.sh; behaviour-tested
-# by scripts/test-check-profileable-google-services.sh. Exits 0 (silent) when the configs are real.
+# This guard catches that BEFORE the build. Used by scripts/generate-baseline-profile.sh and
+# scripts/run-tap-latency.sh. Exits 0 (silent) when the configs are real.
 #
 # See CLAUDE.md § Worktree setup and CONTRIBUTING.md § Firebase config file.
 

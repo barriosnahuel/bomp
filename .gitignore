@@ -32,6 +32,14 @@ build/
 # path of every run. Read it with ./scripts/flaky-report.sh.
 .instrumented-history/
 
+### Preserved benchmark runs
+# The raw benchmarkData.json of each run, copied out of macrobenchmark/build/outputs/ before the
+# NEXT run overwrites it — without that copy you can never hold two runs at once, so comparing two
+# builds is impossible by construction. Also holds the device state the runner carries across
+# invocations (known-good stay-awake value, last OS build id). Per-machine and per-device, hence
+# not committed; the committed series everyone reads is macrobenchmark/RESULTS.md.
+.bench-history/
+
 ### Static Code Analyzers
 config/*
 !config/android/android-lint.xml

@@ -31,18 +31,11 @@ REMOTE="/storage/emulated/0/Android/media/$TEST_PKG/BaselineProfileGenerator_gen
 # "never flushed profiles". The guard explains how to seed the real config.
 ./scripts/check-profileable-google-services.sh
 
-# Resolve a single target device unless ANDROID_SERIAL is already set. Read `adb devices` ONCE so a
-# device (dis)connecting between the count and the pick can't leave us with an empty serial.
-if [ -z "${ANDROID_SERIAL:-}" ]; then
-  serials="$(adb devices | awk 'NR>1 && $2=="device"{print $1}')"
-  n="$(printf '%s\n' "$serials" | sed '/^$/d' | wc -l | tr -d ' ')"
-  if [ "$n" != "1" ]; then
-    echo "✘ Need exactly one attached device, or set ANDROID_SERIAL (found $n)." >&2
-    exit 1
-  fi
-  ANDROID_SERIAL="$serials"
-  export ANDROID_SERIAL
-fi
+# Resolve a single target device unless ANDROID_SERIAL is already set. The rule lives in one place
+# (device-resolve.sh) so this script and run-tap-latency.sh can never pick different phones.
+# shellcheck source=scripts/device-resolve.sh
+. "$(dirname "${BASH_SOURCE[0]}")/device-resolve.sh"
+resolve_android_serial || exit 1
 echo "▶ Device: $ANDROID_SERIAL"
 
 # Fresh nonMinifiedRelease install: the profile must be captured against release code with REAL names,
