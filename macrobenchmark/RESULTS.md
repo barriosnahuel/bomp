@@ -12,8 +12,10 @@ validated (§ *Performance → What it measures*).
 | 2026-07-13 | Pixel 8 (API 16/36) | `test/tap-latency-seed-pinned` — v2026.07.1 pre-release gate, post-Media3 (tap path still MediaPlayer, ADR 0022) | TapLatencyBenchmark.tapToSoundFirstTap | 38.6 | 49.0 | 140.1 | 15 |
 | 2026-09-17 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | `develop` @ `3b460ef8` — after v2026.08.1 (trimmer, spring motion on SoundItem, listen-session analytics) | TapLatencyBenchmark.tapToSoundFirstTap | 39.8 | 48.9 | 58.2 | 15 |
 | 2026-09-17 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | **control** — `v2026.07.1` (`6200a148`) re-measured the same evening on the same device | TapLatencyBenchmark.tapToSoundFirstTap | 38.2 | 58.1 | 77.7 | 15 |
-| 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | `develop` @ `558eff77` — first run through `scripts/run-tap-latency.sh` | TapLatencyBenchmark.tapToSoundFirstTap | 33.6 | 46.0 | 68.3 | 15 |
-| 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | **control** — `v2026.07.1` (`6200a148`) again, two days after the row above | TapLatencyBenchmark.tapToSoundFirstTap | 34.0 | 48.1 | 67.3 | 15 |
+| 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | `develop` @ `558eff77` — run 1, first through `scripts/run-tap-latency.sh` | TapLatencyBenchmark.tapToSoundFirstTap | 32.3 | 47.9 | 169.0 | 15 |
+| 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | `develop` @ `558eff77` — run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 33.6 | 46.0 | 68.3 | 15 |
+| 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | **control** — `v2026.07.1` (`6200a148`), run 1 | TapLatencyBenchmark.tapToSoundFirstTap | 32.3 | 41.5 | 74.3 | 15 |
+| 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | **control** — `v2026.07.1` (`6200a148`), run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 34.0 | 48.1 | 67.3 | 15 |
 
 **The 2026-09-17 pair is one experiment, not two rows.** The July row above was measured on
 **Android 16**; this phone has since moved to **Android 17**. Comparing today's 48.9 ms against it
@@ -24,12 +26,22 @@ platform, not this codebase. **When the device's OS has changed since the row yo
 against, re-measure that ref before reading any delta** — that row is otherwise a different bench,
 which is why the Device column now carries the OS build id.
 
-**What this bench can and cannot resolve — measured, not estimated.** `v2026.07.1` was measured
-twice on the same phone two days apart: **58.1 ms** on the 17th and **48.1 ms** on the 19th. Same
-commit, same device, same OS build — **10 ms apart between sessions**. Within a single run the
-spread is wider still (the 17th's control ranges 38.2-77.7 ms, CoV 0.20). So a delta of a few ms
-between two rows is not a signal, and the 2026-09-19 pair says it plainly: `develop` at 46.0 ms
-against July's code at 48.1 ms is **no difference this bench can see**.
+**What this bench can and cannot resolve — measured, not estimated.** On 2026-09-19 both sides were
+measured twice, alternating, in one session on one phone. Sorted, the four medians **interleave**:
+
+| 41.5 | 46.0 | 47.9 | 48.1 |
+|---|---|---|---|
+| `v2026.07.1` | `develop` | `develop` | `v2026.07.1` |
+
+The old code produced both the fastest and the slowest run of the session. There is no separation to
+read, in either direction. And `v2026.07.1` measured **58.1 ms** two days earlier on the same phone,
+so the same commit moved **10 ms between sessions** without a line changing. Within a single run the
+spread is wider still (the 17th's control ranges 38.2-77.7 ms, CoV 0.20).
+
+Which is why **every** run belongs in this table, winners and losers alike. Picking one run per side
+— even unintentionally, by reading the last output of each — is enough to manufacture a result: the
+pair `develop` 46.0 vs control 48.1 reads as "slightly faster now", while `develop` 47.9 vs control
+41.5, from the same session, reads as "slower". Both are noise.
 
 Other runs on the 17th landed at 65.9 / 57.3 / 54.4 ms, but `develop` moved across several commits
 during that session — including bumps to `androidx.tracing`, which emits the measured span, and
