@@ -425,14 +425,32 @@ Needs a connected device/emulator (API 28+; metrics are most reliable on API 29+
 
 - **`StartupBenchmark`** — cold start across three `CompilationMode`s: `None` (no AOT — fresh install), `DEFAULT` (warmed), and `Partial(Require)` (the committed Baseline Profile). Brackets the AOT spread and validates the profile.
 - **`ScrollBenchmark`** — `FrameTimingMetric` while flinging the sound list at **20 / 50 / 200** items, to expose whether scroll jank scales with list size (hypothesis H2 — Fase 3 found it does not). The list is seeded to exactly N synthetic sounds via a launch-intent extra handled by the benchmark build type's `CustomBuildTypeApplication` (a release-like override; never reaches release or debug). Seeding is synchronous and atomic so the measured scroll always traverses exactly N — see [ADR 0015](docs/adr/0015-macrobenchmark-seeding-architecture.md).
-- **`TapLatencyBenchmark`** — tap-to-sound latency: how long from tapping a sound row's Play button until playback starts, measured through the `BompTapToSound` async trace section emitted at the ViewModel boundary (engine-agnostic, so numbers stay comparable across playback-engine changes). Taps a seeded row backed by real audio bytes; `StartupMode.COLD` so every iteration is a first tap against a fresh player. **Physical device only** — emulator audio/disk starvation makes latency numbers meaningless. Baseline (Pixel 8, 2026-07-04): median **53.5 ms** against the ≤100 ms budget (ADR 0022).
+- **`TapLatencyBenchmark`** — tap-to-sound latency: how long from tapping a sound row's Play button until playback starts, measured through the `BompTapToSound` async trace section emitted at the ViewModel boundary (engine-agnostic, so numbers stay comparable across playback-engine changes). Taps a seeded row backed by real audio bytes; `StartupMode.COLD` so every iteration is a first tap against a fresh player. **Physical device only** — emulator audio/disk starvation makes latency numbers meaningless. Budget: **≤ 100 ms** (ADR 0022). The current number is the **last row of `macrobenchmark/RESULTS.md`** — read it there, not here, and read the median: a single run's own samples span tens of ms, so a small delta between rows is not a signal.
 
   **When to run it (manual, like the rest of the module — CI has no device):** before merging any change to the playback engine or the tap dispatch path (`PlayerControllerImpl`, `MediaPlayerHelper`, `SoundsViewModel.playOrStop`, the trace-span wiring), and once per release alongside the Baseline Profile validation. **There is no automatic ms threshold** — Macrobenchmark reports statistics (min/median/max + JSON under `macrobenchmark/build/outputs/connected_android_test_additional_output/`); the run fails only on execution errors (row not found, trace section missing). The gate is the human comparing the median against the ≤100 ms budget and the previous baseline, exactly like the Baseline Profile flow. **Every run appends a row to `macrobenchmark/RESULTS.md`** — the committed, append-only series that answers "what was it before?". Run just this benchmark with:
 
   ```bash
-  ANDROID_SERIAL=<device> ./gradlew :macrobenchmark:connectedBenchmarkAndroidTest \
-      -P android.testInstrumentationRunnerArguments.class=com.github.barriosnahuel.vossosunboton.macrobenchmark.TapLatencyBenchmark
+  ./scripts/run-tap-latency.sh                      # set ANDROID_SERIAL if several devices are attached
   ```
+
+  **Go through the wrapper, not the Gradle task.** In the 2026-09-17 session four runs (~20 min of
+  builds) were thrown away on conditions `adb` answers in two seconds: a locked screen — which
+  surfaces 15 s later as `Playable seeded sound didn't render within 15000 ms`, naming the symptom
+  and never the cause — a battery below AndroidX's 25% floor, which it reports only *after* the
+  ~4 min build, a `versionCode` downgrade while measuring an older tag as a control, and the device
+  locale. The wrapper checks all of them **before** starting Gradle, re-probes the device when a run
+  fails so the message names the real cause, and maps the outcome onto four exit codes: **only `0`
+  means there is a number, only `1` means go look at the app**; `2` is "the bench could not measure"
+  and `3` is "the build never got there".
+
+  **Comparing two builds.** A row measured on a different OS build is not a comparison — it is a
+  different bench (see the 2026-09-17 note in `RESULTS.md`, where that mistake nearly became a
+  recorded regression). So: check the baseline ref out in a **sibling worktree** (§ *Creating a new
+  worktree*) — never let a measurement move `HEAD`, the `google-services.json` overrides are
+  per-worktree — and **alternate runs**, A then B then A then B, in one session on one device, so a
+  drift in the phone lands on both sides. From the older worktree the script does not exist yet;
+  invoke it by absolute path from the primary one. Append **every** run to `RESULTS.md`, controls
+  included: those control rows are what make the next comparison cheap.
 
 ### Baseline Profile (manual, no plugin)
 
@@ -693,7 +711,7 @@ Release-only Gradle commands (need the signing files above in the project root):
 A **seed** — expand it as the release process is formalized (store rollout steps aren't documented yet, so they're intentionally omitted rather than invented). Before cutting a release:
 
 - [ ] **Regenerate the Baseline Profile** — `./scripts/generate-baseline-profile.sh`, then validate on a **real device** (`StartupBenchmark.startupBaselineProfile` near `DEFAULT`, well under `None`). It's a frozen snapshot of the cold-start path (§ *Baseline Profile*); refresh it so accumulated startup changes are precompiled.
-- [ ] **Run the tap-to-sound latency gate** — `TapLatencyBenchmark` on a **real device** (§ *Performance → What it measures*): median must stay ≤ 100 ms and in line with the last row of `macrobenchmark/RESULTS.md`; **append this run's row** there (that file is the versioned before/today series — there is no automatic threshold).
+- [ ] **Run the tap-to-sound latency gate** — `./scripts/run-tap-latency.sh` on a **real device** (§ *Performance → What it measures*). It refuses a device that cannot measure (locked, low battery, throttling, wrong locale) instead of failing 4 min into the build, and prints the row to paste. Median must stay **≤ 100 ms** (ADR 0022). Comparing against an earlier row only means something if that row came from the same OS build — otherwise re-measure the baseline ref first. **Append this run's row** to `macrobenchmark/RESULTS.md` (there is no automatic threshold).
 - [ ] **Finalize `CHANGELOG.md`** — stamp `## [unreleased]` as `## [vYYYY.MM.N] - YYYY-MM-DD`, the cut month + the month's next counter (`.1` for the month's first release), keeping the Keep-a-Changelog publish-date suffix (§ CLAUDE.md *Changelog*). **The date is the day the release is actually published — the UTC date `gh release view <tag> --json publishedAt` reports — not the day you stamp it**; if the cut slips, re-stamp before tagging, or the header claims a date the release never had. Not a one-off: five of the six releases since `v2.0.0` drifted 1–3 days this way, and near midnight the local date differs from UTC, which is why the command above is the tiebreaker. The tag must match the open milestone — if it was carried over from an earlier no-release month, rename it first to the cut month plus the month's next counter (§ *Creating the GitHub release*, step 6).
 - [ ] **Bump `versionCode` + `versionName`** in `app/build.gradle` — `versionCode` +1; `versionName` to the CalVer `YYYY.MM.N` cut month + monthly counter, the same string as the tag / CHANGELOG header without the `v` (§ *Versioning*).
 - [ ] **Release lint gate** — `./gradlew app:lintVitalRelease` green.

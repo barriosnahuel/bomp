@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-04
+- **Amended:** 2026-09-19 (§ *Measurements* — iteration count of the 2026-07-04 baseline)
 - **Supersedes:** Amends [ADR 0005](0005-unified-audio-player.md) (its revisit criterion #3 —
   "the codebase moves to `androidx.media3.exoplayer`" — fired; the unified-`PlayerController`
   principle and concurrency invariant stand, but the controller now owns **two** engines). Amends
@@ -24,7 +25,7 @@ legacy Android framework APIs"*) — and requires media sessions when playback i
 The project has a hard UX budget: **≤ 100 ms tap-to-sound** — the classic HCI instantaneity
 threshold (Miller 1968 / Nielsen), and the gesture that defines the product.
 
-### Measurements (physical Pixel 8, 2026-07-04, 10 iterations each)
+### Measurements (physical Pixel 8, 2026-07-04, 10 iterations each — but `macrobenchmark/RESULTS.md`, which is that run's own record, says **5**; read 53.5 ms as a 5-iteration median, the regime `DEFAULT_ITERATIONS`' KDoc documents as moving 13% between runs, so it is a soft anchor rather than a reference value)
 
 Tap-to-sound guardrail (Macrobenchmark, PR #1264): current engine cold first tap **median 53.5 ms**
 (31.3–80.9). Engine spike rounds, all on the production-shaped path (one live player, new audio per
