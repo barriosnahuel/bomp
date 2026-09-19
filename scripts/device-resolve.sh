@@ -39,7 +39,11 @@ android_serial_is_emulator() {
   esac
   # A physical device reached over adb-wireless has an mDNS-style serial, not `emulator-*`, so the
   # serial alone is not proof. Ask the device what it is.
-  local qemu
+  # Ask both properties: modern emulator images stopped setting ro.kernel.qemu and use ro.boot.qemu.
+  # This fallback exists precisely for an emulator whose serial is not `emulator-*` (reached over
+  # `adb connect`), so checking only the legacy name would let exactly that case through the gate.
+  local qemu boot_qemu
   qemu="$(adb -s "${ANDROID_SERIAL}" shell getprop ro.kernel.qemu 2>/dev/null | tr -d '\r\n')"
-  [ "$qemu" = "1" ]
+  boot_qemu="$(adb -s "${ANDROID_SERIAL}" shell getprop ro.boot.qemu 2>/dev/null | tr -d '\r\n')"
+  [ "$qemu" = "1" ] || [ "$boot_qemu" = "1" ]
 }

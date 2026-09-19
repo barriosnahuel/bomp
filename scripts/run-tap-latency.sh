@@ -35,6 +35,7 @@
 # Thresholds are env-overridable, which is also how the failure paths are exercised without
 # provoking the condition: MIN_BATTERY_PERCENT, MAX_THERMAL_STATUS, REQUIRED_LOCALE_PREFIX.
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # resolve before the cd below
 cd "$(git rev-parse --show-toplevel)"
 
 # The numbers printed here get pasted into RESULTS.md, whose table uses a decimal POINT. awk and
@@ -51,9 +52,9 @@ BENCH_CLASS="com.github.barriosnahuel.vossosunboton.macrobenchmark.TapLatencyBen
 EXIT_OK=0; EXIT_REAL=1; EXIT_REFUSED=2; EXIT_NO_RUN=3
 
 # shellcheck source=scripts/device-resolve.sh
-. "$(dirname "${BASH_SOURCE[0]}")/device-resolve.sh"
+. "$SCRIPT_DIR/device-resolve.sh"
 # shellcheck source=scripts/bench-history-dir.sh
-. "$(dirname "${BASH_SOURCE[0]}")/bench-history-dir.sh"
+. "$SCRIPT_DIR/bench-history-dir.sh"
 
 die() { echo "✘ $*" >&2; exit "$EXIT_REFUSED"; }
 say() { echo "▶ $*"; }
@@ -63,7 +64,9 @@ adbs() { adb -s "$ANDROID_SERIAL" "$@"; }
 
 # ── P0-P1: repo + tooling + config ────────────────────────────────────────────────────────────
 command -v adb >/dev/null || die "'adb' not found on PATH."
-./scripts/check-profileable-google-services.sh
+# A scrubbed dummy config is a refusal (2), not an app failure (1): the guard exits 1, so the
+# translation has to be explicit or `set -e` would propagate the wrong contract.
+./scripts/check-profileable-google-services.sh || exit "$EXIT_REFUSED"
 
 # ── P2-P4: which device, and is it one we can measure ─────────────────────────────────────────
 resolve_android_serial || exit "$EXIT_REFUSED"
@@ -82,12 +85,31 @@ mkdir -p "$HISTORY_DIR"
 # needs invites exactly that ("I have two checkouts, I'll run both and halve the time"), and the
 # single-device check cannot see it — both runs see one device and both proceed, contaminating each
 # other's numbers. mkdir is atomic and portable (macOS has no flock(1)).
-LOCK_DIR="$HISTORY_DIR/.lock-$(printf '%s' "$ANDROID_SERIAL" | tr -c 'A-Za-z0-9_.-' '_')"
+# One key per device: the lock, the saved stay-awake value and the last-seen OS build are all
+# per-phone. Sharing them would restore phone A's setting onto phone B, or compare A's OS to B's.
+SERIAL_KEY="$(printf '%s' "$ANDROID_SERIAL" | tr -c 'A-Za-z0-9_.-' '_')"
+LOCK_DIR="$HISTORY_DIR/.lock-$SERIAL_KEY"
+STAY_ON_FILE="$HISTORY_DIR/.stay-on-original-$SERIAL_KEY"
+STAY_ON_ORIGINAL=0
+LOCK_HELD=false
+
+# Installed BEFORE the lock is taken: a Ctrl-C in the adb calls between the two would otherwise
+# leave the lock directory behind and refuse every future run until someone deletes it by hand.
+cleanup_on_exit() {
+  [ "$LOCK_HELD" = true ] || return 0
+  adb -s "$ANDROID_SERIAL" shell settings put global stay_on_while_plugged_in "$STAY_ON_ORIGINAL" >/dev/null 2>&1 || true
+  rm -f "$STAY_ON_FILE" 2>/dev/null || true
+  rm -rf "$LOCK_DIR" 2>/dev/null || true
+}
+trap 'cleanup_on_exit; exit 130' INT TERM
+trap cleanup_on_exit EXIT
+
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   holder="$(cat "$LOCK_DIR/holder" 2>/dev/null || echo 'unknown')"
   die "Device $ANDROID_SERIAL is already being measured by $holder.
   Two runs on one phone contaminate each other's numbers. Wait, or remove $LOCK_DIR if stale."
 fi
+LOCK_HELD=true
 printf 'pid %s from %s at %s\n' "$$" "$(pwd)" "$(date '+%Y-%m-%d %H:%M:%S')" > "$LOCK_DIR/holder"
 
 # ── Anti-sleep: normalise on entry, not just restore on exit ──────────────────────────────────
@@ -96,19 +118,16 @@ printf 'pid %s from %s at %s\n' "$$" "$(pwd)" "$(date '+%Y-%m-%d %H:%M:%S')" > "
 # with no visible link to the effect. So the known-good value is persisted once and re-applied at
 # every start. (capture-store-screenshots.sh sets stayon and never restores it, so "whatever the
 # device says now" is not a trustworthy baseline.)
-STAY_ON_FILE="$HISTORY_DIR/.stay-on-original"
+# The file exists ONLY while a run is in flight. Finding one at startup therefore means a previous
+# run died without restoring (SIGKILL, a pulled cable), and the device is still pinned awake by US —
+# so the value to trust is the one in the file, never what the device reports now. Reading "whatever
+# the device says" in that state is how a temporary override becomes permanent: it captures our own
+# leftover as if it were the user's preference and restores it forever after.
 if [ ! -f "$STAY_ON_FILE" ]; then
   adbs shell settings get global stay_on_while_plugged_in 2>/dev/null | tr -d '\r\n' > "$STAY_ON_FILE" || true
 fi
 STAY_ON_ORIGINAL="$(cat "$STAY_ON_FILE" 2>/dev/null || echo 0)"
 case "$STAY_ON_ORIGINAL" in ''|*[!0-9]*) STAY_ON_ORIGINAL=0 ;; esac
-
-cleanup_on_exit() {
-  adb -s "$ANDROID_SERIAL" shell settings put global stay_on_while_plugged_in "$STAY_ON_ORIGINAL" >/dev/null 2>&1 || true
-  rm -rf "$LOCK_DIR" 2>/dev/null || true
-}
-trap 'cleanup_on_exit; exit 130' INT TERM
-trap cleanup_on_exit EXIT
 
 # ── P5: device identity (and the OS-drift warning) ────────────────────────────────────────────
 SDK="$(adbs shell getprop ro.build.version.sdk | tr -d '\r\n')"
@@ -117,7 +136,7 @@ RELEASE="$(adbs shell getprop ro.build.version.release | tr -d '\r\n')"
 MODEL="$(adbs shell getprop ro.product.model | tr -d '\r\n')"
 [ "${SDK:-0}" -ge 28 ] 2>/dev/null || die "API $SDK is below 28; the benchmark needs 28+ (29+ for reliable metrics)."
 
-LAST_BUILD_FILE="$HISTORY_DIR/.last-build-id"
+LAST_BUILD_FILE="$HISTORY_DIR/.last-build-id-$SERIAL_KEY"
 if [ -f "$LAST_BUILD_FILE" ]; then
   last_build="$(cat "$LAST_BUILD_FILE")"
   if [ "$last_build" != "$BUILD_ID" ]; then
@@ -128,7 +147,8 @@ if [ -f "$LAST_BUILD_FILE" ]; then
 fi
 
 # ── P6: battery ───────────────────────────────────────────────────────────────────────────────
-BATTERY="$(adbs shell dumpsys battery 2>/dev/null | sed -n 's/.*level: *\([0-9]*\).*/\1/p' | head -1)"
+# Anchored: an unanchored `level:` also matches "Capacity level:" further down the dump.
+BATTERY="$(adbs shell dumpsys battery 2>/dev/null | sed -n 's/^ *level: *\([0-9]*\).*/\1/p' | head -1)"
 if [ -z "$BATTERY" ]; then
   warn "Could not read the battery level — skipping that check rather than guessing."
 elif [ "$BATTERY" -lt "$MIN_BATTERY_PERCENT" ]; then
@@ -141,7 +161,10 @@ elif [ "$BATTERY" -lt "$MIN_BATTERY_PERCENT" ]; then
 fi
 
 # ── P7: thermal ───────────────────────────────────────────────────────────────────────────────
-THERMAL="$(adbs shell dumpsys thermalservice 2>/dev/null | sed -n 's/.*mStatus= *\([0-9]*\).*/\1/p' | head -1)"
+# "Thermal Status: N" is the DEVICE status. The `mStatus=` fields belong to each cached sensor
+# reading, so matching those reads a per-sensor value (the first listed) and silently passes while
+# the SoC throttles — a guard that quietly measures the wrong thing.
+THERMAL="$(adbs shell dumpsys thermalservice 2>/dev/null | sed -n 's/^ *Thermal Status: *\([0-9]*\).*/\1/p' | head -1)"
 if [ -z "$THERMAL" ]; then
   warn "Could not read the thermal status — skipping that check rather than guessing."
 elif [ "$THERMAL" -gt "$MAX_THERMAL_STATUS" ]; then
@@ -186,7 +209,9 @@ INSTALLED_VC="$(adbs shell dumpsys package "$TARGET_PKG" 2>/dev/null | sed -n 's
 if [ -n "$INSTALLED_VC" ] && [ -n "$LOCAL_VC" ] && [ "$INSTALLED_VC" -gt "$LOCAL_VC" ]; then
   say "Installed $TARGET_PKG is versionCode $INSTALLED_VC; this checkout builds $LOCAL_VC.
   Uninstalling first — a downgrade install dies with INSTALL_FAILED_VERSION_DOWNGRADE about 4 min
-  into the run, after the build. (Normal when measuring an older tag as a control.)"
+  into the run, after the build. (Normal when measuring an older tag as a control.)
+  NOTE: this also wipes that app's data on the device, including anything you had in the dev debug
+  build. The benchmark reinstalls and seeds its own synthetic corpus."
   adbs uninstall "$TARGET_PKG" >/dev/null 2>&1 || true
   adbs uninstall "com.github.barriosnahuel.vossosunboton.macrobenchmark" >/dev/null 2>&1 || true
 fi
@@ -203,7 +228,8 @@ CONFIG_HASH="$(cat app/src/benchmark/google-services.json app/src/debug/google-s
 [ "$DIRTY" = false ] || warn "Working tree is dirty — this number will be attributed to $HEAD_SHA, which does not contain it (diff $DIFF_HASH)."
 
 say "Device: $MODEL · Android $RELEASE (API $SDK, $BUILD_ID) · battery ${BATTERY:-?}% · thermal ${THERMAL:-?}"
-say "Measuring: $HEAD_DESC ($HEAD_SHA${DIRTY:+, dirty}) · configs $CONFIG_HASH"
+if [ "$DIRTY" = true ]; then dirty_note=", dirty"; else dirty_note=""; fi
+say "Measuring: $HEAD_DESC ($HEAD_SHA$dirty_note) · configs $CONFIG_HASH"
 
 # ── Run ───────────────────────────────────────────────────────────────────────────────────────
 LOG="$(mktemp -t tap-latency)"
@@ -213,7 +239,11 @@ set +e
 GRADLE_RC="${PIPESTATUS[0]}"
 set -e
 
-JSON="$(find macrobenchmark/build/outputs/connected_android_test_additional_output -name '*benchmarkData.json' 2>/dev/null | head -1)"
+# Newest by mtime, not "whatever find yields first": AGP keeps one directory per device+release and
+# never prunes them, so an OS upgrade (16 -> 17, the very case behind this script) or a second phone
+# leaves stale JSONs behind — printing a row from an older session is precisely the failure this
+# script exists to prevent.
+JSON="$(find macrobenchmark/build/outputs/connected_android_test_additional_output -name '*benchmarkData.json' -exec stat -f '%m %N' {} + 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)"
 
 # ── Post-run reclassification: re-probe before deciding whose fault it was ────────────────────
 if [ "$GRADLE_RC" -ne 0 ]; then
@@ -222,7 +252,7 @@ if [ "$GRADLE_RC" -ne 0 ]; then
   measured. This is the bench, not the app — reconnect and re-run."
   fi
   if grep -q "LOW-BATTERY" "$LOG"; then
-    now="$(adbs shell dumpsys battery | sed -n 's/.*level: *\([0-9]*\).*/\1/p' | head -1)"
+    now="$(adbs shell dumpsys battery | sed -n 's/^ *level: *\([0-9]*\).*/\1/p' | head -1)"
     die "Battery fell to ${now}% during the run (started at ${BATTERY}%). Charge and re-run."
   fi
   if grep -q "didn't render within" "$LOG"; then
@@ -258,10 +288,14 @@ fi
 
 # ── Read the numbers (sed/awk, never python: the CI image has no parser — flaky-report.sh:65) ──
 FLAT="$(tr -d ' \n' < "$JSON")"
-jnum() { printf '%s' "$FLAT" | sed -n "s/.*\"$1\":\([0-9.eE+-]*\).*/\1/p" | head -1; }
+# Scope to OUR metric's object first. Reading "median" off the whole file returns the LAST one in
+# it, so a second metric — or a JSON from another benchmark — would be printed as tap latency.
+METRIC="$(printf '%s' "$FLAT" | sed -n 's/.*"BompTapToSoundFirstMs":{\([^}]*\)}.*/\1/p')"
+jnum() { printf '%s' "$METRIC" | sed -n "s/.*\"$1\":\([0-9.eE+-]*\).*/\1/p" | head -1; }
+jroot() { printf '%s' "$FLAT" | sed -n "s/.*\"$1\":\([0-9.eE+-]*\).*/\1/p" | head -1; }
 MEDIAN="$(jnum median)"; MINIMUM="$(jnum minimum)"; MAXIMUM="$(jnum maximum)"
-CV="$(jnum coefficientOfVariation)"; ITERS="$(jnum repeatIterations)"; SLEEP_S="$(jnum thermalThrottleSleepSeconds)"
-SAMPLES="$(printf '%s' "$FLAT" | sed -n 's/.*"runs":\[\([^]]*\)\].*/\1/p' | head -1 | awk -F, '{print NF}')"
+CV="$(jnum coefficientOfVariation)"; ITERS="$(jroot repeatIterations)"; SLEEP_S="$(jroot thermalThrottleSleepSeconds)"
+SAMPLES="$(printf '%s' "$METRIC" | sed -n 's/.*"runs":\[\([^]]*\)\].*/\1/p' | head -1 | awk -F, '{print NF}')"
 
 if [ -z "$MEDIAN" ]; then
   echo "✘ The JSON has no BompTapToSound metric — the trace span is probably gone or renamed." >&2
