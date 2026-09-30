@@ -187,13 +187,13 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `tapping the empty-state Import CTA emits import_hub_opened with source my_sounds_empty_state`() {
+    fun `tapping the empty-state Add a Bomp CTA emits import_hub_opened with source my_sounds_empty_state`() {
         val viewModel = givenAViewModel()
         val context = ApplicationProvider.getApplicationContext<Context>()
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
-        // Empty the rendered list to reach the welcome-empty state, where the inline "Import" CTA
+        // Empty the rendered list to reach the welcome-empty state, where the inline "Add a Bomp" CTA
         // (not the FAB) carries the open. Wait for init's load so the injection is not overwritten.
         runBlocking { withTimeout(AWAIT_TIMEOUT_MS) { viewModel.isInitialLoadComplete.first { it } } }
         viewModel.injectSounds(emptyList())
@@ -203,22 +203,6 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
 
         val event = fake.assertEmitted("import_hub_opened")
         assertThat(event.params["source"]).isEqualTo("my_sounds_empty_state")
-    }
-
-    @Test
-    fun `tapping the import row in the Hub emits import_hub_import_selected`() {
-        val viewModel = givenAViewModel()
-        val context = ApplicationProvider.getApplicationContext<Context>()
-
-        composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
-        composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription(context.getString(R.string.app_hub_fab_description)).performClick()
-        composeTestRule.waitForIdle()
-        // The row animates the sheet closed before invoking onImport (see ImportHubSheetTest).
-        composeTestRule.onNodeWithText(context.getString(R.string.app_hub_import)).performClick()
-        composeTestRule.waitForIdle()
-
-        fake.assertEmitted("import_hub_import_selected")
     }
 
     @Test

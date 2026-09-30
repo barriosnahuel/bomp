@@ -495,14 +495,14 @@ sealed class AnalyticsEvent(
      * CTA), or `"onboarding_finish"` (the tour's closing "Start" drops the user here).
      * `hasFirstVariant = true` so first-ever opens are isolable.
      *
-     * Funnel: import_hub_opened → import_hub_import_selected → `sound_add {source=import}`.
-     * Hub abandonment = opened − import_selected; picker/naming drop-off = import_selected −
-     * sound_add(source=import). No dedicated cancel event by design — it is derivable by subtraction.
+     * Funnel: import_hub_opened → import_hub_bring_selected / import_hub_record_selected →
+     * `sound_add {source=import|record}`. The picker behind the bring guide's footer has no intent event
+     * of its own yet, so its drop-off is not separable from the guide's.
      *
      * For an *import-intent* funnel, scope the denominator to proactive opens
      * (`source IN ("fab", "my_sounds_empty_state")`) and treat `"onboarding_finish"` as its own
      * cohort: the tour drops the user on the Hub, so folding it into the total inflates `opened`
-     * vs `import_selected`. Its own conversion (does landing them on the Hub post-tour convert?)
+     * vs the `*_selected` intents. Its own conversion (does landing them on the Hub post-tour convert?)
      * is a separate, deliberate question.
      */
     data class ImportHubOpened(
@@ -512,10 +512,12 @@ sealed class AnalyticsEvent(
     }
 
     /**
-     * Import-Hub funnel · INTENT. The user tapped the live "import audio from your device" row,
-     * committing to pick a file (the system picker launches next). The genuine middle funnel step:
-     * separates "opened the Hub but never engaged its CTA" from "engaged but bailed in the picker /
-     * naming screen". `hasFirstVariant = true`.
+     * Import-Hub funnel · INTENT. The user tapped the "import audio from your device" row, committing
+     * to pick a file (the system picker launched next). `hasFirstVariant = true`.
+     *
+     * **No longer emitted:** the Hub lost that row (the file browser now sits at the foot of the bring
+     * guide), and the event is deliberately not re-pointed at the new call-site, so its history keeps
+     * meaning "chose the Hub row". Kept declared only until the catalogue retires it.
      */
     object ImportHubImportSelected : AnalyticsEvent(name = "import_hub_import_selected", hasFirstVariant = true)
 
@@ -527,8 +529,9 @@ sealed class AnalyticsEvent(
     object ImportHubRecordSelected : AnalyticsEvent(name = "import_hub_record_selected", hasFirstVariant = true)
 
     /**
-     * Import-Hub funnel · INTENT (bring-from-apps). The user tapped the "bring audios from other apps"
-     * row, which opens a focused single-step guide on sharing a voice note in from WhatsApp/Telegram.
+     * Import-Hub funnel · INTENT (bring). The user tapped the "bring in an audio you already have" row,
+     * which opens a focused single-step guide on sharing a voice note in from WhatsApp/Telegram, with the
+     * system file browser at its foot — so this row now covers both ways of bringing an existing audio.
      * Unlike [ImportHubImportSelected]/[ImportHubRecordSelected] this is not an in-app conversion step
      * (the share is initiated from the *other* app, off-funnel); it measures how many Hub opens are
      * driven by the import-from-another-app intent — the primary use case the Hub is being reshaped

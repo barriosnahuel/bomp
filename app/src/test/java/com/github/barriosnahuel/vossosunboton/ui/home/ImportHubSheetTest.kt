@@ -6,8 +6,11 @@
 package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.os.Build
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
@@ -31,7 +34,7 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `hub orders the rows record then bring then import`() {
+    fun `hub offers exactly two paths, record then bring`() {
         setHub()
 
         val recordTop =
@@ -41,17 +44,20 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
                 .boundsInRoot.top
         val bringTop =
             composeTestRule
-                .onNodeWithText("Bring audios from other apps")
-                .fetchSemanticsNode()
-                .boundsInRoot.top
-        val importTop =
-            composeTestRule
-                .onNodeWithText("Import audio from your device")
+                .onNodeWithText("Bring in an audio you already have")
                 .fetchSemanticsNode()
                 .boundsInRoot.top
 
         assertThat(recordTop).isLessThan(bringTop)
-        assertThat(bringTop).isLessThan(importTop)
+        composeTestRule.onAllNodes(hasClickAction()).assertCountEquals(2)
+    }
+
+    @Test
+    fun `hub no longer offers the file-browser row`() {
+        setHub()
+
+        composeTestRule.onAllNodesWithText("Import audio from your device").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Look on your phone").assertCountEquals(0)
     }
 
     @Test
@@ -66,37 +72,24 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `tapping the bring-from-apps row invokes onBringFromApps`() {
+    fun `tapping the bring row invokes onBringFromApps`() {
         var opened = false
         setHub(onBringFromApps = { opened = true })
 
-        composeTestRule.onNodeWithText("Bring audios from other apps").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Bring audios from other apps").performClick()
+        composeTestRule.onNodeWithText("Bring in an audio you already have").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Bring in an audio you already have").performClick()
         composeTestRule.waitForIdle() // the row animates the sheet closed before invoking the callback
 
         assertThat(opened).isTrue()
     }
 
-    @Test
-    fun `tapping the import row invokes onImport`() {
-        var imported = false
-        setHub(onImport = { imported = true })
-
-        composeTestRule.onNodeWithText("Import audio from your device").performClick()
-        composeTestRule.waitForIdle() // the row animates the sheet closed before invoking onImport
-
-        assertThat(imported).isTrue()
-    }
-
     private fun setHub(
-        onImport: () -> Unit = {},
         onRecord: () -> Unit = {},
         onBringFromApps: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             AppTheme {
                 ImportHubSheet(
-                    onImport = onImport,
                     onRecord = onRecord,
                     onBringFromApps = onBringFromApps,
                 )

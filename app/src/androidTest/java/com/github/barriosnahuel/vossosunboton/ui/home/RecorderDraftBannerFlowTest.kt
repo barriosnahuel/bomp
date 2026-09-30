@@ -10,11 +10,13 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.github.barriosnahuel.vossosunboton.AbstractUiTest
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
+import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
@@ -95,6 +97,25 @@ internal class RecorderDraftBannerFlowTest : AbstractUiTest() {
                 composeRule.onAllNodesWithText(string(R.string.app_recorder_draft_banner_message)).fetchSemanticsNodes().isEmpty()
             }
             analytics.assertEmitted("recording_draft_discarded")
+        }
+    }
+
+    @Test
+    fun theBannerIsStillThereAfterTheHubIsDismissed() {
+        seedDraft()
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithText(string(R.string.app_recorder_draft_banner_message)).assertIsDisplayed()
+            composeRule.awaitNodeWithContentDescription(string(R.string.app_hub_fab_description)).performClick()
+            composeRule.awaitNodeWithText(string(R.string.app_hub_title)).assertIsDisplayed()
+
+            Espresso.pressBack()
+
+            // The sheet may cover the banner while open, never for good: dismissing it hands the list back.
+            composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
+                composeRule.onAllNodesWithText(string(R.string.app_hub_title)).fetchSemanticsNodes().isEmpty()
+            }
+            composeRule.awaitNodeWithText(string(R.string.app_recorder_draft_banner_message)).assertIsDisplayed()
         }
     }
 
