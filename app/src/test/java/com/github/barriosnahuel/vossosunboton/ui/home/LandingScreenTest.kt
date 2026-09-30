@@ -252,10 +252,10 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         viewModel.injectSounds(emptyList())
         composeTestRule.waitForIdle()
 
-        // Welcome-empty state owns the single imperative: the inline "Import" CTA, not the FAB
-        // (design "estado vacío": fab=null + CTA Importar).
+        // Welcome-empty state owns the single imperative: the inline "Add a Bomp" CTA, not the FAB
+        // (design "estado vacío": fab=null + inline CTA).
         composeTestRule.onNodeWithContentDescription("Add a Bomp").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Import").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Add a Bomp").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -269,7 +269,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithContentDescription("Add a Bomp").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Import").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Add a Bomp").assertDoesNotExist()
     }
 
     @Test
@@ -280,7 +280,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
         viewModel.injectSounds(emptyList())
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Import").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Add a Bomp").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         // Same destination the FAB carries (design: "mismo sheet desde el CTA del estado vacío").

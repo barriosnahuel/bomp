@@ -97,7 +97,8 @@ internal class CreationFlowBackNavigationTest : AbstractUiTest() {
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithContentDescription(fabLabel()).performClick()
-            composeRule.awaitNodeWithText(string(R.string.app_hub_import)).performClick()
+            composeRule.awaitNodeWithText(string(R.string.app_hub_bring)).performClick()
+            composeRule.awaitNodeWithText(string(R.string.app_hub_files_cta)).performClick()
             composeRule.awaitNodeWithText(createTitle()).assertIsDisplayed()
             composeRule.waitForIdle()
 
@@ -109,8 +110,8 @@ internal class CreationFlowBackNavigationTest : AbstractUiTest() {
             Espresso.pressBack()
             composeRule.waitForIdle()
 
-            // Nothing sits under the naming destination on the import path (the Hub sheet closed when the
-            // picker launched), so back returns the user to the list they started from.
+            // Nothing sits under the naming destination on the import path (the Hub closed when the guide
+            // opened, and the picked audio replaced the guide), so back returns the user to their list.
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
                 composeRule.onAllNodesWithText(createTitle()).fetchSemanticsNodes().isEmpty()
             }

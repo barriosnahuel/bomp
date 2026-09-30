@@ -5,9 +5,15 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### Changed
+- Adding a Bomp now offers two paths instead of three: record one, or bring in an audio you already have — the second shows you how to share a voice note from WhatsApp or Telegram into Bomp, and keeps "Look on your phone" at the bottom for files in Downloads, music, recordings or Drive
+- If the file browser comes back empty, Bomp now tells you that voice notes come in by sharing them, instead of saying nothing
+- The empty My Bomps button now reads "Add a Bomp" instead of "Import"
+
 ### For nerds 🤓
 
 #### Changed
+- `import_hub_import_selected` is no longer emitted now that its Hub row is gone, and `import_hub_bring_selected` covers both ways of bringing an existing audio (the share guide and the file browser at its foot)
 - Bumped all dependencies to latest stable
 - ADR 0029 makes the release cut roll the milestone — create the next, move PRs still in flight onto it, then close the old — so there is always exactly one open milestone for a PR to take; the rule used to pick "the current month's", which kept naming the release that had already shipped
 

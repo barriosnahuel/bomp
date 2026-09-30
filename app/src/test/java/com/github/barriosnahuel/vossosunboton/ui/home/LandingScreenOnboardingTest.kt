@@ -90,8 +90,9 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
 
         // The guide reuses the IMPORT step content but reports its own BRING_GUIDE screen_view (kept
-        // distinct from the onboarding tour); its entry is the import_hub_bring_selected event.
-        composeTestRule.onNodeWithText(STEP1_TITLE).assertIsDisplayed()
+        // distinct from the onboarding tour); its entry is the import_hub_bring_selected event. The lesson
+        // scrolls above the pinned action bar in Robolectric's short default window.
+        composeTestRule.onNodeWithText(STEP1_TITLE).performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText(GUIDE_CTA).assertIsDisplayed()
         fake.assertScreenView(CanonicalScreenName.BRING_GUIDE)
         fake.assertEmitted("import_hub_bring_selected")
@@ -293,7 +294,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         const val HUB_TITLE = "How do you add one?"
         const val OVERFLOW_LABEL = "More options"
         const val SECONDARY_LABEL = "See how it works"
-        const val BRING_LABEL = "Bring audios from other apps"
+        const val BRING_LABEL = "Bring in an audio you already have"
         const val GUIDE_CTA = "Got it"
         const val STEP1_TITLE = "Bring in the voices you already have."
         const val STEP2_TITLE = "Keep them your way."

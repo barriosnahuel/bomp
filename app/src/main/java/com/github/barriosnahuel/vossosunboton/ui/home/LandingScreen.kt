@@ -159,18 +159,43 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         viewModel.deepLinkEvent.collect { tab -> navigator.switchToTabRoot(tab) }
     }
 
-    // System file picker for the Hub's "import audio" path. OpenDocument(arrayOf("audio/*")) opens the
-    // full SAF browser filtered to audio (non-audio files are not selectable) — better at surfacing
+    // A null picker result while the guide is up raises this flag; the guide shows the "wasn't it there?"
+    // notice while it is set. Saveable so a recreate mid-notice brings it back instead of dropping it.
+    var importEmptyNoticePending by rememberSaveable { mutableStateOf(false) }
+
+    // True between a picker launch and its result, so a rapid double tap on the guide's footer can't stack
+    // two system pickers (whose second result would land after the first one already closed the guide).
+    var importPickerInFlight by remember { mutableStateOf(false) }
+
+    // System file picker behind the bring guide's "look on your phone" footer. OpenDocument(arrayOf("audio/*"))
+    // opens the full SAF browser filtered to audio (non-audio files are not selectable) — better at surfacing
     // on-device audio across OEMs than GetContent's "Recent" view. We copy the audio at save time, so we
-    // never take persistable permission; cancel returns null → no-op, no message. The picked URI goes
-    // straight to the naming destination and through the same inbound validator as the share sheet — the
-    // read grant now lives on this Activity, which hosts the destination, so nothing has to forward it.
+    // never take persistable permission. The picked URI goes straight to the naming destination and through
+    // the same inbound validator as the share sheet — the read grant lives on this Activity, which hosts the
+    // destination, so nothing has to forward it. A null result (cancel, or nothing there) raises the notice
+    // on the guide: the system cannot tell those two apart, so the copy never claims which one happened.
     // (App-private media like WhatsApp voice notes is not browsable by any SAF picker on Android 11+;
     // that content arrives via the share sheet instead.)
     val importPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            uri?.let { navigator.navigate(NameSoundRoute(source = AddSoundSource.IMPORT, uri = it.toString())) }
+            importPickerInFlight = false
+            if (uri != null) {
+                // The picked audio replaces the guide (close then navigate), so back and save from naming both
+                // return to the tab the user started from rather than to the guide.
+                navigator.close(BringFromAppsRoute)
+                navigator.navigate(NameSoundRoute(source = AddSoundSource.IMPORT, uri = uri.toString()))
+            } else if (navigator.isVisible(BringFromAppsRoute)) {
+                importEmptyNoticePending = true
+            }
         }
+
+    // Leaving the guide by any path (CTA, back gesture, a tab reset) drops a pending notice, so it never
+    // resurfaces stale on a later visit.
+    LaunchedEffect(navState) {
+        snapshotFlow { navState.visibleRoute is BringFromAppsRoute }
+            .distinctUntilChanged()
+            .collect { onGuide -> if (!onGuide) importEmptyNoticePending = false }
+    }
 
     // Single import-Hub entry point: logs the funnel's ENTRY with the [source] surface, then opens.
     // The isVisible guard makes the open idempotent so a rapid double-tap on a trigger can't
@@ -324,6 +349,15 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                     entry<BringFromAppsRoute> {
                         com.github.barriosnahuel.vossosunboton.feature.onboarding.BringFromAppsGuide(
                             onClose = { navigator.close(BringFromAppsRoute) },
+                            // The guide stays on the stack under the picker, so its result lands back here.
+                            onBrowseFiles = {
+                                if (!importPickerInFlight) {
+                                    importPickerInFlight = true
+                                    importPicker.launch(arrayOf("audio/*"))
+                                }
+                            },
+                            showEmptyResultNotice = importEmptyNoticePending,
+                            onEmptyResultNoticeShown = { importEmptyNoticePending = false },
                         )
                     }
                     entry<RecorderRoute> { key ->
@@ -361,13 +395,6 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                         ImportHubSheet(
                             // Guard on visibility so a double-tap on a row (both taps land before the pop
                             // recomposes the sheet away) fires its action once, not twice.
-                            onImport = {
-                                if (navigator.isVisible(ImportHubRoute)) {
-                                    tracker.log(AnalyticsEvent.ImportHubImportSelected)
-                                    navigator.close(ImportHubRoute)
-                                    importPicker.launch(arrayOf("audio/*"))
-                                }
-                            },
                             onRecord = {
                                 if (navigator.isVisible(ImportHubRoute)) {
                                     tracker.log(AnalyticsEvent.ImportHubRecordSelected)

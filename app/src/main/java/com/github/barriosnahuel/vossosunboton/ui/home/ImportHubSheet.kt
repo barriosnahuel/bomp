@@ -44,19 +44,19 @@ private val HUB_TILE_RADIUS = 12.dp
 /**
  * The import Hub's sheet content — rendered inside the modal bottom sheet that the Nav3
  * `BottomSheetSceneStrategy` provides for `ImportHubRoute` (swipe/scrim/back dismissal pop the
- * route; ADR 0024). Rows are ordered by likely intent for a returning user: "record" a new Bomp
- * in-app ([onRecord], ADR 0019, the acid-primary row), "bring audios from other apps"
- * ([onBringFromApps]) that opens a focused single-step guide on sharing a voice note in from
- * WhatsApp/Telegram, and "import audio from your device" ([onImport]) for a file already saved on
- * the phone (the least-frequent path on Android 11+, where app-private media is not SAF-browsable).
- * The full 3-step onboarding tour is reachable from the empty state, not from here.
+ * route; ADR 0024). Two rows: "record" a new Bomp in-app ([onRecord], ADR 0019, the acid-primary
+ * row), and "bring in an audio you already have" ([onBringFromApps]), the single entry for any audio
+ * that already exists. It opens the guide on sharing a voice note in from WhatsApp/Telegram, whose
+ * footer keeps the system file browser for what SAF can reach. There is deliberately no file-browser
+ * row here: on Android 11+ app-private media is not SAF-browsable, so a separate row asked the user
+ * to pick between two paths they cannot tell apart. The full 3-step onboarding tour is reachable
+ * from the empty state, not from here.
  *
- * Presentational only: the caller pops the route on [onImport]/[onRecord]/[onBringFromApps] and
- * owns the file picker, the recorder Activity, and the guide destination.
+ * Presentational only: the caller pops the route on [onRecord]/[onBringFromApps] and owns the
+ * recorder and guide destinations.
  */
 @Composable
 internal fun ImportHubSheet(
-    onImport: () -> Unit,
     onRecord: () -> Unit,
     onBringFromApps: () -> Unit,
 ) {
@@ -97,14 +97,6 @@ internal fun ImportHubSheet(
             tileColor = MaterialTheme.colorScheme.surfaceVariant,
             iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onClick = onBringFromApps,
-        )
-        HubRow(
-            iconPainter = painterResource(R.drawable.app_ic_add),
-            title = stringResource(R.string.app_hub_import),
-            subtitle = stringResource(R.string.app_hub_import_sub),
-            tileColor = MaterialTheme.colorScheme.surfaceVariant,
-            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            onClick = onImport,
         )
     }
 }

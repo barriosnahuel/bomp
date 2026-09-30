@@ -105,7 +105,7 @@
     <!-- My Sounds empty state (welcome consumed, no custom sounds yet) -->
     <string name="app_my_sounds_empty_headline">This is where the voices live.</string>
     <string name="app_my_sounds_empty_body">A laugh, a "happy birthday", an "on my way" from someone who matters. Share any voice note from WhatsApp, Telegram, or wherever — it\'ll wait right here, ready when you are.</string>
-    <string name="app_my_sounds_empty_cta">Import</string>
+    <string name="app_my_sounds_empty_cta">Add a Bomp</string>
     <string name="app_my_sounds_empty_secondary">See how it works</string>
 
     <!-- Welcome sticker (Sticker Cero, fresh-install variant) -->
@@ -240,11 +240,12 @@
     <string name="app_hub_subtitle">A voice gets saved and stays close, ready whenever you want to hear it.</string>
     <string name="app_hub_record">Record a Bomp</string>
     <string name="app_hub_record_sub">Your voice, a moment you don\'t want to lose.</string>
-    <string name="app_hub_bring">Bring audios from other apps</string>
+    <string name="app_hub_bring">Bring in an audio you already have</string>
     <string name="app_hub_bring_sub">From WhatsApp, Telegram, wherever — we\'ll show you how.</string>
-    <string name="app_hub_import">Import audio from your device</string>
-    <string name="app_hub_import_sub">An audio you already have saved on your phone.</string>
     <string name="app_hub_bring_guide_cta">Got it</string>
+    <string name="app_hub_files_cta">Look on your phone</string>
+    <string name="app_hub_files_scope">Downloads, music, recordings or Drive.</string>
+    <string name="app_import_empty_message">Wasn\'t it there? Voice notes come in by sharing them to Bomp.</string>
 
     <!-- In-app recorder (ADR 0019) -->
     <string name="app_recorder_ready_hint">Tap to record</string>

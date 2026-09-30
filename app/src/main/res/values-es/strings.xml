@@ -99,7 +99,7 @@
     <!-- Mis audios — empty state (welcome consumido, sin Bomps propios todavía) -->
     <string name="app_my_sounds_empty_headline">Acá viven las voces que te importan.</string>
     <string name="app_my_sounds_empty_body">Una risa, un \"feliz cumple\", el \"estoy llegando\" del que querés. Compartí cualquier audio desde WhatsApp, Telegram o donde sea — se queda guardado y lo escuchás cuando quieras.</string>
-    <string name="app_my_sounds_empty_cta">Importar</string>
+    <string name="app_my_sounds_empty_cta">Sumar un Bomp</string>
     <string name="app_my_sounds_empty_secondary">Ver cómo funciona</string>
 
     <!-- Sticker Cero (variante de bienvenida, fresh install) -->
@@ -234,11 +234,12 @@
     <string name="app_hub_subtitle">Una voz se guarda y la tenés cerca, para escucharla cuando quieras.</string>
     <string name="app_hub_record">Grabar un Bomp</string>
     <string name="app_hub_record_sub">Tu voz, un momento que no querés perder.</string>
-    <string name="app_hub_bring">Traé audios de otras apps</string>
+    <string name="app_hub_bring">Traé un audio que ya tenés</string>
     <string name="app_hub_bring_sub">De WhatsApp, Telegram, donde sea — te mostramos cómo.</string>
-    <string name="app_hub_import">Importar audio del dispositivo</string>
-    <string name="app_hub_import_sub">Un audio que ya tengas guardado en el teléfono.</string>
     <string name="app_hub_bring_guide_cta">Listo</string>
+    <string name="app_hub_files_cta">Buscar en el teléfono</string>
+    <string name="app_hub_files_scope">Descargas, música, grabaciones o Drive.</string>
+    <string name="app_import_empty_message">¿No estaba ahí? Las notas de voz se traen compartiéndolas a Bomp.</string>
 
     <!-- Grabador in-app (ADR 0019) -->
     <string name="app_recorder_ready_hint">Tocá para grabar</string>
