@@ -9,14 +9,21 @@ import android.content.Context
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
@@ -112,7 +119,7 @@ internal class BringFromAppsGuideTest : AbstractRobolectricTest() {
 
     @Test
     fun `the empty-result notice shows its message without an action`() {
-        setGuide(showEmptyResultNotice = true)
+        setGuide(emptyResultNoticeId = 1)
 
         composeTestRule.onNodeWithText(EMPTY_RESULT_MESSAGE).assertIsDisplayed()
         // Only the bar's two actions are clickable: the snackbar adds no "see how" loop back to this screen.
@@ -120,30 +127,80 @@ internal class BringFromAppsGuideTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `the notice reports itself shown once it leaves the screen`() {
-        var shown = 0
-        setGuide(showEmptyResultNotice = true, onEmptyResultNoticeShown = { shown++ })
+    fun `the notice reports its id once it leaves the screen`() {
+        val shownIds = mutableListOf<Int>()
+        setGuide(emptyResultNoticeId = 1, onEmptyResultNoticeShown = { shownIds += it })
         composeTestRule.onNodeWithText(EMPTY_RESULT_MESSAGE).assertIsDisplayed()
 
         composeTestRule.mainClock.advanceTimeBy(NOTICE_OUTLIVED_MS)
         composeTestRule.waitForIdle()
 
-        assertThat(shown).isEqualTo(1)
+        assertThat(shownIds).containsExactly(1)
         composeTestRule.onAllNodesWithText(EMPTY_RESULT_MESSAGE).assertCountEquals(0)
+    }
+
+    @Test
+    fun `a new empty result restarts a notice still on screen`() {
+        val shownIds = mutableListOf<Int>()
+        var noticeId by mutableIntStateOf(1)
+        composeTestRule.setContent {
+            AppTheme {
+                BringFromAppsGuide(
+                    onClose = {},
+                    onBrowseFiles = {},
+                    emptyResultNoticeId = noticeId,
+                    onEmptyResultNoticeShown = { shownIds += it },
+                )
+            }
+        }
+        composeTestRule.mainClock.advanceTimeBy(HALF_A_NOTICE_MS)
+
+        noticeId = 2
+        // A write from the test thread reaches composition only once the global snapshot is applied.
+        Snapshot.sendApplyNotifications()
+        composeTestRule.mainClock.advanceTimeBy(HALF_A_NOTICE_MS + 2_000L)
+
+        // Past the first notice's own 10 s, the second one is still up: it got a fresh timer, not the leftovers.
+        composeTestRule.onNodeWithText(EMPTY_RESULT_MESSAGE).assertIsDisplayed()
+        composeTestRule.mainClock.advanceTimeBy(NOTICE_OUTLIVED_MS)
+        composeTestRule.waitForIdle()
+        assertThat(shownIds).containsExactly(2)
+    }
+
+    @Test
+    @Config(qualifiers = "w640dp-h300dp-land")
+    fun `in a very short window the notice leaves room to scroll the footer out from under it`() {
+        setGuide(emptyResultNoticeId = 1)
+
+        composeTestRule.onNodeWithText("Look on your phone").performScrollTo()
+        composeTestRule.onRoot().performTouchInput { swipeUp() }
+        composeTestRule.waitForIdle()
+
+        val footerBottom =
+            composeTestRule
+                .onNodeWithText("Look on your phone")
+                .fetchSemanticsNode()
+                .boundsInRoot.bottom
+        val noticeTop =
+            composeTestRule
+                .onNodeWithText(EMPTY_RESULT_MESSAGE)
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        assertThat(footerBottom).isAtMost(noticeTop)
     }
 
     private fun setGuide(
         onClose: () -> Unit = {},
         onBrowseFiles: () -> Unit = {},
-        showEmptyResultNotice: Boolean = false,
-        onEmptyResultNoticeShown: () -> Unit = {},
+        emptyResultNoticeId: Int = 0,
+        onEmptyResultNoticeShown: (Int) -> Unit = {},
     ) {
         composeTestRule.setContent {
             AppTheme {
                 BringFromAppsGuide(
                     onClose = onClose,
                     onBrowseFiles = onBrowseFiles,
-                    showEmptyResultNotice = showEmptyResultNotice,
+                    emptyResultNoticeId = emptyResultNoticeId,
                     onEmptyResultNoticeShown = onEmptyResultNoticeShown,
                 )
             }
@@ -156,5 +213,6 @@ internal class BringFromAppsGuideTest : AbstractRobolectricTest() {
 
         // Past SnackbarDuration.Long (10 s) plus its exit animation.
         const val NOTICE_OUTLIVED_MS = 12_000L
+        const val HALF_A_NOTICE_MS = 5_000L
     }
 }

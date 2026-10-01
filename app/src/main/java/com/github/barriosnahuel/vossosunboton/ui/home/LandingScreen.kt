@@ -6,6 +6,7 @@
 @file:Suppress("TooManyFunctions")
 
 package com.github.barriosnahuel.vossosunboton.ui.home
+import android.content.ActivityNotFoundException
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
@@ -75,6 +77,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsSource
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddSoundSource
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.NameSoundDestination
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
@@ -159,9 +162,11 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         viewModel.deepLinkEvent.collect { tab -> navigator.switchToTabRoot(tab) }
     }
 
-    // A null picker result while the guide is up raises this flag; the guide shows the "wasn't it there?"
-    // notice while it is set. Saveable so a recreate mid-notice brings it back instead of dropping it.
-    var importEmptyNoticePending by rememberSaveable { mutableStateOf(false) }
+    // Each null picker result while the guide is up bumps this id (0 = no notice); the guide shows the
+    // "wasn't it there?" notice per id, so a second empty result restarts it instead of being swallowed.
+    // Plain remember, not saveable: rotation doesn't recreate this Activity (configChanges), and after a
+    // process death the notice has already expired — replaying it would be stale.
+    var importEmptyNoticeId by remember { mutableIntStateOf(0) }
 
     // True between a picker launch and its result, so a rapid double tap on the guide's footer can't stack
     // two system pickers (whose second result would land after the first one already closed the guide).
@@ -185,16 +190,32 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                 navigator.close(BringFromAppsRoute)
                 navigator.navigate(NameSoundRoute(source = AddSoundSource.IMPORT, uri = uri.toString()))
             } else if (navigator.isVisible(BringFromAppsRoute)) {
-                importEmptyNoticePending = true
+                importEmptyNoticeId++
             }
         }
+
+    // Launches the picker from the guide. Guarded on visibility (the popped guide still takes taps during its
+    // exit crossfade) and on an in-flight launch. A device with no SAF handler (hidden DocumentsUI, managed
+    // builds) throws instead of opening anything: report it and point at the share path, which still works.
+    val launchImportPicker = {
+        if (!importPickerInFlight && navigator.isVisible(BringFromAppsRoute)) {
+            importPickerInFlight = true
+            try {
+                importPicker.launch(arrayOf("audio/*"))
+            } catch (e: ActivityNotFoundException) {
+                importPickerInFlight = false
+                Tracker.track(RuntimeException("Could not launch the system audio picker", e))
+                importEmptyNoticeId++
+            }
+        }
+    }
 
     // Leaving the guide by any path (CTA, back gesture, a tab reset) drops a pending notice, so it never
     // resurfaces stale on a later visit.
     LaunchedEffect(navState) {
         snapshotFlow { navState.visibleRoute is BringFromAppsRoute }
             .distinctUntilChanged()
-            .collect { onGuide -> if (!onGuide) importEmptyNoticePending = false }
+            .collect { onGuide -> if (!onGuide) importEmptyNoticeId = 0 }
     }
 
     // Single import-Hub entry point: logs the funnel's ENTRY with the [source] surface, then opens.
@@ -350,14 +371,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                         com.github.barriosnahuel.vossosunboton.feature.onboarding.BringFromAppsGuide(
                             onClose = { navigator.close(BringFromAppsRoute) },
                             // The guide stays on the stack under the picker, so its result lands back here.
-                            onBrowseFiles = {
-                                if (!importPickerInFlight) {
-                                    importPickerInFlight = true
-                                    importPicker.launch(arrayOf("audio/*"))
-                                }
-                            },
-                            showEmptyResultNotice = importEmptyNoticePending,
-                            onEmptyResultNoticeShown = { importEmptyNoticePending = false },
+                            onBrowseFiles = launchImportPicker,
+                            emptyResultNoticeId = importEmptyNoticeId,
+                            // Clear only the notice that finished: a newer empty result keeps its own id.
+                            onEmptyResultNoticeShown = { shownId -> if (importEmptyNoticeId == shownId) importEmptyNoticeId = 0 },
                         )
                     }
                     entry<RecorderRoute> { key ->

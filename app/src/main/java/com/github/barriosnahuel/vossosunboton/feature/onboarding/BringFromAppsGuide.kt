@@ -10,21 +10,24 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -52,6 +55,9 @@ private val GUIDE_MIN_FLEX_HEIGHT = 420.dp
 // Below this window height the action bar scrolls with the lesson instead of staying pinned.
 private val GUIDE_MIN_PINNED_BAR_HEIGHT = 360.dp
 
+// A two-line M3 snackbar (68 dp) plus its 12 dp outer padding.
+private val SNACKBAR_CLEARANCE = 80.dp
+
 /**
  * Focused single-step guide reached from the Hub's "bring in an audio you already have" row. Reuses the
  * onboarding IMPORT step's content ([ONBOARDING_IMPORT_STEP]) and shared chrome ([DemoStage],
@@ -62,20 +68,21 @@ private val GUIDE_MIN_PINNED_BAR_HEIGHT = 360.dp
  * The bottom bar pins the CTA plus a secondary "look on your phone" action ([onBrowseFiles]) that opens
  * the system file browser, with its reach spelled out (downloads, music, recordings, Drive). The bar is
  * the Scaffold's `bottomBar`, so the snackbar host sits above it and never covers either action — except
- * in a very short window, where the bar scrolls inline with the lesson instead.
+ * in a very short window, where the bar scrolls inline and the column grows a clearance below it while
+ * the notice is up, so the actions can be scrolled out from under the snackbar.
  *
  * Stateless: [onClose] is owned by the host (`LandingScreen`), which also emits the BRING_GUIDE
- * screen_view and owns the picker. While [showEmptyResultNotice] is true the guide shows the
- * "wasn't it there?" snackbar — no action, since the user is already on the screen that explains the
- * share path — and calls [onEmptyResultNoticeShown] once it leaves the screen. Back closes the guide,
- * returning the user where they were.
+ * screen_view and owns the picker. Each non-zero [emptyResultNoticeId] shows the "wasn't it there?"
+ * snackbar once — no action, since the user is already on the screen that explains the share path — and
+ * reports that id to [onEmptyResultNoticeShown] once it leaves the screen; a new id replaces a notice still
+ * showing. Back closes the guide, returning the user where they were.
  */
 @Composable
 internal fun BringFromAppsGuide(
     onClose: () -> Unit,
     onBrowseFiles: () -> Unit,
-    showEmptyResultNotice: Boolean = false,
-    onEmptyResultNoticeShown: () -> Unit = {},
+    emptyResultNoticeId: Int = 0,
+    onEmptyResultNoticeShown: (Int) -> Unit = {},
 ) {
     val reduceMotion = rememberReduceMotionEnabled()
     val step = ONBOARDING_IMPORT_STEP
@@ -83,12 +90,12 @@ internal fun BringFromAppsGuide(
     val emptyResultMessage = stringResource(R.string.app_import_empty_message)
     val currentOnNoticeShown by rememberUpdatedState(onEmptyResultNoticeShown)
 
-    // Keyed on the flag, not on a one-shot event: a recreate while the snackbar is up restarts this
-    // effect with the flag still set (the host saves it), so the notice comes back instead of vanishing.
-    LaunchedEffect(showEmptyResultNotice) {
-        if (showEmptyResultNotice) {
+    // Keyed on the id, so a second empty result restarts the notice (cancelling showSnackbar dismisses the
+    // one on screen) instead of writing the same value over itself and being swallowed.
+    LaunchedEffect(emptyResultNoticeId) {
+        if (emptyResultNoticeId != 0) {
             snackbarHostState.showSnackbar(message = emptyResultMessage, duration = SnackbarDuration.Long)
-            currentOnNoticeShown()
+            currentOnNoticeShown(emptyResultNoticeId)
         }
     }
 
@@ -100,7 +107,7 @@ internal fun BringFromAppsGuide(
             containerColor = MaterialTheme.colorScheme.surface,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
-                if (pinBar) GuideActionBar(onClose = onClose, onBrowseFiles = onBrowseFiles, padForNavigationBar = true)
+                if (pinBar) GuideActionBar(onClose = onClose, onBrowseFiles = onBrowseFiles, padForInsets = true)
             },
         ) { innerPadding ->
             // Same cramped-window handling as OnboardingTour, plus a height floor: the pinned action bar takes
@@ -135,7 +142,12 @@ internal fun BringFromAppsGuide(
                         Spacer(Modifier.height(Spacing.LG))
                         OnboardingStepHeadline(content = step, leadingNumber = null)
                     }
-                    if (!pinBar) GuideActionBar(onClose = onClose, onBrowseFiles = onBrowseFiles, padForNavigationBar = false)
+                    if (!pinBar) {
+                        GuideActionBar(onClose = onClose, onBrowseFiles = onBrowseFiles, padForInsets = false)
+                        // Scaffold floats the snackbar over the content without padding it, so the inline bar
+                        // would sit under the notice at max scroll; this clearance lets it scroll free.
+                        if (snackbarHostState.currentSnackbarData != null) Spacer(Modifier.height(SNACKBAR_CLEARANCE))
+                    }
                 }
             }
         }
@@ -145,17 +157,19 @@ internal fun BringFromAppsGuide(
 /**
  * The guide's action bar: the terminal CTA, then a divider and the Text-tier (ADR 0010) file-browser
  * action. A `surface` container + top divider frames it as a zone of action over the content, as in
- * `VaultUnlockCta`. Pinned as the Scaffold `bottomBar` it gets no insets, so [padForNavigationBar] makes
- * it pad for the navigation bar itself; scrolled inline, the content padding already covers it.
+ * `VaultUnlockCta`. Pinned as the Scaffold `bottomBar` it gets no insets, so [padForInsets] pads it for the
+ * same side + bottom insets the content gets (system bars and display cutout), keeping it aligned with the
+ * lesson in landscape; scrolled inline, the content padding already covers it.
  */
 @Composable
 private fun GuideActionBar(
     onClose: () -> Unit,
     onBrowseFiles: () -> Unit,
-    padForNavigationBar: Boolean,
+    padForInsets: Boolean,
 ) {
+    val insets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
     Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
-        Column(modifier = Modifier.fillMaxWidth().then(if (padForNavigationBar) Modifier.navigationBarsPadding() else Modifier)) {
+        Column(modifier = Modifier.fillMaxWidth().then(if (padForInsets) Modifier.windowInsetsPadding(insets) else Modifier)) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.XL, vertical = Spacing.MD),
