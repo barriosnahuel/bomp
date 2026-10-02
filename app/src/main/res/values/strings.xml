@@ -243,9 +243,10 @@
     <string name="app_hub_bring">Bring in an audio you already have</string>
     <string name="app_hub_bring_sub">From WhatsApp, Telegram, wherever — we\'ll show you how.</string>
     <string name="app_hub_bring_guide_cta">Got it</string>
-    <string name="app_hub_files_cta">Look on your phone</string>
+    <string name="app_hub_files_question">Already have it downloaded?</string>
+    <string name="app_hub_files_cta">Find it on your phone</string>
     <string name="app_hub_files_scope">Downloads, music, recordings or Drive.</string>
-    <string name="app_import_empty_message">Wasn\'t it there? Voice notes come in by sharing them to Bomp.</string>
+    <string name="app_import_empty_message">Wasn\'t it there? In WhatsApp, press and hold the note, tap Share and pick Bomp.</string>
 
     <!-- In-app recorder (ADR 0019) -->
     <string name="app_recorder_ready_hint">Tap to record</string>

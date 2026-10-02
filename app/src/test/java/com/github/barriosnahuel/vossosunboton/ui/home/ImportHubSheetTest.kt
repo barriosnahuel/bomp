@@ -57,7 +57,7 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
         setHub()
 
         composeTestRule.onAllNodesWithText("Import audio from your device").assertCountEquals(0)
-        composeTestRule.onAllNodesWithText("Look on your phone").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Find it on your phone").assertCountEquals(0)
     }
 
     @Test

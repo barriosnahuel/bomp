@@ -76,16 +76,33 @@ internal class BringFromAppsGuideTest : AbstractRobolectricTest() {
     fun `footer names the file browser and what it can reach`() {
         setGuide()
 
-        composeTestRule.onNodeWithText("Look on your phone").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Find it on your phone").assertIsDisplayed()
         composeTestRule.onNodeWithText("Downloads, music, recordings or Drive.").assertIsDisplayed()
     }
 
     @Test
-    fun `tapping Look on your phone invokes onBrowseFiles`() {
+    fun `the file browser is framed as an alternative, behind a question above it`() {
+        setGuide()
+
+        val questionBottom =
+            composeTestRule
+                .onNodeWithText("Already have it downloaded?")
+                .fetchSemanticsNode()
+                .boundsInRoot.bottom
+        val actionTop =
+            composeTestRule
+                .onNodeWithText("Find it on your phone")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        assertThat(questionBottom).isAtMost(actionTop)
+    }
+
+    @Test
+    fun `tapping Find it on your phone invokes onBrowseFiles`() {
         var browsed = 0
         setGuide(onBrowseFiles = { browsed++ })
 
-        composeTestRule.onNodeWithText("Look on your phone").performClick()
+        composeTestRule.onNodeWithText("Find it on your phone").performClick()
         composeTestRule.waitForIdle()
 
         assertThat(browsed).isEqualTo(1)
@@ -97,7 +114,7 @@ internal class BringFromAppsGuideTest : AbstractRobolectricTest() {
         setGuide()
 
         composeTestRule.onNodeWithText("Got it").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Look on your phone").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Find it on your phone").assertIsDisplayed()
     }
 
     @Test
@@ -107,7 +124,7 @@ internal class BringFromAppsGuideTest : AbstractRobolectricTest() {
 
         // performScrollTo needs a scrollable ancestor, so it would throw if the bar were still pinned.
         composeTestRule.onNodeWithText("Got it").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText("Look on your phone").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Find it on your phone").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -172,13 +189,13 @@ internal class BringFromAppsGuideTest : AbstractRobolectricTest() {
     fun `in a very short window the notice leaves room to scroll the footer out from under it`() {
         setGuide(emptyResultNoticeId = 1)
 
-        composeTestRule.onNodeWithText("Look on your phone").performScrollTo()
+        composeTestRule.onNodeWithText("Find it on your phone").performScrollTo()
         composeTestRule.onRoot().performTouchInput { swipeUp() }
         composeTestRule.waitForIdle()
 
         val footerBottom =
             composeTestRule
-                .onNodeWithText("Look on your phone")
+                .onNodeWithText("Find it on your phone")
                 .fetchSemanticsNode()
                 .boundsInRoot.bottom
         val noticeTop =
@@ -209,7 +226,7 @@ internal class BringFromAppsGuideTest : AbstractRobolectricTest() {
     }
 
     private companion object {
-        const val EMPTY_RESULT_MESSAGE = "Wasn't it there? Voice notes come in by sharing them to Bomp."
+        const val EMPTY_RESULT_MESSAGE = "Wasn't it there? In WhatsApp, press and hold the note, tap Share and pick Bomp."
 
         // Past SnackbarDuration.Long (10 s) plus its exit animation.
         const val NOTICE_OUTLIVED_MS = 12_000L

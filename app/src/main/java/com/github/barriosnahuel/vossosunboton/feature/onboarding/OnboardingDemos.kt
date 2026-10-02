@@ -387,15 +387,18 @@ private fun ForeignAppZone(
     }
 }
 
-/** The travel cue between the zones: a down chevron + a soft "share" word in the acid voice. */
+/**
+ * The travel cue between the zones: a down chevron + the "share" word in the acid voice. It names the one
+ * gesture the user has to find in the other app, so it reads as the lesson's keyword, not a margin note.
+ */
 @Composable
 private fun ShareCue() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.XS)) {
-        FlowChevron(rotationDegrees = 90f, modifier = Modifier.size(22.dp))
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.SM)) {
+        FlowChevron(rotationDegrees = 90f, modifier = Modifier.size(32.dp))
         Text(
             text = stringResource(R.string.app_onboarding_demo_share_cue),
-            style = MaterialTheme.typography.titleMedium,
-            fontStyle = FontStyle.Italic,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
         )
     }

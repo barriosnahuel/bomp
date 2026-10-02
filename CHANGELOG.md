@@ -6,8 +6,8 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 ## \[unreleased]
 
 ### Changed
-- Adding a Bomp now offers two paths instead of three: record one, or bring in an audio you already have — the second shows you how to share a voice note from WhatsApp or Telegram into Bomp, and keeps "Look on your phone" at the bottom for files in Downloads, music, recordings or Drive
-- If the file browser comes back empty, Bomp now tells you that voice notes come in by sharing them, instead of saying nothing
+- Adding a Bomp now offers two paths instead of three: record one, or bring in an audio you already have — the second shows you how to share a voice note from WhatsApp or Telegram into Bomp, and, for an audio you already downloaded, keeps "Find it on your phone" at the bottom for Downloads, music, recordings or Drive
+- If the file browser comes back empty, Bomp now tells you how to share the voice note from WhatsApp instead of saying nothing
 - The empty My Bomps button now reads "Add a Bomp" instead of "Import"
 
 ### For nerds 🤓

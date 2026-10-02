@@ -101,7 +101,7 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `Look on your phone launches the system picker filtered to audio`() {
+    fun `Find it on your phone launches the system picker filtered to audio`() {
         givenLanding()
         openGuide()
 
@@ -115,7 +115,7 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `double-tapping Look on your phone launches a single picker until it answers`() {
+    fun `double-tapping Find it on your phone launches a single picker until it answers`() {
         givenLanding()
         openGuide()
         picker.answerImmediately = false
@@ -376,8 +376,8 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         const val FAB_DESCRIPTION = "Add a Bomp"
         const val BRING_ROW = "Bring in an audio you already have"
         const val GUIDE_CTA = "Got it"
-        const val FILES_CTA = "Look on your phone"
-        const val EMPTY_RESULT_MESSAGE = "Wasn't it there? Voice notes come in by sharing them to Bomp."
+        const val FILES_CTA = "Find it on your phone"
+        const val EMPTY_RESULT_MESSAGE = "Wasn't it there? In WhatsApp, press and hold the note, tap Share and pick Bomp."
         const val HALF_A_NOTICE_MS = 5_000L
     }
 }
