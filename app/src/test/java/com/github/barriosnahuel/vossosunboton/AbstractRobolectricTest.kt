@@ -5,7 +5,10 @@
  */
 package com.github.barriosnahuel.vossosunboton
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import io.mockk.every
 import io.mockk.mockkObject
@@ -14,6 +17,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 /**
@@ -45,6 +49,19 @@ internal abstract class AbstractRobolectricTest {
         mockkObject(Tracker)
         every { Tracker.track(any()) } answers { nothing }
         every { Tracker.log(any()) } answers { nothing }
+    }
+
+    /**
+     * Robolectric reports every system feature as absent unless declared, which would make each test
+     * run as a mic-less device (Hub skipped, recorder gated off). Declare the microphone like any phone
+     * has one; a test of the mic-less path flips it back with `setSystemFeature(FEATURE_MICROPHONE, false)`.
+     * Runs as a `@Before`, so a test that launches its Activity from a Rule composes before it and sees no mic.
+     */
+    @Before
+    fun declareMicrophonePresent() {
+        Shadows
+            .shadowOf(ApplicationProvider.getApplicationContext<Context>().packageManager)
+            .setSystemFeature(PackageManager.FEATURE_MICROPHONE, true)
     }
 
     @After

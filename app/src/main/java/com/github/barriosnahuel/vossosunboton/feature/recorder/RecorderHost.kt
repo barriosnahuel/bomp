@@ -6,6 +6,7 @@
 package com.github.barriosnahuel.vossosunboton.feature.recorder
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -38,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsEvent
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.seekTargetMs
@@ -97,6 +99,11 @@ internal fun RecorderHost(
 
     val snackbarHostState = remember { SnackbarHostState() }
     var granted by remember { mutableStateOf(hasMicPermission(context)) }
+    // Hardware, not the grant: a mic-less device can still reach a restored draft's review, which only
+    // plays back, but nothing that captures (ADR 0019 § Microphone-less devices).
+    val micAvailable = remember(context) { context.hasMicrophone() }
+    // Without a file browser the import escape would lead nowhere, so it isn't offered at all.
+    val canImport = remember(context) { context.canBrowseFiles(AUDIO_MIME) }
     // Saveable: durable progress (the denied/settings screen, an open discard dialog) must survive an
     // Activity recreate — locale/theme switch, system kill (CLAUDE.md § Stateful Composables).
     var permanentlyDenied by rememberSaveable { mutableStateOf(false) }
@@ -117,6 +124,7 @@ internal fun RecorderHost(
         }
 
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val entering by viewModel.entering.collectAsStateWithLifecycle()
     val playback by PlayerControllerFactory.instance.playbackState.collectAsStateWithLifecycle()
     val reviewUri = (state as? RecorderState.Review)?.uri
     val preview = playback?.takeIf { it.uri == reviewUri }
@@ -165,7 +173,14 @@ internal fun RecorderHost(
     ImmersiveListenTheme {
         Box(modifier = Modifier.fillMaxSize()) {
             when {
-                granted ->
+                // A restoring draft lands in Review a moment later; showing the no-mic message first would flash it.
+                !micAvailable && entering -> Unit
+                !micAvailable && state !is RecorderState.Review ->
+                    MicUnavailable(
+                        onImportInstead = if (canImport) ({ launchImport(importLauncher::launch) }) else null,
+                        onClose = onExit,
+                    )
+                granted || !micAvailable ->
                     RecorderScreen(
                         state = state,
                         isPreviewPlaying = isPreviewPlaying,
@@ -184,6 +199,7 @@ internal fun RecorderHost(
                             PlayerControllerFactory.instance.stopPlayingSound()
                             viewModel.onReRecord()
                         },
+                        canReRecord = micAvailable,
                         onClose = { if (viewModel.hasUnsavedClip()) showDiscard = true else onExit() },
                         // Scrub like the Vault listen wave. While the clip is loaded, seek the player live;
                         // before first play there is no player, so hold the target as a pending scrub that
@@ -249,6 +265,17 @@ private fun togglePreview(
         // Fresh start (before first play / after completion): resume from the remembered scrub offset.
         // Long-form engine (ADR 0022): the review is a listening session, not a quick tap.
         else -> controller.startUriListenSession(context, uri, startPositionMs)
+    }
+}
+
+// Mic-less devices (TV-like, managed builds) are the ones that may ship without a SAF handler: report it
+// instead of crashing, and leave the screen up so close still works.
+private fun launchImport(launch: (Array<String>) -> Unit) {
+    try {
+        launch(arrayOf(AUDIO_MIME))
+    } catch (e: ActivityNotFoundException) {
+        Tracker.log("recorder.surface=no_microphone")
+        Tracker.track(RuntimeException("Could not launch the system audio picker", e))
     }
 }
 

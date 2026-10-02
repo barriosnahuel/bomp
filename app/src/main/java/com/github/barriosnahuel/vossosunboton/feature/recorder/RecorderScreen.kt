@@ -77,6 +77,9 @@ internal fun RecorderScreen(
     onReRecord: () -> Unit,
     onClose: () -> Unit,
     onSeek: (Float) -> Unit,
+    // False on a mic-less device reviewing a restored draft: playback and "use this" still work, but a
+    // re-record would lead into a capture that cannot start.
+    canReRecord: Boolean = true,
 ) {
     RecorderBackdrop {
         Column(
@@ -98,6 +101,7 @@ internal fun RecorderScreen(
                     onPreviewToggle = onPreviewToggle,
                     onUseClip = onUseClip,
                     onReRecord = onReRecord,
+                    canReRecord = canReRecord,
                 )
             }
         }
@@ -232,6 +236,7 @@ private fun RecorderTransport(
     onPreviewToggle: () -> Unit,
     onUseClip: () -> Unit,
     onReRecord: () -> Unit,
+    canReRecord: Boolean,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.XXL),
@@ -282,8 +287,10 @@ private fun RecorderTransport(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.MD, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = onReRecord) {
-                        Text(text = stringResource(R.string.app_recorder_rerecord))
+                    if (canReRecord) {
+                        TextButton(onClick = onReRecord) {
+                            Text(text = stringResource(R.string.app_recorder_rerecord))
+                        }
                     }
                     Button(
                         onClick = onUseClip,
@@ -408,6 +415,47 @@ internal fun MicPermissionDenied(
                 }
                 TextButton(onClick = onImportInstead) {
                     Text(text = stringResource(R.string.app_recorder_import_instead))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Shown when the device has no microphone at all — nothing to grant, so only the import escape, and only
+ * when [onImportInstead] is non-null (a device with no file browser gets just the message and close).
+ */
+@Composable
+internal fun MicUnavailable(
+    onImportInstead: (() -> Unit)?,
+    onClose: () -> Unit,
+) {
+    RecorderBackdrop {
+        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+            RecorderTopBar(onClose = onClose)
+            Column(
+                modifier = Modifier.fillMaxSize().padding(Spacing.XL),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.app_recorder_no_mic_message),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                if (onImportInstead != null) {
+                    Spacer(Modifier.height(Spacing.XL))
+                    Button(
+                        onClick = onImportInstead,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
+                    ) {
+                        Text(text = stringResource(R.string.app_recorder_import_instead))
+                    }
                 }
             }
         }

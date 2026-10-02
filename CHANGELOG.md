@@ -10,11 +10,15 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - If the file browser comes back empty, Bomp now tells you how to share the voice note from WhatsApp instead of saying nothing
 - The empty My Bomps button now reads "Add a Bomp" instead of "Import"
 
+### Fixed
+- Devices without a microphone, like some tablets, can install and update Bomp again — on them, adding a Bomp goes straight to bringing in an audio you already have, since recording isn't possible
+
 ### For nerds 🤓
 
 #### Changed
 - `import_hub_import_selected` is no longer emitted now that its Hub row is gone, and `import_hub_bring_selected` covers both ways of bringing an existing audio (the share guide and the file browser at its foot)
 - Bumped all dependencies to latest stable
+- ADR 0019 now covers devices with no microphone: the manifest declares it optional so Play stops filtering them out, and every path into capture checks the hardware, not just the permission
 - ADR 0029 makes the release cut roll the milestone — create the next, move PRs still in flight onto it, then close the old — so there is always exactly one open milestone for a PR to take; the rule used to pick "the current month's", which kept naming the release that had already shipped
 
 #### Tests

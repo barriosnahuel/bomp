@@ -81,6 +81,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddSoundSource
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.NameSoundDestination
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
+import com.github.barriosnahuel.vossosunboton.feature.recorder.hasMicrophone
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareAppIntent
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.feature.vault.requestUnlock
@@ -220,11 +221,14 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 
     // Single import-Hub entry point: logs the funnel's ENTRY with the [source] surface, then opens.
     // The isVisible guard makes the open idempotent so a rapid double-tap on a trigger can't
-    // double-count `import_hub_opened` (or push the sheet twice).
+    // double-count `import_hub_opened` (or push the sheet twice). With no microphone the Hub would be
+    // a one-row sheet, so the entry skips it and opens the bring guide directly (ADR 0019).
+    val hasMicrophone = remember(context) { context.hasMicrophone() }
     val openHub = { source: String ->
-        if (!navigator.isVisible(ImportHubRoute)) {
+        val entryRoute = if (hasMicrophone) ImportHubRoute else BringFromAppsRoute
+        if (!navigator.isVisible(entryRoute)) {
             tracker.log(AnalyticsEvent.ImportHubOpened(source = source))
-            navigator.navigate(ImportHubRoute)
+            navigator.navigate(entryRoute)
         }
     }
 
