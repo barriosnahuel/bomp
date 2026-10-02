@@ -6,7 +6,6 @@
 package com.github.barriosnahuel.vossosunboton.feature.onboarding
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -181,7 +180,14 @@ private fun GuideActionBar(
                     onClick = onClose,
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                // Framed as an alternative behind a yes/no question, not as the step after "Got it": someone whose
+                // audio is in WhatsApp answers "no" and stops here instead of trying the browser next.
+                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(R.string.app_hub_files_question),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     TextButton(onClick = onBrowseFiles) {
                         Icon(
                             painter = painterResource(R.drawable.app_ic_folder),

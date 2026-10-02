@@ -237,9 +237,10 @@
     <string name="app_hub_bring">Traé un audio que ya tenés</string>
     <string name="app_hub_bring_sub">De WhatsApp, Telegram, donde sea — te mostramos cómo.</string>
     <string name="app_hub_bring_guide_cta">Listo</string>
-    <string name="app_hub_files_cta">Buscar en el teléfono</string>
+    <string name="app_hub_files_question">¿Ya lo tenés descargado?</string>
+    <string name="app_hub_files_cta">Buscalo en el teléfono</string>
     <string name="app_hub_files_scope">Descargas, música, grabaciones o Drive.</string>
-    <string name="app_import_empty_message">¿No estaba ahí? Las notas de voz se traen compartiéndolas a Bomp.</string>
+    <string name="app_import_empty_message">¿No estaba ahí? En WhatsApp, mantené apretada la nota, tocá Compartir y elegí Bomp.</string>
 
     <!-- Grabador in-app (ADR 0019) -->
     <string name="app_recorder_ready_hint">Tocá para grabar</string>
