@@ -5,13 +5,16 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
-import android.os.Looper
+import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionProfile
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -19,17 +22,25 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.robolectric.Shadows.shadowOf
 
 internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     private val createdViewModels = mutableListOf<SoundsViewModel>()
 
     @Before
     fun setUp() {
+        AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())
+        // Seeding the Baúl on an empty store echoes a second collections emission; let it land
+        // here, before any VM subscribes, so it can't arrive after givenAViewModel's await.
+        runBlocking {
+            withTimeout(LOAD_TIMEOUT_MS) { CollectionsRepository(ApplicationProvider.getApplicationContext()).collections.first() }
+        }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
@@ -45,6 +56,7 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         // ViewModelTestCleanup.kt.
         createdViewModels.cancelAndJoinAll()
         createdViewModels.clear()
+        AnalyticsTrackerProvider.setForTest(null)
         unmockkAll()
     }
 
@@ -134,11 +146,6 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         )
 
         viewModel.onSearchQueryChange("Mama")
-        // Same paused-looper hazard as the mid-search-flip sibling's pre-condition assert: the
-        // recompute settles on the VM's Dispatchers.Main collector, so the injected private-collection
-        // membership can lag under CI load. Flush before reading searchResults.value (CLAUDE.md § await
-        // every async input).
-        shadowOf(Looper.getMainLooper()).idle()
 
         assertThat(viewModel.searchResults.value.map { it.id }).contains(publicAudio.id)
         assertThat(viewModel.searchResults.value.map { it.id }).doesNotContain(privateAudio.id)
@@ -163,11 +170,6 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         )
 
         viewModel.onSearchQueryChange("carlos")
-        // Same paused-looper hazard as the mid-search-flip sibling's pre-condition assert: the
-        // recompute settles on the VM's Dispatchers.Main collector, so the injected cross-tagged
-        // membership can lag under CI load. Flush before reading searchResults.value (CLAUDE.md § await
-        // every async input).
-        shadowOf(Looper.getMainLooper()).idle()
 
         assertThat(viewModel.searchResults.value.map { it.id }).contains(crossTagged.id)
     }
@@ -189,21 +191,10 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
             listOf(privateCollection("col_priv", "vault", audioIds = listOf(privateAudio.id))),
         )
         viewModel.onSearchQueryChange("Mama")
-        // Same paused-looper hazard as the post-flip assert below: the search recompute runs on the
-        // VM's viewModelScope collector (Dispatchers.Main), so the injected private-collection
-        // membership hasn't been applied when we read searchResults.value synchronously — under CI
-        // load the filter lags and the private audio leaks in. Flush the looper before asserting.
-        shadowOf(Looper.getMainLooper()).idle()
         // Pre-condition: while locked, the private audio is filtered out.
         assertThat(viewModel.searchResults.value.map { it.id }).doesNotContain(privateAudio.id)
 
         VaultSessionState.markVaultOpen()
-        // The session-flip recompute runs on the VM's `viewModelScope` collector (Dispatchers.Main,
-        // SoundsViewModel.kt). Robolectric's main looper is PAUSED, so that resumption is queued and
-        // hasn't run when we read searchResults.value synchronously — it flakes on the slower SDK 23
-        // run under CI load. Flush the looper so the recompute lands first. (A `first {}` await would
-        // deadlock here: runBlocking does not pump the Android looper the collector is parked on.)
-        shadowOf(Looper.getMainLooper()).idle()
 
         assertThat(viewModel.searchResults.value.map { it.id }).contains(privateAudio.id)
         VaultSessionState.clearForTest()
@@ -298,16 +289,28 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
             audioIds = audioIds,
         )
 
+    /**
+     * Returns a VM whose init load (sounds + collections from the real DataStore) has landed.
+     * Tests inject state by reflection, so that load must not arrive afterwards: it would replace
+     * the injected collections and catalog mid-test (e.g. a private-only audio leaking into a
+     * locked search).
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun givenAViewModel(): SoundsViewModel {
         val vm =
             SoundsViewModel(
-                androidx.test.core.app.ApplicationProvider
-                    .getApplicationContext(),
+                ApplicationProvider.getApplicationContext(),
                 ioDispatcher = UnconfinedTestDispatcher(),
                 searchDebounceMs = 0L,
             )
         createdViewModels += vm
+        runBlocking { withTimeout(LOAD_TIMEOUT_MS) { vm.isInitialLoadComplete.first { it } } }
         return vm
+    }
+
+    private companion object {
+        // Headroom for the DataStore → repo → loadSounds chain on a loaded CI machine; a passing
+        // await returns as soon as the gate opens.
+        const val LOAD_TIMEOUT_MS = 10_000L
     }
 }

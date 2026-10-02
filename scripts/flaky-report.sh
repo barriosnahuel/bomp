@@ -34,9 +34,8 @@
 #                  still has headroom over the real suite, so it stays honest as
 #                  tests are added.
 #
-# Scope: the instrumented suite only. The known JVM flakies (SoundsViewModelSearch's
-# vault-flip race, SoundsViewModelVisibility's timeout) live in `./gradlew test` and
-# are not recorded here.
+# Scope: the instrumented suite only. JVM flakies live in `./gradlew test` and are not
+# recorded here.
 #
 # Usage:
 #   ./scripts/flaky-report.sh           # all recorded runs
