@@ -13,11 +13,26 @@
         <intent>
             <action android:name="android.app.action.SET_NEW_PASSWORD" />
         </intent>
+        <!-- The system audio file browser (SAF), so the recorder can check one exists before offering
+             "Import instead" — some TV-like or managed builds ship without it. -->
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <category android:name="android.intent.category.OPENABLE" />
+            <data android:mimeType="audio/*" />
+        </intent>
     </queries>
 
     <!-- In-app recorder (ADR 0019): requested at runtime before the first capture; denial routes to
          Settings or an import escape. The Vault still never taps the mic for playback visuals. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- RECORD_AUDIO implies a required microphone, which makes Play hide the app from mic-less devices
+         (TVs, some tablets). Recording is one optional path in: the app gates it at runtime on
+         FEATURE_MICROPHONE instead (ADR 0019 § Microphone-less devices).
+         https://developer.android.com/guide/topics/manifest/uses-feature-element#permissions-features -->
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
 
     <!-- Listen sessions (ADR 0022): PlaybackSessionService runs as a mediaPlayback foreground
          service while a listen session plays, so the media notification / lock-screen controls

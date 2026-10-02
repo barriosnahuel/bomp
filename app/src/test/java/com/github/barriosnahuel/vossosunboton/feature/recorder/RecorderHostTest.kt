@@ -7,9 +7,18 @@ package com.github.barriosnahuel.vossosunboton.feature.recorder
 
 import android.Manifest
 import android.app.Application
+import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -119,14 +128,101 @@ internal class RecorderHostTest : AbstractRobolectricTest() {
         assertThat(handedOff).isNotNull()
     }
 
+    @Test
+    fun `on a device without a microphone a fresh visit explains why and offers only the import escape`() {
+        givenNoMicrophone()
+        givenAFileBrowser()
+        var exited = false
+        givenAHost(resumeDraft = false, onExit = { exited = true })
+
+        composeTestRule.onNodeWithText(NO_MIC_MESSAGE).assertIsDisplayed()
+        composeTestRule.onNodeWithText(IMPORT_INSTEAD).assertIsDisplayed()
+        // Neither the capture button nor the permission priming: there is no mic to grant.
+        composeTestRule.onAllNodesWithContentDescription(START_RECORDING).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText(PERMISSION_TITLE).assertCountEquals(0)
+
+        composeTestRule.onNodeWithContentDescription(CLOSE).performClick()
+        composeTestRule.waitForIdle()
+        assertThat(exited).isTrue()
+    }
+
+    @Test
+    fun `on a device without a microphone or a file browser the import escape is not offered`() {
+        givenNoMicrophone()
+        givenAHost(resumeDraft = false)
+
+        composeTestRule.onNodeWithText(NO_MIC_MESSAGE).assertIsDisplayed()
+        // It would launch nothing: hide it rather than offer a button that fails.
+        composeTestRule.onAllNodesWithText(IMPORT_INSTEAD).assertCountEquals(0)
+        composeTestRule.onNodeWithContentDescription(CLOSE).assertIsDisplayed()
+    }
+
+    @Test
+    fun `on a device without a microphone a restored draft can still be kept but not re-recorded`() {
+        givenNoMicrophone()
+        // Not granted either: a review only plays back, so it must not sit behind the permission priming.
+        Shadows
+            .shadowOf(ApplicationProvider.getApplicationContext<Application>())
+            .denyPermissions(Manifest.permission.RECORD_AUDIO)
+        var handedOff: Uri? = null
+        givenAHostOnAReviewedTake(onKeepClip = { handedOff = it })
+
+        composeTestRule.onAllNodesWithText(RE_RECORD).assertCountEquals(0)
+        composeTestRule.onNodeWithText(USE_CLIP).performClick()
+        composeTestRule.waitForIdle()
+        assertThat(handedOff).isNotNull()
+    }
+
+    @Test
+    fun `on a device without a microphone a draft that vanished falls back to the no-microphone message`() {
+        givenNoMicrophone()
+        // The banner offered a draft whose clip the OS has since evicted: nothing restores into Review.
+        draftStore.pending = null
+        givenAHost(resumeDraft = true)
+
+        composeTestRule.onNodeWithText(NO_MIC_MESSAGE).assertIsDisplayed()
+        composeTestRule.onAllNodesWithContentDescription(START_RECORDING).assertCountEquals(0)
+    }
+
+    // Robolectric resolves no activity for any intent unless declared, so by default there is no file browser.
+    // Same deprecated setter as ScreenLockSettingsTest: Robolectric has no lightweight replacement.
+    @Suppress("DEPRECATION")
+    private fun givenAFileBrowser() {
+        val context = ApplicationProvider.getApplicationContext<Application>()
+        val intent = ActivityResultContracts.OpenDocument().createIntent(context, arrayOf("audio/*"))
+        val resolveInfo =
+            ResolveInfo().apply {
+                activityInfo =
+                    ActivityInfo().apply {
+                        packageName = "com.android.documentsui"
+                        name = "com.android.documentsui.picker.PickActivity"
+                    }
+            }
+        Shadows.shadowOf(context.packageManager).addResolveInfoForIntent(intent, resolveInfo)
+    }
+
+    private fun givenNoMicrophone() {
+        Shadows
+            .shadowOf(ApplicationProvider.getApplicationContext<Application>().packageManager)
+            .setSystemFeature(PackageManager.FEATURE_MICROPHONE, false)
+    }
+
     private fun givenAHostOnAReviewedTake(onKeepClip: (Uri) -> Unit = {}) {
         val clip = File.createTempFile("take", ".m4a")
         draftStore.pending = RecorderDraft(clip, TAKE_MS)
+        givenAHost(resumeDraft = true, onKeepClip = onKeepClip)
+    }
+
+    private fun givenAHost(
+        resumeDraft: Boolean,
+        onExit: () -> Unit = {},
+        onKeepClip: (Uri) -> Unit = {},
+    ) {
         composeTestRule.setContent {
             AppTheme {
                 RecorderHost(
-                    resumeDraft = true,
-                    onExit = {},
+                    resumeDraft = resumeDraft,
+                    onExit = onExit,
                     onKeepClip = onKeepClip,
                     onImportInstead = {},
                     viewModel = viewModel,
@@ -138,6 +234,12 @@ internal class RecorderHostTest : AbstractRobolectricTest() {
 
     private companion object {
         const val USE_CLIP = "Use this"
+        const val RE_RECORD = "Re-record"
+        const val IMPORT_INSTEAD = "Import instead"
+        const val START_RECORDING = "Start recording"
+        const val CLOSE = "Close"
+        const val PERMISSION_TITLE = "Bomp needs your mic"
+        const val NO_MIC_MESSAGE = "This device has no microphone to record with."
         const val TAKE_MS = 1_500L
     }
 }

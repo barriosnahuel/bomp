@@ -261,6 +261,7 @@
     <string name="app_recorder_permission_allow">Permitir micrófono</string>
     <string name="app_recorder_permission_not_now">Ahora no</string>
     <string name="app_recorder_denied_message">El micrófono está desactivado. Activalo en Ajustes para grabar, o importá un archivo.</string>
+    <string name="app_recorder_no_mic_message">Este equipo no tiene micrófono para grabar.</string>
     <string name="app_recorder_open_settings">Abrir ajustes</string>
     <string name="app_recorder_import_instead">Importar en su lugar</string>
     <string name="app_recorder_feedback_too_short">Muy corto — probá de nuevo</string>

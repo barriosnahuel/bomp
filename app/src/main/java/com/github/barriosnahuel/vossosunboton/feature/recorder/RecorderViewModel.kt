@@ -82,6 +82,11 @@ class RecorderViewModel(
     private val mutableState = MutableStateFlow<RecorderState>(RecorderState.Ready)
     val state: StateFlow<RecorderState> = mutableState.asStateFlow()
 
+    // True until [onEnter] has decided whether a draft restores into Review, so a host can hold off on a
+    // state-dependent screen instead of flashing the Ready one first.
+    private val mutableEntering = MutableStateFlow(true)
+    val entering: StateFlow<Boolean> = mutableEntering.asStateFlow()
+
     private val eventChannel = Channel<RecorderEvent>(Channel.BUFFERED)
     val events: Flow<RecorderEvent> = eventChannel.receiveAsFlow()
 
@@ -139,6 +144,7 @@ class RecorderViewModel(
                 tempFile = draft.file
                 mutableState.value = RecorderState.Review(uri = uri, durationMs = draft.durationMs)
             }
+            mutableEntering.value = false
             // Off the main thread — listing/deleting cache files is disk I/O (StrictMode).
             withContext(ioDispatcher) { RecorderTempFiles.purge(getApplication(), keep = draft?.file) }
         }

@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-21
 - **Supersedes:** —
-- **Amended:** 2026-06-23 (§ Draft recovery) · 2026-07-11 (§ Entry point & screen host — the retrofit into the Nav3 graph landed)
+- **Amended:** 2026-06-23 (§ Draft recovery) · 2026-07-11 (§ Entry point & screen host — the retrofit into the Nav3 graph landed) · 2026-10-02 (§ Microphone-less devices)
 
 ## Context
 
@@ -89,6 +89,32 @@ request. Denied → snackbar with "Open settings" CTA (detected via
 `shouldShowRequestPermissionRationale`; permanent-deny routes to `ACTION_APPLICATION_DETAILS_SETTINGS`)
 **and** an "import a file instead" escape — never a dead end. This is the app's first runtime
 permission; the pattern established here is the precedent for future ones.
+
+### Microphone-less devices (amendment 2026-10-02)
+Declaring `RECORD_AUDIO` makes Google Play assume `android.hardware.microphone` is **required**, so the
+release that shipped the recorder silently dropped ~20 device families with no mic (Android TV, some
+tablets, ChromeOS profiles) from the catalogue. The filtering happens at the store, never in the merged
+manifest, which is why no build or CI step caught it. Recording is one way to add a Bomp, not the core:
+collecting, playing and bompear all work without a mic, so there is no product reason to exclude those
+devices.
+
+- **Manifest:** `<uses-feature android:name="android.hardware.microphone" android:required="false" />`
+  overrides the implied requirement ([permissions that imply feature requirements](https://developer.android.com/guide/topics/manifest/uses-feature-element#permissions-features)).
+  It only affects store filtering; capture still needs the runtime grant.
+  Android TV stays out of the catalogue for other reasons (no `LEANBACK_LAUNCHER`, implied touchscreen,
+  Play Console opt-in) — that is a separate decision, not covered here.
+- **Runtime gate on hardware, not on the grant:** `PackageManager.hasSystemFeature(FEATURE_MICROPHONE)`
+  is a separate axis from the permission flow above. A device *with* a mic and a denied grant keeps the
+  Settings / import-escape path; a device *without* one is never offered capture.
+- **Skip the Hub, don't hide its row.** With the two-path Hub (record / bring), a mic-less device would
+  get a one-row sheet — a tap with no choice in it. The single Hub entry opens the bring guide directly
+  instead; every "add a Bomp" surface (FAB, empty state, onboarding finish) goes through that entry.
+  The funnel's entry event still fires, so "wanted to add a Bomp" keeps counting on these devices.
+- **Recorder as last line of defense:** if the destination is reached anyway, a fresh visit shows a
+  no-microphone message with only the import escape — no priming, no Settings CTA (there is nothing to
+  grant). The escape is offered only when a system file browser resolves (TV-like and managed builds can
+  ship without one): a button that launches nothing is hidden, not shown. A restored draft still opens its Review, without the permission gate (review only plays back)
+  and without "Re-record" (it would lead into a capture that cannot start).
 
 ### Data model — internal `SoundSource`
 The recorded clip saves to the **same destination and naming flow as an import** (no Vault pre-mark,
@@ -199,6 +225,8 @@ you-left of an in-progress capture (still no `MediaRecorder.pause()`); the recov
 - A draft (§ Draft recovery) is a *pointer* to a `cacheDir` clip, never durable storage — it must
   re-validate file existence on read and self-heal to "none", and it must be cleared on every terminal
   outcome (save, discard, re-record, too-short) so the banner never offers a clip the user resolved.
+- Every path into capture checks microphone **hardware** (`FEATURE_MICROPHONE`), not just the
+  `RECORD_AUDIO` grant — the manifest declares the mic optional, so mic-less devices install the app.
 
 ## Revisit criteria
 

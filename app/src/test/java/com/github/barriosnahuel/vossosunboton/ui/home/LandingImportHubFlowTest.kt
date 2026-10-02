@@ -7,6 +7,7 @@ package com.github.barriosnahuel.vossosunboton.ui.home
 
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -53,6 +54,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 /**
@@ -267,6 +269,45 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         pressBack()
         composeTestRule.onNodeWithContentDescription(FAB_DESCRIPTION).assertIsDisplayed()
         composeTestRule.onAllNodesWithText(GUIDE_CTA).assertCountEquals(0)
+    }
+
+    @Test
+    fun `on a device without a microphone the + opens the bring guide instead of the Hub`() {
+        givenNoMicrophone()
+        givenLanding()
+
+        composeTestRule.onNodeWithContentDescription(FAB_DESCRIPTION).performClick()
+        composeTestRule.waitForIdle()
+
+        // A Hub with only the bring row left would be a tap with no choice in it.
+        composeTestRule.onNodeWithText(GUIDE_CTA).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText(BRING_ROW).assertCountEquals(0)
+        // The funnel entry still counts: the user asked to add a Bomp, whichever surface answered.
+        assertThat(fake.events.count { it.name == "import_hub_opened" }).isEqualTo(1)
+    }
+
+    @Test
+    fun `on a device without a microphone a double-tapped + opens one guide and back returns to My Bomps`() {
+        givenNoMicrophone()
+        givenLanding()
+
+        composeTestRule.mainClock.autoAdvance = false
+        composeTestRule.onNodeWithContentDescription(FAB_DESCRIPTION).performClick()
+        composeTestRule.onNodeWithContentDescription(FAB_DESCRIPTION).performClick()
+        composeTestRule.mainClock.autoAdvance = true
+        composeTestRule.waitForIdle()
+
+        assertThat(fake.events.count { it.name == "import_hub_opened" }).isEqualTo(1)
+        // No Hub was left underneath and no second guide was stacked: one back lands on the tab.
+        pressBack()
+        composeTestRule.onNodeWithContentDescription(FAB_DESCRIPTION).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText(GUIDE_CTA).assertCountEquals(0)
+    }
+
+    private fun givenNoMicrophone() {
+        Shadows
+            .shadowOf(ApplicationProvider.getApplicationContext<Context>().packageManager)
+            .setSystemFeature(PackageManager.FEATURE_MICROPHONE, false)
     }
 
     @Composable
