@@ -361,7 +361,7 @@ It exists to answer the one question a red actually raises: **is this a known fl
 
 Where it lives: `.instrumented-history/` in the **primary worktree** (resolved via `git rev-parse --git-common-dir`, so runs launched from sibling worktrees append to the *same* history instead of fragmenting it). Gitignored, and outside `build/` so `./gradlew clean` doesn't erase it. `runs.jsonl` is the permanent ledger — one line per run, forever, **carrying each red with its exception**, so the flaky memory outlives the artefacts. The per-run artefact dirs (result XML, heartbeat, full forensics for a stall) are pruned to the newest 30; once a run's artefacts are gone its reds are still named, they just stop contributing a denominator.
 
-This covers the **instrumented** suite only. The known JVM flakes (`SoundsViewModelSearch`'s vault-flip race, `SoundsViewModelVisibility`'s timeout) live in `./gradlew test` and are not recorded here.
+This covers the **instrumented** suite only. JVM flakes live in `./gradlew test` and are not recorded here.
 
 #### If a run hangs, suspect your laptop before the emulator
 
