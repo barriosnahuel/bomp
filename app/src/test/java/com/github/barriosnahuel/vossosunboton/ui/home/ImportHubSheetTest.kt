@@ -44,7 +44,7 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
                 .boundsInRoot.top
         val bringTop =
             composeTestRule
-                .onNodeWithText("Bring in an audio you already have")
+                .onNodeWithText("Bring in audio you already have")
                 .fetchSemanticsNode()
                 .boundsInRoot.top
 
@@ -76,8 +76,8 @@ internal class ImportHubSheetTest : AbstractRobolectricTest() {
         var opened = false
         setHub(onBringFromApps = { opened = true })
 
-        composeTestRule.onNodeWithText("Bring in an audio you already have").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Bring in an audio you already have").performClick()
+        composeTestRule.onNodeWithText("Bring in audio you already have").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Bring in audio you already have").performClick()
         composeTestRule.waitForIdle() // the row animates the sheet closed before invoking the callback
 
         assertThat(opened).isTrue()

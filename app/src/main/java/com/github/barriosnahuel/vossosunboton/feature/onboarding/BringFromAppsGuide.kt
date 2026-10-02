@@ -47,9 +47,10 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.rememberReduceMotionEnabled
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 
-// Below this content height the flexing demo (min DEMO_MIN_HEIGHT) plus the headline no longer fit, so
-// the body switches to the scrollable column.
-private val GUIDE_MIN_FLEX_HEIGHT = 420.dp
+// Below this content height the demo at its natural size (~250 dp) plus the headline no longer fit, so the
+// body switches to the scrollable column instead of squeezing the demo's Bomp zone out of view. Sized for a
+// 360x720 dp phone, whose content area is ~480 dp once the pinned bar and nav bar are taken out.
+private val GUIDE_MIN_FLEX_HEIGHT = 520.dp
 
 // Below this window height the action bar scrolls with the lesson instead of staying pinned.
 private val GUIDE_MIN_PINNED_BAR_HEIGHT = 360.dp
@@ -64,7 +65,7 @@ private val SNACKBAR_CLEARANCE = 80.dp
  * but without the tour's navigation machinery (no progress dots, no story tap-halves, no step funnel
  * analytics). The CTA is terminal ("Got it") rather than the tour's "Go on".
  *
- * The bottom bar pins the CTA plus a secondary "look on your phone" action ([onBrowseFiles]) that opens
+ * The bottom bar pins the CTA plus a secondary "find it on your phone" action ([onBrowseFiles]) that opens
  * the system file browser, with its reach spelled out (downloads, music, recordings, Drive). The bar is
  * the Scaffold's `bottomBar`, so the snackbar host sits above it and never covers either action — except
  * in a very short window, where the bar scrolls inline and the column grows a clearance below it while
@@ -98,8 +99,9 @@ internal fun BringFromAppsGuide(
         }
     }
 
-    // A window too short to spare the bar's height (split-screen, large fonts in landscape) stops pinning
-    // it: the actions scroll with the lesson instead of the bar eating the whole window.
+    // A window too short to spare the bar's height (split-screen, a small freeform window) stops pinning it:
+    // the actions scroll with the lesson instead of the bar eating the whole window. Measured in window dp,
+    // so a large font scale alone does not unpin it.
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val pinBar = maxHeight >= GUIDE_MIN_PINNED_BAR_HEIGHT
         Scaffold(
@@ -197,10 +199,11 @@ private fun GuideActionBar(
                         Spacer(Modifier.width(Spacing.SM))
                         Column {
                             Text(text = stringResource(R.string.app_hub_files_cta))
+                            // Inherits the Text tier's `primary` (ADR 0010): it is part of the control, unlike the
+                            // question above it, so it must not read as the same gray caption.
                             Text(
                                 text = stringResource(R.string.app_hub_files_scope),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }

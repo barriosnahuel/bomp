@@ -244,7 +244,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `empty My Bomps hides the FAB and shows the Import CTA instead`() {
+    fun `empty My Bomps hides the FAB and shows the Add a Bomp CTA instead`() {
         val viewModel = givenAViewModel()
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
@@ -259,7 +259,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `non-empty My Bomps shows the FAB and no inline Import CTA`() {
+    fun `non-empty My Bomps shows the FAB and no inline Add a Bomp CTA`() {
         // Reverse of the empty-state swap: with audios present (a fresh install seeds the welcome
         // sticker, so the list is non-empty), the FAB is the create affordance and the empty-state
         // CTA must not appear.
@@ -273,7 +273,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `tapping the empty-state Import CTA opens the import Hub`() {
+    fun `tapping the empty-state Add a Bomp CTA opens the import Hub`() {
         val viewModel = givenAViewModel()
 
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }

@@ -26,6 +26,10 @@ import com.github.barriosnahuel.vossosunboton.WAIT_TIMEOUT_MS
 import com.github.barriosnahuel.vossosunboton.awaitNode
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
+import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
+import com.google.common.truth.Truth.assertThat
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -114,12 +118,23 @@ internal class HubImportFlowTest : AbstractUiTest() {
                 ),
             )
 
-        ActivityScenario.launch(LandingActivity::class.java).use {
-            openGuide()
-            composeRule.awaitNodeWithText(filesLabel()).performClick()
+        val analytics = FakeAnalyticsTracker()
+        AnalyticsTrackerProvider.setForTest(analytics)
+        try {
+            ActivityScenario.launch(LandingActivity::class.java).use {
+                openGuide()
+                composeRule.awaitNodeWithText(filesLabel()).performClick()
 
-            composeRule.awaitNodeWithText(createTitle()).assertIsDisplayed()
-            composeRule.awaitNode(hasSetTextAction()).assertIsDisplayed()
+                composeRule.awaitNodeWithText(createTitle()).assertIsDisplayed()
+                composeRule.awaitNode(hasSetTextAction()).assertIsDisplayed()
+                composeRule.waitForIdle()
+            }
+            // Guide → naming never passes through the list, so screen_view must not report one in between.
+            val afterGuide = analytics.screens.map { it.name }.dropWhile { it != CanonicalScreenName.BRING_GUIDE }
+            assertThat(afterGuide).isNotEmpty()
+            assertThat(afterGuide).doesNotContain(CanonicalScreenName.MY_SOUNDS)
+        } finally {
+            AnalyticsTrackerProvider.setForTest(null)
         }
     }
 

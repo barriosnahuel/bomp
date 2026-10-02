@@ -92,7 +92,7 @@ internal class CreationFlowBackNavigationTest : AbstractUiTest() {
     }
 
     @Test
-    fun backFromNamingOpenedByImportReturnsToTheTab() {
+    fun backFromNamingOpenedFromTheGuideReturnsToTheGuide() {
         stubPickerWithAudio()
 
         ActivityScenario.launch(LandingActivity::class.java).use {
@@ -110,13 +110,35 @@ internal class CreationFlowBackNavigationTest : AbstractUiTest() {
             Espresso.pressBack()
             composeRule.waitForIdle()
 
-            // Nothing sits under the naming destination on the import path (the Hub closed when the guide
-            // opened, and the picked audio replaced the guide), so back returns the user to their list.
+            // Naming sits on top of the guide the file browser was opened from, so back returns there — a
+            // user who changes their mind about the file can try sharing instead.
             composeRule.waitUntil(timeoutMillis = WAIT_TIMEOUT_MS) {
                 composeRule.onAllNodesWithText(createTitle()).fetchSemanticsNodes().isEmpty()
             }
+            composeRule.awaitNodeWithText(string(R.string.app_hub_bring_guide_cta)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun savingAnAudioPickedFromTheGuideReturnsToTheTab() {
+        stubPickerWithAudio()
+        val newName = "picked_clip"
+
+        ActivityScenario.launch(LandingActivity::class.java).use {
+            composeRule.awaitNodeWithContentDescription(fabLabel()).performClick()
+            composeRule.awaitNodeWithText(string(R.string.app_hub_bring)).performClick()
+            composeRule.awaitNodeWithText(string(R.string.app_hub_files_cta)).performClick()
+            composeRule.awaitNode(hasSetTextAction()).performTextInput(newName)
+            composeRule.awaitNodeWithText(string(R.string.app_addbutton_save)).performClick()
+
+            // The save pops naming and the guide under it: landing back on the guide would show a lesson
+            // for an audio the user just saved.
+            composeRule.waitUntil(timeoutMillis = SAVE_SETTLE_MS) {
+                composeRule.onAllNodesWithText(createTitle()).fetchSemanticsNodes().isEmpty() &&
+                    composeRule.onAllNodesWithText(string(R.string.app_hub_bring_guide_cta)).fetchSemanticsNodes().isEmpty()
+            }
+            composeRule.awaitNodeWithText(newName).assertIsDisplayed()
             composeRule.awaitNodeWithContentDescription(fabLabel()).assertIsDisplayed()
-            composeRule.awaitNodeWithText("custom_1").assertIsDisplayed()
         }
     }
 

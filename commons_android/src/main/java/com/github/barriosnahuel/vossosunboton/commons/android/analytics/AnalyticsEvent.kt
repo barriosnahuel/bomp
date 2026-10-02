@@ -491,8 +491,8 @@ sealed class AnalyticsEvent(
 
     /**
      * Import-Hub funnel · ENTRY. The add-a-Bomp Hub bottom sheet opened. [source] = which surface
-     * opened it: `"fab"` (the `+` on My Bomps), `"my_sounds_empty_state"` (the empty-state Import
-     * CTA), or `"onboarding_finish"` (the tour's closing "Start" drops the user here).
+     * opened it: `"fab"` (the `+` on My Bomps), `"my_sounds_empty_state"` (the empty-state "Add a
+     * Bomp" CTA), or `"onboarding_finish"` (the tour's closing "Start" drops the user here).
      * `hasFirstVariant = true` so first-ever opens are isolable.
      *
      * Funnel: import_hub_opened → import_hub_bring_selected / import_hub_record_selected →
@@ -523,19 +523,18 @@ sealed class AnalyticsEvent(
 
     /**
      * Import-Hub funnel · INTENT (record). The user tapped the live "record" row, committing to the
-     * in-app recorder (ADR 0019). Sibling of [ImportHubImportSelected]; together they split Hub intent
+     * in-app recorder (ADR 0019). Sibling of [ImportHubBringSelected]; together they split Hub intent
      * between the two creation channels. `hasFirstVariant = true`.
      */
     object ImportHubRecordSelected : AnalyticsEvent(name = "import_hub_record_selected", hasFirstVariant = true)
 
     /**
-     * Import-Hub funnel · INTENT (bring). The user tapped the "bring in an audio you already have" row,
-     * which opens a focused single-step guide on sharing a voice note in from WhatsApp/Telegram, with the
-     * system file browser at its foot — so this row now covers both ways of bringing an existing audio.
-     * Unlike [ImportHubImportSelected]/[ImportHubRecordSelected] this is not an in-app conversion step
-     * (the share is initiated from the *other* app, off-funnel); it measures how many Hub opens are
-     * driven by the import-from-another-app intent — the primary use case the Hub is being reshaped
-     * around. `hasFirstVariant = true`.
+     * Import-Hub funnel · INTENT (bring). The user tapped the "bring in audio you already have" row, which
+     * opens a focused single-step guide on sharing a voice note in from WhatsApp/Telegram, with the system
+     * file browser at its foot — so this row covers both ways of bringing an existing audio. Its two exits
+     * convert differently: the file browser lands in-app as `sound_add {source=import}`, while a share is
+     * initiated from the *other* app and arrives through the share sheet, off this funnel.
+     * `hasFirstVariant = true`.
      */
     object ImportHubBringSelected : AnalyticsEvent(name = "import_hub_bring_selected", hasFirstVariant = true)
 

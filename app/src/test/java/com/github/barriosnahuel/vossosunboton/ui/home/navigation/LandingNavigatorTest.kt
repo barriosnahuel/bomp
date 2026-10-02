@@ -103,4 +103,22 @@ class LandingNavigatorTest {
 
         assertThat(navigator.state.visibleRoute).isEqualTo(HomeRoute)
     }
+
+    @Test
+    fun `saving an audio picked from the bring guide lands on the tab, not back on the guide`() {
+        val navigator = navigator(homeStack = listOf(HomeRoute, BringFromAppsRoute, NameSoundRoute(uri = "content://x")))
+
+        navigator.closeCreationFlow()
+
+        assertThat(navigator.state.visibleRoute).isEqualTo(HomeRoute)
+    }
+
+    @Test
+    fun `saving an edit opened from the list leaves the history below it intact`() {
+        val navigator = navigator(homeStack = listOf(HomeRoute, AboutRoute, NameSoundRoute(editSoundId = "id")))
+
+        navigator.closeCreationFlow()
+
+        assertThat(navigator.state.visibleRoute).isEqualTo(AboutRoute)
+    }
 }

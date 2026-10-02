@@ -294,7 +294,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         const val HUB_TITLE = "How do you add one?"
         const val OVERFLOW_LABEL = "More options"
         const val SECONDARY_LABEL = "See how it works"
-        const val BRING_LABEL = "Bring in an audio you already have"
+        const val BRING_LABEL = "Bring in audio you already have"
         const val GUIDE_CTA = "Got it"
         const val STEP1_TITLE = "Bring in the voices you already have."
         const val STEP2_TITLE = "Keep them your way."

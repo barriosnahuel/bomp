@@ -89,8 +89,12 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       between steps.
    b) CREATION CHANNELS: `sound_add` broken down by param `source` — above all `import` vs `record`
       (import a file vs record in-app), plus others. How users create Bomps.
-   c) IMPORT HUB FUNNEL: `import_hub_opened` → (`import_hub_import_selected` | `import_hub_record_selected`)
-      → `sound_add` with `source=import/record`. Conversion and drop-off per stage. Treat
+   c) IMPORT HUB FUNNEL: `import_hub_opened` → (`import_hub_bring_selected` | `import_hub_record_selected`)
+      → `sound_add` with `source=import/record`. Conversion and drop-off per stage. Since spec 029 the Hub
+      has two rows: `bring` opens the share guide, whose footer holds the file browser, so `source=import`
+      now follows `bring_selected`. `import_hub_import_selected` (the old file-browser row) is no longer
+      emitted; read it only for versions before 029, and never sum it with `bring_selected` across that
+      boundary — they measure different taps. Treat
       `source=onboarding_finish` as a separate cohort (don't put it in the denominator of proactive intent
       `fab`/`my_sounds_empty_state`).
    d) RECORDER FUNNEL (new feature, ADR 0019): `import_hub_record_selected` → `record_permission_result`
