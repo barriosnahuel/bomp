@@ -158,9 +158,8 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         restorationTester.emulateSavedInstanceStateRestore()
         composeTestRule.waitForIdle()
 
-        // Rotation doesn't recreate Landing (configChanges), so a restore here means a process death or a
-        // theme/locale change — by then the 10 s notice is stale, and replaying it would contradict what the
-        // user just did. The guide itself is durable progress and stays.
+        // The notice is deliberately not saved: after a process death it has expired, and replaying it would
+        // contradict what the user just did. The guide itself is durable progress and stays.
         composeTestRule.onAllNodesWithText(EMPTY_RESULT_MESSAGE).assertCountEquals(0)
         composeTestRule.onNodeWithText(GUIDE_CTA).assertIsDisplayed()
     }
@@ -374,7 +373,7 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         const val LOAD_TIMEOUT_MS = 5_000L
         const val SOUND_NAME = "Existing Bomp"
         const val FAB_DESCRIPTION = "Add a Bomp"
-        const val BRING_ROW = "Bring in an audio you already have"
+        const val BRING_ROW = "Bring in audio you already have"
         const val GUIDE_CTA = "Got it"
         const val FILES_CTA = "Find it on your phone"
         const val EMPTY_RESULT_MESSAGE = "Wasn't it there? In WhatsApp, press and hold the note, tap Share and pick Bomp."

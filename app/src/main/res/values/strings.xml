@@ -240,7 +240,7 @@
     <string name="app_hub_subtitle">A voice gets saved and stays close, ready whenever you want to hear it.</string>
     <string name="app_hub_record">Record a Bomp</string>
     <string name="app_hub_record_sub">Your voice, a moment you don\'t want to lose.</string>
-    <string name="app_hub_bring">Bring in an audio you already have</string>
+    <string name="app_hub_bring">Bring in audio you already have</string>
     <string name="app_hub_bring_sub">From WhatsApp, Telegram, wherever — we\'ll show you how.</string>
     <string name="app_hub_bring_guide_cta">Got it</string>
     <string name="app_hub_files_question">Already have it downloaded?</string>

@@ -40,7 +40,7 @@ internal class MySoundsEmptyStateTest : AbstractRobolectricTest() {
     }
 
     @Test
-    fun `MySoundsEmptyState Import CTA invokes the callback when tapped`() {
+    fun `MySoundsEmptyState Add a Bomp CTA invokes the callback when tapped`() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val cta = context.getString(R.string.app_my_sounds_empty_cta)
         var imports = 0

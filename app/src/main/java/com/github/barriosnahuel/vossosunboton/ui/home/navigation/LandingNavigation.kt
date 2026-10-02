@@ -268,13 +268,14 @@ internal class LandingNavigator(
      * Pops the whole creation flow, landing back on the tab the user started from.
      *
      * A save reached from the recorder leaves `[tab, RecorderRoute, NameSoundRoute]` on the stack, and
-     * popping one entry would drop the user back into the recorder — on a clip they just saved. Popping
+     * popping one entry would drop the user back into the recorder — on a clip they just saved. The same
+     * holds for `[tab, BringFromAppsRoute, NameSoundRoute]` from the bring guide's file browser. Popping
      * only the contiguous creation routes on top (rather than truncating to the tab) keeps any other
      * history below intact.
      */
     fun closeCreationFlow() {
         val stack = state.activeStack
-        while (stack.lastOrNull().let { it is NameSoundRoute || it is RecorderRoute }) {
+        while (stack.lastOrNull().let { it is NameSoundRoute || it is RecorderRoute || it is BringFromAppsRoute }) {
             stack.removeLastOrNull()
         }
     }

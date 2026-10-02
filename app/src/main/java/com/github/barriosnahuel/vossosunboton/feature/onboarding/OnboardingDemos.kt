@@ -153,7 +153,8 @@ private fun FlowChevron(
     Icon(
         painter = painterResource(R.drawable.app_ic_keyboard_arrow_right),
         contentDescription = null,
-        tint = MaterialTheme.colorScheme.primaryContainer,
+        // `primary`, not `primaryContainer`: the stage is `surfaceVariant`, and Acid400 on it is ~1:1 in light mode.
+        tint = MaterialTheme.colorScheme.primary,
         modifier = modifier.rotate(rotationDegrees),
     )
 }

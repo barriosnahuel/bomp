@@ -164,15 +164,16 @@ fun LandingScreen(viewModel: SoundsViewModel) {
 
     // Each null picker result while the guide is up bumps this id (0 = no notice); the guide shows the
     // "wasn't it there?" notice per id, so a second empty result restarts it instead of being swallowed.
-    // Plain remember, not saveable: rotation doesn't recreate this Activity (configChanges), and after a
-    // process death the notice has already expired — replaying it would be stale.
+    // Plain remember, not saveable: after a process death the notice has already expired, and replaying it
+    // would be stale. The cost is that a recreate mid-notice (theme flip, entering split-screen — rotation is
+    // handled in place by configChanges) drops it a few seconds early; the guide it points to stays.
     var importEmptyNoticeId by remember { mutableIntStateOf(0) }
 
     // True between a picker launch and its result, so a rapid double tap on the guide's footer can't stack
     // two system pickers (whose second result would land after the first one already closed the guide).
     var importPickerInFlight by remember { mutableStateOf(false) }
 
-    // System file picker behind the bring guide's "look on your phone" footer. OpenDocument(arrayOf("audio/*"))
+    // System file picker behind the bring guide's "find it on your phone" footer. OpenDocument(arrayOf("audio/*"))
     // opens the full SAF browser filtered to audio (non-audio files are not selectable) — better at surfacing
     // on-device audio across OEMs than GetContent's "Recent" view. We copy the audio at save time, so we
     // never take persistable permission. The picked URI goes straight to the naming destination and through
@@ -185,9 +186,8 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             importPickerInFlight = false
             if (uri != null) {
-                // The picked audio replaces the guide (close then navigate), so back and save from naming both
-                // return to the tab the user started from rather than to the guide.
-                navigator.close(BringFromAppsRoute)
+                // Naming is pushed ON TOP of the guide: back returns to the guide the user came from, the save
+                // pops both (closeCreationFlow), and screen_view never reports the tab underneath in between.
                 navigator.navigate(NameSoundRoute(source = AddSoundSource.IMPORT, uri = uri.toString()))
             } else if (navigator.isVisible(BringFromAppsRoute)) {
                 importEmptyNoticeId++
