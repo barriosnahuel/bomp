@@ -12,12 +12,14 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ### Fixed
 - Devices without a microphone, like some tablets, can install and update Bomp again — on them, adding a Bomp goes straight to bringing in an audio you already have, since recording isn't possible
+- On a device without a file browser, the microphone-off screen no longer offers "Import instead" — tapping it used to close the app
 
 ### For nerds 🤓
 
 #### Changed
 - `import_hub_import_selected` is no longer emitted now that its Hub row is gone, and `import_hub_bring_selected` covers both ways of bringing an existing audio (the share guide and the file browser at its foot)
 - Bumped all dependencies to latest stable
+- New `record_mic_unavailable` and `import_option_hidden` (`surface`) events, plus `hub_skipped` on `import_hub_opened`, so devices without a microphone or a file browser show up in the weekly report whenever they reach those screens
 - ADR 0019 now covers devices with no microphone: the manifest declares it optional so Play stops filtering them out, and every path into capture checks the hardware, not just the permission
 - ADR 0029 makes the release cut roll the milestone — create the next, move PRs still in flight onto it, then close the old — so there is always exactly one open milestone for a PR to take; the rule used to pick "the current month's", which kept naming the release that had already shipped
 

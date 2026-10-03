@@ -381,11 +381,14 @@ internal fun MicPermissionPriming(
     }
 }
 
-/** Shown after a denial — routes to settings or an import escape so the user is never stuck. */
+/**
+ * Shown after a denial — routes to settings or an import escape so the user is never stuck. A null
+ * [onImportInstead] (no file browser on the device) drops the escape and the message's promise of it.
+ */
 @Composable
 internal fun MicPermissionDenied(
     onOpenSettings: () -> Unit,
-    onImportInstead: () -> Unit,
+    onImportInstead: (() -> Unit)?,
     onClose: () -> Unit,
 ) {
     RecorderBackdrop {
@@ -397,7 +400,14 @@ internal fun MicPermissionDenied(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = stringResource(R.string.app_recorder_denied_message),
+                    text =
+                        stringResource(
+                            if (onImportInstead != null) {
+                                R.string.app_recorder_denied_message
+                            } else {
+                                R.string.app_recorder_denied_message_no_import
+                            },
+                        ),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
@@ -413,8 +423,10 @@ internal fun MicPermissionDenied(
                 ) {
                     Text(text = stringResource(R.string.app_recorder_open_settings))
                 }
-                TextButton(onClick = onImportInstead) {
-                    Text(text = stringResource(R.string.app_recorder_import_instead))
+                if (onImportInstead != null) {
+                    TextButton(onClick = onImportInstead) {
+                        Text(text = stringResource(R.string.app_recorder_import_instead))
+                    }
                 }
             }
         }

@@ -504,11 +504,20 @@ sealed class AnalyticsEvent(
      * cohort: the tour drops the user on the Hub, so folding it into the total inflates `opened`
      * vs the `*_selected` intents. Its own conversion (does landing them on the Hub post-tour convert?)
      * is a separate, deliberate question.
+     *
+     * [hubSkipped] is true on a device with no microphone, where the entry opens the bring guide directly
+     * (ADR 0019 § Microphone-less devices): no `*_selected` can follow, so exclude it from the Hub's
+     * "chose a path" denominator.
      */
     data class ImportHubOpened(
         val source: String,
+        val hubSkipped: Boolean = false,
     ) : AnalyticsEvent(name = "import_hub_opened", hasFirstVariant = true) {
-        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SOURCE, source) }
+        override fun params(): Bundle =
+            Bundle().apply {
+                putString(AnalyticsParam.SOURCE, source)
+                putBoolean(AnalyticsParam.HUB_SKIPPED, hubSkipped)
+            }
     }
 
     /**
@@ -546,6 +555,24 @@ sealed class AnalyticsEvent(
      * a draft *restore* — that is a recovered prior completion, not a new one.
      */
     object RecordingCompleted : AnalyticsEvent(name = "recording_completed", hasFirstVariant = true)
+
+    /**
+     * Limited-device diagnostic (ADR 0019 § Microphone-less devices). The recorder showed its "this device
+     * has no microphone" screen. Fired once per appearance, only on such devices, so its user count is
+     * the mic-less base that reached capture. No `first_*`: a diagnostic, not a milestone.
+     */
+    object RecordMicUnavailable : AnalyticsEvent(name = "record_mic_unavailable", hasFirstVariant = false)
+
+    /**
+     * Limited-device diagnostic. A surface left out its "import a file" option because the device has no
+     * system file browser to open. [surface] is a [CanonicalScreenName]: `bring_guide` (the guide's footer)
+     * or `record_sound` (the recorder's no-mic or mic-denied screen). Fired once per appearance.
+     */
+    data class ImportOptionHidden(
+        val surface: String,
+    ) : AnalyticsEvent(name = "import_option_hidden", hasFirstVariant = false) {
+        override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
+    }
 
     /**
      * Outcome of the app's first runtime permission, `RECORD_AUDIO` (ADR 0019). [granted] is true on

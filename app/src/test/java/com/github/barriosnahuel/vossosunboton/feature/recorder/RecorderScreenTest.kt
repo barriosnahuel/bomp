@@ -9,9 +9,11 @@ import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -71,6 +73,19 @@ internal class RecorderScreenTest : AbstractRobolectricTest() {
         composeTestRule.onNodeWithText("Import instead").performClick()
 
         assertThat(imported).isTrue()
+    }
+
+    @Test
+    fun `a denied microphone on a device without a file browser offers only Settings, without promising an import`() {
+        composeTestRule.setContent {
+            AppTheme {
+                MicPermissionDenied(onOpenSettings = {}, onImportInstead = null, onClose = {})
+            }
+        }
+
+        composeTestRule.onNodeWithText("Open settings").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Import instead").assertCountEquals(0)
+        composeTestRule.onNodeWithText("Microphone access is off. Turn it on in Settings to record.").assertIsDisplayed()
     }
 
     @Test

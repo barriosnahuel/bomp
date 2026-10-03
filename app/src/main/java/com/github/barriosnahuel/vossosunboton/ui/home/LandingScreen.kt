@@ -80,6 +80,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Canonica
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.AddSoundSource
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.NameSoundDestination
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.canBrowseFiles
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
 import com.github.barriosnahuel.vossosunboton.feature.recorder.hasMicrophone
 import com.github.barriosnahuel.vossosunboton.feature.share.ShareAppIntent
@@ -227,7 +228,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val openHub = { source: String ->
         val entryRoute = if (hasMicrophone) ImportHubRoute else BringFromAppsRoute
         if (!navigator.isVisible(entryRoute)) {
-            tracker.log(AnalyticsEvent.ImportHubOpened(source = source))
+            tracker.log(AnalyticsEvent.ImportHubOpened(source = source, hubSkipped = !hasMicrophone))
             navigator.navigate(entryRoute)
         }
     }
@@ -372,10 +373,19 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                         )
                     }
                     entry<BringFromAppsRoute> {
+                        // Resolved here, not at Landing's first frame: only the guide needs it, and it is a
+                        // PackageManager call that would otherwise sit on the startup path of every launch.
+                        val hasFileBrowser = remember(context) { context.canBrowseFiles("audio/*") }
+                        if (!hasFileBrowser) {
+                            LaunchedEffect(Unit) {
+                                tracker.log(AnalyticsEvent.ImportOptionHidden(CanonicalScreenName.BRING_GUIDE))
+                            }
+                        }
                         com.github.barriosnahuel.vossosunboton.feature.onboarding.BringFromAppsGuide(
                             onClose = { navigator.close(BringFromAppsRoute) },
-                            // The guide stays on the stack under the picker, so its result lands back here.
-                            onBrowseFiles = launchImportPicker,
+                            // The guide stays on the stack under the picker, so its result lands back here. No file
+                            // browser on the device → no footer option at all, rather than one that cannot open.
+                            onBrowseFiles = if (hasFileBrowser) launchImportPicker else null,
                             emptyResultNoticeId = importEmptyNoticeId,
                             // Clear only the notice that finished: a newer empty result keeps its own id.
                             onEmptyResultNoticeShown = { shownId -> if (importEmptyNoticeId == shownId) importEmptyNoticeId = 0 },
