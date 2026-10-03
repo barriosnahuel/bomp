@@ -46,6 +46,8 @@ object AnalyticsParam {
     const val ACTION = "action"
     const val ORIGIN = "origin"
     const val HUB_SKIPPED = "hub_skipped"
+    const val PICKED = "picked"
+    const val RESULTS = "results"
 }
 
 /**

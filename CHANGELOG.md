@@ -16,8 +16,11 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ### For nerds 🤓
 
+#### Added
+- Analytics now records each abandonment instead of inferring it: `bring_guide_files_selected` and `import_picker_result` (did the file browser return a file) on the bring guide, `recording_discarded` when a reviewed clip is thrown away, and `search_performed` as the denominator that makes the zero-result rate computable
+
 #### Changed
-- `import_hub_import_selected` is no longer emitted now that its Hub row is gone, and `import_hub_bring_selected` covers both ways of bringing an existing audio (the share guide and the file browser at its foot)
+- `import_hub_import_selected` is no longer emitted now that its Hub row is gone, and is retired from the catalogue; `import_hub_bring_selected` covers both ways of bringing an existing audio (the share guide and the file browser at its foot)
 - Bumped all dependencies to latest stable
 - New `record_mic_unavailable` and `import_option_hidden` (`surface`) events, plus `hub_skipped` on `import_hub_opened`, so devices without a microphone or a file browser show up in the weekly report whenever they reach those screens
 - ADR 0019 now covers devices with no microphone: the manifest declares it optional so Play stops filtering them out, and every path into capture checks the hardware, not just the permission

@@ -94,7 +94,11 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       has two rows: `bring` opens the share guide, whose footer holds the file browser, so `source=import`
       now follows `bring_selected`. `import_hub_import_selected` (the old file-browser row) is no longer
       emitted; read it only for versions before 029, and never sum it with `bring_selected` across that
-      boundary — they measure different taps. Treat
+      boundary — they measure different taps. The file browser has its own pair on the guide:
+      `bring_guide_files_selected` / `screen_view {bring_guide}` (did they reach for it? leave out of the
+      denominator the guide views that fired `import_option_hidden {surface=bring_guide}` — no footer to tap) →
+      `import_picker_result` split by `picked` (did the picker return a file?) → `sound_add {source=import}`.
+      `picked=false` is "came back empty", never "cancelled": the system does not tell the two apart. Treat
       `source=onboarding_finish` as a separate cohort (don't put it in the denominator of proactive intent
       `fab`/`my_sounds_empty_state`).
       Exclude `hub_skipped` = true from every Hub denominator (a Bundle boolean param; read it type-safely
@@ -105,7 +109,9 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       carry no `hub_skipped`; those opens all saw the Hub.
    d) RECORDER FUNNEL (new feature, ADR 0019): `import_hub_record_selected` → `record_permission_result`
       (mic GRANT RATE = granted true/total) → `recording_completed` → `sound_add` with `source=record`.
-      Mark where people fall off. Draft recovery: `recording_draft_banner_shown` → `recording_draft_resumed`
+      Mark where people fall off. Split the review drop-off with `recording_discarded` (re-recorded or threw
+      the clip away = "didn't like it"); a completion with neither a save nor a discard left the clip as a
+      draft (see the draft-recovery events) — closer to "didn't manage to save it". Draft recovery: `recording_draft_banner_shown` → `recording_draft_resumed`
       vs `recording_draft_discarded` (resume rate).
    e) ONBOARDING TOUR (3 steps, `step_key` ∈ import/organize/bompear): `onboarding_opened` →
       `onboarding_step_viewed` → `onboarding_completed` vs `onboarding_dismissed`. Completion rate =
@@ -155,7 +161,11 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
    j3) TRIMMER (does the cut engine hold up on real-world codecs, ADR 0028): `sound_trim` totals and
       `first_sound_trim`; fallback rate = share with `outcome='fallback'` (the cut failed and the whole audio
       was saved) — a rate creeping up means a codec regressed; `kept_ms/source_ms` as how much people cut.
-   k) UNMET DEMAND: `search_zero_results` (+ `query_length`).
+   k) UNMET DEMAND: `search_zero_results` (+ `query_length`). ZERO-RESULT RATE = `search_zero_results` /
+      `search_performed` (same trigger, so zero-results is a strict subset; `search_performed` carries
+      `results`). Unlocking the Vault with a query open re-runs it with a wider scope and counts as a new search.
+      Before this split, `search_zero_results` also re-fired on playback/pin/delete refreshes — older counts run high. Alarm above 30%. Not
+      computable for versions before `search_performed` shipped — don't backfill the denominator.
    l) MONETIZATION: `about_gratitude_cafecito_open` + `about_gratitude_kofi_open`.
    m) NAVIGATION: `screen_view` broken down by screen. Read the name from `event_params`
       key `firebase_screen` — the export uses that key, not `screen_name` (Firebase renames

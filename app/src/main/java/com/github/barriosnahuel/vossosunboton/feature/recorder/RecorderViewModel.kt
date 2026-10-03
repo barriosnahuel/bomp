@@ -198,6 +198,7 @@ class RecorderViewModel(
     /** Review → "Re-record": discard the clip and return to ready. */
     fun onReRecord() {
         if (mutableState.value !is RecorderState.Review) return
+        analytics.log(AnalyticsEvent.RecordingDiscarded)
         discardTemp()
         draftStore.clear()
         amplitudes.clear()
@@ -217,6 +218,8 @@ class RecorderViewModel(
     /** Back while a clip exists (recording or review): drop it and return to ready. */
     fun onDiscard() {
         val wasRecording = mutableState.value is RecorderState.Recording
+        // Only a reviewed clip counts as discarded: one still recording never reached `recording_completed`.
+        if (mutableState.value is RecorderState.Review) analytics.log(AnalyticsEvent.RecordingDiscarded)
         pollJob?.cancel()
         val file = tempFile
         tempFile = null

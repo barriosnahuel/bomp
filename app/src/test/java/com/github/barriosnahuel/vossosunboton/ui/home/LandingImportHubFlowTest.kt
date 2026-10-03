@@ -118,6 +118,59 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `tapping Find it on your phone emits bring_guide_files_selected`() {
+        givenLanding()
+        openGuide()
+        picker.answerImmediately = false
+
+        composeTestRule.onNodeWithText(FILES_CTA).performClick()
+        composeTestRule.waitForIdle()
+
+        fake.assertEmitted("bring_guide_files_selected")
+        // The picker is still open: no outcome yet.
+        fake.assertNotEmitted("import_picker_result")
+    }
+
+    @Test
+    fun `double-tapping Find it on your phone counts one intent`() {
+        givenLanding()
+        openGuide()
+        picker.answerImmediately = false
+
+        composeTestRule.onNodeWithText(FILES_CTA).performClick()
+        composeTestRule.onNodeWithText(FILES_CTA).performClick()
+        composeTestRule.waitForIdle()
+
+        assertThat(fake.events.count { it.name == "bring_guide_files_selected" }).isEqualTo(1)
+    }
+
+    @Test
+    fun `an empty picker result emits import_picker_result with picked false`() {
+        givenLanding()
+        openGuide()
+
+        pickNothing()
+
+        assertThat(fake.assertEmitted("import_picker_result").params["picked"]).isEqualTo(false)
+    }
+
+    @Test
+    fun `a picked file emits import_picker_result with picked true`() {
+        givenLanding()
+        openGuide()
+        picker.answerImmediately = false
+        composeTestRule.onNodeWithText(FILES_CTA).performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.runOnUiThread { picker.answer(Uri.parse(PICKED_URI)) }
+        composeTestRule.waitForIdle()
+
+        val results = fake.events.filter { it.name == "import_picker_result" }
+        assertThat(results).hasSize(1)
+        assertThat(results.single().params["picked"]).isEqualTo(true)
+    }
+
+    @Test
     fun `double-tapping Find it on your phone launches a single picker until it answers`() {
         givenLanding()
         openGuide()
@@ -192,6 +245,9 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
 
         composeTestRule.onNodeWithText(EMPTY_RESULT_MESSAGE).assertIsDisplayed()
         verify { Tracker.track(any()) }
+        // The tap was an intent, but no picker ever ran, so there is no outcome to report.
+        fake.assertEmitted("bring_guide_files_selected")
+        fake.assertNotEmitted("import_picker_result")
         // The in-flight guard was released, so the footer is not left dead for the rest of the visit.
         picker.throwOnLaunch = false
         composeTestRule.onNodeWithText(FILES_CTA).performClick()
@@ -427,5 +483,6 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         const val FILES_CTA = "Find it on your phone"
         const val EMPTY_RESULT_MESSAGE = "Wasn't it there? In WhatsApp, press and hold the note, tap Share and pick Bomp."
         const val HALF_A_NOTICE_MS = 5_000L
+        const val PICKED_URI = "content://com.example.documents/audio/1"
     }
 }
