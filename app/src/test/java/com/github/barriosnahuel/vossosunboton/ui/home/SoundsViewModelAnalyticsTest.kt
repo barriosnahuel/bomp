@@ -613,13 +613,17 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         // First toggle: assign. Wait for it to settle so the second toggle reads the right state.
         viewModel.toggleAudioInCollection(sound.id, created.id)
         runBlocking { viewModel.collections.first { col -> col.first { it.id == created.id }.audioIds.contains(sound.id) } }
+        // The collections flow re-emits before the assign coroutine logs its own event, so awaiting
+        // membership alone lets that late `assigned = true` land after the clear below. Await the
+        // assign's last write (the lifetime counter) so the clear only drops settled events.
+        runBlocking { awaitUserProperty(fake, AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS, "1") }
         fake.events.clear()
 
         viewModel.toggleAudioInCollection(sound.id, created.id)
-        runBlocking { awaitAnalyticsEvent(fake, "collection_audio_toggle") }
+        runBlocking { awaitUserProperty(fake, AnalyticsUserProperty.LIFETIME_COLLECTION_ASSIGNS, "2") }
 
-        val event = fake.assertEmitted("collection_audio_toggle")
-        assertThat(event.params["assigned"]).isEqualTo(false)
+        val toggles = fake.events.toList().filter { it.name == "collection_audio_toggle" }
+        assertThat(toggles.map { it.params["assigned"] }).containsExactly(false)
     }
 
     @Test

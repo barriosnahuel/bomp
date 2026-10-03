@@ -5,6 +5,7 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
+import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
@@ -13,13 +14,17 @@ import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessio
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionProfile
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -30,6 +35,7 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     @Before
     fun setUp() {
         AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())
+        runBlocking { SoundsRepository(ApplicationProvider.getApplicationContext()).clearForTest() }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }
@@ -75,16 +81,13 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     fun `searchResults reflects a pin toggled while overlay is open`() {
         val viewModel = givenAViewModel()
         val sound = testSound("custom sound", file = "custom.mp3")
-        viewModel.injectSoundsAndAllSounds(listOf(sound))
+        viewModel.persistAndAwaitInLibrary(sound)
         viewModel.onSearchQueryChange("custom")
 
         viewModel.togglePin(sound)
+        val results = viewModel.awaitSearchResults { found -> found.any { it.id == sound.id && it.isPinned } }
 
-        assertThat(
-            viewModel.searchResults.value
-                .single { it.name == "custom sound" }
-                .isPinned,
-        ).isTrue()
+        assertThat(results.single { it.name == "custom sound" }.isPinned).isTrue()
     }
 
     @Test
@@ -104,16 +107,13 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         val viewModel = givenAViewModel()
         val alpha = testSound("test alpha", file = "a.mp3")
         val beta = testSound("test beta", file = "b.mp3")
-        viewModel.injectSoundsAndAllSounds(listOf(alpha, beta))
+        viewModel.persistAndAwaitInLibrary(alpha, beta)
         viewModel.onSearchQueryChange("test")
 
         viewModel.togglePin(beta)
+        val results = viewModel.awaitSearchResults { found -> found.firstOrNull()?.id == beta.id }
 
-        assertThat(
-            viewModel.searchResults.value
-                .first()
-                .name,
-        ).isEqualTo("test beta")
+        assertThat(results.first().name).isEqualTo("test beta")
     }
 
     /**
@@ -224,6 +224,38 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
         assertThat(viewModel.searchQuery.value).isEmpty()
         assertThat(viewModel.searchResults.value).isEmpty()
     }
+
+    /**
+     * Persists [sounds] for real and blocks until the reactive reload has brought them into
+     * [SoundsViewModel.library]. Tests that call `togglePin` need this instead of reflection
+     * injection: `savePin` re-emits the store, and that reload replaces `allSoundsCache` with what
+     * is persisted — a never-persisted sound vanishes from search mid-test.
+     */
+    private fun SoundsViewModel.persistAndAwaitInLibrary(vararg sounds: Sound) {
+        runBlocking {
+            val repo = SoundsRepository(ApplicationProvider.getApplicationContext())
+            sounds.forEach { repo.save(it) }
+            try {
+                withTimeout(INITIAL_LOAD_TIMEOUT_MS) { library.first { lib -> sounds.all { s -> lib.any { it.id == s.id } } } }
+            } catch (e: TimeoutCancellationException) {
+                throw AssertionError("Persisted sounds never reached library; last: ${library.value.map { it.id }}", e)
+            }
+        }
+    }
+
+    /**
+     * Blocks until [searchResults][SoundsViewModel.searchResults] satisfies [converged] and returns
+     * that value. Usually immediate (togglePin recomputes synchronously); bounded so a regression
+     * fails by name with the last value instead of a bare `NoSuchElementException`.
+     */
+    private fun SoundsViewModel.awaitSearchResults(converged: (List<Sound>) -> Boolean): List<Sound> =
+        runBlocking {
+            try {
+                withTimeout(INITIAL_LOAD_TIMEOUT_MS) { searchResults.first(converged) }
+            } catch (e: TimeoutCancellationException) {
+                throw AssertionError("searchResults never converged; last: ${searchResults.value.map { it.name to it.isPinned }}", e)
+            }
+        }
 
     @Suppress("UNCHECKED_CAST")
     private fun SoundsViewModel.injectAllSounds(sounds: List<Sound>) {
