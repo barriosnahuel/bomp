@@ -141,7 +141,9 @@ No bare `kotlin.assert(...)` in test sources — see [ADR 0006](docs/adr/0006-no
 
 ## JVM tests — await every async input, not just the one you triggered
 
-For a value aggregated from **multiple** flows, await **each** upstream before the triggering action — not just the signal the test fired. The other input (typically the reactive `loadSounds` populating `allSoundsCache`) hasn't arrived on a loaded CI machine, so the derived value is computed against empty state and the assertion flakes. Worked example + canonical `SoundsViewModelAnalyticsTest`: CONTRIBUTING.md § *Testing → Awaiting multiple async inputs*.
+For a value aggregated from **multiple** flows, await **each** upstream before the triggering action — not just the signal the test fired. The other input (typically the reactive `loadSounds` populating `allSoundsCache`) hasn't arrived on a loaded CI machine, so the derived value is computed against empty state and the assertion flakes. Worked example: CONTRIBUTING.md § *Testing → Awaiting multiple async inputs*.
+
+Build a real `SoundsViewModel` only via `buildLoadedSoundsViewModel(...)` (awaits its init load; grep-enforced, escape `// vm-await-ok`).
 
 ## Activity smoke tests
 

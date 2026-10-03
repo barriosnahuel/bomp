@@ -286,10 +286,8 @@ fi
 # openings are out of scope (most are legit `runBlocking { repo.save() }` setup →
 # false positives). Escape hatch: a trailing `// await-ok` on the line.
 # ============================================================================
-RUNBLOCKING_AWAIT_BASELINE="27 app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/SoundsViewModelCollectionsTest.kt
+RUNBLOCKING_AWAIT_BASELINE="25 app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/SoundsViewModelCollectionsTest.kt
 19 app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/SoundsViewModelAnalyticsTest.kt
-1 app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/SoundsViewModelLifecycleTest.kt
-1 app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/LandingScreenTest.kt
 1 app/src/androidTest/java/com/github/barriosnahuel/vossosunboton/TestData.kt"
 runblocking_await_violations=$(
     find $TEST_DIRS -name '*.kt' 2>/dev/null | while IFS= read -r f; do
@@ -304,6 +302,28 @@ if [ -n "$runblocking_await_violations" ]; then
     fail "Unbounded runBlocking await over baseline in test sources:
 $runblocking_await_violations
 A test's runBlocking { … .first/.collect/.await/.single … } must be bounded by withTimeout(…) so it fails in seconds, not after the 10-min CI no-output timeout (the #1186 hang). Wrap the await in withTimeout(TIMEOUT_MS) — see CONTRIBUTING.md § Awaiting multiple async inputs — or justify a one-off with a trailing // await-ok. The grandfathered baseline only shrinks (handoff: sweep the runBlocking-await baseline), never grows."
+fi
+
+# ============================================================================
+# SoundsViewModel await guard — see CONTRIBUTING.md § "Awaiting multiple async inputs"
+# A test that builds a real SoundsViewModel and injects state before its init load
+# lands gets that state overwritten mid-test (the #1340 flake). Tests build it through
+# buildLoadedSoundsViewModel(...), which awaits isInitialLoadComplete with one bounded
+# timeout. Any other `SoundsViewModel(` in test sources fails unless the line carries a
+# trailing `// vm-await-ok: <reason>` (the test must observe the load itself). Comment lines are
+# skipped; the leading non-identifier char keeps `FakeSoundsViewModel(` out.
+# ============================================================================
+VM_BUILDER_FILE="app/src/test/java/com/github/barriosnahuel/vossosunboton/ui/home/SoundsViewModelTestBuilder.kt"
+unawaited_vm=$(
+    grep -rnE --include="*.kt" '(^|[^[:alnum:]_])SoundsViewModel[[:space:]]*\(' app/src/test app/src/androidTest 2>/dev/null \
+        | grep -v "^$VM_BUILDER_FILE:" \
+        | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|\*|/\*)' \
+        | grep -vE '// vm-await-ok:[[:space:]]*[^[:space:]]' || true
+)
+if [ -n "$unawaited_vm" ]; then
+    fail "SoundsViewModel built in a test without awaiting its initial load:
+$unawaited_vm
+Build it with buildLoadedSoundsViewModel(...) (ui/home/SoundsViewModelTestBuilder.kt), which awaits isInitialLoadComplete bounded by INITIAL_LOAD_TIMEOUT_MS — or, when the test must observe the load itself, add a trailing // vm-await-ok: <reason> on that line. See CONTRIBUTING.md § Awaiting multiple async inputs."
 fi
 
 # ============================================================================

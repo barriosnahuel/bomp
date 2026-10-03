@@ -20,10 +20,8 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
@@ -360,14 +358,7 @@ internal class SoundsViewModelVisibilityTest : AbstractRobolectricTest() {
         ).isTrue()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel {
-        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val vm = SoundsViewModel(context, ioDispatcher = UnconfinedTestDispatcher())
-        createdViewModels += vm
-        runBlocking { withTimeout(TIMEOUT_MS) { vm.isInitialLoadComplete.first { it } } }
-        return vm
-    }
+    private fun givenAViewModel(): SoundsViewModel = buildLoadedSoundsViewModel(createdViewModels)
 
     private companion object {
         // Generous headroom for the DataStore → repo → loadSounds → StateFlow chain on a loaded CI

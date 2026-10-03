@@ -26,6 +26,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 #### Tests
 - A CI guard now blocks JVM tests that mount a screen without stopping the background work it starts, the failure mode that used to surface as an unrelated test going red
+- Tests build a real `SoundsViewModel` through one shared builder that waits for its initial load with a single 10-second bound, and a CI guard blocks new tests that skip that wait — a load that lands mid-test can no longer overwrite injected state, and a load that never lands fails in seconds instead of hanging CI
 
 ## \[v2026.08.1] - 2026-08-21
 

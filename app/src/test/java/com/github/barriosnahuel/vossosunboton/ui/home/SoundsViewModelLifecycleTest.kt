@@ -13,7 +13,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
-import com.github.barriosnahuel.vossosunboton.feature.share.ShareFeature
 import com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
@@ -22,10 +21,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -72,20 +68,7 @@ internal class SoundsViewModelLifecycleTest : AbstractRobolectricTest() {
         verify { PlayerControllerFactory.instance.removeOnStartStopListener(viewModel) }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel {
-        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val vm =
-            SoundsViewModel(
-                context,
-                ioDispatcher = UnconfinedTestDispatcher(),
-                welcomeStore = WelcomeStickerStore(context),
-                shareFeature = ShareFeature.instance,
-            )
-        createdViewModels += vm
-        runBlocking { vm.isInitialLoadComplete.first { it } }
-        return vm
-    }
+    private fun givenAViewModel(): SoundsViewModel = buildLoadedSoundsViewModel(createdViewModels)
 
     /**
      * Drives the real ViewModel teardown: hosting [viewModel] in a [ViewModelStore] and clearing it is
