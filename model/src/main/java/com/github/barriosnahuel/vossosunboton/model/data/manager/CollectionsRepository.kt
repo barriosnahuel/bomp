@@ -81,18 +81,21 @@ class CollectionsRepository(
      * On the first subscription per install, the Baúl seed is committed before the flow emits so
      * the UI never observes an empty Vault tab during normal use. Errors during seed (e.g. disk
      * full) surface via [onError] and the flow emits the un-seeded list — the next mutate retries.
+     * The trailing dedup swallows DataStore's echo of that seed write, which would otherwise
+     * re-emit the identical seeded list right after the first emission.
      */
     val collections: Flow<List<Collection>> =
-        storedFlow.map { list ->
-            if (list.none { it.id == BAUL_SYSTEM_ID }) {
-                ensureSystemBaul()
-                // Re-read after seeding to avoid emitting the un-seeded snapshot. The cost is one
-                // extra `first()` per install; mutate() does its own atomic read.
-                decodeStored().map(::toDomain)
-            } else {
-                list.map(::toDomain)
-            }
-        }
+        storedFlow
+            .map { list ->
+                if (list.none { it.id == BAUL_SYSTEM_ID }) {
+                    ensureSystemBaul()
+                    // Re-read after seeding to avoid emitting the un-seeded snapshot. The cost is one
+                    // extra `first()` per install; mutate() does its own atomic read.
+                    decodeStored().map(::toDomain)
+                } else {
+                    list.map(::toDomain)
+                }
+            }.distinctUntilChanged()
 
     suspend fun create(
         name: String,

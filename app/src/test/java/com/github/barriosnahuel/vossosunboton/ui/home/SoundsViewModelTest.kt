@@ -783,15 +783,6 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         createdViewModels += vm
         runBlocking {
             vm.isInitialLoadComplete.first { it }
-            // Yield briefly to let init's auxiliary coroutines (collections collector, filter
-            // prime, repo.sounds.drop(1) collector) reach their suspension points before tests
-            // mutate state via reflection. Without this yield, those collectors can race with
-            // the test's `injectSounds(...)` and overwrite `_sounds` / `allSoundsCache` via a
-            // late-arriving loadSounds emission. The previous timing relied on
-            // loadSounds being a single synchronous read; v2.4.0 added a per-load DataStore
-            // round-trip for the private-only filter, widening the window where the test sees
-            // a half-applied projection.
-            kotlinx.coroutines.delay(50)
         }
         return vm
     }
