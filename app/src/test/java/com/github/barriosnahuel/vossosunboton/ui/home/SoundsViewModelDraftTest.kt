@@ -48,7 +48,7 @@ internal class SoundsViewModelDraftTest : AbstractRobolectricTest() {
                 .let { File(it, "draft.m4a") }
                 .apply { createNewFile() }
         val draftStore = FakeDraftStore(RecorderDraft(clip, durationMs = 3_000))
-        val viewModel = SoundsViewModel(app, ioDispatcher = UnconfinedTestDispatcher(), draftStore = draftStore)
+        val viewModel = buildLoadedSoundsViewModel(application = app, draftStore = draftStore)
 
         viewModel.discardDraft()
 

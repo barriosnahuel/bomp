@@ -24,11 +24,7 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -287,20 +283,7 @@ internal class LandingScreenTest : AbstractRobolectricTest() {
         composeTestRule.onNodeWithText("How do you add one?").assertIsDisplayed()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel {
-        val vm =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-            )
-        createdViewModels += vm
-        // Wait for init's loadSounds to populate state — DataStore IO suspends off
-        // UnconfinedTestDispatcher, so without this wait, reflection-based injection
-        // races with the in-flight load and gets overwritten.
-        runBlocking { vm.isInitialLoadComplete.first { it } }
-        return vm
-    }
+    private fun givenAViewModel(): SoundsViewModel = buildLoadedSoundsViewModel(createdViewModels)
 
     // Drives the global library (allSoundsCache) to a known value. The debug build's loadSounds
     // primes allSoundsCache with the bundled catalog, so injecting AFTER waitForIdle (once that

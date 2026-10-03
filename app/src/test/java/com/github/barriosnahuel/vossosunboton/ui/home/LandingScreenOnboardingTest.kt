@@ -29,12 +29,7 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -266,17 +261,7 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel {
-        val vm =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-            )
-        createdViewModels += vm
-        runBlocking { withTimeout(AWAIT_TIMEOUT_MS) { vm.isInitialLoadComplete.first { it } } }
-        return vm
-    }
+    private fun givenAViewModel(): SoundsViewModel = buildLoadedSoundsViewModel(createdViewModels)
 
     @Suppress("UNCHECKED_CAST")
     private fun SoundsViewModel.injectSounds(value: List<Sound>) {
@@ -288,9 +273,6 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
     }
 
     private companion object {
-        // Bounds the init-load await so a missed signal fails in seconds, not at CI's no-output
-        // timeout (ADR ratchet on unbounded runBlocking flow-awaits in tests).
-        const val AWAIT_TIMEOUT_MS = 5_000L
         const val HUB_TITLE = "How do you add one?"
         const val OVERFLOW_LABEL = "More options"
         const val SECONDARY_LABEL = "See how it works"

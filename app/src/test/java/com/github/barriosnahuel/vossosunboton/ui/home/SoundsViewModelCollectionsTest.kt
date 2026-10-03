@@ -24,7 +24,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -435,7 +434,7 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
         // assertion sees exactly what the UI sees between the tab tap and the IO chain landing.
         val scheduler = kotlinx.coroutines.test.TestCoroutineScheduler()
         val vm =
-            SoundsViewModel(
+            SoundsViewModel( // vm-await-ok: parked StandardTestDispatcher — a blocking await deadlocks; the loop below pumps the load
                 context,
                 ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(scheduler),
             )
@@ -487,16 +486,5 @@ internal class SoundsViewModelCollectionsTest : AbstractRobolectricTest() {
             .containsExactly("first", "second")
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel {
-        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val vm =
-            SoundsViewModel(
-                context,
-                ioDispatcher = UnconfinedTestDispatcher(),
-            )
-        createdViewModels += vm
-        runBlocking { vm.isInitialLoadComplete.first { it } }
-        return vm
-    }
+    private fun givenAViewModel(): SoundsViewModel = buildLoadedSoundsViewModel(createdViewModels)
 }

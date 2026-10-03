@@ -102,7 +102,7 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
                 coEvery { migrateToPersistentIfNeeded() } coAnswers { initGate.await() }
             }
         val viewModel =
-            SoundsViewModel(
+            SoundsViewModel( // vm-await-ok: this test asserts the gate itself, so it subscribes before the load runs
                 context,
                 ioDispatcher = UnconfinedTestDispatcher(),
                 welcomeStore = gatedWelcomeStore,
@@ -582,17 +582,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         // read the cache (search, Vault). This drives that real re-emit path via a concurrent write.
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         runBlocking { SoundsRepository(context).save(testSound("solo", file = "solo.mp3")) }
-        val viewModel =
-            SoundsViewModel(
-                context,
-                ioDispatcher = UnconfinedTestDispatcher(),
-                searchDebounceMs = 0L,
-            )
-        createdViewModels += viewModel
-        runBlocking {
-            viewModel.isInitialLoadComplete.first { it }
-            kotlinx.coroutines.delay(50)
-        }
+        val viewModel = buildLoadedSoundsViewModel(createdViewModels, application = context, searchDebounceMs = 0L)
+        runBlocking { kotlinx.coroutines.delay(50) }
         val sound = viewModel.sounds.value.single { it.name == "solo" }
 
         viewModel.deleteSound(sound)
@@ -767,24 +758,17 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         return givenAViewModel()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     private fun givenAViewModel(
         welcomeStore: WelcomeStickerStore? = null,
         shareFeature: ShareFeature? = null,
     ): SoundsViewModel {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val vm =
-            SoundsViewModel(
-                context,
-                ioDispatcher = UnconfinedTestDispatcher(),
-                welcomeStore = welcomeStore ?: WelcomeStickerStore(context),
-                shareFeature = shareFeature ?: ShareFeature.instance,
-            )
-        createdViewModels += vm
-        runBlocking {
-            vm.isInitialLoadComplete.first { it }
-        }
-        return vm
+        return buildLoadedSoundsViewModel(
+            createdViewModels,
+            application = context,
+            welcomeStore = welcomeStore ?: WelcomeStickerStore(context),
+            shareFeature = shareFeature ?: ShareFeature.instance,
+        )
     }
 
     @Test

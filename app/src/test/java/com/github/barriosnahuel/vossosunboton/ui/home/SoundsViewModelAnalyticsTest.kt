@@ -22,13 +22,11 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
@@ -331,20 +329,8 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
             .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = sounds }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(searchDebounceMs: Long = 200L): SoundsViewModel {
-        val vm =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-                searchDebounceMs = searchDebounceMs,
-            )
-        createdViewModels += vm
-        runBlocking {
-            vm.isInitialLoadComplete.first { it }
-        }
-        return vm
-    }
+    private fun givenAViewModel(searchDebounceMs: Long = 200L): SoundsViewModel =
+        buildLoadedSoundsViewModel(createdViewModels, searchDebounceMs = searchDebounceMs)
 
     /**
      * Polls [fake] every 25 ms until [eventName] appears, with a 5-second cap so a regression

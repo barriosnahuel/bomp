@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.home
 
-import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
@@ -19,12 +18,8 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -289,22 +284,5 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
      * the injected collections and catalog mid-test (e.g. a private-only audio leaking into a
      * locked search).
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel {
-        val vm =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-                searchDebounceMs = 0L,
-            )
-        createdViewModels += vm
-        runBlocking { withTimeout(LOAD_TIMEOUT_MS) { vm.isInitialLoadComplete.first { it } } }
-        return vm
-    }
-
-    private companion object {
-        // Headroom for the DataStore → repo → loadSounds chain on a loaded CI machine; a passing
-        // await returns as soon as the gate opens.
-        const val LOAD_TIMEOUT_MS = 10_000L
-    }
+    private fun givenAViewModel(): SoundsViewModel = buildLoadedSoundsViewModel(createdViewModels, searchDebounceMs = 0L)
 }

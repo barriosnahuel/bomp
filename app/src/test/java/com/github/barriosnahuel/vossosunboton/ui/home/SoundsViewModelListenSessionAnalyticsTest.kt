@@ -19,9 +19,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -55,16 +53,8 @@ internal class SoundsViewModelListenSessionAnalyticsTest : AbstractRobolectricTe
     }
 
     private fun givenAViewModel(): SoundsViewModel {
-        val vm =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-            )
-        createdViewModels += vm
-        runBlocking {
-            vm.isInitialLoadComplete.first { it }
-            delay(50)
-        }
+        val vm = buildLoadedSoundsViewModel(createdViewModels)
+        runBlocking { delay(50) }
         return vm
     }
 

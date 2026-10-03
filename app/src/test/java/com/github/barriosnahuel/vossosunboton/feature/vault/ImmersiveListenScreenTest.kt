@@ -23,6 +23,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnal
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
+import com.github.barriosnahuel.vossosunboton.ui.home.buildLoadedSoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.home.cancelAndJoinAll
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
@@ -32,7 +33,6 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -194,12 +194,7 @@ internal class ImmersiveListenScreenTest : AbstractRobolectricTest() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `host emits the vault_listen screen view on entry`() {
-        val viewModel =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-            )
-        createdViewModels += viewModel
+        val viewModel = buildLoadedSoundsViewModel(createdViewModels)
 
         composeTestRule.setContent {
             AppTheme { ImmersiveListenHost(viewModel = viewModel, soundId = "any-id", onBack = {}) }

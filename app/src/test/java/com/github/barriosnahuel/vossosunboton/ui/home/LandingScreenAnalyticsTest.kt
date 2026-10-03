@@ -28,12 +28,7 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -194,8 +189,7 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
         composeTestRule.setContent { AppTheme { LandingScreen(viewModel) } }
         composeTestRule.waitForIdle()
         // Empty the rendered list to reach the welcome-empty state, where the inline "Add a Bomp" CTA
-        // (not the FAB) carries the open. Wait for init's load so the injection is not overwritten.
-        runBlocking { withTimeout(AWAIT_TIMEOUT_MS) { viewModel.isInitialLoadComplete.first { it } } }
+        // (not the FAB) carries the open. givenAViewModel already awaited init's load, so the injection sticks.
         viewModel.injectSounds(emptyList())
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText(context.getString(R.string.app_my_sounds_empty_cta)).performScrollTo().performClick()
@@ -246,7 +240,6 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
         // Reach the welcome-empty state, whose "See how it works" secondary opens the tour; that
         // path never touches isHubVisible, so the finish-time openHub guard must still fire.
-        runBlocking { withTimeout(AWAIT_TIMEOUT_MS) { viewModel.isInitialLoadComplete.first { it } } }
         viewModel.injectSounds(emptyList())
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText(context.getString(R.string.app_my_sounds_empty_secondary)).performScrollTo().performClick()
@@ -272,20 +265,5 @@ internal class LandingScreenAnalyticsTest : AbstractRobolectricTest() {
             .let { (it.get(this) as MutableStateFlow<List<Sound>>).value = value }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun givenAViewModel(): SoundsViewModel {
-        val vm =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-            )
-        createdViewModels += vm
-        return vm
-    }
-
-    private companion object {
-        // Bounds the init-load await so a missed signal fails in seconds, not at CI's no-output
-        // timeout (ADR ratchet on unbounded runBlocking flow-awaits in tests).
-        const val AWAIT_TIMEOUT_MS = 5_000L
-    }
+    private fun givenAViewModel(): SoundsViewModel = buildLoadedSoundsViewModel(createdViewModels)
 }

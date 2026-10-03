@@ -46,10 +46,6 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -369,16 +365,7 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
     }
 
-    private fun givenAViewModel(): SoundsViewModel {
-        val vm =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-            )
-        createdViewModels += vm
-        runBlocking { withTimeout(LOAD_TIMEOUT_MS) { vm.isInitialLoadComplete.first { it } } }
-        return vm
-    }
+    private fun givenAViewModel(): SoundsViewModel = buildLoadedSoundsViewModel(createdViewModels)
 
     /**
      * Stands in for the SAF picker: records each launch input and answers [nextResult] synchronously, or,
@@ -411,7 +398,6 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
     }
 
     private companion object {
-        const val LOAD_TIMEOUT_MS = 5_000L
         const val SOUND_NAME = "Existing Bomp"
         const val FAB_DESCRIPTION = "Add a Bomp"
         const val BRING_ROW = "Bring in audio you already have"

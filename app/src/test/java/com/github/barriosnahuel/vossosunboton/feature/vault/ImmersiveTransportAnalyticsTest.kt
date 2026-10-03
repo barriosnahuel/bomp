@@ -20,6 +20,7 @@ import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.home.SoundsViewModel
+import com.github.barriosnahuel.vossosunboton.ui.home.buildLoadedSoundsViewModel
 import com.github.barriosnahuel.vossosunboton.ui.home.cancelAndJoinAll
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
@@ -32,8 +33,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -54,10 +53,6 @@ internal class ImmersiveTransportAnalyticsTest : AbstractRobolectricTest() {
     private val controller = mockk<PlayerController>(relaxed = true)
     private val createdViewModels = mutableListOf<SoundsViewModel>()
     private lateinit var soundId: String
-
-    private companion object {
-        const val AWAIT_TIMEOUT_MS = 5_000L
-    }
 
     @Before
     fun setUp() {
@@ -97,13 +92,7 @@ internal class ImmersiveTransportAnalyticsTest : AbstractRobolectricTest() {
     }
 
     private fun launchHost() {
-        val viewModel =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-            )
-        createdViewModels += viewModel
-        runBlocking { withTimeout(AWAIT_TIMEOUT_MS) { viewModel.isInitialLoadComplete.first { it } } }
+        val viewModel = buildLoadedSoundsViewModel(createdViewModels)
         composeTestRule.setContent {
             AppTheme { ImmersiveListenHost(viewModel = viewModel, soundId = soundId, onBack = {}) }
         }

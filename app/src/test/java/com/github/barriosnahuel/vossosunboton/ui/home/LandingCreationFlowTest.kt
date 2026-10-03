@@ -14,7 +14,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
-import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlaybackState
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerController
@@ -27,10 +26,6 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -165,18 +160,7 @@ internal class LandingCreationFlowTest : AbstractRobolectricTest() {
 
     private var backDispatcherOwner: androidx.activity.OnBackPressedDispatcherOwner? = null
 
-    private fun givenAViewModel(): SoundsViewModel {
-        val vm =
-            SoundsViewModel(
-                ApplicationProvider.getApplicationContext(),
-                ioDispatcher = UnconfinedTestDispatcher(),
-            )
-        createdViewModels += vm
-        // Bounded: a load that never lands fails here in seconds instead of hanging until CI's
-        // no-output timeout.
-        runBlocking { withTimeout(LOAD_TIMEOUT_MS) { vm.isInitialLoadComplete.first { it } } }
-        return vm
-    }
+    private fun givenAViewModel(): SoundsViewModel = buildLoadedSoundsViewModel(createdViewModels)
 
     // Drives the rendered list. Injected after the first composition so init's loadSounds cascade
     // (which repopulates it) has already settled.
@@ -198,7 +182,6 @@ internal class LandingCreationFlowTest : AbstractRobolectricTest() {
     }
 
     private companion object {
-        const val LOAD_TIMEOUT_MS = 5_000L
         const val SOUND_NAME = "Existing Bomp"
         const val FAB_DESCRIPTION = "Add a Bomp"
         const val HUB_RECORD_ROW = "Record a Bomp"
