@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Bumped all dependencies to latest stable
 - ADR 0029 makes the release cut roll the milestone — create the next, move PRs still in flight onto it, then close the old — so there is always exactly one open milestone for a PR to take; the rule used to pick "the current month's", which kept naming the release that had already shipped
 
+#### Fixed
+- Seeding the Vault on a fresh install no longer makes the collections stream emit the same list twice, which had Home reload its audios a second time for nothing; the test waits and pre-seeds that papered over the echo are gone
+
 #### Tests
 - A CI guard now blocks JVM tests that mount a screen without stopping the background work it starts, the failure mode that used to surface as an unrelated test going red
 

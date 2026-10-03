@@ -14,7 +14,6 @@ import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessio
 import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionProfile
 import com.github.barriosnahuel.vossosunboton.model.Sound
-import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -36,11 +35,6 @@ internal class SoundsViewModelSearchTest : AbstractRobolectricTest() {
     @Before
     fun setUp() {
         AnalyticsTrackerProvider.setForTest(FakeAnalyticsTracker())
-        // Seeding the Baúl on an empty store echoes a second collections emission; let it land
-        // here, before any VM subscribes, so it can't arrive after givenAViewModel's await.
-        runBlocking {
-            withTimeout(LOAD_TIMEOUT_MS) { CollectionsRepository(ApplicationProvider.getApplicationContext()).collections.first() }
-        }
         mockkObject(PlayerControllerFactory)
         every { PlayerControllerFactory.instance.setOnStartStopListener(any()) } answers { nothing }
         every { PlayerControllerFactory.instance.removeOnStartStopListener(any()) } answers { nothing }

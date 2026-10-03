@@ -8,12 +8,16 @@ package com.github.barriosnahuel.vossosunboton.model.data.manager
 import android.content.Context
 import android.os.Build
 import androidx.test.core.app.ApplicationProvider
+import com.github.barriosnahuel.vossosunboton.model.Collection
 import com.github.barriosnahuel.vossosunboton.model.CollectionAccess
 import com.github.barriosnahuel.vossosunboton.model.CollectionProfile
 import com.github.barriosnahuel.vossosunboton.model.CollectionShareability
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,6 +45,22 @@ internal class CollectionsRepositoryTest {
             assertThat(baul!!.isSystem).isTrue()
             assertThat(baul.isPrivate).isTrue()
             assertThat(baul.profile.shareability).isEqualTo(CollectionShareability.LISTEN_ONLY)
+        }
+
+    @Test
+    fun `seeding the Baul on an empty store emits the seeded list exactly once`() =
+        runTest {
+            repo.clearForTest()
+            val emissions = mutableListOf<List<Collection>>()
+            // Real-time window (not runTest virtual time): DataStore re-emits its own seed write on
+            // Dispatchers.IO, so the echo needs wall-clock time to arrive.
+            withContext(Dispatchers.Default) {
+                withTimeoutOrNull(SEED_ECHO_WINDOW_MS) {
+                    repo.collections.collect { emissions += it }
+                }
+            }
+            assertThat(emissions).hasSize(1)
+            assertThat(emissions.single().map { it.id }).containsExactly(CollectionsRepository.BAUL_SYSTEM_ID)
         }
 
     @Test
@@ -169,4 +189,8 @@ internal class CollectionsRepositoryTest {
             val list = repo.collections.first()
             assertThat(list.any { it.id == CollectionsRepository.BAUL_SYSTEM_ID }).isTrue()
         }
+
+    private companion object {
+        const val SEED_ECHO_WINDOW_MS = 1_500L
+    }
 }

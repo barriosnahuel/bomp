@@ -342,12 +342,6 @@ internal class SoundsViewModelAnalyticsTest : AbstractRobolectricTest() {
         createdViewModels += vm
         runBlocking {
             vm.isInitialLoadComplete.first { it }
-            // Same yield pattern as SoundsViewModelTest: let the collections observer's first
-            // (system-Baúl-seed) emission and any auxiliary collectors settle before the test
-            // mutates state via reflection. Without this the observer can fire a `loadSounds()`
-            // mid-test and overwrite user properties (`current_pinned`) the action under test
-            // just set.
-            delay(50)
         }
         return vm
     }
