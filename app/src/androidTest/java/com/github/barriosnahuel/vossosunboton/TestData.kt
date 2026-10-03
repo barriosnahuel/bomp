@@ -10,6 +10,8 @@ import android.net.Uri
 import android.os.Environment
 import androidx.core.content.FileProvider
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.barriosnahuel.vossosunboton.feature.recorder.DataStoreRecorderDraftStore
+import com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderTempFiles
 import com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
 import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.Collection
@@ -19,6 +21,7 @@ import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepo
 import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import java.io.File
 import java.io.RandomAccessFile
 import java.util.UUID
 
@@ -69,6 +72,7 @@ internal object TestData {
             // assumption every other instrumented test relies on.
             welcome.migrateToPersistentIfNeeded()
             welcome.consume()
+            DataStoreRecorderDraftStore(context).clearForTest()
         }
         // Process-scoped singleton — survives across tests in the same instrumentation process,
         // so reset it explicitly to keep biometric-gate tests deterministic.
@@ -79,6 +83,7 @@ internal object TestData {
             ?.listFiles()
             ?.forEach { it.delete() }
         previewAudioDir(context).listFiles()?.forEach { it.delete() }
+        RecorderTempFiles.purge(context)
     }
 
     /**
@@ -130,7 +135,7 @@ internal object TestData {
 
     private fun providerUri(
         context: Context,
-        file: java.io.File,
+        file: File,
     ): Uri = FileProvider.getUriForFile(context, "${context.packageName}.androidtest.fileprovider", file)
 
     private fun previewAudioDir(context: Context) = context.cacheDir.resolve("preview-audio")
@@ -166,6 +171,25 @@ internal object TestData {
         sound: Sound,
     ) {
         runBlocking { repo(context).savePin(sound.id, sound.name, true) }
+    }
+
+    /**
+     * Seeds a pending recorder draft: a real-audio clip under `cacheDir/recordings/` plus its draft
+     * metadata, returning once the write has landed. Real bytes matter — resuming decodes the clip's
+     * waveform, and an empty stub would exercise the decode-failure branch instead. [clearAll] undoes it.
+     */
+    fun seedRecorderDraft(
+        context: Context,
+        durationMs: Long,
+    ): File {
+        val clip = RecorderTempFiles.newTempFile(context)
+        context.resources.openRawResource(R.raw.app_branding_audio).use { input ->
+            clip.outputStream().use { output -> input.copyTo(output) }
+        }
+        // Await the write itself (save() launches into the scope passed here), never a `draft` collector:
+        // on DataStore 1.2.x a collector racing the write can miss it for good (b/431787506, fixed 1.3.0-alpha03).
+        runBlocking { DataStoreRecorderDraftStore(context, scope = this).save(clip, durationMs) }
+        return clip
     }
 
     /**

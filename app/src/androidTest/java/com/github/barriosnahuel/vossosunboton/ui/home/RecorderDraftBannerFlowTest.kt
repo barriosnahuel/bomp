@@ -20,10 +20,6 @@ import com.github.barriosnahuel.vossosunboton.awaitNodeWithContentDescription
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
-import com.github.barriosnahuel.vossosunboton.feature.recorder.DataStoreRecorderDraftStore
-import com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderTempFiles
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -44,7 +40,6 @@ internal class RecorderDraftBannerFlowTest : AbstractUiTest() {
     @get:Rule
     val micPermission: GrantPermissionRule = GrantPermissionRule.grant(Manifest.permission.RECORD_AUDIO)
 
-    private val draftStore by lazy { DataStoreRecorderDraftStore(context) }
     private val analytics = FakeAnalyticsTracker()
 
     @Before
@@ -56,8 +51,6 @@ internal class RecorderDraftBannerFlowTest : AbstractUiTest() {
     @After
     override fun tearDown() {
         AnalyticsTrackerProvider.setForTest(null)
-        runBlocking { draftStore.clearForTest() }
-        RecorderTempFiles.purge(context)
         super.tearDown()
     }
 
@@ -122,16 +115,7 @@ internal class RecorderDraftBannerFlowTest : AbstractUiTest() {
     private fun seedDraft() {
         // One custom sound so My Bomps renders its normal list (not a first-run onboarding surface).
         TestData.seedCustomSounds(context, count = 1)
-        // Real audio bytes: resuming now actually opens the recorder, whose Review decodes the clip's
-        // waveform — an empty stub would exercise the decode-failure branch instead.
-        val clip = RecorderTempFiles.newTempFile(context)
-        context.resources.openRawResource(R.raw.app_branding_audio).use { input ->
-            clip.outputStream().use { output -> input.copyTo(output) }
-        }
-        runBlocking {
-            draftStore.save(clip, durationMs = 3_000)
-            draftStore.draft.first { it != null }
-        }
+        TestData.seedRecorderDraft(context, durationMs = 3_000)
     }
 
     private fun string(resId: Int): String = context.getString(resId)

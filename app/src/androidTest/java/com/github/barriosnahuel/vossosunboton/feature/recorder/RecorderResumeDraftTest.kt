@@ -15,9 +15,6 @@ import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.TestData
 import com.github.barriosnahuel.vossosunboton.awaitNodeWithText
 import com.github.barriosnahuel.vossosunboton.ui.home.LandingActivity
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 
@@ -33,27 +30,12 @@ internal class RecorderResumeDraftTest : AbstractUiTest() {
     @get:Rule
     val micPermission: GrantPermissionRule = GrantPermissionRule.grant(Manifest.permission.RECORD_AUDIO)
 
-    private val draftStore by lazy { DataStoreRecorderDraftStore(context) }
-
-    @After
-    fun clearDraft() {
-        runBlocking { draftStore.clearForTest() }
-        RecorderTempFiles.purge(context)
-    }
-
     @Test
     fun resumingADraftReopensTheRecorderInReview() {
         // One custom sound so My Sounds renders its normal list (not the first-run welcome surface),
         // which is what the draft banner sits above.
         TestData.seedCustomSounds(context, count = 1)
-        val clip = RecorderTempFiles.newTempFile(context)
-        context.resources.openRawResource(R.raw.app_branding_audio).use { input ->
-            clip.outputStream().use { output -> input.copyTo(output) }
-        }
-        runBlocking {
-            draftStore.save(clip, durationMs = 3_000)
-            draftStore.draft.first { it != null }
-        }
+        TestData.seedRecorderDraft(context, durationMs = 3_000)
 
         ActivityScenario.launch(LandingActivity::class.java).use {
             composeRule.awaitNodeWithText(string(R.string.app_recorder_draft_continue)).performClick()

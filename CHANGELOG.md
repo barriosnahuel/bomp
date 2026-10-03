@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Tests build a real `SoundsViewModel` through one shared builder that waits for its initial load with a single 10-second bound, and a CI guard blocks new tests that skip that wait — a load that lands mid-test can no longer overwrite injected state, and a load that never lands fails in seconds instead of hanging CI
 - The collection-unassign analytics test now waits for the assign to finish before clearing events, so its late `assigned = true` is no longer read as the unassign; the two search pin tests persist their audios instead of injecting them, so the reload a pin save triggers can no longer drop them mid-assertion
 - The onboarding screen tests reset the stored audios and welcome state before each test, so an audio saved by an earlier test class no longer hides the welcome footer and fails them in filtered runs
+- The five recorder-draft UI tests no longer hang for 5 minutes in their seed step: they await the draft write itself instead of a DataStore collector, which DataStore 1.2.x can starve when it starts mid-write (b/431787506), and every UI test now starts with no leftover draft
 
 ## \[v2026.08.1] - 2026-08-21
 
