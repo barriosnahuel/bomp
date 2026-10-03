@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 ### For nerds 🤓
 
 #### Added
+- `listen_session_start` / `listen_session_end` now also cover audios played from the grid (`my_sounds`, `explore_sounds`, `vault`, `search_sound`), one session per playback with `listened_ms` / `duration_ms`, so the weekly report can tell a two-second tap from an audio heard to the end; `first_listen_session_start` now marks the first session on any surface, not the first long listen
 - Analytics now records each abandonment instead of inferring it: `bring_guide_files_selected` and `import_picker_result` (did the file browser return a file) on the bring guide, `recording_discarded` when a reviewed clip is thrown away, and `search_performed` as the denominator that makes the zero-result rate computable
 
 #### Changed

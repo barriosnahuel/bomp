@@ -124,15 +124,19 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
    g) FRICTION: `sound_add_abandoned_after_error` (+ param `reason`); rate of `sound_add` with
       `name_hit_limit=true`; `duplicate_name_hint_shown` vs `duplicate_name_hint_play`.
    h) ENGAGEMENT: `sound_play` and `sound_add` totals and per active user; `pin_toggle`, `visibility_toggle`;
-      milestones (`event_name LIKE 'milestone_sounds_%'`). Long-listen depth is its own block (j2) — a play
+      milestones (`event_name LIKE 'milestone_sounds_%'`). Listening depth is its own block (j2 long, j2b grid) — a play
       count alone cannot tell a 2-second tap from a 3-minute listen.
    i) VIRALITY: `share` and `first_share` (sharers / actives rate).
    j) FEATURE ADOPTION: Collections (`collection_create` by `scope=public/private` and by `source`;
       `collection_audio_toggle`, `collection_filter_apply`); Vault (`vault_unlock` rate `granted=true`;
       `vault_unprotected_warning_shown`; `vault_search_unlock_cta_shown`).
    j2) LONG LISTENING (the Vault's reason to exist — audios you sit down to hear, not soundboard taps):
-      - **Reach**: `listen_session_start` totals, sessions per active user, and `first_listen_session_start`
-        as the adoption curve of the surface.
+      - **Scope every j2 metric to `surface = 'vault_listen'`.** From v2026.10.1 the grid emits the same
+        `listen_session_*` pair (block j2b); an unfiltered query mixes a 2-second tap with a 3-minute listen.
+      - **Reach**: `listen_session_start` totals, sessions per active user, and Bompers whose first
+        `listen_session_start` with `surface = 'vault_listen'` falls in the window as the adoption curve of
+        the surface. Do NOT use `first_listen_session_start` for this from v2026.10.1 on: it now fires on the
+        first session on any surface, almost always a grid tap.
       - **Depth**: over `listen_session_end`, `SUM(listened_ms)/SUM(duration_ms)` as the share of the audio
         actually heard, plus the share of sessions above 80% (a proxy for "listened to the end"). Read
         `listened_ms` as audio consumed, NOT time on screen: pauses do not accrue, a scrub back does not
@@ -158,6 +162,26 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       - **Segment plays by surface**: `sound_play` carries `surface`; `vault_listen` separates a long listen
         from a Vault list tap. Data before the fix (releases up to v2026.08.1) reports those long listens as
         `vault` — do not read the split backwards across that boundary.
+   j2b) BOTONERA LISTENING DEPTH (the brand KPI — audios *heard*, not audios tapped; from v2026.10.1):
+      - **Source**: `listen_session_start` / `listen_session_end` with `surface IN ('my_sounds',
+        'explore_sounds', 'vault', 'search_sound')`. One session per playback of one audio: a pause + resume
+        of it stays one session; it closes on completion, on stop, when another audio (or a long listen)
+        starts, or when the Bomper leaves the screen. Returning to an audio that another grid audio interrupted
+        opens a new session that starts mid-audio — its `listened_ms` covers only that stretch; after an
+        edit/trim preview interrupted it, the same session continues. Audio that keeps
+        playing after the Bomper leaves the screen is not counted past that moment, so depth reads slightly low.
+      - **Depth**: same reading as j2 — `SUM(listened_ms)/SUM(duration_ms)` and the share of sessions
+        above 80%, broken down by `surface`, **always `WHERE duration_ms > 0`**. Unlike j2, >100% is NOT
+        re-listening here: a replay after completion is a new session, so a grid ratio above 1 only comes from
+        a scrub back or measurement overshoot — cap at 1. Re-listening shows up as more sessions, not deeper ones.
+      - **How long the audios are**: percentiles (p25/p50/p90) of `duration_ms` over `listen_session_end`.
+        These are the audios *played*, weighted by how often each one is played — not the library. This
+        is the data the session-duration floor is waiting for (spec 030 §7): no floor is applied at
+        emission, so filter short taps when reading (e.g. report the depth with and without
+        `listened_ms < 1000`).
+      - **Denominator**: `listen_session_start`; end/start below 1 is a process kill or the app going away
+        mid-audio, not a bug. The welcome sticker opens no session (as it reports no `sound_play`), so
+        grid `listen_session_start` should track grid `sound_play` minus resumes and failed starts.
    j3) TRIMMER (does the cut engine hold up on real-world codecs, ADR 0028): `sound_trim` totals and
       `first_sound_trim`; fallback rate = share with `outcome='fallback'` (the cut failed and the whole audio
       was saved) — a rate creeping up means a codec regressed; `kept_ms/source_ms` as how much people cut.

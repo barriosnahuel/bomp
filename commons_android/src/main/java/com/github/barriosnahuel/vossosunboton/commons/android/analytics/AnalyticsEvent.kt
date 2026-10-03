@@ -105,10 +105,12 @@ sealed class AnalyticsEvent(
     }
 
     /**
-     * A listen session started on the long-form engine — the surface the Bomper reaches to hear a whole
-     * audio, not to fire a soundboard tap (ADR 0022). Pairs with [ListenSessionEnd]: start counts reach,
-     * the pair counts how much of the audio actually got heard. `hasFirstVariant = true` so the first
-     * long listen is separable as an adoption milestone.
+     * A listen session started. [surface] tells the two kinds apart: `vault_listen` is the long-form
+     * listening screen (ADR 0022), one session per visit; the grid surfaces (`my_sounds`, `explore_sounds`,
+     * `vault`, `search_sound`) are one session per playback of an audio, surviving a pause + resume of it.
+     * Pairs with [ListenSessionEnd]: start counts reach, the pair counts how much of the audio actually got
+     * heard. The `first_*` variant fires on the first session on ANY surface — first long listen is
+     * `MIN(event_timestamp)` over `surface = vault_listen`.
      */
     data class ListenSessionStart(
         val surface: String,
@@ -117,11 +119,11 @@ sealed class AnalyticsEvent(
     }
 
     /**
-     * A listen session ended — the Bomper left the listening surface. [listenedMs] is audio actually
+     * A listen session ended — the Bomper left the listening surface or, on the grid, the audio completed,
+     * was stopped, gave way to another one, or the Bomper left the screen. [listenedMs] is audio actually
      * consumed (advancing playback only: pauses do not accrue, and seeking backwards does not subtract),
-     * so `listened_ms / duration_ms` reads as depth of listening rather than time on screen. Emitted on
-     * teardown of the listening surface, so a process kill mid-session drops it — start counts are the
-     * denominator to trust, not end counts.
+     * so `listened_ms / duration_ms` reads as depth of listening rather than time on screen. A process kill
+     * mid-session drops it — start counts are the denominator to trust, not end counts.
      */
     data class ListenSessionEnd(
         val surface: String,
