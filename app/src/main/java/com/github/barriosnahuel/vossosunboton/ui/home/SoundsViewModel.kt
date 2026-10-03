@@ -385,6 +385,7 @@ class SoundsViewModel(
      */
     override fun onCleared() {
         PlayerControllerFactory.instance.removeOnStartStopListener(this)
+        gridListenSessions.close()
         super.onCleared()
     }
 
@@ -649,6 +650,22 @@ class SoundsViewModel(
     }
 
     private val tracker get() = AnalyticsTrackerProvider.get(getApplication())
+
+    private val gridListenSessions = GridListenSessions { tracker }
+
+    /** Surface of the last play tap: [onPlayerStart] lands after an async prepare, maybe on another tab. */
+    private var playTapSurface: String? = null
+
+    /** [Sound.id] of the long listen in progress — tracked by its own screen, so not a grid session. */
+    private var longListenSoundId: String? = null
+
+    /**
+     * The Bomper left the screen (another Activity on top, Home, screen off) — not a rotation. Closes
+     * the grid listen session so its end event is not lost if the process dies in the background.
+     */
+    fun onLeftForeground() {
+        gridListenSessions.close()
+    }
 
     /**
      * Surface label for events fired from this ViewModel. Mirrors the screen_view emitted by `LandingScreen` so
@@ -930,6 +947,7 @@ class SoundsViewModel(
             PlayerControllerFactory.instance.pause()
         } else {
             beginTapToSoundSpan()
+            playTapSurface = currentSurface
             PlayerControllerFactory.instance.startPlayingSound(getApplication(), sound)
             if (isWelcomeSticker(sound)) {
                 tracker.log(AnalyticsEvent.WelcomeStickerPlay)
@@ -951,6 +969,7 @@ class SoundsViewModel(
      * keep routing through [playOrStop] — the controller resolves the engine.
      */
     fun startListenSession(sound: Sound) {
+        longListenSoundId = sound.id
         PlayerControllerFactory.instance.startListenSession(getApplication(), sound)
         // The listening surface, not the tab underneath it: `currentSurface` resolves to `vault`
         // here, which made every long listen indistinguishable from a Vault list tap.
@@ -1587,6 +1606,14 @@ class SoundsViewModel(
         positionMs: Int,
     ) {
         endTapToSoundSpan()
+        gridListenSessions.onStart(
+            soundId = sound.id,
+            surface = playTapSurface ?: currentSurface,
+            durationMs = durationMs,
+            positionMs = positionMs,
+            // The immersive's long listens are tracked by its screen; the welcome stays out like in `sound_play`.
+            tracked = !isWelcomeSticker(sound) && sound.id != longListenSoundId,
+        )
         val playingSound = sound.copy(isPlaying = true)
         _playingSound.value = playingSound
         // positionMs is non-zero on resume from a paused state; initialising _playbackProgress with
@@ -1612,6 +1639,8 @@ class SoundsViewModel(
         // A stop/delete can land while a tap's prepare is still in flight — close the span so the
         // next tap doesn't double-begin with the same cookie (guarded no-op otherwise).
         endTapToSoundSpan()
+        gridListenSessions.onStop(sound.id, completed)
+        if (sound.id == longListenSoundId) longListenSoundId = null
         val stoppedSound = sound.copy(isPlaying = false)
         _playingSound.value = null
         _playbackProgress.value = null
@@ -1656,6 +1685,7 @@ class SoundsViewModel(
         // Paused (toggle) or preempted (another playback started). The sound is no longer the
         // active one, so `_playingSound` / `_playbackProgress` clear — but unlike a stop, we
         // retain its position in `_pausedProgress` so the UI keeps the slider where it was.
+        gridListenSessions.onPause(sound.id, positionMs)
         val pausedSound = sound.copy(isPlaying = false)
         if (_playingSound.value?.id == sound.id) {
             _playingSound.value = null
@@ -1669,11 +1699,13 @@ class SoundsViewModel(
     }
 
     override fun onProgressUpdate(positionMs: Int) {
+        gridListenSessions.onProgress(positionMs)
         _playbackProgress.update { it?.copy(positionMs = positionMs) }
     }
 
     override fun onPlayerError(sound: Sound) {
         endTapToSoundSpan()
+        if (sound.id == longListenSoundId) longListenSoundId = null
         _playbackErrorEvent.trySend(Unit)
     }
 

@@ -45,6 +45,11 @@ class LandingActivity : FragmentActivity() {
         maybeSeedDebugSounds(intent)
     }
 
+    override fun onStop() {
+        super.onStop()
+        if (!isChangingConfigurations) viewModel.onLeftForeground()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         // Keep getIntent() pointing at the newest Intent, so a later recreate restores from the one
