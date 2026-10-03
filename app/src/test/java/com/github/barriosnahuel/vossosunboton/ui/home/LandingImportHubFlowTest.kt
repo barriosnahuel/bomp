@@ -33,12 +33,14 @@ import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.declareAudioFileBrowser
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlaybackState
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerController
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.model.Sound
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
+import com.github.barriosnahuel.vossosunboton.withdrawAudioFileBrowser
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
@@ -75,6 +77,8 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
     fun setUp() {
         fake = FakeAnalyticsTracker()
         AnalyticsTrackerProvider.setForTest(fake)
+        // Most of this class drives the guide's file-browser footer, which only renders when one resolves.
+        declareAudioFileBrowser()
         originalController = PlayerControllerFactory.instance
         PlayerControllerFactory.instance =
             mockk(relaxed = true) {
@@ -110,6 +114,7 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         assertThat(picker.launchedInputs.single() as Array<*>).asList().containsExactly("audio/*")
         // The old Hub row's event is not re-pointed here: that would silently redefine its history.
         fake.assertNotEmitted("import_hub_import_selected")
+        fake.assertNotEmitted("import_option_hidden")
     }
 
     @Test
@@ -246,6 +251,7 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         composeTestRule.waitForIdle()
 
         assertThat(fake.events.count { it.name == "import_hub_opened" }).isEqualTo(1)
+        assertThat(fake.assertEmitted("import_hub_opened").params["hub_skipped"]).isEqualTo(false)
     }
 
     @Test
@@ -278,8 +284,11 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         // A Hub with only the bring row left would be a tap with no choice in it.
         composeTestRule.onNodeWithText(GUIDE_CTA).assertIsDisplayed()
         composeTestRule.onAllNodesWithText(BRING_ROW).assertCountEquals(0)
-        // The funnel entry still counts: the user asked to add a Bomp, whichever surface answered.
-        assertThat(fake.events.count { it.name == "import_hub_opened" }).isEqualTo(1)
+        // The funnel entry still counts: the user asked to add a Bomp, whichever surface answered. Flagged as
+        // skipped, so the report keeps it out of the Hub's "chose a path" denominator.
+        val opened = fake.events.filter { it.name == "import_hub_opened" }
+        assertThat(opened).hasSize(1)
+        assertThat(opened.single().params["hub_skipped"]).isEqualTo(true)
     }
 
     @Test
@@ -298,6 +307,19 @@ internal class LandingImportHubFlowTest : AbstractRobolectricTest() {
         pressBack()
         composeTestRule.onNodeWithContentDescription(FAB_DESCRIPTION).assertIsDisplayed()
         composeTestRule.onAllNodesWithText(GUIDE_CTA).assertCountEquals(0)
+    }
+
+    @Test
+    fun `on a device without a file browser the guide offers no file option and reports it hidden`() {
+        withdrawAudioFileBrowser()
+        givenLanding()
+
+        openGuide()
+
+        composeTestRule.onAllNodesWithText(FILES_CTA).assertCountEquals(0)
+        val hidden = fake.events.filter { it.name == "import_option_hidden" }
+        assertThat(hidden).hasSize(1)
+        assertThat(hidden.single().params["surface"]).isEqualTo("bring_guide")
     }
 
     private fun givenNoMicrophone() {

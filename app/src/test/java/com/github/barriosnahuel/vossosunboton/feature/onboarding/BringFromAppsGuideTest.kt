@@ -206,9 +206,19 @@ internal class BringFromAppsGuideTest : AbstractRobolectricTest() {
         assertThat(footerBottom).isAtMost(noticeTop)
     }
 
+    @Test
+    fun `without a file browser the footer keeps only Got it`() {
+        setGuide(onBrowseFiles = null)
+
+        composeTestRule.onNodeWithText("Got it").assertIsDisplayed()
+        // The question and its answer leave together: no "already downloaded?" left pointing at nothing.
+        composeTestRule.onAllNodesWithText("Find it on your phone").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Already have it downloaded?").assertCountEquals(0)
+    }
+
     private fun setGuide(
         onClose: () -> Unit = {},
-        onBrowseFiles: () -> Unit = {},
+        onBrowseFiles: (() -> Unit)? = {},
         emptyResultNoticeId: Int = 0,
         onEmptyResultNoticeShown: (Int) -> Unit = {},
     ) {

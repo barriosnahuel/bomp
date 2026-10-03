@@ -45,6 +45,7 @@ object AnalyticsParam {
     const val DURATION_MS = "duration_ms"
     const val ACTION = "action"
     const val ORIGIN = "origin"
+    const val HUB_SKIPPED = "hub_skipped"
 }
 
 /**

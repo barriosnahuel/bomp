@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-21
 - **Supersedes:** —
-- **Amended:** 2026-06-23 (§ Draft recovery) · 2026-07-11 (§ Entry point & screen host — the retrofit into the Nav3 graph landed) · 2026-10-02 (§ Microphone-less devices)
+- **Amended:** 2026-06-23 (§ Draft recovery) · 2026-07-11 (§ Entry point & screen host — the retrofit into the Nav3 graph landed) · 2026-10-02 (§ Microphone-less devices) · 2026-10-03 (§ Microphone-less devices: file browser on every surface, measurement)
 
 ## Context
 
@@ -111,10 +111,19 @@ devices.
   instead; every "add a Bomp" surface (FAB, empty state, onboarding finish) goes through that entry.
   The funnel's entry event still fires, so "wanted to add a Bomp" keeps counting on these devices.
 - **Recorder as last line of defense:** if the destination is reached anyway, a fresh visit shows a
-  no-microphone message with only the import escape — no priming, no Settings CTA (there is nothing to
-  grant). The escape is offered only when a system file browser resolves (TV-like and managed builds can
-  ship without one): a button that launches nothing is hidden, not shown. A restored draft still opens its Review, without the permission gate (review only plays back)
+  no-microphone message with at most the import escape (see the file-browser rule below) — no priming, no Settings CTA (there is nothing to
+  grant). A restored draft still opens its Review, without the permission gate (review only plays back)
   and without "Re-record" (it would lead into a capture that cannot start).
+- **No file browser, no import option — on every surface.** Every "import a file" option (this screen's
+  escape, the mic-denied screen's escape, the bring guide's "find it on your phone") is offered only when
+  a system file browser resolves; TV-like and managed builds can ship without one. A button that launches
+  nothing is hidden, not shown, and copy that promised it drops the promise. The launch still guards
+  `ActivityNotFoundException`, for a handler disabled between the check and the tap.
+- **Measured per situation, not per device.** `import_hub_opened {hub_skipped}`, `record_mic_unavailable`
+  and `import_option_hidden {surface}` fire only when a limited device reaches that surface, so a phone
+  with both never pays for them. User properties (`has_microphone`, …) were rejected: a ~constant value
+  repeated on every event row of every user, for a base that may be tiny. Accepted cost: a limited user
+  who never reaches those surfaces stays invisible.
 
 ### Data model — internal `SoundSource`
 The recorded clip saves to the **same destination and naming flow as an import** (no Vault pre-mark,
@@ -227,6 +236,7 @@ you-left of an in-progress capture (still no `MediaRecorder.pause()`); the recov
   outcome (save, discard, re-record, too-short) so the banner never offers a clip the user resolved.
 - Every path into capture checks microphone **hardware** (`FEATURE_MICROPHONE`), not just the
   `RECORD_AUDIO` grant — the manifest declares the mic optional, so mic-less devices install the app.
+- Every "import a file" option checks a system file browser resolves before it renders.
 
 ## Revisit criteria
 
