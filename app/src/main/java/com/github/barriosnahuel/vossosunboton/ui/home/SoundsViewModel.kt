@@ -543,7 +543,7 @@ class SoundsViewModel(
                 com.github.barriosnahuel.vossosunboton.feature.vault.security.VaultSessionState
                     .flow
                     .drop(1)
-                    .collect { recomputeSearchResults() }
+                    .collect { recomputeSearchResults(reportSearch = true) }
             } catch (e: CancellationException) {
                 throw e
             } catch (
@@ -685,19 +685,24 @@ class SoundsViewModel(
         searchDebounceJob?.cancel()
         if (searchDebounceMs == 0L || query.isBlank()) {
             _isSearchPending.value = false
-            recomputeSearchResults()
+            recomputeSearchResults(reportSearch = true)
         } else {
             _isSearchPending.value = true
             searchDebounceJob =
                 viewModelScope.launch {
                     delay(searchDebounceMs)
-                    recomputeSearchResults()
+                    recomputeSearchResults(reportSearch = true)
                     _isSearchPending.value = false
                 }
         }
     }
 
-    private fun recomputeSearchResults() {
+    /**
+     * [reportSearch] marks a run the user caused (a settled query, a Vault unlock re-running it), which
+     * reports `search_performed` and, with no match, `search_zero_results`; refreshes from playback, pin or
+     * delete only re-filter what is shown, so the zero-result rate never counts a search twice.
+     */
+    private fun recomputeSearchResults(reportSearch: Boolean = false) {
         val query = _searchQuery.value
         // Privacy gate: while the Vault session is locked, audios tagged exclusively to a
         // private collection must NOT surface on the search overlay (it's reachable from public
@@ -722,8 +727,11 @@ class SoundsViewModel(
                     .filter { it.name.contains(query, ignoreCase = true) }
                     .sortedWith(compareByDescending<Sound> { it.isPinned }.thenBy { it.name.lowercase() })
             }
-        if (query.isNotBlank() && _searchResults.value.isEmpty()) {
-            tracker.log(AnalyticsEvent.SearchZeroResults(queryLength = query.length))
+        if (reportSearch && query.isNotBlank()) {
+            tracker.log(AnalyticsEvent.SearchPerformed(results = _searchResults.value.size))
+            if (_searchResults.value.isEmpty()) {
+                tracker.log(AnalyticsEvent.SearchZeroResults(queryLength = query.length))
+            }
         }
     }
 

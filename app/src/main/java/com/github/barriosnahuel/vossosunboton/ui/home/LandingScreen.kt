@@ -187,6 +187,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val importPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             importPickerInFlight = false
+            tracker.log(AnalyticsEvent.ImportPickerResult(picked = uri != null))
             if (uri != null) {
                 // Naming is pushed ON TOP of the guide: back returns to the guide the user came from, the save
                 // pops both (closeCreationFlow), and screen_view never reports the tab underneath in between.
@@ -202,6 +203,7 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     val launchImportPicker = {
         if (!importPickerInFlight && navigator.isVisible(BringFromAppsRoute)) {
             importPickerInFlight = true
+            tracker.log(AnalyticsEvent.BringGuideFilesSelected)
             try {
                 importPicker.launch(arrayOf("audio/*"))
             } catch (e: ActivityNotFoundException) {

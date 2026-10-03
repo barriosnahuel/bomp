@@ -181,11 +181,26 @@ sealed class AnalyticsEvent(
         override fun params(): Bundle = Bundle().apply { putBoolean(AnalyticsParam.VISIBLE, visible) }
     }
 
-    /** Search returned zero results for a non-blank query. Debounced upstream to avoid keystroke noise. */
+    /**
+     * Search returned zero results for a non-blank query. Debounced upstream to avoid keystroke noise; fires
+     * only alongside [SearchPerformed], so it is a strict subset of it.
+     */
     data class SearchZeroResults(
         val queryLength: Int,
     ) : AnalyticsEvent(name = "search_zero_results", hasFirstVariant = true) {
         override fun params(): Bundle = Bundle().apply { putInt(AnalyticsParam.QUERY_LENGTH, queryLength) }
+    }
+
+    /**
+     * A non-blank search settled: emitted on the same debounce, and the same re-run on a Vault unlock, that
+     * fires [SearchZeroResults] — so it is that event's denominator and the zero-result rate is computable.
+     * [results] = matches shown. Not emitted when results refresh for other reasons (playback, pin, delete).
+     * No `first_*`: high volume, not a milestone.
+     */
+    data class SearchPerformed(
+        val results: Int,
+    ) : AnalyticsEvent(name = "search_performed", hasFirstVariant = false) {
+        override fun params(): Bundle = Bundle().apply { putInt(AnalyticsParam.RESULTS, results) }
     }
 
     /**
@@ -496,8 +511,8 @@ sealed class AnalyticsEvent(
      * `hasFirstVariant = true` so first-ever opens are isolable.
      *
      * Funnel: import_hub_opened → import_hub_bring_selected / import_hub_record_selected →
-     * `sound_add {source=import|record}`. The picker behind the bring guide's footer has no intent event
-     * of its own yet, so its drop-off is not separable from the guide's.
+     * `sound_add {source=import|record}`. The picker behind the bring guide's footer has its own pair:
+     * [BringGuideFilesSelected] (intent) → [ImportPickerResult] (came back with a file or empty).
      *
      * For an *import-intent* funnel, scope the denominator to proactive opens
      * (`source IN ("fab", "my_sounds_empty_state")`) and treat `"onboarding_finish"` as its own
@@ -521,16 +536,6 @@ sealed class AnalyticsEvent(
     }
 
     /**
-     * Import-Hub funnel · INTENT. The user tapped the "import audio from your device" row, committing
-     * to pick a file (the system picker launched next). `hasFirstVariant = true`.
-     *
-     * **No longer emitted:** the Hub lost that row (the file browser now sits at the foot of the bring
-     * guide), and the event is deliberately not re-pointed at the new call-site, so its history keeps
-     * meaning "chose the Hub row". Kept declared only until the catalogue retires it.
-     */
-    object ImportHubImportSelected : AnalyticsEvent(name = "import_hub_import_selected", hasFirstVariant = true)
-
-    /**
      * Import-Hub funnel · INTENT (record). The user tapped the live "record" row, committing to the
      * in-app recorder (ADR 0019). Sibling of [ImportHubBringSelected]; together they split Hub intent
      * between the two creation channels. `hasFirstVariant = true`.
@@ -546,6 +551,26 @@ sealed class AnalyticsEvent(
      * `hasFirstVariant = true`.
      */
     object ImportHubBringSelected : AnalyticsEvent(name = "import_hub_bring_selected", hasFirstVariant = true)
+
+    /**
+     * Bring guide · INTENT (file browser). The user tapped the guide's "find it on your phone" footer (a
+     * repeat tap while a picker is already open does not count). Numerator against `screen_view {bring_guide}`
+     * on the same screen, so "nobody needed the browser" separates from "nobody reached it". Not a re-pointed
+     * `import_hub_import_selected`:
+     * that event meant "chose the Hub row" and was retired with the row, keeping its history honest.
+     */
+    object BringGuideFilesSelected : AnalyticsEvent(name = "bring_guide_files_selected", hasFirstVariant = true)
+
+    /**
+     * Bring guide · OUTCOME of the system picker. [picked] = it returned a file; false means it returned
+     * nothing, and the system does not say whether the user cancelled or found nothing — do not read it as
+     * either. Not emitted when the picker could not launch at all. No `first_*`: a recurring diagnostic.
+     */
+    data class ImportPickerResult(
+        val picked: Boolean,
+    ) : AnalyticsEvent(name = "import_picker_result", hasFirstVariant = false) {
+        override fun params(): Bundle = Bundle().apply { putBoolean(AnalyticsParam.PICKED, picked) }
+    }
 
     /**
      * In-app recorder funnel · COMPLETION (ADR 0019). A capture reached the review state — via
@@ -573,6 +598,14 @@ sealed class AnalyticsEvent(
     ) : AnalyticsEvent(name = "import_option_hidden", hasFirstVariant = false) {
         override fun params(): Bundle = Bundle().apply { putString(AnalyticsParam.SURFACE, surface) }
     }
+
+    /**
+     * In-app recorder funnel · DROP-OFF. A clip that reached review ([RecordingCompleted]) was thrown away
+     * from the recorder: "Re-record", or back → confirm discard. Leaving the screen any other way keeps the
+     * clip as a recoverable draft, whose fate is [RecordingDraftDiscarded] / [RecordingDraftResumed] instead.
+     * `first_*` separates a first frustration from the routine of someone who records often.
+     */
+    object RecordingDiscarded : AnalyticsEvent(name = "recording_discarded", hasFirstVariant = true)
 
     /**
      * Outcome of the app's first runtime permission, `RECORD_AUDIO` (ADR 0019). [granted] is true on

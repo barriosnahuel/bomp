@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -47,6 +48,15 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    private fun TestScope.reachReview(): RecorderViewModel {
+        val vm = viewModel()
+        vm.onRecordTapped()
+        advanceTimeBy(1_200)
+        vm.onStopTapped()
+        advanceUntilIdle()
+        return vm
     }
 
     private fun viewModel() =
@@ -321,6 +331,65 @@ internal class RecorderViewModelTest : AbstractRobolectricTest() {
 
             // A restored draft is a recovered prior completion, not a new one — the funnel must not double-count.
             analytics.assertNotEmitted("recording_completed")
+        }
+
+    @Test
+    fun `re-recording a reviewed clip emits recording_discarded`() =
+        runTest(dispatcher) {
+            val vm = reachReview()
+
+            vm.onReRecord()
+
+            analytics.assertEmitted("recording_discarded")
+        }
+
+    @Test
+    fun `discarding a reviewed clip emits recording_discarded`() =
+        runTest(dispatcher) {
+            val vm = reachReview()
+
+            vm.onDiscard()
+            advanceUntilIdle()
+
+            analytics.assertEmitted("recording_discarded")
+        }
+
+    @Test
+    fun `discarding while still recording does not emit recording_discarded`() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            vm.onRecordTapped()
+            advanceTimeBy(1_200)
+
+            vm.onDiscard()
+            advanceUntilIdle()
+
+            // The take never reached review, so it is not a reviewed clip thrown away.
+            analytics.assertNotEmitted("recording_discarded")
+        }
+
+    @Test
+    fun `using the clip does not emit recording_discarded`() =
+        runTest(dispatcher) {
+            val vm = reachReview()
+
+            vm.onUseClip()
+
+            analytics.assertNotEmitted("recording_discarded")
+        }
+
+    @Test
+    fun `discarding a restored draft from review emits recording_discarded`() =
+        runTest(dispatcher) {
+            draftStore.currentDraft = RecorderDraft(File(application.cacheDir, "recordings/clip.m4a"), durationMs = 4_000)
+            val vm = viewModel()
+            vm.onEnter(resumeDraft = true)
+            advanceUntilIdle()
+
+            vm.onDiscard()
+            advanceUntilIdle()
+
+            analytics.assertEmitted("recording_discarded")
         }
 
     @Test
