@@ -21,8 +21,13 @@ import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
+import com.github.barriosnahuel.vossosunboton.feature.collections.MySoundsFilterStore
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
+import com.github.barriosnahuel.vossosunboton.feature.vault.VaultFilterStore
+import com.github.barriosnahuel.vossosunboton.feature.welcome.WelcomeStickerStore
 import com.github.barriosnahuel.vossosunboton.model.Sound
+import com.github.barriosnahuel.vossosunboton.model.data.manager.CollectionsRepository
+import com.github.barriosnahuel.vossosunboton.model.data.manager.SoundsRepository
 import com.github.barriosnahuel.vossosunboton.testSound
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 import com.google.common.truth.Truth.assertThat
@@ -30,6 +35,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -53,8 +59,18 @@ internal class LandingScreenOnboardingTest : AbstractRobolectricTest() {
 
     @Before
     fun setUp() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        // The tests assume a fresh install (only the welcome sticker). The DataStores are process
+        // singletons, so an earlier class's saved audio would otherwise hide the welcome footer.
+        runBlocking {
+            SoundsRepository(context).clearForTest()
+            WelcomeStickerStore(context).clearForTest()
+            CollectionsRepository(context).clearForTest()
+            MySoundsFilterStore(context).clearForTest()
+            VaultFilterStore(context).clearForTest()
+        }
         Settings.Global.putFloat(
-            ApplicationProvider.getApplicationContext<Context>().contentResolver,
+            context.contentResolver,
             Settings.Global.ANIMATOR_DURATION_SCALE,
             0f,
         )

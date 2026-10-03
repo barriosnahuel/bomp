@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - A CI guard now blocks JVM tests that mount a screen without stopping the background work it starts, the failure mode that used to surface as an unrelated test going red
 - Tests build a real `SoundsViewModel` through one shared builder that waits for its initial load with a single 10-second bound, and a CI guard blocks new tests that skip that wait — a load that lands mid-test can no longer overwrite injected state, and a load that never lands fails in seconds instead of hanging CI
 - The collection-unassign analytics test now waits for the assign to finish before clearing events, so its late `assigned = true` is no longer read as the unassign; the two search pin tests persist their audios instead of injecting them, so the reload a pin save triggers can no longer drop them mid-assertion
+- The onboarding screen tests reset the stored audios and welcome state before each test, so an audio saved by an earlier test class no longer hides the welcome footer and fails them in filtered runs
 
 ## \[v2026.08.1] - 2026-08-21
 
