@@ -66,7 +66,8 @@ private val SNACKBAR_CLEARANCE = 80.dp
  * analytics). The CTA is terminal ("Got it") rather than the tour's "Go on".
  *
  * The bottom bar pins the CTA plus a secondary "find it on your phone" action ([onBrowseFiles]) that opens
- * the system file browser, with its reach spelled out (downloads, music, recordings, Drive). The bar is
+ * the system file browser, with its reach spelled out (downloads, music, recordings, Drive). A null
+ * [onBrowseFiles] (no file browser on the device) leaves the CTA alone in the bar. The bar is
  * the Scaffold's `bottomBar`, so the snackbar host sits above it and never covers either action — except
  * in a very short window, where the bar scrolls inline and the column grows a clearance below it while
  * the notice is up, so the actions can be scrolled out from under the snackbar.
@@ -80,7 +81,7 @@ private val SNACKBAR_CLEARANCE = 80.dp
 @Composable
 internal fun BringFromAppsGuide(
     onClose: () -> Unit,
-    onBrowseFiles: () -> Unit,
+    onBrowseFiles: (() -> Unit)?,
     emptyResultNoticeId: Int = 0,
     onEmptyResultNoticeShown: (Int) -> Unit = {},
 ) {
@@ -165,7 +166,7 @@ internal fun BringFromAppsGuide(
 @Composable
 private fun GuideActionBar(
     onClose: () -> Unit,
-    onBrowseFiles: () -> Unit,
+    onBrowseFiles: (() -> Unit)?,
     padForInsets: Boolean,
 ) {
     val insets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
@@ -181,30 +182,32 @@ private fun GuideActionBar(
                     showTrailingArrow = false,
                     onClick = onClose,
                 )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                // Framed as an alternative behind a yes/no question, not as the step after "Got it": someone whose
-                // audio is in WhatsApp answers "no" and stops here instead of trying the browser next.
-                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.app_hub_files_question),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    TextButton(onClick = onBrowseFiles) {
-                        Icon(
-                            painter = painterResource(R.drawable.app_ic_folder),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                if (onBrowseFiles != null) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    // Framed as an alternative behind a yes/no question, not as the step after "Got it": someone whose
+                    // audio is in WhatsApp answers "no" and stops here instead of trying the browser next.
+                    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.app_hub_files_question),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(Modifier.width(Spacing.SM))
-                        Column {
-                            Text(text = stringResource(R.string.app_hub_files_cta))
-                            // Inherits the Text tier's `primary` (ADR 0010): it is part of the control, unlike the
-                            // question above it, so it must not read as the same gray caption.
-                            Text(
-                                text = stringResource(R.string.app_hub_files_scope),
-                                style = MaterialTheme.typography.bodySmall,
+                        TextButton(onClick = onBrowseFiles) {
+                            Icon(
+                                painter = painterResource(R.drawable.app_ic_folder),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
                             )
+                            Spacer(Modifier.width(Spacing.SM))
+                            Column {
+                                Text(text = stringResource(R.string.app_hub_files_cta))
+                                // Inherits the Text tier's `primary` (ADR 0010): it is part of the control, unlike the
+                                // question above it, so it must not read as the same gray caption.
+                                Text(
+                                    text = stringResource(R.string.app_hub_files_scope),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
                         }
                     }
                 }

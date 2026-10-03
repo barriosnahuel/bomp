@@ -40,6 +40,7 @@ import com.github.barriosnahuel.vossosunboton.commons.android.analytics.Analytic
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.CanonicalScreenName
 import com.github.barriosnahuel.vossosunboton.commons.android.error.Tracker
+import com.github.barriosnahuel.vossosunboton.feature.addbutton.canBrowseFiles
 import com.github.barriosnahuel.vossosunboton.feature.addbutton.findFragmentActivity
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
 import com.github.barriosnahuel.vossosunboton.feature.playback.seekTargetMs
@@ -47,6 +48,8 @@ import com.github.barriosnahuel.vossosunboton.feature.vault.WaveformExtractor
 import com.github.barriosnahuel.vossosunboton.ui.theme.ImmersiveListenTheme
 
 private const val AUDIO_MIME = "audio/*"
+private const val IMPORT_FROM_NO_MIC = "no_microphone"
+private const val IMPORT_FROM_MIC_DENIED = "mic_denied"
 
 /**
  * Full-screen recorder destination (ADR 0019 + ADR 0024 D4). Owns the `RECORD_AUDIO` permission flow
@@ -104,6 +107,7 @@ internal fun RecorderHost(
     val micAvailable = remember(context) { context.hasMicrophone() }
     // Without a file browser the import escape would lead nowhere, so it isn't offered at all.
     val canImport = remember(context) { context.canBrowseFiles(AUDIO_MIME) }
+    val tracker = remember(context) { AnalyticsTrackerProvider.get(context.applicationContext) }
     // Saveable: durable progress (the denied/settings screen, an open discard dialog) must survive an
     // Activity recreate — locale/theme switch, system kill (CLAUDE.md § Stateful Composables).
     var permanentlyDenied by rememberSaveable { mutableStateOf(false) }
@@ -175,11 +179,17 @@ internal fun RecorderHost(
             when {
                 // A restoring draft lands in Review a moment later; showing the no-mic message first would flash it.
                 !micAvailable && entering -> Unit
-                !micAvailable && state !is RecorderState.Review ->
+                !micAvailable && state !is RecorderState.Review -> {
+                    LaunchedEffect(Unit) {
+                        tracker.log(AnalyticsEvent.RecordMicUnavailable)
+                        if (!canImport) tracker.log(AnalyticsEvent.ImportOptionHidden(CanonicalScreenName.RECORD_SOUND))
+                    }
                     MicUnavailable(
-                        onImportInstead = if (canImport) ({ launchImport(importLauncher::launch) }) else null,
+                        onImportInstead =
+                            if (canImport) ({ launchImport(importLauncher::launch, IMPORT_FROM_NO_MIC) }) else null,
                         onClose = onExit,
                     )
+                }
                 granted || !micAvailable ->
                     RecorderScreen(
                         state = state,
@@ -217,12 +227,17 @@ internal fun RecorderHost(
                             }
                         },
                     )
-                permanentlyDenied ->
+                permanentlyDenied -> {
+                    if (!canImport) {
+                        LaunchedEffect(Unit) { tracker.log(AnalyticsEvent.ImportOptionHidden(CanonicalScreenName.RECORD_SOUND)) }
+                    }
                     MicPermissionDenied(
                         onOpenSettings = { openAppSettings(context) },
-                        onImportInstead = { importLauncher.launch(arrayOf(AUDIO_MIME)) },
+                        onImportInstead =
+                            if (canImport) ({ launchImport(importLauncher::launch, IMPORT_FROM_MIC_DENIED) }) else null,
                         onClose = onExit,
                     )
+                }
                 else ->
                     MicPermissionPriming(
                         onAllow = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
@@ -268,13 +283,16 @@ private fun togglePreview(
     }
 }
 
-// Mic-less devices (TV-like, managed builds) are the ones that may ship without a SAF handler: report it
-// instead of crashing, and leave the screen up so close still works.
-private fun launchImport(launch: (Array<String>) -> Unit) {
+// The option is only offered when a file browser resolves, but the launch can still find none (a handler
+// disabled in between): report it instead of crashing, and leave the screen up so close still works.
+private fun launchImport(
+    launch: (Array<String>) -> Unit,
+    surface: String,
+) {
     try {
         launch(arrayOf(AUDIO_MIME))
     } catch (e: ActivityNotFoundException) {
-        Tracker.log("recorder.surface=no_microphone")
+        Tracker.log("recorder.surface=$surface")
         Tracker.track(RuntimeException("Could not launch the system audio picker", e))
     }
 }

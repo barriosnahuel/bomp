@@ -97,6 +97,12 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       boundary — they measure different taps. Treat
       `source=onboarding_finish` as a separate cohort (don't put it in the denominator of proactive intent
       `fab`/`my_sounds_empty_state`).
+      Exclude `hub_skipped` = true from every Hub denominator (a Bundle boolean param; read it type-safely
+      as `COALESCE(CAST(value.int_value AS STRING), value.string_value) IN ('1', 'true')` until a real row
+      confirms which field it lands in): on a device without a microphone the "+" opens
+      the bring guide directly, so no `*_selected` can follow — report those opens on their own line ("went
+      straight to the guide"), never as Hub drop-offs. Versions before the param shipped
+      carry no `hub_skipped`; those opens all saw the Hub.
    d) RECORDER FUNNEL (new feature, ADR 0019): `import_hub_record_selected` → `record_permission_result`
       (mic GRANT RATE = granted true/total) → `recording_completed` → `sound_add` with `source=record`.
       Mark where people fall off. Draft recovery: `recording_draft_banner_shown` → `recording_draft_resumed`
@@ -156,6 +162,16 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       the SDK's SCREEN_NAME param). Values (`CanonicalScreenName.kt`): my_sounds,
       explore_sounds, about, search_sound, add_sound, edit_sound, vault, vault_listen,
       vault_unlock, collection_create, manage_collections, onboarding, bring_guide, record_sound.
+
+   h) LIMITED DEVICES (no microphone / no file browser, ADR 0019 § Microphone-less devices). Measured per
+      situation, so a user who never reaches one of these surfaces is invisible — say so when reading it.
+      Per window, `COUNT(DISTINCT user_pseudo_id)` for each situation: Hub skipped
+      (`import_hub_opened` with `hub_skipped=true`), recorder without a microphone (`record_mic_unavailable`),
+      and import option hidden (`import_option_hidden`, split by `surface`: `bring_guide` / `record_sound`).
+      Add the app version, and how many of those users reached `first_sound_add` (any time) as the one
+      activation read. **Small-sample rule:** under ~5 users in a cell, report counts only, no percentages.
+      All three signals start with the first version that emits them (find it as the lowest
+      `app_info.version` carrying them): a 0 before it means "not measured", not "didn't happen". If every count is 0, say it in one line and skip the section.
 
    Available user properties (to segment if useful): `current_sounds`, `current_pinned`,
    `current_public_colls`, `current_private_colls`, `current_audios_in_colls`, `current_public_default`,

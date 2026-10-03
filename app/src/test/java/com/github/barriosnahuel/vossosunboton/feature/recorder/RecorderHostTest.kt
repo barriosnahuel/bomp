@@ -7,12 +7,9 @@ package com.github.barriosnahuel.vossosunboton.feature.recorder
 
 import android.Manifest
 import android.app.Application
-import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Build
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -25,6 +22,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.AnalyticsTrackerProvider
 import com.github.barriosnahuel.vossosunboton.commons.android.analytics.FakeAnalyticsTracker
+import com.github.barriosnahuel.vossosunboton.declareAudioFileBrowser
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlaybackState
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerController
 import com.github.barriosnahuel.vossosunboton.feature.playback.PlayerControllerFactory
@@ -131,7 +129,7 @@ internal class RecorderHostTest : AbstractRobolectricTest() {
     @Test
     fun `on a device without a microphone a fresh visit explains why and offers only the import escape`() {
         givenNoMicrophone()
-        givenAFileBrowser()
+        declareAudioFileBrowser()
         var exited = false
         givenAHost(resumeDraft = false, onExit = { exited = true })
 
@@ -140,6 +138,10 @@ internal class RecorderHostTest : AbstractRobolectricTest() {
         // Neither the capture button nor the permission priming: there is no mic to grant.
         composeTestRule.onAllNodesWithContentDescription(START_RECORDING).assertCountEquals(0)
         composeTestRule.onAllNodesWithText(PERMISSION_TITLE).assertCountEquals(0)
+
+        // Seen once per appearance, however many frames the screen draws; the option was not hidden.
+        assertThat(fakeTracker.events.count { it.name == "record_mic_unavailable" }).isEqualTo(1)
+        fakeTracker.assertNotEmitted("import_option_hidden")
 
         composeTestRule.onNodeWithContentDescription(CLOSE).performClick()
         composeTestRule.waitForIdle()
@@ -155,6 +157,10 @@ internal class RecorderHostTest : AbstractRobolectricTest() {
         // It would launch nothing: hide it rather than offer a button that fails.
         composeTestRule.onAllNodesWithText(IMPORT_INSTEAD).assertCountEquals(0)
         composeTestRule.onNodeWithContentDescription(CLOSE).assertIsDisplayed()
+        assertThat(fakeTracker.events.count { it.name == "record_mic_unavailable" }).isEqualTo(1)
+        val hidden = fakeTracker.events.filter { it.name == "import_option_hidden" }
+        assertThat(hidden).hasSize(1)
+        assertThat(hidden.single().params["surface"]).isEqualTo("record_sound")
     }
 
     @Test
@@ -182,23 +188,6 @@ internal class RecorderHostTest : AbstractRobolectricTest() {
 
         composeTestRule.onNodeWithText(NO_MIC_MESSAGE).assertIsDisplayed()
         composeTestRule.onAllNodesWithContentDescription(START_RECORDING).assertCountEquals(0)
-    }
-
-    // Robolectric resolves no activity for any intent unless declared, so by default there is no file browser.
-    // Same deprecated setter as ScreenLockSettingsTest: Robolectric has no lightweight replacement.
-    @Suppress("DEPRECATION")
-    private fun givenAFileBrowser() {
-        val context = ApplicationProvider.getApplicationContext<Application>()
-        val intent = ActivityResultContracts.OpenDocument().createIntent(context, arrayOf("audio/*"))
-        val resolveInfo =
-            ResolveInfo().apply {
-                activityInfo =
-                    ActivityInfo().apply {
-                        packageName = "com.android.documentsui"
-                        name = "com.android.documentsui.picker.PickActivity"
-                    }
-            }
-        Shadows.shadowOf(context.packageManager).addResolveInfoForIntent(intent, resolveInfo)
     }
 
     private fun givenNoMicrophone() {

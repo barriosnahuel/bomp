@@ -103,6 +103,8 @@ internal class AnalyticsCoverageMatrixTest {
                 "ImportHubRecordSelected",
                 "ImportHubBringSelected",
                 "RecordingCompleted",
+                "RecordMicUnavailable",
+                "ImportOptionHidden",
                 "RecordPermissionResult",
                 "RecordingDraftBannerShown",
                 "RecordingDraftResumed",

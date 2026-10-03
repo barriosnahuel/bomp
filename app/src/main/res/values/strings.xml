@@ -268,6 +268,7 @@
     <string name="app_recorder_permission_allow">Allow microphone</string>
     <string name="app_recorder_permission_not_now">Not now</string>
     <string name="app_recorder_denied_message">Microphone access is off. Turn it on in Settings to record, or import a file instead.</string>
+    <string name="app_recorder_denied_message_no_import">Microphone access is off. Turn it on in Settings to record.</string>
     <string name="app_recorder_no_mic_message">This device has no microphone to record with.</string>
     <string name="app_recorder_open_settings">Open settings</string>
     <string name="app_recorder_import_instead">Import instead</string>
