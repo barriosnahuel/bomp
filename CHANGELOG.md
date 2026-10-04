@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - The empty My Bomps button now reads "Add a Bomp" instead of "Import"
 
 ### Fixed
+- Starting a new recording while one is still unsaved no longer deletes it silently: Bomp asks whether to keep that one or record a new one, and the banner now reads "You left a Bomp unsaved"
 - Devices without a microphone, like some tablets, can install and update Bomp again — on them, adding a Bomp goes straight to bringing in an audio you already have, since recording isn't possible
 - On a device without a file browser, the microphone-off screen no longer offers "Import instead" — tapping it used to close the app
 

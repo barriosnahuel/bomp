@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-21
 - **Supersedes:** —
-- **Amended:** 2026-06-23 (§ Draft recovery) · 2026-07-11 (§ Entry point & screen host — the retrofit into the Nav3 graph landed) · 2026-10-02 (§ Microphone-less devices) · 2026-10-03 (§ Microphone-less devices: file browser on every surface, measurement)
+- **Amended:** 2026-06-23 (§ Draft recovery) · 2026-07-11 (§ Entry point & screen host — the retrofit into the Nav3 graph landed) · 2026-10-02 (§ Microphone-less devices) · 2026-10-03 (§ Microphone-less devices: file browser on every surface, measurement) · 2026-10-04 (§ Draft recovery: one draft at a time, guarded at entry)
 
 ## Context
 
@@ -168,8 +168,8 @@ you-left of an in-progress capture (still no `MediaRecorder.pause()`); the recov
   DataStore Preferences file (`RecorderDraftStore`). Persisted on entering Review; cleared on save
   (handoff), re-record, explicit discard, or too-short. The clip bytes already live in
   `cacheDir/recordings/`; the draft only points at them.
-- **Recovery UX:** a non-intrusive banner on the My Sounds list ("unsaved recording — Continue /
-  Discard"); Continue relaunches `RecordingActivity` with a resume flag → restores Review (file spared
+- **Recovery UX:** a non-intrusive banner on the My Sounds list ("You left a Bomp unsaved —
+  Continue / Discard"); Continue relaunches `RecordingActivity` with a resume flag → restores Review (file spared
   from the purge); Discard deletes the clip + clears the draft.
 - **`cacheDir`, not `filesDir`:** the clip stays OS-evictable. If the OS reclaims the cache under real
   storage pressure while the user is away, the draft self-heals to "none" (existence re-validated on
@@ -189,6 +189,14 @@ you-left of an in-progress capture (still no `MediaRecorder.pause()`); the recov
   Guaranteeing this would need a foreground service, which is explicitly out of scope (recording is
   foreground-only). Draft recovery covers the common cases (Review reached, launcher re-entry, process
   death *after* a clip exists); the narrow mid-finalize kill is accepted.
+- **One draft at a time, resolved at entry (amendment 2026-10-04):** the store holds a single draft, so a
+  fresh take started while one is pending used to drop it silently — overwritten when the new take
+  reached Review, or cleared when the new take was discarded / too short. The fresh entry ("+" → Record)
+  now reads the store first and, if a draft is pending, asks: keep it (resume into Review) or record a new
+  one (discard it, then open fresh). Resolving the conflict *before* recording closes both loss paths with
+  one decision; multiple concurrent drafts were rejected as UI cost for a rare case. Any future fresh entry
+  to the recorder (shortcut, widget, deep link) must go through the same guard. Product spec:
+  `push-me-backlog` `034-recorder-pending-draft-guard.md`.
 
 ## Options considered (and rejected)
 

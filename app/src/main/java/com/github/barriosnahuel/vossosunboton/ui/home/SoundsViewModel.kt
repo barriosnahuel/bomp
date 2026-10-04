@@ -158,6 +158,9 @@ class SoundsViewModel(
     val pendingDraft: kotlinx.coroutines.flow.Flow<com.github.barriosnahuel.vossosunboton.feature.recorder.RecorderDraft?> =
         draftStore.draft
 
+    /** True when a draft is pending right now — a fresh, file-validated read, not the banner's collector. */
+    suspend fun hasPendingDraft(): Boolean = draftStore.current() != null
+
     /** Banner "Descartar": delete the draft clip and forget it. */
     fun discardDraft() {
         viewModelScope.launch(ioDispatcher) {
