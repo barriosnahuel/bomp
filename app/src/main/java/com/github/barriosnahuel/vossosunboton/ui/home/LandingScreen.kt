@@ -175,6 +175,10 @@ fun LandingScreen(viewModel: SoundsViewModel) {
     // two system pickers (whose second result would land after the first one already closed the guide).
     var importPickerInFlight by remember { mutableStateOf(false) }
 
+    // Saveable: an open draft guard is a pending choice — a rotation must not silently drop it.
+    var showDraftGuard by rememberSaveable { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
     // System file picker behind the bring guide's "find it on your phone" footer. OpenDocument(arrayOf("audio/*"))
     // opens the full SAF browser filtered to audio (non-audio files are not selectable) — better at surfacing
     // on-device audio across OEMs than GetContent's "Recent" view. We copy the audio at save time, so we
@@ -432,7 +436,14 @@ fun LandingScreen(viewModel: SoundsViewModel) {
                                 if (navigator.isVisible(ImportHubRoute)) {
                                     tracker.log(AnalyticsEvent.ImportHubRecordSelected)
                                     navigator.close(ImportHubRoute)
-                                    navigator.navigate(RecorderRoute())
+                                    // A fresh take with a draft pending would overwrite or drop it; ask first.
+                                    coroutineScope.launch {
+                                        if (viewModel.hasPendingDraft()) {
+                                            showDraftGuard = true
+                                        } else if (navState.visibleRoute !is RecorderRoute) {
+                                            navigator.navigate(RecorderRoute())
+                                        }
+                                    }
                                 }
                             },
                             onBringFromApps = {
@@ -454,6 +465,23 @@ fun LandingScreen(viewModel: SoundsViewModel) {
         },
         sceneStrategies = listOf(bottomSheetStrategy),
     )
+
+    if (showDraftGuard) {
+        RecorderDraftGuardDialog(
+            onKeep = {
+                showDraftGuard = false
+                tracker.log(AnalyticsEvent.RecordingDraftResumed)
+                if (navState.visibleRoute !is RecorderRoute) navigator.navigate(RecorderRoute(resumeDraft = true))
+            },
+            onRecordNew = {
+                showDraftGuard = false
+                tracker.log(AnalyticsEvent.RecordingDraftDiscarded)
+                viewModel.discardDraft()
+                if (navState.visibleRoute !is RecorderRoute) navigator.navigate(RecorderRoute())
+            },
+            onDismiss = { showDraftGuard = false },
+        )
+    }
 
     com.github.barriosnahuel.vossosunboton.feature.collections
         .CollectionSheetHost(viewModel = viewModel)

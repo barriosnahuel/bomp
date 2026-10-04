@@ -629,10 +629,10 @@ sealed class AnalyticsEvent(
      */
     object RecordingDraftBannerShown : AnalyticsEvent(name = "recording_draft_banner_shown", hasFirstVariant = true)
 
-    /** Draft recovery. The user resumed an unsaved recording from the banner ("Continue"). */
+    /** Draft recovery. The user resumed an unsaved recording — from the banner, or the guard before a fresh take. */
     object RecordingDraftResumed : AnalyticsEvent(name = "recording_draft_resumed", hasFirstVariant = true)
 
-    /** Draft recovery. The user discarded an unsaved recording from the banner ("Discard"). */
+    /** Draft recovery. The user discarded an unsaved recording — from the banner, or the guard before a fresh take. */
     object RecordingDraftDiscarded : AnalyticsEvent(name = "recording_draft_discarded", hasFirstVariant = true)
 
     /**

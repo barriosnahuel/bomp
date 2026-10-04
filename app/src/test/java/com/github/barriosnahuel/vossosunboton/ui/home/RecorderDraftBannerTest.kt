@@ -23,7 +23,7 @@ internal class RecorderDraftBannerTest : AbstractRobolectricTest() {
     fun `shows the unsaved-recording prompt`() {
         composeTestRule.setContent { AppTheme { RecorderDraftBanner(onContinue = {}, onDiscard = {}) } }
 
-        composeTestRule.onNodeWithText("You have an unsaved recording").assertIsDisplayed()
+        composeTestRule.onNodeWithText("You left a Bomp unsaved").assertIsDisplayed()
     }
 
     @Test
