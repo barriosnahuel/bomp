@@ -16,6 +16,25 @@ validated (§ *Performance → What it measures*).
 | 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | `develop` @ `558eff77` — run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 33.6 | 46.0 | 68.3 | 15 |
 | 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | **control** — `v2026.07.1` (`6200a148`), run 1 | TapLatencyBenchmark.tapToSoundFirstTap | 32.3 | 41.5 | 74.3 | 15 |
 | 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | **control** — `v2026.07.1` (`6200a148`), run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 34.0 | 48.1 | 67.3 | 15 |
+| 2026-10-07 | Pixel 8 (Android 17 / API 37, CP3A.260905.009) | `v2026.08.1-41-gc4ddde71` @ `c4ddde71` — v2026.10.1 pre-release gate | TapLatencyBenchmark.tapToSoundFirstTap | 36.3 | 48.1 | 126.3 | 15 |
+
+**On the 2026-10-07 row (v2026.10.1 pre-release gate).** Two caveats that make it a weaker number
+than its median suggests, neither of them a reason to re-measure. **(a)** The phone's OS build moved
+again, `CP2A.260805.005` → `CP3A.260905.009`, so every row above it is a different bench — the 48.1 ms
+is read against the ≤100 ms budget (ADR 0022), not against September. It matches the September medians
+to the decimal, which is a coincidence worth distrusting rather than a finding. **(b)** Only **12 of 15
+iterations produced a sample** and the run's CoV is **0.42**, double the 0.20 the 17th's control
+measured — so the median is over 12 samples on an unusually noisy run. The `Max` of 126.3 ms is the
+`StartupMode.COLD` warmup outlier the section below describes, not a latency regression.
+
+**The bench needs the host held awake.** This row took three attempts: the first two died mid-run with
+`AdbCommandRejectedException: device offline` over wireless ADB, ~25 and ~30 minutes in. The third ran
+under `caffeinate -dimsu` plus a 15-second `adb shell true` keepalive and finished in 5 minutes.
+`scripts/run-instrumented-tests.sh` already wraps itself in `caffeinate` for exactly this reason
+([ADR 0001](../docs/adr/0001-local-ui-test-suite.md) § *Bounded termination*, where host sleep was the
+long-misdiagnosed cause of "the emulator freezes"); `scripts/run-tap-latency.sh` does not. One success
+is not proof the keepalive is what saved it — the third attempt was also much shorter — but a run over
+wireless ADB with the host free to sleep is the condition that produced both failures.
 
 **The 2026-09-17 pair is one experiment, not two rows.** The July row above was measured on
 **Android 16**; this phone has since moved to **Android 17**. Comparing today's 48.9 ms against it
