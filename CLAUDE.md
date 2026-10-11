@@ -349,6 +349,6 @@ Full "when to use" per label + worked combinations: CONTRIBUTING.md § *Labels &
 
 ## Handoff notes & issue tracking
 
-GitHub Issues are open for external feature requests and bug reports. Out-of-scope work goes via `/intake` to `../push-me-backlog/`; path absent → note it in the PR.
+GitHub Issues are open for external feature requests and bug reports. Work found but not done goes via `/intake` to `../push-me-backlog/`; path absent → note it in the PR.
 
 `handoff/` holds session handoff documents (decisions, key paths, pending work). Gitignored. Only read these when the user references them to continue a previous topic.
