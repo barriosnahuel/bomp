@@ -141,7 +141,7 @@ The trigger and the three-axis gate live in CLAUDE.md § *Features — test cove
 - **Concurrent reactive re-emit** — a DataStore write re-ran `loadSounds` and repopulated a cache just mutated (#1174).
 - **What's rendered/seekable behind a dismiss gesture** — predictive-back revealed a bare window because the base wasn't composed behind (#1171 / `5404b7a`).
 
-Check each state against CLAUDE.md § *Stateful Composables* (durable state → `rememberSaveable`; the focus incantation). Agree the minimum scenarios up front (happy path + these boundaries + smoke test, § *Activity smoke tests*); implement tests **alongside** the feature, not after. Anything unlisted is out of scope — note in the PR.
+Check each state against CLAUDE.md § *Stateful Composables* (durable state → `rememberSaveable`; the focus incantation). Agree the minimum scenarios up front (happy path + these boundaries + smoke test, § *Activity smoke tests*); implement tests **alongside** the feature, not after. Anything unlisted is out of scope — note the scope cut in the PR (follow-up work you found but won't do goes via `/intake`, per CLAUDE.md § *Handoff notes & issue tracking*).
 
 **(c) Device-only verification — route to the existing guardrail first.** Don't hand-check what tooling already covers:
 
