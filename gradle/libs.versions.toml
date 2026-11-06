@@ -30,7 +30,7 @@ timber                    = "5.0.1"
 coroutines                = "1.11.0"
 datastore                 = "1.2.1"
 metricsPerformance        = "1.0.0"
-kotlinxSerialization      = "1.11.0"
+kotlinxSerialization      = "1.12.0"
 biometric                 = "1.4.0-alpha07"
 
 # Test
