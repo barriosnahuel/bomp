@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
  * [DataStoreFirstFlagStore]; rationale in docs/adr/0004-datastore-sync-api-cache-prime.md.
  *
  * One critical detail in [increment]: the disk write reads the latest cache value INSIDE the
- * `store.edit` block instead of capturing the `newValue` returned by `merge`. DataStore serialises
+ * `store.edit` block instead of capturing the `newValue` computed under `incrementLock`. DataStore serialises
  * `edit` calls via an internal Mutex but does NOT guarantee FIFO ordering between concurrent
  * launches dispatched on `Dispatchers.IO` (a thread pool). If we captured `newValue = 1` outside
  * and another concurrent increment captured `newValue = 2`, the launches could land in inverted
@@ -43,9 +43,8 @@ class DataStoreCounterStore(
     private val store: DataStore<Preferences> = context.applicationContext.analyticsCountersStore
     private val counters = ConcurrentHashMap<String, Long>()
 
-    // ConcurrentHashMap.merge requires API 24 (minSdk = 23), so atomicity comes from a coarse
-    // synchronized block on this lock. Increment frequency is low (one per play / share); the
-    // contention cost is negligible for analytics.
+    // Atomicity comes from a coarse synchronized block on this lock. Increment frequency is low
+    // (one per play / share); the contention cost is negligible for analytics.
     private val incrementLock = Any()
 
     init {
@@ -56,7 +55,6 @@ class DataStoreCounterStore(
         }
     }
 
-    // Avoid ConcurrentHashMap.getOrDefault — it requires API 24 and minSdk is 23.
     override fun get(key: String): Long = counters[key] ?: 0L
 
     override fun increment(key: String): Long {

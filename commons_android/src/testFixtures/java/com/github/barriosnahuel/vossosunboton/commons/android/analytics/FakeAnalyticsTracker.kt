@@ -20,8 +20,7 @@ import java.util.concurrent.ConcurrentHashMap
  * once. [firedFlags] therefore mirrors production's [DataStoreFirstFlagStore] semantics — backed by a
  * [ConcurrentHashMap] so `add` is atomic, leaving exactly one concurrent caller observing "not yet
  * fired" per flag and preventing a double-emit of `first_*` / `milestone_*` events.
- * `Collections.newSetFromMap` (API 9+) wraps the map without requiring `ConcurrentHashMap.newKeySet`
- * (API 24+). The other recorders stay plain — they are written from the same coroutines but only
+ * The other recorders stay plain — they are written from the same coroutines but only
  * read by the test thread after the ViewModel has reached a quiescent state, so the JMM visibility
  * cost of synchronized collections is not worth paying.
  */

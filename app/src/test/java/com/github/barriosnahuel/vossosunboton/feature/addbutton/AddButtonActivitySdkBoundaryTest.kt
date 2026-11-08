@@ -31,16 +31,16 @@ import org.robolectric.annotation.Config
 /**
  * SDK-boundary coverage for [AddButtonActivity.handleIntent], which reads the shared [Uri] through
  * `Intent.getParcelableExtra(name, Class)` on TIRAMISU+ and the deprecated single-arg overload below
- * it. The matrix straddles that boundary: M (23) exercises the legacy branch, TIRAMISU (33) the typed
- * one.
+ * it. The matrix straddles that boundary: N (24, the minSdk) exercises the legacy branch, TIRAMISU (33)
+ * the typed one.
  *
  * Assertions are deliberately SDK-independent — they observe the *effect* of a successful extraction
  * (the trampoline composes the Create screen, logs it, and does not finish) rather than calling the
- * typed two-arg API, which does not exist below TIRAMISU and would fail the M run on the test side
+ * typed two-arg API, which does not exist below TIRAMISU and would fail the N run on the test side
  * instead of the production side. [AddButtonTrampolineTest] covers the TIRAMISU behaviour in depth;
  * this test only adds the legacy-branch leg.
  */
-@Config(sdk = [Build.VERSION_CODES.M, Build.VERSION_CODES.TIRAMISU]) // sdk-boundary: handleIntent branches on SDK_INT >= TIRAMISU
+@Config(sdk = [Build.VERSION_CODES.N, Build.VERSION_CODES.TIRAMISU]) // sdk-boundary: handleIntent branches on SDK_INT >= TIRAMISU
 internal class AddButtonActivitySdkBoundaryTest : AbstractRobolectricTest() {
     // screen_view fires from AddButtonScreen's composition (not the Activity): flush the
     // pending frame (waitForIdle in launch) before asserting on fake.screens.

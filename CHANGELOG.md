@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [Semantic Versioning][]; from the next release onward it uses [Calendar Versioning][] — see CONTRIBUTING § *Versioning*. Existing headers below stay as the SemVer versions they shipped as.
 
+## \[unreleased]
+
+### Removed
+- Android 6.0 is no longer supported; the app now requires Android 7.0 or later
+
 ## \[v2026.10.1] - 2026-10-07
 
 ### Changed

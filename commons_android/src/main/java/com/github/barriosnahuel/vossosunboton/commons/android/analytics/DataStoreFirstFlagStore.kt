@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * [FirstFlagStore] backed by Jetpack DataStore Preferences with an in-memory cache. Reads
- * (`isFirstTime`) are pure in-memory `getOrDefault` — sync, lock-free; writes (`markFired`) update
+ * (`isFirstTime`) are pure in-memory map lookups — sync, lock-free; writes (`markFired`) update
  * the [ConcurrentHashMap] atomically (`putIfAbsent`) and dispatch the disk write fire-and-forget on
  * the process-lived [scope]. The constructor primes the map once via `runBlocking(Dispatchers.IO)`
  * inside `AnalyticsTrackerProvider`'s `StrictMode.allowThreadDiskReads` block.
@@ -49,7 +49,6 @@ class DataStoreFirstFlagStore(
         }
     }
 
-    // Avoid ConcurrentHashMap.getOrDefault — it requires API 24 and minSdk is 23.
     override fun isFirstTime(event: String): Boolean = !(flags[event] ?: false)
 
     override fun markFired(event: String) {

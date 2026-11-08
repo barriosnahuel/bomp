@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-21
 - **Supersedes:** —
-- **Amended:** 2026-06-23 (§ Draft recovery) · 2026-07-11 (§ Entry point & screen host — the retrofit into the Nav3 graph landed) · 2026-10-02 (§ Microphone-less devices) · 2026-10-03 (§ Microphone-less devices: file browser on every surface, measurement) · 2026-10-04 (§ Draft recovery: one draft at a time, guarded at entry)
+- **Amended:** 2026-06-23 (§ Draft recovery) · 2026-07-11 (§ Entry point & screen host — the retrofit into the Nav3 graph landed) · 2026-10-02 (§ Microphone-less devices) · 2026-10-03 (§ Microphone-less devices: file browser on every surface, measurement) · 2026-10-04 (§ Draft recovery: one draft at a time, guarded at entry) · 2026-11-08 (driver 4 and § Pause/resume: `minSdk` is now 24)
 
 ## Context
 
@@ -67,6 +67,10 @@ while `minSdk` is 23. v1 ships **no manual pause**; on audio-focus loss / incomi
 exact resume. This keeps one code path across API 23–24+ (no SDK-boundary branch, smaller bug
 surface). True pause/resume (API-24+ with a 23 fallback) is a deferred enhancement, not a v1 gap to
 paper over.
+
+> **Amendment 2026-11-08.** `minSdk` is now 24, so driver 4 no longer applies: `MediaRecorder.pause()`
+> / `resume()` are available on every supported device and pause/resume needs no fallback branch. The
+> v1 decision above still stands — adding the control is a product call, not something the bump ships.
 
 ### Entry point & screen host — standalone Activity, pre-Nav3
 The spec sequences the recorder *after* the Nav3 migration (`v2.3.0-02`) so its screens are born as
