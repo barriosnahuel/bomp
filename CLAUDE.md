@@ -129,7 +129,7 @@ Before code, the plan enumerates three axes — skip it and bugs leak to manual 
 Test names are descriptive sentences, never opaque identifiers — reports list them verbatim.
 
 - **JVM tests** (`src/test/`): backtick-quoted, sentence-case, no trailing period — `` @Test fun `searchResults emits empty list when query is blank`() ``.
-- **Instrumented tests** (`src/androidTest/`): camelCase — `@Test fun swipeRightPinsACustomSound()`. Backticks need DEX 040, not emitted by AGP/D8 at `minSdk` 23; migrate when that boundary moves.
+- **Instrumented tests** (`src/androidTest/`): camelCase — `@Test fun swipeRightPinsACustomSound()`. Backticks need DEX 040, not emitted by AGP/D8 at `minSdk` 24; migrate when that boundary moves.
 
 ## Robolectric SDK config
 

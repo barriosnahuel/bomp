@@ -19,10 +19,10 @@ import org.robolectric.annotation.Config
 /**
  * SDK-boundary coverage for [performConfirmHaptic] / [performRejectHaptic], which branch on
  * `Build.VERSION.SDK_INT >= R` to use a richer haptic constant on R+ and fall back to a generic one
- * below. The matrix straddles that boundary: M (23) exercises the legacy fallback, R (30) the modern
- * branch. Without the M run the fallback path never executes in tests.
+ * below. The matrix straddles that boundary: N (24, the minSdk) exercises the legacy fallback, R (30)
+ * the modern branch. Without the N run the fallback path never executes in tests.
  */
-@Config(sdk = [Build.VERSION_CODES.M, Build.VERSION_CODES.R]) // sdk-boundary: Haptics branches on SDK_INT >= R
+@Config(sdk = [Build.VERSION_CODES.N, Build.VERSION_CODES.R]) // sdk-boundary: Haptics branches on SDK_INT >= R
 internal class HapticsTest : AbstractRobolectricTest() {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 

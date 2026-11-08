@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         // minSdk 28: Macrobenchmark needs a profileable/debuggable target and is most reliable on
-        // API 28+. The app itself stays at minSdk 23; this only constrains where benchmarks run.
+        // API 28+. The app itself stays at minSdk 24; this only constrains where benchmarks run.
         minSdkVersion 28
         targetSdkVersion 37
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

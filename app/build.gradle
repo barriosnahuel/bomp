@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         applicationId "com.github.barriosnahuel.vossosunboton"
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 37
         versionCode 11
         versionName '2026.10.1' // CalVer: cut month + monthly counter, matches the release tag (CONTRIBUTING § Versioning)
