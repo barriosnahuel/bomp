@@ -40,7 +40,7 @@ queries use `CURRENT_TIMESTAMP()`.
 ## Versions (cross-cutting dimension)
 
 The app can have several active versions and new releases are key events. Mapping: GA4/Firebase use the
-NAME (2.1.0, 2.2.0); Play uses the CODE (`App_Version_Code` = Firebase's `build_version`). Rules:
+NAME (`2026.08.1`; SemVer like `2.3.0` up to mid-2026); Play uses the CODE (`App_Version_Code` = Firebase's `build_version`). Rules:
 
 1. Compute the share of active users per version (GA4, distinct users by `app_info.version`; if a user
    appears in two versions, count them in the most recent one).
