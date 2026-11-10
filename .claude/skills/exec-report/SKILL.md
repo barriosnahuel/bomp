@@ -131,11 +131,12 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       `collection_audio_toggle`, `collection_filter_apply`); Vault (`vault_unlock` rate `granted=true`;
       `vault_unprotected_warning_shown`; `vault_search_unlock_cta_shown`).
    j2) LONG LISTENING (the Vault's reason to exist — audios you sit down to hear, not soundboard taps):
-      - **Scope every j2 metric to `surface = 'vault_listen'`.** From v2026.10.1 the grid emits the same
-        `listen_session_*` pair (block j2b); an unfiltered query mixes a 2-second tap with a 3-minute listen.
+      - **Scope every j2 metric to `surface = 'vault_listen'`.** From the first release after v2026.08.1
+        (v2026.10.1 was cut but never shipped) the grid emits the same `listen_session_*` pair (block j2b);
+        an unfiltered query mixes a 2-second tap with a 3-minute listen.
       - **Reach**: `listen_session_start` totals, sessions per active user, and Bompers whose first
         `listen_session_start` with `surface = 'vault_listen'` falls in the window as the adoption curve of
-        the surface. Do NOT use `first_listen_session_start` for this from v2026.10.1 on: it now fires on the
+        the surface. Do NOT use `first_listen_session_start` for this from that release on: it now fires on the
         first session on any surface, almost always a grid tap.
       - **Depth**: over `listen_session_end`, `SUM(listened_ms)/SUM(duration_ms)` as the share of the audio
         actually heard, plus the share of sessions above 80% (a proxy for "listened to the end"). Read
@@ -162,7 +163,7 @@ Compare the last 7 days vs the previous 7 days whenever there is data.
       - **Segment plays by surface**: `sound_play` carries `surface`; `vault_listen` separates a long listen
         from a Vault list tap. Data before the fix (releases up to v2026.08.1) reports those long listens as
         `vault` — do not read the split backwards across that boundary.
-   j2b) BOTONERA LISTENING DEPTH (the brand KPI — audios *heard*, not audios tapped; from v2026.10.1):
+   j2b) BOTONERA LISTENING DEPTH (the brand KPI — audios *heard*, not audios tapped; from the first release after v2026.08.1):
       - **Source**: `listen_session_start` / `listen_session_end` with `surface IN ('my_sounds',
         'explore_sounds', 'vault', 'search_sound')`. One session per playback of one audio: a pause + resume
         of it stays one session; it closes on completion, on stop, when another audio (or a long listen)

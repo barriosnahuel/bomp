@@ -5,11 +5,6 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
-### Removed
-- Android 6.0 is no longer supported; the app now requires Android 7.0 or later
-
-## \[v2026.10.1] - 2026-10-07
-
 ### Changed
 - Adding a Bomp now offers two paths instead of three: record one, or bring in an audio you already have — the second shows you how to share a voice note from WhatsApp or Telegram into Bomp, and, for an audio you already downloaded, keeps "Find it on your phone" at the bottom for Downloads, music, recordings or Drive
 - If the file browser comes back empty, Bomp now tells you how to share the voice note from WhatsApp instead of saying nothing
@@ -19,6 +14,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 - Starting a new recording while one is still unsaved no longer deletes it silently: Bomp asks whether to keep that one or record a new one, and the banner now reads "You left a Bomp unsaved"
 - Devices without a microphone, like some tablets, can install and update Bomp again — on them, adding a Bomp goes straight to bringing in an audio you already have, since recording isn't possible
 - On a device without a file browser, the microphone-off screen no longer offers "Import instead" — tapping it used to close the app
+
+### Removed
+- Android 6.0 is no longer supported; the app now requires Android 7.0 or later
 
 ### For nerds 🤓
 
