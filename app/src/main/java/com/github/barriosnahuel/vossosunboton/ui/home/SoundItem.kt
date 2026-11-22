@@ -57,6 +57,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -77,6 +78,9 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 import com.github.barriosnahuel.vossosunboton.ui.theme.bompEffectsSpec
 import kotlinx.coroutines.CancellationException
 import kotlin.math.roundToInt
+
+// Every row's play button. Mirrored by the :macrobenchmark first-run journey (plays the welcome audio).
+internal const val SOUND_PLAY_BUTTON_TAG = "sound_play_button"
 
 // One-time swipe-hint nudge (welcome card): how far it peeks and the in/out durations.
 private val WELCOME_HINT_PEEK = 88.dp
@@ -476,7 +480,7 @@ private fun SoundCard(
                 ) {
                     FilledIconButton(
                         onClick = onPlayClick,
-                        modifier = Modifier.size(44.dp),
+                        modifier = Modifier.size(44.dp).testTag(SOUND_PLAY_BUTTON_TAG),
                         colors =
                             IconButtonDefaults.filledIconButtonColors(
                                 containerColor = playContainerColor,

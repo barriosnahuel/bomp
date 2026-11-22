@@ -22,14 +22,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
@@ -38,6 +41,10 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.Spacing
 // control is exempt from the WCAG 1.4.3 contrast minimum (§ Accessibility). All Hub rows are live
 // today; the nullable-onClick path is kept for future inert rows.
 private const val HUB_DISABLED_ALPHA = 0.38f
+
+// Mirrored by the :macrobenchmark first-run journey, which waits for the sheet to open and close.
+internal const val IMPORT_HUB_SHEET_TAG = "import_hub_sheet"
+
 private val HUB_ICON_TILE = 44.dp
 private val HUB_TILE_RADIUS = 12.dp
 
@@ -55,6 +62,7 @@ private val HUB_TILE_RADIUS = 12.dp
  * Presentational only: the caller pops the route on [onRecord]/[onBringFromApps] and owns the
  * recorder and guide destinations.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun ImportHubSheet(
     onRecord: () -> Unit,
@@ -63,6 +71,9 @@ internal fun ImportHubSheet(
     Column(
         modifier =
             Modifier
+                // The sheet is its own window, so it doesn't inherit LandingActivity's flag.
+                .semantics { testTagsAsResourceId = true }
+                .testTag(IMPORT_HUB_SHEET_TAG)
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.XL, vertical = Spacing.LG),
         verticalArrangement = Arrangement.spacedBy(Spacing.SM),

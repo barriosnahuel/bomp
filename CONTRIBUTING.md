@@ -408,7 +408,7 @@ Three complementary layers — reach for the one that matches the question:
 | Layer | What it does | When to reach for it |
 |---|---|---|
 | **Baseline Profile** (`app/src/main/baseline-prof.txt`) | AOT-compiles the cold-start path so first launches are fast | Make startup faster; regenerate when the startup path changes (§ *Baseline Profile* below) |
-| **Macrobenchmark** (`:macrobenchmark`) | Statistical on-device numbers for cold start + scroll — the **assertable regression gate** for slow-frame jank | Prove or measure a regression with numbers; validate the Baseline Profile |
+| **Macrobenchmark** (`:macrobenchmark`) | Statistical on-device numbers for cold start, scroll and the first-run journey — the **assertable regression gate** for slow-frame jank | Prove or measure a regression with numbers; validate the Baseline Profile |
 | **Frozen-frame crash gate** (debug JankStats) | **Fails loud** in manual debug on a repeated main-thread block, like StrictMode | Catch an egregious block the moment you hit it by hand — no script, no watching logcat |
 
 Rule of thumb: slow-frame jank is *measured* (Macrobenchmark); a *frozen* frame — a main-thread block — is *gated* (the crash gate). Complementary, not redundant. The first two are documented immediately below; the gate is § *Frozen-frame crash gate (JankStats)*.
@@ -453,6 +453,35 @@ Needs a connected device/emulator (API 28+; metrics are most reliable on API 29+
   drift in the phone lands on both sides. From the older worktree the script does not exist yet;
   invoke it by absolute path from the primary one. Append **every** run to `RESULTS.md`, controls
   included: those control rows are what make the next comparison cheap.
+
+- **`FirstRunJourneyBenchmark`** — `FrameTimingMetric` + `StartupTimingMetric` over a brand-new user's first session, the context where low-tier devices report their LandingActivity slow frames in the field: `pm clear` (no sounds, welcome audio and its swipe hint not yet consumed) → cold start → play the welcome audio → onboarding tour through all 3 steps → the Import Hub sheet it lands on, opened and closed → 10 s idle on the welcome-only list. Two `CompilationMode`s: `None` (a fresh install, first-run JIT included) and `Partial(Require)` (the committed Baseline Profile) — the gap between them is the JIT cost, what remains is steady rendering cost. Nodes are found by resource-id (Compose test tags exposed through `testTagsAsResourceId` on LandingActivity's root and on the Hub sheet's own window), so it runs in any device locale. Needs a device **with a microphone** — without one the Hub is skipped and the run fails, saying so. 10 iterations per mode, ~40 s each (6.5–17 min per mode on an emulator, where some iterations stalled for minutes). Emulator numbers only prove the journey runs; the signal comes from **physical low-tier devices**, which is what Test Lab is for (below).
+
+### Run on Firebase Test Lab (physical devices)
+
+The app APK is the `benchmark` build type; the test APK is `:macrobenchmark` (self-instrumenting, so the test APK runs the instrumentation and drives the app as a separate package):
+
+```bash
+./gradlew :app:assembleBenchmark :macrobenchmark:assembleBenchmark
+gcloud firebase test android run \
+  --type instrumentation \
+  --app app/build/outputs/apk/benchmark/app-benchmark.apk \
+  --test macrobenchmark/build/outputs/apk/benchmark/macrobenchmark-benchmark.apk \
+  --test-targets "class com.github.barriosnahuel.vossosunboton.macrobenchmark.FirstRunJourneyBenchmark" \
+  --device model=lion,version=34 \
+  --device model=a16,version=35 \
+  --timeout 45m \
+  --no-performance-metrics \
+  --no-record-video \
+  --directories-to-pull /sdcard/Android/media/com.github.barriosnahuel.vossosunboton.macrobenchmark
+```
+
+- **Devices:** `lion` (moto g04, nearest sibling of the field's moto g04s) and `a16` (Galaxy A16) are the bad-tier models; add a low-end that looks fine in the field (e.g. `java`, moto g20) and a Pixel as controls. Confirm ids with `gcloud firebase test android models list` first — the catalog changes.
+- **Results:** with no output-dir argument, Macrobenchmark writes `<test package>-benchmarkData.json` plus one Perfetto trace per iteration to the test package's media directory — the path above. `--directories-to-pull` copies it into the matrix's results bucket; open the traces in [ui.perfetto.dev](https://ui.perfetto.dev).
+- **No instrumentation args.** `androidx.benchmark.suppressErrors` exists for emulators and debuggable builds; a physical device running the `benchmark` build type needs none, and suppressing there would hide a real misconfiguration. Leave the orchestrator off (the default): each iteration already resets app state with `pm clear`.
+- **`--no-performance-metrics` / `--no-record-video`:** Test Lab's own CPU/memory sampling and screen recording run on the device during the test; turning them off keeps that load out of the frame timings.
+- **Timeout:** the two tests took 23 min together on an emulator (one mode 6.5 min, the other 17 with stalled iterations), and a low-tier device is slower — so ask for the physical-device max of 45 min, and if a device still times out, run each test as its own matrix with `--test-targets "class com.github.barriosnahuel.vossosunboton.macrobenchmark.FirstRunJourneyBenchmark#firstRunJourneyNoCompilation"` (and the same for `#firstRunJourneyBaselineProfile`).
+- **Firebase config:** build the APKs from a set-up worktree (§ *Firebase config file*), same as any local benchmark run.
+- **Deprecation:** Firebase Test Lab shuts down on 2027-09-30 ([gcloud reference](https://docs.cloud.google.com/sdk/gcloud/reference/firebase/test/android/run)); its replacement is Google Cloud's Developer Device Platform (`gcloud beta device-run sessions submit instrumentation`, with `--apps`, `--device=lion-34`, `--paths-to-pull`, `--instrumentation-timeout`). Same APKs and paths.
 
 ### Baseline Profile (manual, no plugin)
 

@@ -93,6 +93,11 @@ Enforced by `scripts/check-adr-invariants.sh` (CircleCI job `adr-invariants`):
   `model/src/main/.../SoundsRepository.kt` and its only call-site is `app/src/benchmark`; the model
   unit test exercises it. Any reference from another production/debug/release source set fails the
   check — that fence stands in for the `@VisibleForTesting` one Lint can't provide cross-module.
+- **Benchmark resource-ids mirror app test tags.** Journeys find nodes by resource-id (Compose test
+  tags exposed through `testTagsAsResourceId`), never by localized text, so they run in any device
+  locale. Every `*_RES` literal in `BenchmarkTargets.kt` must match a `*_TAG` constant in
+  `app/src/main` that is applied with `testTag(...)`; CI never runs a benchmark, so this grep is the
+  only thing that catches a rename before a paid Test Lab run.
 
 ## Cross-references
 

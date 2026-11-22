@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -131,6 +132,9 @@ internal fun MySoundsEmptyState(
     }
 }
 
+// Mirrored by the :macrobenchmark first-run journey, which opens the tour from this button.
+internal const val SEE_HOW_IT_WORKS_TAG = "see_how_it_works"
+
 /**
  * Text-tier (ADR 0010) "see how it works" CTA that opens the onboarding tour. Shared by this empty-state
  * secondary and the welcome-audio footer (SoundsList) so the two never drift in copy or button typology.
@@ -140,7 +144,7 @@ internal fun SeeHowItWorksButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TextButton(onClick = onClick, modifier = modifier) {
+    TextButton(onClick = onClick, modifier = modifier.testTag(SEE_HOW_IT_WORKS_TAG)) {
         Text(text = stringResource(R.string.app_my_sounds_empty_secondary))
     }
 }

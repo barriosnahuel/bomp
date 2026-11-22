@@ -12,6 +12,12 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.CustomBuildTypeApplication
@@ -21,6 +27,7 @@ import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
 
 // FragmentActivity (vs the smaller ComponentActivity) is required so androidx.biometric's
 // BiometricPrompt can manage its hosting fragment when the user opens a Vault collection.
+@OptIn(ExperimentalComposeUiApi::class)
 class LandingActivity : FragmentActivity() {
     private val viewModel: SoundsViewModel by viewModels { SoundsViewModel.Factory }
 
@@ -32,7 +39,14 @@ class LandingActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             AppTheme {
-                LandingScreen(viewModel = viewModel)
+                // Test tags as resource-ids, so :macrobenchmark finds nodes without localized text. Sheet and
+                // dialog windows don't inherit it (see ImportHubSheet); the Box keeps the window's constraints.
+                Box(
+                    modifier = Modifier.fillMaxSize().semantics { testTagsAsResourceId = true },
+                    propagateMinConstraints = true,
+                ) {
+                    LandingScreen(viewModel = viewModel)
+                }
             }
         }
         // Only on a fresh start: the launching Intent survives in `getIntent()` across recreates, so

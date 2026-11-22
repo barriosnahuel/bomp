@@ -83,3 +83,32 @@ internal const val TAP_SETTLE_MS = 2_000L
  * localized string, so the benchmark assumes an English-locale device — it fails loudly otherwise.
  */
 internal const val PLAY_BUTTON_DESC = "Play"
+
+// --- First-run journey (a brand-new user: welcome audio → onboarding tour → Import Hub → idle) ---
+// Tags mirror the app's Compose test tags (exposed as resource-ids via testTagsAsResourceId), so the
+// journey never matches localized text. Keep them in sync with the app constants named on each line.
+
+internal const val SOUND_PLAY_BUTTON_RES = "sound_play_button" // SoundItem.SOUND_PLAY_BUTTON_TAG
+
+internal const val SEE_HOW_IT_WORKS_RES = "see_how_it_works" // MySoundsEmptyState.SEE_HOW_IT_WORKS_TAG
+
+internal const val ONBOARDING_PRIMARY_CTA_RES = "onboarding_primary_cta" // OnboardingScreen.ONBOARDING_PRIMARY_CTA_TAG
+
+internal const val IMPORT_HUB_SHEET_RES = "import_hub_sheet" // ImportHubSheet.IMPORT_HUB_SHEET_TAG
+
+// Each iteration is ~40 s (measured on an emulator). Fewer than DEFAULT_ITERATIONS so both modes fit
+// one Test Lab run; frame percentiles pool every frame of every iteration (~500 each), so 10 is plenty
+// for them — read this test's StartupTimingMetric as context, StartupBenchmark is the startup gate.
+internal const val FIRST_RUN_ITERATIONS = 10
+
+internal const val FIRST_RUN_STEP_COUNT = 3
+
+internal const val FIRST_RUN_UI_TIMEOUT_MS = 10_000L
+
+internal const val POLL_INTERVAL_MS = 50L
+
+// How long the journey dwells where a new user would look: listening, reading a step, the open Hub.
+internal const val FIRST_RUN_DWELL_MS = 2_000L
+
+// The field's slow-frame ratios come from ≥ 10 s Landing visits; idle that long on the welcome-only list.
+internal const val FIRST_RUN_IDLE_MS = 10_000L
