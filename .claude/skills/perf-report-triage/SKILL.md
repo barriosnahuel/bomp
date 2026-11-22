@@ -101,8 +101,8 @@ compiles the Baseline Profile), not a code regression.
   start-type shift you can't see.
 
 ### 5. Record it (privacy split)
-- Add a record under `docs/perf-investigations/` (public conclusion) and put the raw per-device rows in
-  the private counterpart. **The public/private split rule is canonical in
-  `docs/perf-investigations/README.md` — follow it there** (don't restate it).
+- Write the record (conclusion + raw per-device rows) in the private
+  `../push-me-backlog/performance-investigations/` folder; only the fix reaches this repo. **The rule is
+  canonical in `docs/perf-investigations/README.md` — follow it there** (don't restate it).
 - If the alarm was a false positive, also note whether the **report itself** should switch from a raw
   mean to a median / per-device view to stop manufacturing alarms.
