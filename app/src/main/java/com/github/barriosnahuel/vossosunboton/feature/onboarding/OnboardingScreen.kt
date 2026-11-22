@@ -69,6 +69,9 @@ internal const val ONBOARDING_STEP_COUNT = 3
 internal const val ONBOARDING_TAP_PREV = "onboarding_tap_prev"
 internal const val ONBOARDING_TAP_NEXT = "onboarding_tap_next"
 
+// The tour's primary CTA (next / start). Mirrored by the :macrobenchmark first-run journey.
+internal const val ONBOARDING_PRIMARY_CTA_TAG = "onboarding_primary_cta"
+
 // Shared with BringFromAppsGuide (same package), which reuses the demo card + CTA pill.
 internal val STAGE_RADIUS = 24.dp
 internal val CTA_HEIGHT = 56.dp
@@ -298,6 +301,7 @@ internal fun OnboardingTour(
                     text = stringResource(content.cta),
                     showTrailingArrow = isLast,
                     onClick = { if (isLast) finish(AnalyticsNavMethod.BUTTON) else advance(AnalyticsNavMethod.BUTTON) },
+                    modifier = Modifier.testTag(ONBOARDING_PRIMARY_CTA_TAG),
                 )
                 Spacer(Modifier.height(Spacing.XL))
             }

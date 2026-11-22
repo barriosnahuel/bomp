@@ -229,6 +229,19 @@ $rogue_seed
 It is a benchmark-only primitive — only app/src/benchmark may call it (declared in SoundsRepository, tested in model/src/test). Supersede ADR 0015 or move the call site."
 fi
 
+# Macrobenchmark journeys find app nodes by resource-id (Compose test tags exposed via
+# testTagsAsResourceId). CI never runs a benchmark, so a renamed tag would only surface on a paid
+# Test Lab run: every *_RES literal in BenchmarkTargets.kt must still be declared as a tag in :app.
+bench_targets=macrobenchmark/src/main/java/com/github/barriosnahuel/vossosunboton/macrobenchmark/BenchmarkTargets.kt
+for tag in $(grep -oE '_RES = "[A-Za-z0-9_]+"' "$bench_targets" | sed -E 's/.*"(.*)"/\1/'); do
+    const=$(grep -rhoE --include="*.kt" "[A-Z0-9_]+_TAG = \"$tag\"" app/src/main | head -1 | cut -d' ' -f1)
+    if [ -z "$const" ]; then
+        fail "ADR 0015 broken: benchmark resource-id \"$tag\" (BenchmarkTargets.kt) has no matching *_TAG constant in app/src/main. Rename both sides together."
+    elif ! grep -rqE --include="*.kt" "testTag\\($const\\)" app/src/main; then
+        fail "ADR 0015 broken: $const (\"$tag\") is declared but never applied with testTag(...) in app/src/main — the benchmark can't find it."
+    fi
+done
+
 # ============================================================================
 # Comment-block length budget — see CLAUDE.md § "Comments & KDoc"
 # KDoc/comments carry what the code can't say: the contract, invariants & gotchas
