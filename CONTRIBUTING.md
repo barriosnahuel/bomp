@@ -539,7 +539,7 @@ git worktree add ../push-me-<topic> -b <branch> origin/develop
 
 A committed `WorktreeCreate` hook (`.claude/hooks/create-sibling-worktree.sh`, registered in `.claude/settings.json`) applies the same layout to worktrees the Claude Code harness or its subagents create — they land as `../push-me-<name>` instead of the harness default `.claude/worktrees/<name>`. The hook resolves the primary worktree root via `git rev-parse --git-common-dir`, so it works even when invoked from inside a linked worktree.
 
-The dummies land checked-in on the new worktree but the real configs and the bundled audio files don't follow — the swap-and-skip-worktree state is per-worktree. The `WorktreeCreate` hook runs `./scripts/setup-worktree.sh` automatically when the Claude Code harness creates the worktree. For worktrees created by hand, run it once from the new worktree's root:
+The dummies land checked-in on the new worktree but the real configs, the release signing files and the bundled audio files don't follow — the swap-and-skip-worktree state is per-worktree. The `WorktreeCreate` hook runs `./scripts/setup-worktree.sh` automatically when the Claude Code harness creates the worktree. For worktrees created by hand, run it once from the new worktree's root:
 
 ```bash
 ./scripts/setup-worktree.sh
@@ -555,6 +555,7 @@ git update-index --skip-worktree app/src/debug/google-services.json
 mkdir -p model/src/debug/res/raw
 cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.mp3 model/src/debug/res/raw/ 2>/dev/null || true
 cp "$(git rev-parse --git-common-dir)/../model/src/debug/res/raw/"*.ogg model/src/debug/res/raw/ 2>/dev/null || true
+install -m 600 "$(git rev-parse --git-common-dir)/../"{nahuelbarrios.keystore-appbundle.pkcs12,secure.properties} . 2>/dev/null || true  # gitignored; § Signing
 ```
 
 This is distinct from the swap-from-disk procedure above (used the first time you set up a fresh clone). The worktree-copy variant assumes the primary worktree already has the real files in place.
@@ -717,6 +718,8 @@ The following files must be located into the root dir (neither is committed):
 - `secure.properties` — holds `key.alias`, `key.password`, `store.password`
 
 Debug builds use the included debug keystore, so no signing setup is needed for them.
+
+Without both files, any task that signs a release (`bundleRelease`, `assembleRelease`, `installRelease`, `build`, …) **fails at `validateSigningRelease`** with a "keystore not found" error pointing at a `MISSING-release-signing-files…` path — a release signed with the debug key is rejected by Play. In a linked worktree `./scripts/setup-worktree.sh` copies both files from the primary — re-run it in worktrees created before this rule. For a throwaway release build that never reaches Play (CI does this), opt in with `-PallowDebugSignedRelease=true`. Release tasks that don't sign (`lintVitalRelease`, `compileReleaseSources`) and the `benchmark` / `nonMinifiedRelease` build types don't need the key.
 
 ## Release builds 📦
 

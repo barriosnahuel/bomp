@@ -6,6 +6,7 @@
 #     primary worktree, where they live as skip-worktree overrides
 #   * re-arms skip-worktree on this worktree so accidental edits don't reach
 #     the index
+#   * copies the release signing files (best-effort — gitignored, never staged)
 #   * copies the bundled debug audio files (best-effort — not committed)
 #
 # Re-running is safe: if both google-services files are already skip-worktree
@@ -84,6 +85,25 @@ for dest in app/src/benchmark/google-services.json app/src/nonMinifiedRelease/go
     echo "✓ $(dirname "$dest" | xargs basename) google-services seeded from the debug config (skip-worktree)."
   else
     echo "✓ $(dirname "$dest" | xargs basename) google-services already set up."
+  fi
+done
+
+# Release signing files (CONTRIBUTING.md § Signing). Best-effort: a primary without them just skips,
+# and app/build.gradle then refuses to sign a release instead of signing it with the debug key.
+# Both are gitignored; skip one that isn't, so the key can never reach the index. Names mirror
+# signingConfigs.release in app/build.gradle.
+for signing_file in nahuelbarrios.keystore-appbundle.pkcs12 secure.properties; do
+  src="$primary_root/$signing_file"
+  if [ ! -f "$src" ]; then
+    echo "• $signing_file not in the primary worktree — release signing stays disabled here."
+  elif ! git check-ignore -q -- "$signing_file"; then
+    echo "✘ $signing_file is not gitignored — skipped (it could be staged)." >&2
+  elif cmp -s "$src" "$signing_file"; then
+    echo "✓ $signing_file already set up."
+  else
+    [ -f "$signing_file" ] && echo "• $signing_file differs from the primary — replacing it."
+    install -m 600 "$src" "$signing_file"
+    echo "✓ $signing_file copied from primary (gitignored, mode 600)."
   fi
 done
 
