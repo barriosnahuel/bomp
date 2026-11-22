@@ -54,23 +54,38 @@ android {
 
     signingConfigs {
         release {
-
-            File keystoreFile = file("$project.rootProject.projectDir/nahuelbarrios.keystore-appbundle.pkcs12")
-            File propertiesFile = file("$project.rootProject.projectDir/secure.properties")
+            // A release signed with the debug key is rejected by Play, so without the real signing
+            // files (CONTRIBUTING.md § Signing) release packaging fails instead of falling back to it.
+            // CI has no key and only proves the bundle packages: it opts in with -PallowDebugSignedRelease=true.
+            File keystoreFile = rootProject.file('nahuelbarrios.keystore-appbundle.pkcs12')
+            File propertiesFile = rootProject.file('secure.properties')
             if (keystoreFile.exists() && propertiesFile.exists()) {
                 logger.warn('WARNING: Release keystore is available for app signing')
                 Properties properties = new Properties()
-                properties.load(new FileInputStream(propertiesFile))
+                FileInputStream propertiesStream = new FileInputStream(propertiesFile)
+                try {
+                    properties.load(propertiesStream)
+                } finally {
+                    propertiesStream.close()
+                }
 
                 keyAlias properties.getProperty('key.alias')
                 keyPassword properties.getProperty('key.password')
                 storeFile keystoreFile
                 storePassword properties.getProperty('store.password')
-            } else {
+            } else if (providers.gradleProperty('allowDebugSignedRelease').getOrElse('false') == 'true') {
+                logger.warn('WARNING: allowDebugSignedRelease=true — release is signed with the DEBUG key; Play rejects it')
                 keyAlias "androiddebugkey"
                 keyPassword "android"
-                storeFile file("$project.rootProject.projectDir/debug_keystore.keystore")
+                storeFile rootProject.file('debug_keystore.keystore')
                 storePassword "android"
+            } else {
+                // Points at a file that never exists, so AGP's validateSigningRelease fails any
+                // task that would sign a release (bundle, assemble, install, build), naming it.
+                keyAlias "missing"
+                keyPassword "missing"
+                storeFile rootProject.file('MISSING-release-signing-files--copy-the-keystore-and-secure.properties-see-CONTRIBUTING-Signing')
+                storePassword "missing"
             }
         }
     }

@@ -195,7 +195,7 @@ jobs:
           at: .
       - run:
           name: "Bundle Release"
-          command: ./gradlew app:bundleRelease -x lintVitalRelease -x uploadCrashlyticsMappingFileRelease
+          command: ./gradlew app:bundleRelease -x lintVitalRelease -x uploadCrashlyticsMappingFileRelease -PallowDebugSignedRelease=true
 
 workflows:
   version: 2.1

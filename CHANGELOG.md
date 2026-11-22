@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 #### Added
 - `FirstRunJourneyBenchmark` measures frame timing over a new user's first session (welcome audio, onboarding tour, Import Hub, idle) with and without the Baseline Profile, locale-independent via Compose test tags, plus the Firebase Test Lab command to run it on low-tier physical devices
 
+#### Changed
+- Release signing no longer falls back to the debug key: without the real keystore, signing a release fails (CI opts in with `-PallowDebugSignedRelease=true`), and `setup-worktree.sh` copies the signing files into new worktrees
+
 ## \[v2026.11.1] - 2026-11-22
 
 ### Changed
