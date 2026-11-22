@@ -739,7 +739,7 @@ Release-only Gradle commands (need the signing files above in the project root):
 
 ### Pre-release checklist
 
-A **seed** — expand it as the release process is formalized (store rollout steps aren't documented yet, so they're intentionally omitted rather than invented). Before cutting a release:
+A **seed** — expand it as the release process is formalized (the Play rollout that follows the cut is in § *Publishing to Play*). Before cutting a release:
 
 - [ ] **Hold the device for the whole benchmark session** — one cabled physical device (wireless ADB drops ~25–30 min in), unlocked, English locale. **Setup once:** `adb shell svc power stayon true`; **teardown once, after the last run:** `adb shell settings put global stay_on_while_plugged_in 0` (or the value it had). Restoring between runs lets a secure keyguard lock the phone and the next run aborts.
 - [ ] **Regenerate the Baseline Profile** — `./scripts/generate-baseline-profile.sh`, then validate on a **real device** (`StartupBenchmark.startupBaselineProfile` near `DEFAULT`, well under `None`). It's a frozen snapshot of the cold-start path (§ *Baseline Profile*); refresh it so accumulated startup changes are precompiled. **Append the three `StartupBenchmark` medians** to `macrobenchmark/RESULTS.md`.
@@ -778,6 +778,14 @@ After the checklist above is green and the version bump is merged to `develop`:
    Deferring the create until the next PR opens is what files a post-cut PR under the release that already shipped — until the new milestone exists there is nothing correct to assign. If the month then ends with no second release, rename the open milestone to the next month (`v2026.09.2` → `v2026.10.1`, § *Versioning*) — the rename absorbs the counter guess.
 
 Why archive the mapping: even when Firebase holds it for Console/MCP de-obfuscation, a GitHub-release copy keyed to the tag is a durable offline `retrace` backup independent of Firebase retention — and the safety net for exactly the case above, where the Firebase upload didn't happen.
+
+### Publishing to Play
+
+Upload the signed `.aab` **once**, then promote that same bundle track by track — never rebuild or re-upload it between tracks, so what reaches production is byte-for-byte what testers ran:
+
+1. **Closed testing** — upload `app/build/outputs/bundle/release/app-release.aab` and paste the en-US / es-AR notes from `store-listing/{en-US,es-AR}/changelog-<versionCode>.txt`. Install it from Play on a real device and smoke the basics (open, play a Bomp, unlock the Vault): this is the first run of the exact bundle Play signs and serves.
+2. **Open testing** — promote the closed-testing release (Play Console → the release → *Promote release*), same notes.
+3. **Production, staged** — promote again with a partial rollout (e.g. 20%) and watch Crashlytics for this `versionName` for a couple of days before raising it to 100%. A regression at this point is a halted rollout, not a rebuild: fixes ship as the next `versionCode`.
 
 ## Bundled audio files 🔊
 
