@@ -3,8 +3,10 @@
 Append-only history of on-device benchmark runs — one row per run, newest last. This file is the
 "before / today / tomorrow" series for the manual gates (the raw JSON/Perfetto outputs under
 `macrobenchmark/build/outputs/` are gitignored and ephemeral). Add a row on every pre-release run
-(CONTRIBUTING § *Pre-release checklist*) and whenever a playback-engine / tap-path change is
-validated (§ *Performance → What it measures*).
+(CONTRIBUTING § *Pre-release checklist*) — tap latency **and** cold start (`StartupBenchmark`) —
+and whenever a playback-engine / tap-path change is validated (§ *Performance → What it measures*).
+Rows are comparable only within one OS build (the *Device* column): when it moved, the same session
+re-measures the previous release as a **control** row.
 
 | Date | Device | Branch / context | Benchmark | Min (ms) | Median (ms) | Max (ms) | Iterations |
 |---|---|---|---|---|---|---|---|
@@ -23,6 +25,13 @@ validated (§ *Performance → What it measures*).
 | 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | `v2026.08.1-69-g40b66ec0` @ `40b66ec0` — v2026.11.1 pre-release gate, run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 31.8 | 45.0 | 60.0 | 15 |
 | 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | **control** — `v2026.08.1` (`e8617ead`), run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 32.5 | 42.7 | 65.9 | 15 |
 | 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | **control** — `v2026.07.1` (`6200a148`), run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 33.5 | 38.8 | 55.6 | 5 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | `v2026.08.1-68-gc99d3fab` + regenerated profile (= `40b66ec0`) — v2026.11.1 profile validation | StartupBenchmark.startupNoCompilation | 1061.3 | 1246.8 | 1444.0 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | `v2026.08.1-68-gc99d3fab` + regenerated profile (= `40b66ec0`) — v2026.11.1 profile validation | StartupBenchmark.startupDefaultCompilation | 246.2 | 262.6 | 312.7 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | `v2026.08.1-68-gc99d3fab` + regenerated profile (= `40b66ec0`) — v2026.11.1 profile validation | StartupBenchmark.startupBaselineProfile | 256.7 | 269.7 | 1125.8 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | **control** — `v2026.08.1` (`e8617ead`), A/B run 1 | StartupBenchmark.startupBaselineProfile | 301.8 | 331.3 | 374.8 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | `v2026.08.1-70-gf863d014` @ `f863d014` — v2026.11.1 release, A/B run 1 | StartupBenchmark.startupBaselineProfile | 365.6 | 383.8 | 404.2 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | **control** — `v2026.08.1` (`e8617ead`), A/B run 2 | StartupBenchmark.startupBaselineProfile | 359.1 | 380.6 | 427.4 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | `v2026.08.1-70-gf863d014` @ `f863d014` — v2026.11.1 release, A/B run 2 | StartupBenchmark.startupBaselineProfile | 362.4 | 377.8 | 415.1 | 15 |
 
 **On the 2026-11-22 rows (v2026.11.1 pre-release gate).** The OS build moved again
 (`CP3A.260905.009` → `CP3A.261005.005`), so this session re-measured both earlier releases as
@@ -32,6 +41,14 @@ between builds is smaller than one build's run-to-run spread, so no regression a
 ships today. The `v2026.07.1` rows are 5-iteration medians (its harness predates
 `DEFAULT_ITERATIONS = 15`): read them as soft. The 183.7 ms `Max` on release run 1 is the cold-start
 warmup outlier described below.
+
+**On the 2026-11-22 `StartupBenchmark` rows — the first cold-start rows in this log.** The profile
+validation (None 1246.8 / DEFAULT 262.6 / Partial(Require) 269.7 ms) shows the regenerated profile
+recovering 99% of the AOT gap. The later `v2026.08.1` ↔ release A/B, alternating, ran ~2 h after it
+and reads ~110 ms higher **on both builds**: the phone drifted (A/B run 1, on a cool device, is the
+lowest at 331.3 ms), not the app. From run 2 on the two builds sit at 377.8–383.8 ms, so the release
+neither opens faster nor slower than what Play ships today. Compare cold-start rows only within one
+session: this one shows a same-device, same-OS drift larger than any code change measured here.
 
 **On the 2026-10-07 row (v2026.10.1 pre-release gate).** Two caveats that make it a weaker number
 than its median suggests, neither of them a reason to re-measure. **(a)** The phone's OS build moved
