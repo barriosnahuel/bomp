@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+## \[v2026.11.1] - 2026-11-22
+
 ### Changed
 - Adding a Bomp now offers two paths instead of three: record one, or bring in an audio you already have — the second shows you how to share a voice note from WhatsApp or Telegram into Bomp, and, for an audio you already downloaded, keeps "Find it on your phone" at the bottom for Downloads, music, recordings or Drive
 - If the file browser comes back empty, Bomp now tells you how to share the voice note from WhatsApp instead of saying nothing
@@ -27,7 +29,8 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 #### Changed
 - `import_hub_import_selected` is no longer emitted now that its Hub row is gone, and is retired from the catalogue; `import_hub_bring_selected` covers both ways of bringing an existing audio (the share guide and the file browser at its foot)
-- Bumped all dependencies to latest stable
+- Bumped all dependencies to latest stable; AndroidX Biometric moves from 1.4.0-alpha07 to 1.4.0-beta01
+- The committed Baseline Profile was regenerated after the dependency bumps: cold start with it lands within 7 ms of a fully compiled app, recovering 99% of the gap to an uncompiled one
 - New `record_mic_unavailable` and `import_option_hidden` (`surface`) events, plus `hub_skipped` on `import_hub_opened`, so devices without a microphone or a file browser show up in the weekly report whenever they reach those screens
 - ADR 0019 now covers devices with no microphone: the manifest declares it optional so Play stops filtering them out, and every path into capture checks the hardware, not just the permission
 - ADR 0029 makes the release cut roll the milestone — create the next, move PRs still in flight onto it, then close the old — so there is always exactly one open milestone for a PR to take; the rule used to pick "the current month's", which kept naming the release that had already shipped

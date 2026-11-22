@@ -17,6 +17,21 @@ validated (§ *Performance → What it measures*).
 | 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | **control** — `v2026.07.1` (`6200a148`), run 1 | TapLatencyBenchmark.tapToSoundFirstTap | 32.3 | 41.5 | 74.3 | 15 |
 | 2026-09-19 | Pixel 8 (Android 17 / API 37, CP2A.260805.005) | **control** — `v2026.07.1` (`6200a148`), run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 34.0 | 48.1 | 67.3 | 15 |
 | 2026-10-07 | Pixel 8 (Android 17 / API 37, CP3A.260905.009) | `v2026.08.1-41-gc4ddde71` @ `c4ddde71` — v2026.10.1 pre-release gate | TapLatencyBenchmark.tapToSoundFirstTap | 36.3 | 48.1 | 126.3 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | `v2026.08.1-69-g40b66ec0` @ `40b66ec0` — v2026.11.1 pre-release gate, run 1 | TapLatencyBenchmark.tapToSoundFirstTap | 36.2 | 40.6 | 183.7 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | **control** — `v2026.08.1` (`e8617ead`), run 1 | TapLatencyBenchmark.tapToSoundFirstTap | 21.7 | 42.3 | 65.6 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | **control** — `v2026.07.1` (`6200a148`), run 1 | TapLatencyBenchmark.tapToSoundFirstTap | 33.1 | 43.0 | 51.5 | 5 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | `v2026.08.1-69-g40b66ec0` @ `40b66ec0` — v2026.11.1 pre-release gate, run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 31.8 | 45.0 | 60.0 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | **control** — `v2026.08.1` (`e8617ead`), run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 32.5 | 42.7 | 65.9 | 15 |
+| 2026-11-22 | Pixel 8 (Android 17 / API 37, CP3A.261005.005) | **control** — `v2026.07.1` (`6200a148`), run 2 | TapLatencyBenchmark.tapToSoundFirstTap | 33.5 | 38.8 | 55.6 | 5 |
+
+**On the 2026-11-22 rows (v2026.11.1 pre-release gate).** The OS build moved again
+(`CP3A.260905.009` → `CP3A.261005.005`), so this session re-measured both earlier releases as
+controls, alternating release → `v2026.08.1` → `v2026.07.1` twice on one cabled Pixel 8. Medians:
+release 40.6 / 45.0 ms, `v2026.08.1` 42.3 / 42.7 ms, `v2026.07.1` 43.0 / 38.8 ms — the ~3 ms spread
+between builds is smaller than one build's run-to-run spread, so no regression against what Play
+ships today. The `v2026.07.1` rows are 5-iteration medians (its harness predates
+`DEFAULT_ITERATIONS = 15`): read them as soft. The 183.7 ms `Max` on release run 1 is the cold-start
+warmup outlier described below.
 
 **On the 2026-10-07 row (v2026.10.1 pre-release gate).** Two caveats that make it a weaker number
 than its median suggests, neither of them a reason to re-measure. **(a)** The phone's OS build moved
