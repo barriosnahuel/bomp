@@ -19,9 +19,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -58,7 +59,11 @@ import kotlinx.coroutines.launch
 internal fun CollectionSheetHost(viewModel: SoundsViewModel) {
     val request by viewModel.activeCollectionSheet.collectAsState()
     val activeRequest = request ?: return
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState =
+        rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        )
     val coroutineScope = rememberCoroutineScope()
     // Emit a screen_view the first time this composition sees a non-null request. The sheet is
     // a self-contained surface for analytics — naming follows CanonicalScreenName.COLLECTION_CREATE

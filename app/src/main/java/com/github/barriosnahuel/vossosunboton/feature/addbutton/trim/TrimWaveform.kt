@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RangeSlider
+import androidx.compose.material3.RangeSliderState
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -97,8 +99,17 @@ internal fun TrimWaveform(
                 )
             }
         }
+        val rangeState = remember { RangeSliderState(selection.startFraction, selection.endFraction) }
+        // Each setter clamps against the other thumb: move the outward one first so neither is clipped.
+        if (selection.startFraction > rangeState.endValue) {
+            rangeState.endValue = selection.endFraction
+            rangeState.startValue = selection.startFraction
+        } else {
+            rangeState.startValue = selection.startFraction
+            rangeState.endValue = selection.endFraction
+        }
         RangeSlider(
-            value = selection.startFraction..selection.endFraction,
+            state = rangeState,
             onValueChange = { range ->
                 onSelectionChange(resolveHandleDrag(selection, range.start, range.endInclusive, durationMs))
             },

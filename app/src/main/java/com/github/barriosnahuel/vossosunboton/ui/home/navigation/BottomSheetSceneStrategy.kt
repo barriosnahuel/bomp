@@ -43,9 +43,13 @@ internal data class BottomSheetScene<T : Any>(
         val lifecycleOwner = rememberLifecycleOwner()
         ModalBottomSheet(
             onDismissRequest = onBack,
-            // skipPartiallyExpanded: the pre-Nav3 host always opened fully expanded; the default
+            // Hidden + Expanded only (no PartiallyExpanded): the pre-Nav3 host always opened fully expanded; the default
             // half-state cuts the last Hub row below the fold on short viewports.
-            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            sheetState =
+                androidx.compose.material3.rememberBottomSheetState(
+                    initialValue = androidx.compose.material3.SheetValue.Hidden,
+                    enabledValues = setOf(androidx.compose.material3.SheetValue.Hidden, androidx.compose.material3.SheetValue.Expanded),
+                ),
             properties = modalBottomSheetProperties,
             containerColor = MaterialTheme.colorScheme.surface,
         ) {

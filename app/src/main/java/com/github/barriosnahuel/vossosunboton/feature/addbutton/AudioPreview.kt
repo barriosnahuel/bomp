@@ -24,6 +24,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -155,8 +156,10 @@ internal fun AudioPreview(
                         }
                     }
                     Column(modifier = Modifier.weight(1f)) {
+                        val sliderState = remember { SliderState(sliderPosition) }
+                        sliderState.value = sliderPosition
                         Slider(
-                            value = sliderPosition,
+                            state = sliderState,
                             onValueChange = { value ->
                                 // reserveEndMargin = false: a full-right drag may intend to reach
                                 // the end and complete, unlike the waveform scrub (see seekTargetMs).

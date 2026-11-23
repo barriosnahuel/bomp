@@ -18,9 +18,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -72,7 +73,11 @@ internal fun AssignCollectionSheet(viewModel: SoundsViewModel) {
     val audioId = viewModel.activeAssignAudioId.collectAsState().value ?: return
     val collections by viewModel.collections.collectAsState()
     val vaultOpen by VaultSessionState.flow.collectAsState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState =
+        rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        )
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val activity = remember(context) { context.findFragmentActivity() }

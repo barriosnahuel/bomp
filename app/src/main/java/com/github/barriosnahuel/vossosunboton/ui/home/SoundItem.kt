@@ -34,6 +34,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -502,8 +503,10 @@ private fun SoundCard(
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
+                    val sliderState = remember { SliderState(sliderPosition) }
+                    sliderState.value = sliderPosition
                     Slider(
-                        value = sliderPosition,
+                        state = sliderState,
                         onValueChange = { value ->
                             isDragging = true
                             sliderPosition = value
