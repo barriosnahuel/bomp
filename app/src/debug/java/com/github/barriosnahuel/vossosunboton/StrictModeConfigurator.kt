@@ -93,7 +93,7 @@ private fun reportViolation(
  * Disk-read / slow-call violations from Firebase init are not on this list because they are prevented at the
  * call-site via `StrictMode.allowThreadDiskReads()` in `AnalyticsTrackerProvider.createTracker`.
  */
-private fun shouldReportToCrashlytics(violation: Throwable): Boolean {
+internal fun shouldReportToCrashlytics(violation: Throwable): Boolean {
     val frames = violation.stackTrace
     return KNOWN_THIRD_PARTY_VIOLATIONS.none { matcher ->
         frames.any { frame -> matcher.matches(frame) }
@@ -200,6 +200,16 @@ private val KNOWN_THIRD_PARTY_VIOLATIONS =
             classNamePrefix = "android.os.StrictMode",
             library = "Android framework (Activity destroy GC)",
             methodNameContains = "decrementExpectedActivityCount",
+        ),
+        // JankStats (androidx.metrics.performance, debug-only) reflects the hidden
+        // Landroid/view/Choreographer;->mLastFrameTimeNanos:J in DelegatingOnPreDrawListener's static init on
+        // API 24-30 (API 31+ reads FrameMetrics instead); detectNonSdkApiUsage reports it on API 28-30. Anchored
+        // on `<clinit>` only: our JankStatsLogger / FrozenFrameGate run inside JankStats callbacks, so a
+        // package-wide prefix would silence our own violations on every API level.
+        KnownThirdPartyViolation(
+            classNamePrefix = "androidx.metrics.performance.DelegatingOnPreDrawListener",
+            library = "JankStats (hidden Choreographer field, API 28-30)",
+            methodNameContains = "<clinit>",
         ),
         // Firebase Crashlytics' settings fetch (HttpGetRequest → HttpEngine.unzip → GzipSource → Inflater)
         // leaks the underlying Inflater because the platform OkHttp shim (`com.android.okhttp.*`) does not
