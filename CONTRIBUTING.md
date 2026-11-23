@@ -721,6 +721,8 @@ Debug builds use the included debug keystore, so no signing setup is needed for 
 
 Without both files, any task that signs a release (`bundleRelease`, `assembleRelease`, `installRelease`, `build`, …) **fails at `validateSigningRelease`** with a "keystore not found" error pointing at a `MISSING-release-signing-files…` path — a release signed with the debug key is rejected by Play. In a linked worktree `./scripts/setup-worktree.sh` copies both files from the primary — re-run it in worktrees created before this rule. For a throwaway release build that never reaches Play (CI does this), opt in with `-PallowDebugSignedRelease=true`. Release tasks that don't sign (`lintVitalRelease`, `compileReleaseSources`) and the `benchmark` / `nonMinifiedRelease` build types don't need the key.
 
+**Temporary — routine build is `./gradlew app:assembleDebug`, not `app:build`.** `build` includes `assembleRelease`, so since [#1382](https://github.com/barriosnahuel/bomp/pull/1382) it fails on any checkout without the signing files (fresh clones, outside contributors, agent worktrees whose primary lacks them). Stopgap until release signing stops needing per-worktree secret copies — planned in `../push-me-backlog/tech-debt/2026-11-23-release-signing-secrets-copied-per-worktree.md` (Keychain-backed signing after the AGP 9.4.1 bump); revert this note when that lands.
+
 ## Release builds 📦
 
 Release-only Gradle commands (need the signing files above in the project root):
