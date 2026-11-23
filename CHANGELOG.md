@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 #### Changed
 - Release signing no longer falls back to the debug key: without the real keystore, signing a release fails (CI opts in with `-PallowDebugSignedRelease=true`), and `setup-worktree.sh` copies the signing files into new worktrees
 
+#### Fixed
+- Debug builds no longer crash on launch on Android 9–11 (API 28–30): the StrictMode audit now ignores JankStats' one-time reflective read of a hidden `Choreographer` field, while still flagging violations from our own frame listeners
+
 ## \[v2026.11.1] - 2026-11-22
 
 ### Changed
