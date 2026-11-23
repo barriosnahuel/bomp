@@ -604,9 +604,8 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         runTest {
             val viewModel = givenAViewModelWithCustomSound()
             // Pick the saved custom sound explicitly — `sounds.value.first()` would resolve to the
-            // welcome sticker on a fresh install, and the sticker is filtered out of the synchronous
-            // `applyTabFilterFromCache` projection that `selectTab` now uses to bridge the gap to
-            // loadSounds. The contract the test guards is independent of welcome placement.
+            // welcome sticker on a fresh install. The contract the test guards is independent of
+            // welcome placement.
             val playingSound = viewModel.sounds.value.single { it.name == "custom" }
 
             viewModel.onPlayerStart(playingSound, durationMs = 1000)
@@ -838,6 +837,23 @@ internal class SoundsViewModelTest : AbstractRobolectricTest() {
         }
 
         assertThat(viewModel.sounds.value.none { it.name == welcomeTitle }).isTrue()
+    }
+
+    @Test
+    fun `welcome sticker is in MY_SOUNDS synchronously after returning from another tab`() {
+        // The synchronous cache projection is also what the collections collector applies on its
+        // first snapshot; when that lands after the init load no loadSounds follows, so a projection
+        // that dropped the welcome left a fresh install on the welcome-empty state.
+        val viewModel = givenAViewModel()
+        val welcomeTitle =
+            ApplicationProvider
+                .getApplicationContext<android.content.Context>()
+                .getString(R.string.app_welcome_sticker_title)
+
+        viewModel.setActiveTab(AppTab.EXPLORE_SOUNDS)
+        viewModel.setActiveTab(AppTab.MY_SOUNDS)
+
+        assertThat(viewModel.sounds.value.any { it.name == welcomeTitle }).isTrue()
     }
 
     @Test

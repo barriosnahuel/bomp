@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### Fixed
+- The welcome audio could occasionally vanish from My Bomps, next to your own audios, until the list refreshed
+
 ### For nerds 🤓
 
 #### Added
