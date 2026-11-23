@@ -304,7 +304,7 @@ class SoundsViewModel(
 
     private val allSoundsCache = MutableStateFlow<List<Sound>>(emptyList())
 
-    // The welcome's `dateAdded`, captured by the first [loadSounds] pass so the synchronous
+    // The welcome's `dateAdded`, refreshed on every [loadSounds] pass and kept so the synchronous
     // [applyTabFilterFromCache] can re-add the welcome (it never lives in [allSoundsCache]).
     @Volatile
     private var welcomeInstallTs: Long? = null
