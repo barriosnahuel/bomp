@@ -23,7 +23,7 @@ Small canonical snippets (≤ 5 lines) may live in both files when needed at wri
 ./gradlew :model:test --tests "com.github.barriosnahuel.vossosunboton.model.SomeTest"   # Single test class
 ```
 
-Standalone `detekt`, `app:build -x check` (build, skip checks), release-only `app:lintVitalRelease` / `app:bundle`: CONTRIBUTING.md § *Release builds*; emulator workflows in § *Testing → Local UI test suite*. The Android CLI tools — `adb`, `fastboot`, `emulator` — are on `PATH`.
+Standalone `detekt`, `app:assembleDebug` (build; CONTRIBUTING § *Signing*), release-only `app:lintVitalRelease` / `app:bundle`: CONTRIBUTING.md § *Release builds*; emulator workflows in § *Testing → Local UI test suite*. The Android CLI tools — `adb`, `fastboot`, `emulator` — are on `PATH`.
 
 ## Module Architecture
 
