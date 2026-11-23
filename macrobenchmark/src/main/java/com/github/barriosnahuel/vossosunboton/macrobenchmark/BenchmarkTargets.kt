@@ -112,3 +112,14 @@ internal const val FIRST_RUN_DWELL_MS = 2_000L
 
 // The field's slow-frame ratios come from ≥ 10 s Landing visits; idle that long on the welcome-only list.
 internal const val FIRST_RUN_IDLE_MS = 10_000L
+
+// --- Interaction to Next Paint (tap → response frame on screen, onboarding tour, pulse on vs off) ---
+
+// 10 iterations × 3 tour taps = 30 samples per variant, enough for a stable p50/p90.
+internal const val INP_ITERATIONS = 10
+
+// Dwell on each tour step before tapping, so the pulse has the frame pipeline in steady state.
+internal const val INP_DWELL_MS = 2_000L
+
+// After the last tap, so its response frame is presented inside the traced window.
+internal const val INP_SETTLE_MS = 1_000L
