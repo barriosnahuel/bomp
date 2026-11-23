@@ -4,7 +4,7 @@ apply from: "$project.rootProject.projectDir/linters.gradle"
 android {
     namespace = 'com.github.barriosnahuel.vossosunboton.commons.android'
 
-    compileSdkVersion "android-37.0"
+    compileSdkVersion "android-37.1"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21

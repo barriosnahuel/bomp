@@ -94,6 +94,9 @@ private fun LegalListItem(
     onClick: () -> Unit,
 ) {
     val externalLabel = stringResource(R.string.app_about_open_in_browser)
+    // The non-deprecated overload is the Expressive ListItem (new default padding and shapes): a
+    // visual change that needs its own design pass, not a side effect of a BOM bump.
+    @Suppress("DEPRECATION")
     ListItem(
         modifier = Modifier.clickable(onClick = onClick),
         colors =
