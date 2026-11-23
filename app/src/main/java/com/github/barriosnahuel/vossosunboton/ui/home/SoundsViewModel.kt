@@ -304,6 +304,11 @@ class SoundsViewModel(
 
     private val allSoundsCache = MutableStateFlow<List<Sound>>(emptyList())
 
+    // The welcome's `dateAdded`, captured by the first [loadSounds] pass so the synchronous
+    // [applyTabFilterFromCache] can re-add the welcome (it never lives in [allSoundsCache]).
+    @Volatile
+    private var welcomeInstallTs: Long? = null
+
     /**
      * Snapshot of the full catalog (custom + bundled) regardless of the currently selected tab.
      * Distinct from [sounds], which is the tab-filtered list that powers the visible LazyColumn —
@@ -785,7 +790,7 @@ class SoundsViewModel(
         val snapshot = allSoundsCache.value
         if (snapshot.isEmpty()) return
         // Mirrors the byTab branch in loadSounds so the tab swap doesn't flash an empty list.
-        _sounds.value =
+        val byTab =
             when (tab) {
                 AppTab.MY_SOUNDS -> mySoundsProjection(snapshot)
                 AppTab.EXPLORE_SOUNDS -> snapshot.filter { it.isBundled() }
@@ -794,6 +799,24 @@ class SoundsViewModel(
                 // and (b) a predictive-back preview from the Vault base always composes Home
                 // (exit-through-home), which must show its own rows, not the previous tab's.
                 AppTab.VAULT -> mySoundsProjection(snapshot)
+            }
+        // Re-add the welcome as loadSounds does: when no loadSounds follows (the collections
+        // collector's first snapshot landing after the init load), dropping it would leave the
+        // welcome-empty state on screen until the next unrelated reload.
+        val installTs = welcomeInstallTs
+        val deletedSound = _deletedSoundEvent.value?.sound
+        val withWelcome =
+            if (installTs == null) {
+                byTab
+            } else {
+                positionWelcomeIn(byTab, deletedSound != null && isWelcomeSticker(deletedSound), installTs)
+            }
+        val playingId = _playingSound.value?.id
+        _sounds.value =
+            if (playingId == null) {
+                withWelcome
+            } else {
+                withWelcome.map { if (it.id == playingId) it.copy(isPlaying = true) else it }
             }
     }
 
@@ -1543,6 +1566,7 @@ class SoundsViewModel(
             // Read once per loadSounds — pure function over a snapshotted value, easier to test. The
             // welcome's install timestamp is its `dateAdded` so it sorts by date with user audios.
             val welcomeInstallTs = welcomeStore.installTimestamp()
+            this.welcomeInstallTs = welcomeInstallTs
             // The swipe-hint nudge is eligible while the welcome is showing and the nudge hasn't run.
             _welcomeHintPending.value =
                 !welcomeHintConsumed &&
