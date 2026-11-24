@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 #### Changed
 - Bumped all dependencies to latest stable; compileSdk moves to android-37.1, required by Compose 1.13
+- The share-sheet entry point reads the shared audio through `IntentCompat`, dropping its own SDK branch; a share whose stream isn't a URI is now rejected with the missing-file toast instead of crashing on Android 12L and below
 - Release signing no longer falls back to the debug key: without the real keystore, signing a release fails (CI opts in with `-PallowDebugSignedRelease=true`), and `setup-worktree.sh` copies the signing files into new worktrees
 
 #### Fixed

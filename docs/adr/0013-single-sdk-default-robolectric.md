@@ -65,7 +65,8 @@ A **multi-SDK** `@Config(sdk = [a, b, ...])` is allowed **only** when the code
 under test has a real `Build.VERSION.SDK_INT` branch, and must be justified
 inline with a `// sdk-boundary:` comment naming that branch. The matrix should
 straddle the boundary (one level below, one at/above). Canonical:
-`HapticsTest` (`[M, R]`), `AddButtonActivitySdkBoundaryTest` (`[M, TIRAMISU]`).
+`HapticsTest` (`[M, R]`), `AddButtonActivitySdkBoundaryTest` (`[M, TIRAMISU]`
+at the time; current matrix under *Amendment*).
 
 A single SDK other than the default (a one-off pin) needs no marker — it is
 already the conservative case.
@@ -81,6 +82,16 @@ already the conservative case.
 - DataStore tests lose their per-SDK runs. If a future need to guard
   DataStore-the-library across API levels appears, it returns as an explicit
   `// sdk-boundary:` matrix stating that reason — not as an unexplained default.
+
+## Amendment (2026-11-23)
+
+`AddButtonActivity.handleIntent` no longer branches on `SDK_INT`: it reads the
+stream through `IntentCompat.getParcelableExtra`, whose own branch (typed API on
+`>= UPSIDE_DOWN_CAKE`, legacy overload + `isInstance` below) now lives inside
+androidx.core. `AddButtonActivitySdkBoundaryTest` keeps its matrix as a guard on
+that library branch — the case anticipated under *Consequences* for DataStore —
+and straddles it at `[TIRAMISU, UPSIDE_DOWN_CAKE]`, plus `N` (minSdk) as a floor
+run of the share flow.
 
 ## Invariants
 
