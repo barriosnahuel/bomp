@@ -8,14 +8,19 @@ package com.github.barriosnahuel.vossosunboton.ui.about
 import android.content.Context
 import android.os.Build
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -214,6 +219,19 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
     }
 
     @Test
+    fun `every legal item is a single clickable row at least 48dp tall`() {
+        launch()
+        LEGAL_ITEM_LABELS.forEach { labelRes ->
+            composeTestRule
+                .onNode(hasText(context.getString(labelRes)) and hasClickAction())
+                .performScrollTo()
+                .assertIsEnabled()
+                .assertHeightIsAtLeast(MIN_TOUCH_TARGET)
+                .assertWidthIsAtLeast(MIN_TOUCH_TARGET)
+        }
+    }
+
+    @Test
     fun `tap on privacy policy when the intent succeeds does not show the no-browser snackbar`() {
         launch()
         composeTestRule
@@ -322,5 +340,14 @@ internal class AboutScreenTest : AbstractRobolectricTest() {
 
     private companion object {
         const val EXTERNAL_LEGAL_ITEMS = 4
+        val MIN_TOUCH_TARGET = 48.dp
+        val LEGAL_ITEM_LABELS =
+            listOf(
+                R.string.app_about_license,
+                R.string.app_about_privacy_policy,
+                R.string.app_about_data_safety,
+                R.string.app_about_terms_of_service,
+                R.string.app_about_source,
+            )
     }
 }
