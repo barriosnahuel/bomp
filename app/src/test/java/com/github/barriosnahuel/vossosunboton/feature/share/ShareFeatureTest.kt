@@ -9,9 +9,9 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import androidx.core.content.FileProvider
+import androidx.core.content.IntentCompat
 import androidx.test.core.app.ApplicationProvider
 import com.github.barriosnahuel.vossosunboton.AbstractRobolectricTest
 import com.github.barriosnahuel.vossosunboton.R
@@ -293,13 +293,7 @@ internal class ShareFeatureTest : AbstractRobolectricTest() {
     }
 
     private fun thenWeSendAnAudio(intent: Intent) {
-        val shareIntent =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
-            }
+        val shareIntent = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java)
 
         assertThat(shareIntent?.action).isEqualTo(Intent.ACTION_SEND)
         assertThat(shareIntent?.type).isEqualTo("audio/*")

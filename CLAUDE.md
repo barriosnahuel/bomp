@@ -133,7 +133,7 @@ Test names are descriptive sentences, never opaque identifiers — reports list 
 
 ## Robolectric SDK config
 
-Robolectric tests run at a **single SDK by default** — the `AbstractRobolectricTest` base classes pin it; subclasses inherit. A multi-SDK matrix (`@Config(sdk = [a, b, …])`) is **only** for a test guarding a real `Build.VERSION.SDK_INT` branch and **must** carry a trailing `// sdk-boundary: <branch>` comment (grep-enforced by `scripts/check-adr-invariants.sh`). Straddle the boundary (one level below, one at/above). Canonical: `HapticsTest` (`[M, R]`), `AddButtonActivitySdkBoundaryTest` (`[M, TIRAMISU]`). See [ADR 0013](docs/adr/0013-single-sdk-default-robolectric.md).
+Robolectric tests run at a **single SDK by default** — the `AbstractRobolectricTest` base classes pin it; subclasses inherit. A multi-SDK matrix (`@Config(sdk = [a, b, …])`) is **only** for a test guarding a real `Build.VERSION.SDK_INT` branch and **must** carry a trailing `// sdk-boundary: <branch>` comment (grep-enforced by `scripts/check-adr-invariants.sh`). Straddle the boundary (one level below, one at/above). Canonical: `HapticsTest` (`[M, R]`), `AddButtonActivitySdkBoundaryTest` (`[N, TIRAMISU, UPSIDE_DOWN_CAKE]`). See [ADR 0013](docs/adr/0013-single-sdk-default-robolectric.md).
 
 ## Test assertions
 

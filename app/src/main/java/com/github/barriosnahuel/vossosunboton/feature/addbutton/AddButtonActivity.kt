@@ -8,12 +8,12 @@ package com.github.barriosnahuel.vossosunboton.feature.addbutton
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.content.IntentCompat
 import androidx.fragment.app.FragmentActivity
 import com.github.barriosnahuel.vossosunboton.R
 import com.github.barriosnahuel.vossosunboton.ui.theme.AppTheme
@@ -55,13 +55,7 @@ class AddButtonActivity : FragmentActivity() {
 
     private fun handleIntent(intent: Intent) {
         intentSequence++
-        val uri: Uri? =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(Intent.EXTRA_STREAM)
-            }
+        val uri: Uri? = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
         if (uri == null) {
             Toast.makeText(this, R.string.app_addbutton_missing_parameter_error, Toast.LENGTH_SHORT).show()
             finish()
