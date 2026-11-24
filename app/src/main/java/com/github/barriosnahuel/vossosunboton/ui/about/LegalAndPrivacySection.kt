@@ -5,7 +5,6 @@
  */
 package com.github.barriosnahuel.vossosunboton.ui.about
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -94,11 +93,8 @@ private fun LegalListItem(
     onClick: () -> Unit,
 ) {
     val externalLabel = stringResource(R.string.app_about_open_in_browser)
-    // The non-deprecated overload is the Expressive ListItem (new default padding and shapes): a
-    // visual change that needs its own design pass, not a side effect of a BOM bump.
-    @Suppress("DEPRECATION")
     ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
+        onClick = onClick,
         colors =
             ListItemDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -113,7 +109,6 @@ private fun LegalListItem(
                 modifier = Modifier.size(24.dp),
             )
         },
-        headlineContent = { Text(label) },
         trailingContent =
             if (isExternal) {
                 {
@@ -126,5 +121,7 @@ private fun LegalListItem(
             } else {
                 null
             },
-    )
+    ) {
+        Text(label)
+    }
 }

@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog][]. Through v2.3.0 this project used [S
 
 ## \[unreleased]
 
+### Changed
+- The rows in About → Legal & Privacy now follow Material's latest list style, with slightly different spacing and press feedback
+
 ### Fixed
 - The welcome audio could occasionally vanish from My Bomps, next to your own audios, until the list refreshed
 
